@@ -4186,6 +4186,14 @@ function MonsterVillage() {
               <p className="mvIn mt-3" style={{ animationDelay: "0.8s", color: C.parch, fontSize: 15 }}>
                 Nine souls are left in Hollow's Edge, and one of them is only wearing a face. Find what it leaves behind, learn its name, and end it before it ends the rest of you.
               </p>
+              <div className="mvIn mt-5" style={{ animationDelay: "1.1s" }}>
+                <div className="grid grid-cols-4 gap-x-3 gap-y-3 place-items-center" style={{ opacity: 0.6, filter: "grayscale(0.35)" }}>
+                  {["marta", "tobias", "ansel", "greta", "wilhelm", "liesel", "falk", "rosa"].map((fid) => (
+                    <Portrait key={fid} id={fid} size={52} />
+                  ))}
+                </div>
+                <div className="mv-display text-center mt-3" style={{ color: C.dim, fontSize: 11, letterSpacing: 3 }}>THE FACES YOU KNOW · ONE YOU DO NOT</div>
+              </div>
             </>
           )}
           {veteran && (
