@@ -3680,7 +3680,7 @@ const fontStyles = `
 @media (prefers-reduced-motion: reduce) { .mvFog, .mvFog2, .mvFlick, .mvBeat, .mvNightFade, .mvSun, .mvMoon { animation: none; opacity: 1; transform: none; } }
 `;
 
-function Btn({ children, onClick, disabled, kind = "ghost", full, small }) {
+function Btn({ children, onClick, disabled, kind = "ghost", full, small, center }) {
   const styles = {
     ghost: { background: "transparent", border: `1px solid ${C.line}`, color: C.text },
     amber: { background: "transparent", border: `1px solid ${C.amber}`, color: C.amber },
@@ -3689,7 +3689,7 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small }) {
   return (
     <button onClick={onClick} disabled={disabled}
       className={`mv-btn mv-body rounded ${full ? "w-full" : ""} ${small ? "px-3 py-1.5 text-sm" : "px-4 py-2.5"}`}
-      style={{ ...styles, opacity: disabled ? 0.35 : 1, cursor: disabled ? "default" : "pointer", textAlign: "left" }}>
+      style={{ ...styles, opacity: disabled ? 0.35 : 1, cursor: disabled ? "default" : "pointer", textAlign: center ? "center" : "left" }}>
       {children}
     </button>
   );
@@ -4228,7 +4228,7 @@ function MonsterVillage() {
             </>
           )}
           <div className="mvIn mt-auto pb-6" style={{ animationDelay: "1.5s" }}>
-            <Btn kind="red" full onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>ENTER HOLLOW'S EDGE</span></Btn>
+            <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>ENTER HOLLOW'S EDGE</span></Btn>
             <div className="flex justify-between mt-2">
               <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
                 {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
