@@ -435,9 +435,9 @@ const BODY_FOUND = [
   (v, w) => `They find ${v.name} at first light, ${w === "home" ? "behind a door still bolted from the inside" : `out at the ${w}`}. One of the searchers refuses burial duty from now on.`,
   (v, w) => `${v.name} is dead. ${w === "home" ? "Taken at home, shutters latched, no sign of how." : `Found at the ${w}, where no one should have been.`} Someone in the square will not stop screaming long enough to be led away.`,
   (v, w) => `Word goes door to door before the sun is up: ${v.name}, ${w === "home" ? "dead in the wreck of their own bed" : `dead at the ${w}`}. The man who carried the body will not describe the weight of it.`,
-  (v, w) => `${v.name} is found ${w === "home" ? "in their bed" : `at the ${w}`}, opened from throat to belt, and arranged. That is the word the searchers keep circling back to and flinching away from: arranged. Nothing hungry did that. Something proud did.`,
-  (v, w) => `There is not enough blood where ${v.name} lies, and far too much of it twenty feet away, dragged in a wide fan across the ground, as if the dying were taken for a long walk in something's grip before being allowed to finish.`,
-  (v, w) => `${v.name}'s hands are ruined. Both of them, palms and fingers opened to the bone, dozens of small wounds over the great ones. Doctor Falk says it once, quietly, to the men nearest: "They fought. For a long time. They were alive for all of it." Then he closes the bag and the subject together.`,
+  (v, w) => `${v.name} is found ${w === "home" ? "in their bed" : `at the ${w}`}, opened from throat to belt, and arranged. Nothing hungry did that. Something proud did.`,
+  (v, w) => `Too little blood where ${v.name} lies, and far too much twenty feet away, dragged in a wide fan, as if the dying were walked a while in something's grip before being let finish.`,
+  (v, w) => `${v.name}'s hands are ruined, palms and fingers opened to the bone. Falk says it quietly: "They fought. A long time. They were alive for all of it." Then he shuts the bag.`,
 ];
 const NO_BODY = [
   "No one is dead. Someone's dog is gone, though. The chain was bitten through, not broken, and its owner keeps calling for it in a smaller and smaller voice.",
@@ -498,29 +498,29 @@ const GOSSIP_NAMED = [
    specific detail; one or two entries keep the contradictory-accounts device
    in reserve, where fear does its own butchery and none of it names the creature. */
 const BRUTAL_DETAILS = [
-  (v) => `${v}'s throat is opened to the bone, and whatever did it did not stop there. The men who carried the body will not say what else, and will not be asked twice.`,
-  (v) => `Drained white, says the baker. Torn apart, says the smith. Untouched but for the face, says the boy who found them. They all saw the same body. Fear does its own butchery.`,
-  (v) => `An arm was found forty feet from the rest of ${v}. Nothing dragged it there. It was set down. Deliberately. Pointing back at the village.`,
-  (v) => `Something has been taken out of ${v}, cleanly, between the ribs, the way a butcher takes the good cut first. Doctor Falk closes his bag and does not open it again that day.`,
-  (v) => `There was laughter over the body, high and delighted, from no fixed direction. Everyone who heard it describes it the same way, and no one will try to imitate it twice.`,
-  (v) => `Whatever was done to ${v} was not finished quickly. The wounds nearest the heart came last, and came slowest, and the ground shows exactly how long that took.`,
-  (v) => `The blood is in the wrong places: pooled where there is no wound, missing where the wounds gape open. Someone suggests the ground drank it. No one corrects them.`,
-  (v) => `${v}'s face was left untouched, composed, almost peaceful. Everyone calls it a mercy. It is not a mercy. It was left whole on purpose, so the village would know exactly who to grieve.`,
-  (v) => `${v}'s face has been taken. Removed, whole, with a patience nobody will describe out loud, and Falk says - once, to the men who have to know - that it was done first, before any of the wounds that killed. When they ask him how he can be sure, he does not answer, and they stop asking.`,
-  (v) => `What was done to ${v} was done the way a hunter dresses game, except no hunter is that slow about it, and no hunter folds the skin afterward and leaves it on the doorstep like laundry come back from the wash.`,
-  (v) => `${v} drowned, Falk says. On dry land, in their own blood, through a wound made small and low and deliberate so the drowning would take a long time. It wanted to watch. That is what the wound means. Nobody says it aloud. Everybody understands it.`,
-  (v) => `There are words on ${v}. In ${v}, cut shallow and neat across the shoulders where the skin is smoothest, in a hand more careful than most men manage with ink: "SLOWER NEXT TIME." Falk covers it. He is not fast enough. By noon the whole village knows the thing can write.`,
-  (v) => `${v} was unmade below the ribs, and what should be inside was outside, laid along the ground in a line. In order. Someone points out, in a high strange voice, that nothing was eaten. Nothing at all. It was not hunger. It was inventory.`,
+  (v) => `${v}'s throat is opened to the bone, and whatever did it did not stop there. The men who carried the body will not say what else.`,
+  (v) => `Drained white, says the baker. Torn apart, says the smith. Untouched but for the face, says the boy. Same body. Fear does its own butchery.`,
+  (v) => `An arm was found forty feet from the rest of ${v}. Nothing dragged it there. It was set down, deliberately, pointing back at the village.`,
+  (v) => `Something was taken out of ${v}, cleanly, between the ribs, the way a butcher takes the best cut first. Falk shuts his bag and does not open it again.`,
+  (v) => `There was laughter over the body, high and delighted, from no fixed direction. Everyone heard it the same. No one will imitate it twice.`,
+  (v) => `Whatever was done to ${v} was not quick. The wounds nearest the heart came last, and slowest, and the ground shows how long that took.`,
+  (v) => `The blood is in the wrong places: pooled where there is no wound, gone where the wounds gape. Someone says the ground drank it. No one argues.`,
+  (v) => `${v}'s face was left whole, almost peaceful. Not a mercy: it was left so on purpose, so the village would know exactly who to grieve.`,
+  (v) => `${v}'s face has been taken, whole, and Falk says it was done first, before the wounds that killed. When they ask how he knows, he stops them asking.`,
+  (v) => `What was done to ${v} was hunter's work, but no hunter is that slow, and none folds the skin after and leaves it on the doorstep like washing.`,
+  (v) => `${v} drowned on dry land, in their own blood, through a wound made small and low so it would take a long time. It wanted to watch.`,
+  (v) => `Words are cut in ${v}, neat across the shoulders: "SLOWER NEXT TIME." Falk covers it too late. By noon the whole village knows it can write.`,
+  (v) => `${v} was opened below the ribs and what should be inside was laid out in a line, in order. Nothing eaten. Not hunger. Inventory.`,
 ];
 
 const KILLER_MESSAGES = [
-  { line: (v) => `Beside what is left of ${v}, written on the stones in blood gone tacky, in a small, careful hand: "I COUNTED FIRST."`, clue: `a message left beside the body, in blood: "I COUNTED FIRST." It knows you keep a journal.` },
-  { line: (v) => `On ${v}'s door, finger-painted in blood at exactly eye height, so the whole street would read it walking past: "ONE A NIGHT UNTIL YOU STOP WATCHING."`, clue: `a message on the victim's door: "ONE A NIGHT UNTIL YOU STOP WATCHING." It means you.` },
-  { line: (v) => `Pressed into the mud beside ${v}, deliberate as a signature: a human hand-print, fingers spread wide. Under it, scratched with a nail: "STILL WARM."`, clue: `a hand-print left like a signature, and two scratched words: "STILL WARM." It is enjoying itself now.` },
-  { line: (v) => `Beside ${v}, nothing written at all. Only a chair, carried out from the house and set down facing the body, the ground beneath it printed deep with long sitting. It watched its work afterward, at leisure, the way a man watches a fire he built.`, clue: `a chair set facing the body, sat in at length. It stays to admire what it does. It is not in any hurry at all.` },
-  { line: (v) => `A splinter of ${v}'s own door, pried loose and still bloody at one end, is waiting on YOUR doorstep at first light. No one saw it carried, and no one saw it set down.`, clue: `it left a piece of the kill on your own doorstep. It knows exactly which house is yours.` },
-  { line: (v) => `The words are found on ${v} when the body is washed, carved into the back, shallow and neat and entirely unhurried: "YOU WERE ASLEEP FOR THIS ONE." Nobody washes a body alone in this village anymore.`, clue: `words carved into the body itself: "YOU WERE ASLEEP FOR THIS ONE." It writes to you on the dead now.` },
-  { line: (v) => `${v}'s door is written over, top to bottom, in blood that was not spared for the purpose - one sentence, over and over, in a fine copperplate hand: "ASK ME NICELY AND I WILL STOP." Nobody has ever asked it anything.`, clue: `a door written over in a fine hand, one sentence repeated: "ASK ME NICELY AND I WILL STOP." It is playing now, and it wants you to know it.` },
+  { line: (v) => `Beside what is left of ${v}, in blood gone tacky, a small careful hand: "I COUNTED FIRST."`, clue: `a message left beside the body, in blood: "I COUNTED FIRST." It knows you keep a journal.` },
+  { line: (v) => `On ${v}'s door, finger-painted in blood at eye height for the whole street to read: "ONE A NIGHT UNTIL YOU STOP WATCHING."`, clue: `a message on the victim's door: "ONE A NIGHT UNTIL YOU STOP WATCHING." It means you.` },
+  { line: (v) => `Pressed in the mud by ${v}, deliberate as a signature: a spread hand-print, and scratched beneath it: "STILL WARM."`, clue: `a hand-print left like a signature, and two scratched words: "STILL WARM." It is enjoying itself now.` },
+  { line: (v) => `By ${v}, nothing written. Only a chair carried out and set facing the body, the ground beneath printed deep. It sat and watched its work at leisure.`, clue: `a chair set facing the body, sat in at length. It stays to admire what it does. It is not in any hurry at all.` },
+  { line: (v) => `A splinter of ${v}'s own door, still bloody at one end, waits on YOUR doorstep at first light. No one saw it carried, or set down.`, clue: `it left a piece of the kill on your own doorstep. It knows exactly which house is yours.` },
+  { line: (v) => `Carved in ${v}'s back, shallow and unhurried, found when the body is washed: "YOU WERE ASLEEP FOR THIS ONE." No one washes a body alone now.`, clue: `words carved into the body itself: "YOU WERE ASLEEP FOR THIS ONE." It writes to you on the dead now.` },
+  { line: (v) => `${v}'s door is written over top to bottom, one line in a fine hand: "ASK ME NICELY AND I WILL STOP." No one ever has.`, clue: `a door written over in a fine hand, one sentence repeated: "ASK ME NICELY AND I WILL STOP." It is playing now, and it wants you to know it.` },
 ];
 
 /* The thing does not always stop at one. Some killing nights it goes on past
@@ -528,10 +528,10 @@ const KILLER_MESSAGES = [
    with no name in your journal. Only ever on a night it already hunted, so
    the pattern of the ledger stays true, and never diagnostic of its kind. */
 const CRUELTY_DAWN = [
-  "The night did not stop inside the village. The croft past the mill stream did not answer the morning: the crofter, his wife, and of the children no one will say anything at all, except that the men who went in came out and were sick against the wall, and the youngest of the searchers has not spoken since. The carpenter was asked for four coffins. Then, in a voice that failed halfway through the asking, for two small ones.",
-  "Someone heard laughing in the small hours, out past the last fence. High, delighted, going on and on, the way a child laughs when a game is going well. This morning the shepherd's dogs were found laid in a ring, nose to tail, opened, and not one of them eaten. It was not hungry last night. It was enjoying itself.",
-  "The old couple at the turn of the north road were a week from going to live with their daughter. The men who found them will say only this much: that it was slow, that it was slow for both of them, and that one was made to wait while it finished with the other. The rope marks on the chair say which order. None of this is repeated in the square. All of it is known by noon.",
-  "There is blood on the milestone half a mile out, a great deal of it, gone tacky in the cold, and small bare footprints leading away into the field. Forty yards of them, running, wide-spaced, desperate. Then they stop mid-stride in open ground, and past that last pair of prints there is nothing but unbroken frost. The searchers stood a long while looking at where the running ended, and came home without a body, and without a word for it.",
+  "The croft past the mill stream did not answer this morning. The men who went in came out sick against the wall, and asked the carpenter for two small coffins among the four.",
+  "Laughing was heard past the last fence in the small hours, high and delighted. This morning the shepherd's dogs lay in a ring, opened, not one eaten. Not hunger. Enjoyment.",
+  "The old couple at the north turn were a week from leaving. The men who found them say only that it was slow, and that one was made to wait while it finished the other.",
+  "Blood on the milestone half a mile out, and small bare footprints running into the field, wide-spaced, desperate. They stop mid-stride in open ground, the frost past them unbroken.",
 ];
 
 const MOB_REASONS = [
@@ -3365,6 +3365,14 @@ function applyAnswer(prev, id, night, q, targetId) {
 
 /* ================= ACCUSATION ================= */
 
+/* Dusk-rite openers, drawn so the naming does not read word-for-word the same
+   every time. (name, creature) => line. */
+const RITE_OPEN = [
+  (nm, cr) => `At dusk the village gathers, torches guttering. You say it aloud: ${nm}. And what you believe wears their face: a ${cr}.`,
+  (nm, cr) => `The square fills at dusk, every torch lit. You give them a name, ${nm}, and then the truer one you swear is under the skin: a ${cr}.`,
+  (nm, cr) => `Dusk. The village closes into a ring of light around you. You name ${nm}, and the thing you believe them to be: a ${cr}.`,
+];
+
 function actAccuse(prev, id, typeId) {
   const s = JSON.parse(JSON.stringify(prev));
   const m = monsterOf(s);
@@ -3372,8 +3380,8 @@ function actAccuse(prev, id, typeId) {
   const declared = MONSTERS.find((x) => x.id === typeId);
   const beats = [];
   if (s.mob) { s.mob = null; }
-  beats.push(`At dusk the village gathers, torches guttering, and you say it aloud: ${npc.name}. And you name the thing you believe them to be: a ${declared.name}.`);
-  beats.push(`${ritePreparer(s, id)} consults the old books and prepares what they prescribe: the ${METHODS[declared.method]}.`);
+  beats.push(pick(RITE_OPEN)(npc.name, declared.name));
+  beats.push(`${ritePreparer(s, id)} readies what the old books prescribe: the ${METHODS[declared.method]}.`);
 
   if (id === s.monster.vid && typeId === s.monster.type) {
     beats.push(`${npc.name} smiles. It is the last time anyone mistakes that smile for a neighbour's.`);
@@ -3387,10 +3395,9 @@ function actAccuse(prev, id, typeId) {
   if (id === s.monster.vid) {
     s.fled = true;
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, fled: true } : x));
-    beats.push(`The rite is performed. The circle closes. And nothing happens.`);
-    beats.push(`${npc.name} looks at the ${METHODS[declared.method]}, and then at you, and laughs. The laugh is the last human sound it makes.`);
-    beats.push("What it becomes, no two witnesses will ever agree on. The torchlight, the panic, the speed of it. It goes over the churchyard wall and into the tree line, and the whole village hears it stop running and turn around.");
-    beats.push("You had the right face and the wrong name. It has no reason to hide anymore, and every reason to make you pay. Learn its true nature from what it left behind, and quickly. Two failed rites is all the faith this village has left to spend.");
+    beats.push(`The rite is performed. The circle closes. Nothing happens.`);
+    beats.push(`${npc.name} looks at the ${METHODS[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
+    beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Two failed rites is all this village has left.");
     s.dayEvents.push(ev(`The village knows the face now. It does not know the name, and only the right rite will end this. Study the signs. When you are ready, perform the rite at dusk. You will not get more than two tries.`, id));
     s.ap = 0;
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
@@ -3403,8 +3410,8 @@ function actAccuse(prev, id, typeId) {
   s.embolden = s.nightNum + 1;
   for (const pid of Object.keys(s.patience)) s.patience[pid] = Math.max(0, s.patience[pid] - 1);
   beats.push(`${npc.name} protests. To the end, ${npc.name} protests.`);
-  if (npc.turned) beats.push(`As the rite begins, their eyes flash with something that was never theirs. A murmur runs through the crowd. Changed. They were changed.`);
-  beats.push(`The ${METHODS[declared.method]} does its work on plain human flesh. When it is over, the village does not have a dead monster. It has a dead neighbour, and the silence of everyone who helped.`);
+  if (npc.turned) beats.push(`As the rite begins, their eyes flash with something that was never theirs. Changed. They were changed.`);
+  beats.push(`The ${METHODS[declared.method]} does its work on plain human flesh. The village does not have a dead monster. It has a dead neighbour, and everyone's silence.`);
   beats.push(`They go home in the dark, and no one meets your eye.`);
   s.calmHope = npc.name;
   /* -- Pass G2: the grim bargain pays off, quietly, without ever announcing
