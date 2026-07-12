@@ -547,7 +547,7 @@ const DEATH_SCENES = {
     `Breathing, first: close, ragged, enormous, timed to your own footsteps like something that has been pacing you for a hundred yards and finally tired of the game.`,
     `You turn. The moon is generous. It shows you the wrongness of the joints, the breadth of the shoulders, and in the ruin of the face, patient as a debt: ${nm}'s eyes.`,
     `It takes you at the shoulder first, and the crunch arrives through your bones before it arrives through your ears, and the arm on that side stops being anything you own. Then you are down in the mud with the heat of its mouth working in the wound, and your own blood is in your throat now, and the screaming you can hear is coming out of you in bubbles.`,
-    `It does not stop at the kill. Animals stop; this is not hungry the way animals are hungry. It eats while you are still learning that you are dying, unhurried, tugging at you with a patient, rhythmic, almost sociable motion, like a man carving at his own table. By the time the ${w} goes quiet, there is a reason the search party carries you home in two sacks, and a reason no one lets the children watch them pass.`,
+    `It does not stop at the kill. This is not animal hunger. It eats while you are still learning that you are dying, unhurried, tugging with an almost sociable patience, like a man carving at his own table. There is a reason they carry you home in two sacks, and none of it fit for the children to watch pass.`,
   ],
   vampire: (nm, w) => [
     `Your name, said softly, from somewhere ahead on the path, in a voice that already sounds fond of you. No footsteps announced it. It has been standing there a while.`,
@@ -565,7 +565,7 @@ const DEATH_SCENES = {
     `A wet, busy sound ahead at the ${w}: digging, or chewing, unhurried, the sound of something with all night and no reason to rush.`,
     `It looks up before you are close enough to have been heard, and under the grave-dirt caked to its face there is enough of ${nm} left to recognise, and a grin that goes back too far.`,
     `It is on you before your knife clears your belt, stronger than a starved thing has any right to be, and its teeth close on your forearm first, worrying at it the way a dog works a joint loose.`,
-    `It does not wait for you to finish. It starts at the forearm it has already opened, and you are alive for more of the meal than any mercy would allow, dragged hand over hand toward the soft ground while it feeds, your heels cutting two long furrows you will share the grave with. The last thing you learn is why the graves nearby never stayed settled. The searchers find the ground disturbed all over again by morning, and know better, this time, than to dig all the way down.`,
+    `It does not wait for you to finish dying. It starts at the forearm it has opened, and you are alive for more of the meal than any mercy would allow, dragged hand over hand toward the soft ground, your heels cutting two long furrows you will share the grave with. The last thing you learn is why the graves nearby never stayed settled.`,
   ],
   witch: (nm, w) => [
     `A voice rides the wind ahead of you at the ${w}, reciting something soft and rhythmic in no language you know, and your feet stop obeying you exactly as the last syllable lands.`,
@@ -582,8 +582,8 @@ const DEATH_SCENES = {
   shifter: (nm, w) => [
     `Footsteps at the ${w} that match your own pace exactly, half a beat behind, as if something out there is learning your gait before it needs it.`,
     `Someone is standing with their back to you, the shape unmistakably ${nm}'s, and then, without appearing to move at all, it is not.`,
-    `The claws are the only honest thing about it. Four of them open your side in one motion, and there is a sound like wet cloth tearing that you understand, too late, is you. It works with a tailor's economy - no rage, no hunger, nothing personal in it at all - while its borrowed face keeps its borrowed calm, and the warmth leaving your body pools in your boots.`,
-    `It studies your face while you die, closely, professionally, the way a tailor studies cloth before committing to the cut. Then it takes the face. You are almost past feeling when it starts, which is not the same as past feeling: the last thing that reaches you is a careful tugging at the hairline, patient as a barber. It will wear you to your own wake by morning, and grieve you convincingly, in your own coat.`,
+    `The claws are the only honest thing about it. Four of them open your side in one motion, with a sound like wet cloth tearing that you understand, too late, is you. It works with a tailor's economy, nothing personal in it at all, while its borrowed face keeps its borrowed calm.`,
+    `It studies your face while you die, professionally, the way a tailor studies cloth before the cut. Then it takes the face. You are almost past feeling when it starts, which is not the same as past feeling: the last thing to reach you is a careful tugging at the hairline. It will wear you to your own wake by morning, and grieve you in your own coat.`,
   ],
   banshee: (nm, w) => [
     `The wail does not arrive from the ${w}. It arrives from inside your own skull, a grief that is not yours pouring in like water through a failed wall.`,
@@ -594,7 +594,7 @@ const DEATH_SCENES = {
   hellhound: (nm, w) => [
     `Sulfur first, thick on the night air, and then paws, heavier than any dog's, closing the ground between you and the ${w} in long, unhurried strides.`,
     `You run. Everyone runs. That has never once mattered, and it does not start mattering now: two coals swing level with your chest and keep coming.`,
-    `The weight of it lands across your back before you hear it leave the ground, and the jaw that closes on your shoulder does not let go. It worries the bite wider with every second you struggle, working its grip toward the neck the way a dog works a knot out of rope, and the smell of your own blood scorching on its breath is the last smell there is.`,
+    `The weight of it lands across your back before you hear it leave the ground, and the jaw that closes on your shoulder does not let go. It worries the bite wider with every second you struggle, working toward the neck the way a dog works a knot from rope, and the smell of your own blood scorching on its breath is the last there is.`,
     `Somewhere behind, unhurried footsteps arrive to watch the finish: ${nm}'s tread, easy, in no rush at all to see something that was never in doubt. What's left of you at the ${w} still smells of struck matches at dawn, and the dogs of the village will not go near the spot again.`,
   ],
   revenant: (nm, w) => [
@@ -711,10 +711,10 @@ const OFFER_MIN_NIGHT = 3;
 /* Siege nights: what the unmasked thing does to the barricaded village.
    One entry per night, no repeats while the pool holds out. */
 const SIEGE_KILLS = [
-  { beat: (v) => `Toward dawn, a cry from the houses. ${v.name} had slipped back for something - nobody knows what, and now nobody ever will - and the night was waiting for exactly that.`, dawn: (v) => `${v.name} ${v.role} was found at first light, halfway between their own door and the church. They very nearly made it back. It made sure they had time to understand how nearly.` },
-  { beat: (v) => `It comes through the west window in a storm of glass and takes ${v.name} out of the middle of the congregation - out through the frame by one arm, gone into the dark, while every hand that grabs for them closes on air. Then it stays close. Just past the torchlight, where the light can't reach and the hearing can. It eats slowly. It wants the hearing. That is the point of it now.`, dawn: (v) => `${v.name} was taken from inside the church itself, and what was left by morning had been arranged facing the doors, deliberately, so the first ones out would have to step around it.` },
-  { beat: (v) => `Something laughs outside the church, low and delighted, and walks the walls once, twice, trailing one claw along the stone so that everyone inside can follow its progress around them. Then the great door groans inward against the bar - bends, holds - and a voice half the room knows and no one will name says, pleasantly, through the wood: "Not tonight. Tonight, just the one." And out in the houses, toward dawn, one scream keeps the promise: ${v.name}, who never made it inside at dusk.`, dawn: (v) => `${v.name} ${v.role} never reached the church at dusk. It found them long before dawn, and from the state of the house, it was in no hurry at all.` },
-  { beat: (v) => `In the worst hour of the night the singing falters, and in the gap where the hymn was, everyone hears it: ${v.name}'s voice, outside, in the dark, calling to be let in. The bar is half lifted before old hands slam it back down. ${v.name} is sitting in the third pew. Has been all night. Whatever is outside wearing that voice keeps calling till dawn, patient, working through name after name after name, and by first light it has found one that isn't in the church to answer for itself.`, dawn: (v) => `${v.name} ${v.role} is gone from their house, the door standing open, the supper still on the table. Something called them out in a voice they trusted. Everyone in the church heard what it can do with a voice.` },
+  { beat: (v) => `Toward dawn, a cry from the houses. ${v.name} had slipped back for something, and the night had been waiting for exactly that.`, dawn: (v) => `${v.name} ${v.role} was found at first light, halfway between their door and the church. They nearly made it back. It made sure they knew how nearly.` },
+  { beat: (v) => `It comes through the west window in a storm of glass and takes ${v.name} out of the middle of the congregation, out by one arm, gone, while every hand that grabs for them closes on air. Then it stays close, just past the torchlight, and eats slowly. It wants the hearing.`, dawn: (v) => `${v.name} was taken from inside the church itself, and what was left had been arranged facing the doors, so the first ones out would have to step around it.` },
+  { beat: (v) => `Something laughs outside the church and walks the walls, trailing one claw along the stone so everyone inside can follow it round them. Then a voice half the room knows says through the wood, pleasantly: "Not tonight. Tonight, just the one." Toward dawn, one scream keeps the promise: ${v.name}, who never made it inside at dusk.`, dawn: (v) => `${v.name} ${v.role} never reached the church at dusk. It found them long before dawn, and from the state of the house, it was in no hurry at all.` },
+  { beat: (v) => `In the worst hour the singing falters, and everyone hears it: ${v.name}'s voice, outside, calling to be let in. The bar is half lifted before old hands slam it down. ${v.name} is in the third pew, has been all night. The voice keeps calling till dawn, and by first light it has found one that isn't inside to answer.`, dawn: (v) => `${v.name} ${v.role} is gone from their house, the door open, the supper still on the table. Something called them out in a voice they trusted. Everyone in the church heard what it can do with a voice.` },
 ];
 
 /* Ten openings, two beats each, drawn fresh across replays. None of them
@@ -965,10 +965,30 @@ const FOLLOW_TURNED_SCENES = [
   (nm, dest) => `${nm} walks to the ${dest} the way the sleepless walk: no errand, no haste, no lantern. Once there, they stand with their face tipped up to the dark, mouth moving around words that don't carry. An hour of it. Your legs go numb long before their patience does.`,
   (nm, dest) => `At the ${dest}, ${nm} kneels, lays both palms flat against the cold ground, and holds them there, listening through their hands to something you cannot hear. When they rise, they say something soft to the dark. You are too far away to hear it. You are certain, all the same, that it was thanks.`,
 ];
+/* Following an innocent on a blameless night is not a dead end: it is a
+   window into who these people are. None of these carry a monster tell; some
+   are the disguised thing on a quiet night, wearing its humanity well. */
 const FOLLOW_PLAIN_SCENES = [
-  (nm, dest) => `${nm}'s errand proves brief and blameless: to the ${dest} and back, meeting no one, hurting nothing. ${nm} heads straight home after and bars the door.`,
-  (nm, dest) => `${nm} goes to the ${dest}, does some small human errand badly by moonlight - drops things, curses softly, hurries - and heads home with the particular walk of somebody who knows exactly how stupid it was to be out. You know that walk. It is yours, most nights.`,
-  (nm, dest) => `Whatever took ${nm} to the ${dest}, it takes ten minutes and harms no one, and they spend the entire walk home checking over their shoulder at everything except the one shadow you are actually standing in.`,
+  (nm, dest) => `${nm}'s errand proves brief and blameless: to the ${dest} and back, meeting no one, hurting nothing. ${nm} heads straight home and bars the door.`,
+  (nm, dest) => `${nm} does some small human errand badly by moonlight at the ${dest} - drops things, curses softly, hurries - and heads home with the walk of somebody who knows exactly how stupid it was to be out. You know that walk. It is yours, most nights.`,
+  (nm, dest) => `Whatever took ${nm} to the ${dest} takes ten minutes and harms no one, and they spend the whole walk home checking over their shoulder at everything except the one shadow you are standing in.`,
+  (nm, dest) => `${nm} goes to the ${dest} and just sits, alone in the cold, doing nothing at all, a long time. Some griefs need a place that isn't home to be felt in. You leave them to it, feeling like a thief for watching.`,
+  (nm, dest) => `${nm} walks to the ${dest} and back and to it again, no errand, just motion, the way people move when the house holds one too many empty chairs. You know that walk from the inside.`,
+  (nm, dest) => `At the ${dest}, ${nm} drinks alone from a flask, joyless and methodical, muttering to someone who is not there. Grief, or guilt, or only the drink. Human, all of it.`,
+  (nm, dest) => `${nm}'s whole errand is to stand at the ${dest} and look back at the village a while, counting the lit windows as if making sure of them, and then go home. Whatever they feared losing was still there.`,
+  (nm, dest) => `At the ${dest}, ${nm} tends to something in the dark - a grave, a sick animal, hard to say - with a gentleness you would never have guessed from how they are by daylight. People keep their soft parts for the dark.`,
+  (nm, dest) => `${nm} meets someone at the ${dest}: two people who should not be seen together, standing too close, talking too low, parting too carefully. Whose business it is, is theirs. You take the knowing home and say nothing.`,
+  (nm, dest) => `At the ${dest}, ${nm} prays - not the Sunday kind, the desperate kind, fast and private and bargaining. You cannot hear the terms. You hope, for their sake, that something is listening.`,
+  (nm, dest) => `${nm} leaves something at the ${dest}, food by the shape of it, for whom you cannot see, and slips off quick so no one need thank them. You did not know that about ${nm}. You are glad to.`,
+  (nm, dest) => `${nm} reaches the ${dest}, does nothing you can name, and weeps once, briefly, in the way of someone who has learned to do it quietly and on a schedule. Then wipes their face and walks home steady. You will look at them differently by day.`,
+];
+/* The morning-after journal echo for a blameless follow: it teaches you a
+   villager, and pointedly not the monster. */
+const DAWN_PLAIN_FOLLOW = [
+  (nm, dest) => `You followed ${nm} to the ${dest} last night. Whatever it was, it was human, and private, and not the thing you are hunting.`,
+  (nm, dest) => `You followed ${nm} to the ${dest} and came home knowing them a little better, and the monster not at all.`,
+  (nm, dest) => `You followed ${nm} to the ${dest}. Ordinary business, or a private grief. Either way, no sign of the thing in it.`,
+  (nm, dest) => `You trailed ${nm} to the ${dest} and learned something of who they are. None of it points where you need it to.`,
 ];
 const HAIL_MONSTER_LINES = [
   (nm, dest) => `${nm} stops. Considers you. "Dangerous night for a walk," they say, pleasantly. "For you, I mean." The smile takes one beat too long to arrive, and you suddenly want a wall at your back.`,
@@ -1864,7 +1884,7 @@ function resolveNight(prev, planIn, preEvents) {
       dawn.push(ev(`You know ${fw.name}'s secret now: ${sec.short}. Whatever they claim about their nights, you know the human truth of it.`, fw.id));
     } else {
       beats.push(`You leave ${fw.name} to their blameless errand and take yourself home, feeling a fool, and glad of the feeling.`);
-      dawn.push(ev(`You followed ${fw.name} to the ${fDest} last night. Whatever their business, it looked like ordinary business.`, fw.id));
+      dawn.push(ev(pickFreshIdx("dawnPlainFollow", DAWN_PLAIN_FOLLOW)(fw.name, fDest), fw.id));
     }
     return false;
   };
@@ -2453,8 +2473,8 @@ function resolveNight(prev, planIn, preEvents) {
     if (noteCand.length) {
       const target = pick(noteCand);
       s.coerceNote = { target: target.id, night: n, shown: false };
-      dawn.push(ev(`Folded somewhere only you would have reached for it, a scrap of paper you did not put there. The hand is small, careful, and utterly unhurried: "GIVE ME ${target.name.toUpperCase()} AND THIS ENDS, FOR YOU. NO ONE ELSE NEEDS EVER TO KNOW WHY." You read it twice, alone, and are grateful, for once, that you are.`, target.id));
-      s.clues.push(`Night ${n}: a note, left where only you could have found it, offering your own safety in exchange for ${target.name}. To hand it ${target.name} is to hang an innocent on a monster's word, that is the whole trap of it. You can burn it and say nothing, or take it to the square and let the village see how the thing bargains. (Open ${target.name}'s profile to show the note.)`);
+      dawn.push(ev(`Folded where only you would have reached, a scrap you did not put there, in a small unhurried hand: "GIVE ME ${target.name.toUpperCase()} AND THIS ENDS, FOR YOU. NO ONE ELSE NEED EVER KNOW WHY." You read it twice, alone, and are grateful you are.`, target.id));
+      s.clues.push(`Night ${n}: a note offering your own safety in exchange for ${target.name}. To hand it ${target.name} is to hang an innocent on a monster's word. Burn it, or show it in the square (open ${target.name}'s profile). Do not give it what it wants.`);
     }
   }
 
