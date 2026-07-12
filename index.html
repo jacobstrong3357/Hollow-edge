@@ -5622,7 +5622,7 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 19, color: C.parch }}>Day {s.dayNum}{s.fled ? " · under siege" : ""}</span>
             <span style={{ fontSize: 12, color: C.dim }}>
               <button onClick={toggleSound} className="mv-body mr-2" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12, cursor: "pointer", padding: 0 }}>{snd ? "♪" : "♪·off"}</button>
-              {aliveNpcs(s).length + 1} living{knownChanged ? ", and some walk changed" : ""}
+              {aliveNpcs(s).length} living{knownChanged ? ", and some walk changed" : ""}
             </span>
           </div>
           <div className="mt-1"><MoonStrip s={s} /></div>
