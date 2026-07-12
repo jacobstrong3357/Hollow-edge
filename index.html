@@ -617,6 +617,17 @@ const DEATH_SCENES = {
   ],
 };
 
+/* Two wrong names is one too many: on the second, the thing stops feeding on
+   the village and comes for the one who kept naming it wrong. Appends a death
+   scene to the given beats and sets the loss. */
+function monsterKillsAccuser(s, beats, intro, where) {
+  const m = monsterOf(s);
+  const mn = npcById(s, s.monster.vid);
+  if (intro) beats.push(intro);
+  beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "your own door"));
+  s.over = { win: false, reason: "slain", text: `Twice you named it wrong, and the second time was one too many. It stopped feeding on the village and came for you the same night, and the neighbours whose trust you had spent did not come when you called.` };
+}
+
 /* ---------- Pass G2: the offer ----------
    Vanishingly rare, and only reachable by a monster that has, in its own
    way, come to want something other than the player's death. Three beats:
@@ -1486,7 +1497,7 @@ function newGame() {
     knownBuild: null, buildClues: [], monsterSawYou: false, mob: null, embolden: 0,
     dawn: [], dawnScene: null, dayEvents: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
-    enraged: false, fled: false, riteFails: 0, over: null,
+    enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
     struck: [], nightBeats: [], beatTitle: null, phase: "night",
     /* -- hidden fondness mechanic (Pass G2): a coin flip decided once, at
        the start of the game, never shown to the player directly. Bond only
@@ -1627,7 +1638,14 @@ function resolveNight(prev, planIn, preEvents) {
         return s;
       }
       s.riteFails += 1;
+      s.wrongGuesses += 1;
       beats.push(`It comes out of the dark, walks to the very edge of the circle, and stops. The ${METHODS[declared.method]} means nothing to it.`);
+      if (s.wrongGuesses >= 2) {
+        monsterKillsAccuser(s, beats, "It does not take a neighbour this time. It steps across the dead circle, unhurried, straight to you, and the village that stood here on your word steps back and lets it.", "the square");
+        s.nightBeats = beats; s.beatTitle = `NIGHT ${n} \u00b7 UNDER SIEGE`; s.phase = "night"; s.dawn = dawn;
+        s.nightLogs.push({ night: n, active: true, huntLoc: null, outMap: {}, wail: false, weather: null, event: null });
+        return s;
+      }
       const cand = untainted(s);
       if (cand.length) {
         const v = pick(cand);
@@ -1636,14 +1654,7 @@ function resolveNight(prev, planIn, preEvents) {
         s.deaths.push({ night: n, id: v.id, name: v.name, kind: "slain", where: "Village Square", examined: false, found: [] });
         dawn.push(ev(`${v.name} ${v.role} was taken at the failed rite. What is left was found at the tree line.`, v.id));
       }
-      if (s.riteFails >= 2 && !s.over) {
-        beats.push("Two rites. Two wrong names. Two more dead. When the survivors look at you now, it is not for answers.");
-        s.over = { win: false, reason: "distrust", text: `Twice the village stood in the circle on your word, and twice it buried someone for it. On the third morning they put you out of the gates with what you can carry. The thing in the woods watches you go, and does not follow. It has what it wants.` };
-        s.nightBeats = beats; s.beatTitle = `NIGHT ${n} \u00b7 UNDER SIEGE`; s.phase = "night"; s.dawn = dawn;
-        s.nightLogs.push({ night: n, active: true, huntLoc: null, outMap: {}, wail: false, weather: null, event: null });
-        return s;
-      }
-      beats.push("Wrong. The books, the signs, something. You have very little village left to be wrong with.");
+      beats.push("Wrong. The books, the signs, something. You have very little village left to be wrong with, and no wrong names left at all.");
     } else {
       beats.push("You barricade with the others in the church and listen to it work its way around the walls, patient as weather.");
       const cand = untainted(s);
@@ -3393,12 +3404,21 @@ function actAccuse(prev, id, typeId) {
   }
 
   if (id === s.monster.vid) {
+    s.wrongGuesses += 1;
+    if (s.wrongGuesses >= 2) {
+      beats.push(`The rite is performed. The circle closes. Nothing happens.`);
+      beats.push(`${npc.name} looks at the ${METHODS[declared.method]}, then at you, and the last of the pretence falls away. Right face. Wrong name. Again. And this time it does not run.`);
+      monsterKillsAccuser(s, beats, `It crosses the broken circle before anyone's legs will answer, and the village whose trust you have spent only watches.`);
+      s.ap = 0;
+      s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
+      return s;
+    }
     s.fled = true;
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, fled: true } : x));
     beats.push(`The rite is performed. The circle closes. Nothing happens.`);
     beats.push(`${npc.name} looks at the ${METHODS[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
-    beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Two failed rites is all this village has left.");
-    s.dayEvents.push(ev(`The village knows the face now. It does not know the name, and only the right rite will end this. Study the signs. When you are ready, perform the rite at dusk. You will not get more than two tries.`, id));
+    beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Name it wrong once more and it comes for you, not them.");
+    s.dayEvents.push(ev(`The village knows the face now, but not the name, and only the right rite ends this. Study the signs and be sure: you have one wrong name left before it stops taking neighbours and takes you.`, id));
     s.ap = 0;
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
     return s;
@@ -3407,6 +3427,7 @@ function actAccuse(prev, id, typeId) {
   s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
   s.deaths.push({ night: s.nightNum, id, name: npc.name, kind: "executed" });
   s.wrongExecutions += 1;
+  s.wrongGuesses += 1;
   s.embolden = s.nightNum + 1;
   for (const pid of Object.keys(s.patience)) s.patience[pid] = Math.max(0, s.patience[pid] - 1);
   beats.push(`${npc.name} protests. To the end, ${npc.name} protests.`);
@@ -3420,12 +3441,11 @@ function actAccuse(prev, id, typeId) {
     s.monsterProtects = true;
     beats.push("Somewhere beyond the torchlight, something that once left you a note reads the outcome in the crowd's own grief, and is, for the first time in this whole affair, satisfied.");
   }
-  if (s.wrongExecutions >= 2) {
-    beats.push("Somewhere in the dark beyond the torchlight, something is laughing.");
-    s.over = { win: false, reason: "distrust", text: "Two of the village's own, dead on your word, and the killing has not stopped. At dawn they come for you instead. Whatever walks the night, it has won without ever touching you." };
+  if (s.wrongGuesses >= 2) {
+    monsterKillsAccuser(s, beats, "Out beyond the torchlight, something that has watched you spend the village's trust decides it has seen enough. Tonight it does not go looking for a neighbour.");
   } else {
     beats.push("And out beyond the torchlight, something that watched the whole thing turns away satisfied. Tonight it will feed without fear. An innocent hanged is a village half-beaten.");
-    s.dayEvents.push(ev(`${npc.name} is dead on your word. The village will not forgive a second mistake, and the thing in the dark grows bold on your failure.`, id));
+    s.dayEvents.push(ev(`${npc.name} is dead on your word. Name the thing wrong once more and it stops taking neighbours and comes for you.`, id));
   }
   s.ap = 0;
   s.nightBeats = beats; s.beatTitle = "JUDGMENT"; s.phase = "night";
@@ -5159,7 +5179,7 @@ function MonsterVillage() {
             <p className="mt-2"><strong>By night:</strong> bar your door, investigate one villager, or search an area. Searching is a walk: follow who you meet, hail them, press close or turn back. A villager seen home on a killing night is cleared. Fog hides faces; frost holds prints.</p>
             <p className="mt-2"><strong>The armed confrontation:</strong> work the journal down to a single possible creature and you walk the nights carrying its remedy. Catch the thing at its business and confront it, and you can name it and end it right there in the dark, before it takes another soul. Carry the wrong name into that moment and you will not carry anything home again.</p>
             <p className="mt-2"><strong>It fights back:</strong> hunted, it plants false marks where it never walks. Search the same ground twice by day to expose them.</p>
-            <p className="mt-2"><strong>Accusing:</strong> name a person and a creature together. Right on both ends it. Wrong person: an innocent dies by the rite, and a second mistake ends you. Right face, wrong name: it flees, besieges the village, and you have two rites of faith left.</p>
+            <p className="mt-2"><strong>Accusing:</strong> name a person and a creature together. Right on both, it ends. Wrong person: an innocent dies by the rite. Right face, wrong name: it flees and besieges the village. Get it wrong twice in any mix, and it stops feeding on the village and comes for you.</p>
           </div>
         )}
       </div>
@@ -5774,7 +5794,7 @@ function MonsterVillage() {
               s.dawn.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))
             )}
             {s.enraged && <p className="mt-2" style={{ color: C.redBright, fontSize: 13, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
-            {s.wrongExecutions === 1 && <p className="mt-2" style={{ color: C.redBright, fontSize: 13 }}>One of the village's own is dead on your word, and the thing grows bold on it. They will not forgive a second mistake.</p>}
+            {s.wrongGuesses === 1 && <p className="mt-2" style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
           </div>
         </div>
 
