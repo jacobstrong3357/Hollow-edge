@@ -995,6 +995,27 @@ const RETIRE_LINES = [
   (nm) => `${nm}'s chimney smoke thins to nothing, and the house settles into the dark like every honest house on the lane. You give it one more hour, and the hour gives you nothing back.`,
   (nm) => `Behind the shutters, ${nm}'s fire burns down to embers and no one tends it. Asleep, then. Or very good at seeming to be. Your cold feet cast the deciding vote: home.`,
 ];
+/* Even a stay-home watch can turn something up: an unsettled, sleepless
+   house that gives you a feeling if not a fact. Ambiguous on purpose. */
+const WATCH_RESTLESS = [
+  (nm) => `${nm} never slept. A candle lit, snuffed, lit again, their shadow crossing the shutter hour on hour, back and forth, like something kept awake by its own company.`,
+  (nm) => `Twice in the night ${nm} cracked the shutter and stood looking out at nothing, or at everything, and twice drew it shut as though they had heard you think.`,
+  (nm) => `${nm}'s house was too quiet: no fire banked, no tread, no cough. Just a stillness held on purpose, the way you hold a breath, all the way to dawn.`,
+  (nm) => `Long after every honest candle died, ${nm}'s stayed lit, and something moved behind it that did not move the way sleep moves.`,
+];
+/* One roll for what a stay-home watch turns up, so the live walk and the
+   morning recap always agree: it is computed once and carried on the shared
+   night facts. Never fires on the monster (never a giveaway). */
+function rollHomeWatch(s, id) {
+  const target = npcById(s, id);
+  if (!target || id === s.monster.vid) return { kind: "quiet" };
+  const roll = Math.random();
+  const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id && x.id !== s.monster.vid);
+  if (SECRETS[id] && !target.secretKnown && roll < 0.3) return { kind: "secret", short: SECRETS[id].short };
+  if (others.length && roll < 0.52) return { kind: "visitor", visitorId: pick(others).id };
+  if (roll < 0.7) return { kind: "restless", ri: Math.floor(Math.random() * WATCH_RESTLESS.length) };
+  return { kind: "quiet" };
+}
 
 const EVENTS = [
   { id: "harvest", name: "harvest festival", loc: "Village Square", intro: "Against all sense, the harvest festival goes ahead. Fiddle music, cider, and every laugh a little too loud." },
@@ -2164,6 +2185,25 @@ function resolveNight(prev, planIn, preEvents) {
          problem as the out-walk's arrival/closure lines. */
       if (!plan.facts) beats.push(`${target.name}'s door stays shut. The candle behind the shutter gutters out around midnight, and does not relight.`);
       watchStayedHome = watching;
+      /* A stay-home watch is no longer a dead end. It turns up their own human
+         secret, a visitor nobody has mentioned, or a house that never slept.
+         The outcome was rolled once (interactive: carried on plan.facts and
+         already lived in the walk; non-interactive: rolled fresh here) so the
+         morning journal always matches what the night showed. */
+      const hw = (plan.facts && plan.facts.homeWatch) ? plan.facts.homeWatch : rollHomeWatch(s, watching);
+      if (hw.kind === "secret") {
+        s.npcs = s.npcs.map((x) => (x.id === watching ? { ...x, secretKnown: true } : x));
+        s.clues.push(`Night ${n}: watching ${target.name}'s house, you learned the human truth of their nights: ${hw.short}. It explains their lies, and it is not the thing you are hunting.`);
+        dawn.push(ev(`${target.name} never left, but you saw enough through the shutter to know their secret: ${hw.short}. Human, and sad, and not what stalks Hollow's Edge.`, watching));
+      } else if (hw.kind === "visitor") {
+        const visitor = npcById(s, hw.visitorId);
+        if (visitor) {
+          s.clues.push(`Night ${n}: while you watched ${target.name}'s door, ${visitor.name} came to it in the dark, was let in without a knock, and was gone before the bell. Those two keep company nobody has mentioned.`);
+          dawn.push(ev(`You caught ${target.name} at nothing — but you caught ${visitor.name} slipping to their door in the dark, let in without a knock and gone before the bell. Whatever ties those two, they keep it quiet.`, visitor.id));
+        }
+      } else if (hw.kind === "restless") {
+        dawn.push(ev(WATCH_RESTLESS[hw.ri % WATCH_RESTLESS.length](target.name), watching));
+      }
     } else {
       if (!plan.facts) beats.push("The house you watch stands dark and empty. Nothing stirs there at all.");
     }
@@ -4622,6 +4662,9 @@ function MonsterVillage() {
     const facts = sampleNight(s, monsterOf(s), s.nightNum + 1);
     const tLoc = facts.outMap[id];
     const leaves = !!(tLoc && tLoc !== "home");
+    /* Roll the stay-home outcome once, onto the shared facts, so the live walk
+       (below) and the morning recap (resolveNight) tell the same story. */
+    if (!leaves) facts.homeWatch = rollHomeWatch(s, id);
     setModal(null);
     const openLine = pickFreshIdx("watchLines", WATCH_LINES)(npcById(s, id).name);
     const log = watchIntroSeen ? [openLine] : ["You will live this night in the lanes, choice by choice.", openLine];
@@ -4924,18 +4967,34 @@ function MonsterVillage() {
             })()}
             {isWatch && walk.stage === "quiet" && (() => {
               const t = npcById(s, walk.targetId);
+              const hw = walk.facts.homeWatch;
+              const vis = hw && hw.kind === "visitor" ? npcById(s, hw.visitorId) : null;
+              const quietText =
+                hw && hw.kind === "secret"
+                  ? `Through a gap in the shutter, ${t.name} does the very thing they have been lying about — alone, human, and sadder than you had let yourself expect. You have their secret now, and it is not the thing you hunt.`
+                  : hw && hw.kind === "visitor" && vis
+                  ? `${t.name} never leaves. But past midnight a second figure crosses the lane to their door, is let in without a knock, and is gone before the bell. You know that gait. It is ${vis.name}.`
+                  : hw && hw.kind === "restless"
+                  ? WATCH_RESTLESS[hw.ri % WATCH_RESTLESS.length](t.name)
+                  : walk.quietLine || QUIET_WATCH_LINES[(s.nightNum + t.name.length) % QUIET_WATCH_LINES.length](t.name);
+              const settled = hw && hw.kind !== "quiet";
               return (
                 <div className="flex flex-col gap-2">
-                  <p style={{ fontSize: 15, color: C.text }}>{walk.quietLine || QUIET_WATCH_LINES[(s.nightNum + t.name.length) % QUIET_WATCH_LINES.length](t.name)}</p>
-                  <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: "retire", quietLine: walk.quietLine || QUIET_WATCH_LINES[(s.nightNum + t.name.length) % QUIET_WATCH_LINES.length](t.name) })}>Wait it out →</Btn>
+                  <p style={{ fontSize: 15, color: C.text }}>{quietText}</p>
+                  <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: "retire" })}>{settled ? "Slip away with what you have →" : "Wait it out →"}</Btn>
                 </div>
               );
             })()}
             {isWatch && walk.stage === "retire" && (() => {
               const t = npcById(s, walk.targetId);
+              const hw = walk.facts.homeWatch;
+              const settled = hw && hw.kind !== "quiet";
+              const retireText = settled
+                ? `You have carried enough out of the dark for one night. You go back the way you came, turning it over, and do not breathe easy until your own bolt is thrown.`
+                : walk.retireLine || RETIRE_LINES[0](t.name);
               return (
                 <div className="flex flex-col gap-2">
-                  <p style={{ fontSize: 15, color: C.text }}>{walk.retireLine || RETIRE_LINES[0](t.name)}</p>
+                  <p style={{ fontSize: 15, color: C.text }}>{retireText}</p>
                   <Btn full kind="amber" onClick={() => commitWatch({})}>Head home yourself, and bar the door →</Btn>
                 </div>
               );
