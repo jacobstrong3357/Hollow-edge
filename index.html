@@ -4282,22 +4282,22 @@ function MonsterVillage() {
     const total = 1.2 + beats.length * 1.4;
     const toDawn = () => { setS({ ...s, phase: "day" }); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
     return (
-      <div className="min-h-screen mv-body relative overflow-hidden" style={{ background: "linear-gradient(#3E3450, #B4623E 72%, #6E2530)", color: C.parch }}>
+      <div className="h-screen mv-body relative overflow-hidden" style={{ background: "linear-gradient(#3E3450, #B4623E 72%, #6E2530)", color: C.parch }}>
         <style>{CSS_ALL}</style>
         <div className="absolute inset-0 mvNightFade" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})` }} />
         <div className="mvSun absolute" style={{ left: "16%", top: "34%", width: 46, height: 46, borderRadius: "50%", background: "#E8B04B", boxShadow: "0 0 60px 22px rgba(232,176,75,0.35)" }} />
         <div className="mvMoon absolute" style={{ right: "14%", top: "10%", width: 34, height: 34, borderRadius: "50%", background: C.parch, boxShadow: "0 0 40px 12px rgba(233,223,200,0.15)" }} />
-        <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 min-h-screen flex flex-col">
-          <div className="flex items-baseline justify-between">
+        <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 h-full flex flex-col">
+          <div className="flex items-baseline justify-between shrink-0">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
             <button onClick={toDawn} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
           </div>
-          <div className="mt-6 flex-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
+          <div className="mt-6 flex-1 min-h-0 overflow-y-auto pr-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
             {beats.map((b, i) => (
-              <p key={i} className={beatsRevealed ? "mt-4" : "mvBeat mt-4"} style={{ fontSize: 16, lineHeight: 1.45, animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s`, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{b}</p>
+              <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.45, animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s`, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{b}</p>
             ))}
           </div>
-          <div className={beatsRevealed ? "mt-6" : "mvBeat mt-6"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
+          <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
             <Btn full kind="amber" onClick={toDawn}>{s.over ? "…" : "Onward →"}</Btn>
           </div>
         </div>
