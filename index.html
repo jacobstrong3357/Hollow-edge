@@ -4148,6 +4148,12 @@ function MonsterVillage() {
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const recordedRef = useRef(null);
   const walkStageRef = useRef(null);
+  const walkLogRef = useRef(null);
+
+  /* Keep the newest walk beat in view as the log grows inside its own scroll. */
+  useEffect(() => {
+    if (walkLogRef.current) walkLogRef.current.scrollTop = walkLogRef.current.scrollHeight;
+  }, [walk && walk.log.length, walk && walk.stage]);
 
   /* -- the black book: load once, in-memory fallback if storage is unavailable -- */
   useEffect(() => {
@@ -4465,35 +4471,6 @@ function MonsterVillage() {
     const planted = (s.planted || []);
     const joined = !s.over.win && s.over.reason === "joined";
 
-    /* On a loss, the village's fates are played one at a time, full-screen,
-       before the ordinary summary: dumping a wall of deaths at once was
-       worse than the deaths themselves. */
-    if (!s.over.win && fates.length > 2 && !lossIntroSeen) {
-      return (
-        <div className="min-h-screen mv-body relative overflow-hidden" style={{ background: C.bg, color: C.text }}>
-          <style>{CSS_ALL}</style>
-          <div className="relative max-w-md mx-auto px-6 pt-12 pb-8 min-h-screen flex flex-col">
-            <div className="mv-display" style={{ color: C.redBright, fontSize: 13, letterSpacing: 3 }}>{joined ? "WHAT YOU LEAVE BEHIND" : "THE FALL OF HOLLOW'S EDGE"}</div>
-            <p className="mt-1" style={{ fontSize: 13, color: C.dim }}>{joined ? "What became of them, seen from the other side of it now." : "What became of them, one soul at a time."}</p>
-            <div className="mt-8 flex-1 flex flex-col justify-center">
-              <Carousel
-                items={fates}
-                minHeight={230}
-                doneLabel="See how it ended →"
-                onDone={() => setLossIntroSeen(true)}
-                renderItem={({ x, line }) => (
-                  <div className="flex flex-col items-center text-center gap-3">
-                    <Portrait id={x.id} size={76} dead={!x.alive} turnedKnown={x.turned && x.known} />
-                    <div className="mv-display" style={{ color: C.parch, fontSize: 17 }}>{x.name}</div>
-                    <p style={{ fontSize: 16, lineHeight: 1.55, color: C.text }}>{line}</p>
-                  </div>
-                )}
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
     return (
       <div className="min-h-screen mv-body" style={{ background: C.bg, color: C.text }}>
         <style>{CSS_ALL}</style>
@@ -4547,18 +4524,12 @@ function MonsterVillage() {
           <div className="mvIn mt-4" style={{ animationDelay: "2.3s" }}>
             <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>{s.over.win ? "WHAT BECAME OF THEM" : joined ? "WHAT YOU LEAVE BEHIND" : "THE FALL OF HOLLOW'S EDGE"}</div>
             <div className="mt-1">
-              {!s.over.win && fates.length > 2 ? (
-                <button onClick={() => setLossIntroSeen(false)} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: "4px 0" }}>
-                  read the fates again ▾
-                </button>
-              ) : (
-                fates.map(({ x, line }) => (
-                  <div key={x.id} className="flex gap-3 items-start py-1.5" style={{ borderBottom: `1px solid ${C.line}` }}>
-                    <div className="shrink-0"><Portrait id={x.id} size={36} dead={!x.alive} turnedKnown={x.turned && x.known} /></div>
-                    <p style={{ fontSize: 13.5 }}>{line}</p>
-                  </div>
-                ))
-              )}
+              {fates.map(({ x, line }) => (
+                <div key={x.id} className="flex gap-3 items-start py-1.5" style={{ borderBottom: `1px solid ${C.line}` }}>
+                  <div className="shrink-0"><Portrait id={x.id} size={36} dead={!x.alive} turnedKnown={x.turned && x.known} /></div>
+                  <p style={{ fontSize: 13.5 }}>{line}</p>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -4767,18 +4738,20 @@ function MonsterVillage() {
     const danger = !isWatch && walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc;
     const w = walk.lane ? npcById(s, walk.lane.wid) : null;
     return (
-      <div className="fixed inset-0 z-40 mv-body overflow-y-auto" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})`, color: C.parch, WebkitOverflowScrolling: "touch" }}>
-        <div className="max-w-md mx-auto px-6 pt-12 pb-10 min-h-screen flex flex-col">
-          <div className="flex items-baseline justify-between">
+      <div className="fixed inset-0 z-40 mv-body overflow-hidden" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})`, color: C.parch, WebkitOverflowScrolling: "touch" }}>
+        <div className="max-w-md mx-auto px-6 pt-12 pb-10 h-full flex flex-col">
+          <div className="flex items-baseline justify-between shrink-0">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>NIGHT {s.nightNum + 1} · {isWatch ? "THE WATCH" : "THE LANES"}</span>
             <span style={{ fontSize: 12, color: C.dim }}>{walk.facts.wx ? { fog: "fog", storm: "storm coming", frost: "hard frost" }[walk.facts.wx] : "clear"}</span>
           </div>
-          {walk.log.map((t, i) => (
-            <p key={i} className="mt-4" style={{ fontSize: 16, lineHeight: 1.45, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
-              {i === walk.log.length - 1 ? <SpokenText text={t} speed={40} /> : t}
-            </p>
-          ))}
-          <div className="mt-auto pt-6">
+          <div ref={walkLogRef} className="flex-1 min-h-0 overflow-y-auto pr-1" style={{ WebkitOverflowScrolling: "touch" }}>
+            {walk.log.map((t, i) => (
+              <p key={i} className="mt-4 first:mt-0" style={{ fontSize: 16, lineHeight: 1.45, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                {i === walk.log.length - 1 ? <SpokenText text={t} speed={40} /> : t}
+              </p>
+            ))}
+          </div>
+          <div className="shrink-0 pt-6">
             {!isWatch && walk.stage === "depart" && (
               <div className="flex flex-col gap-2">
                 {walk.facts.wx && <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
