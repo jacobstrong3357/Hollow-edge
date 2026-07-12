@@ -874,6 +874,20 @@ const WALK_CLOSURES = [
   (l) => `You give the ${l} back to the dark and take the lanes home at a pace just short of running, telling yourself, the whole way, that dignity is not worth what it costs tonight.`,
 ];
 
+/* Non-people encounters on the way out, so a search is not only ever "you see
+   somebody." Atmosphere and dread, sometimes the thing's passage, never a
+   name. (loc) => beat. */
+const WALK_ODD_SIGHTS = [
+  (l) => `On the way to the ${l} you pass a hen-house standing open, every bird inside it dead and not one taken. Something did this for the doing of it.`,
+  (l) => `A dog is out on its chain in a yard you pass, facing the tree line, rigid and silent, and it does not so much as glance at you. Whatever it watches, it is not you.`,
+  (l) => `The frost holds a single track for a few yards: too long for a boot, too deep, the toes splayed wrong. Then it stops mid-stride, as if the maker had been lifted off the ground.`,
+  (l) => `You pass the well. The bucket is up and overturned, the water black and still, and a smell comes off it like old iron and a colder season than this one.`,
+  (l) => `Every window on the lane is dark but one, and behind that one a candle burns, and a shape sits against it, perfectly still, and is still not moving when you look back.`,
+  (l) => `Something has been at the churchyard wall: a long pale scrape through the moss, shoulder-height, running twenty feet, as though a hand had trailed along it, testing.`,
+  (l) => `The eaves you pass under are empty of birds, all of them, on a night cold enough they should be huddled there. The abandoned nests are the loudest thing on the lane.`,
+  (l) => `A gate swings open and shut on the wind ahead, except there is no wind tonight, and when you reach it the latch is whole and the hinge is dry and it hangs perfectly still.`,
+];
+
 const WALK_SOUND_LINES = [
   "Somewhere off your path: a sound. Wet, rhythmic, patient: a spade, or a jaw, or a prayer being said into the ground.",
   "From between the houses, brief and clear: a chain being tested, link by link, by something with all night to test it.",
@@ -4790,7 +4804,7 @@ function MonsterVillage() {
             {!isWatch && walk.stage === "depart" && (
               <div className="flex flex-col gap-2">
                 {walk.facts.wx && <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
-                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "depart"), log: walk.facts.wx ? [...walk.log, WEATHER_WALK[walk.facts.wx]] : walk.log })}>Into the dark →</Btn>
+                <Btn full kind="amber" onClick={() => { const extra = []; if (walk.facts.wx) extra.push(WEATHER_WALK[walk.facts.wx]); if (chance(0.55)) extra.push(pick(WALK_ODD_SIGHTS)(walk.loc)); setWalk({ ...walk, stage: nextStage(walk, "depart"), log: extra.length ? [...walk.log, ...extra] : walk.log }); }}>Into the dark →</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "lane" && (
