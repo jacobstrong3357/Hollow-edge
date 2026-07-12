@@ -4421,7 +4421,7 @@ function MonsterVillage() {
             ))}
           </div>
           <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
-            <Btn full kind="amber" onClick={toDawn}>{s.over ? "…" : "Onward →"}</Btn>
+            <Btn full kind="amber" onClick={toDawn}>{s.over ? "Onward →" : "Onward →"}</Btn>
           </div>
         </div>
       </div>
@@ -4766,13 +4766,16 @@ function MonsterVillage() {
             <span style={{ fontSize: 12, color: C.dim }}>{walk.facts.wx ? { fog: "fog", storm: "storm coming", frost: "hard frost" }[walk.facts.wx] : "clear"}</span>
           </div>
           <div ref={walkLogRef} className="flex-1 min-h-0 overflow-y-auto pr-1" style={{ WebkitOverflowScrolling: "touch" }}>
-            {walk.log.map((t, i) => (
-              <p key={i} className="mt-4 first:mt-0" style={{ fontSize: 16, lineHeight: 1.45, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
-                {i === walk.log.length - 1 ? <SpokenText text={t} speed={40} /> : t}
-              </p>
-            ))}
+            {walk.log.map((t, i) => {
+              const current = i === walk.log.length - 1;
+              return (
+                <p key={i} className="mt-4 first:mt-0" style={{ fontSize: 16, lineHeight: 1.45, color: current ? C.parch : "rgba(233,223,200,0.42)", textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                  {current ? <SpokenText text={t} speed={40} /> : t}
+                </p>
+              );
+            })}
           </div>
-          <div className="shrink-0 pt-6">
+          <div className="shrink-0 mt-3 pt-4" style={{ borderTop: `1px solid ${C.line}` }}>
             {!isWatch && walk.stage === "depart" && (
               <div className="flex flex-col gap-2">
                 {walk.facts.wx && <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
@@ -5216,6 +5219,13 @@ function MonsterVillage() {
     <div className="flex flex-col gap-1.5">{LOCS.map((l) => locBtn(l, () => doAction((x) => actSearch(x, l)), 46))}</div>
   ));
 
+  const nightWalkModal = modal === "nightwalk" && modalWrap("Search where tonight?", (
+    <div>
+      <div className="grid grid-cols-2 gap-2">{LOCS.map((l) => locBtn(l, () => startWalk(l), 56))}</div>
+      {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. What hunts by night notices being hunted.</p>}
+    </div>
+  ));
+
   /* --- interview --- */
   const startInterview = (id) => {
     const s2 = JSON.parse(JSON.stringify(s));
@@ -5347,10 +5357,10 @@ function MonsterVillage() {
           {!done && !ivSub && (
             <div className="mt-4">
               <div className="grid grid-cols-2 gap-2">
-                <Btn onClick={() => setIvSub("catN")}>The nights…</Btn>
-                <Btn onClick={() => setIvSub("catP")}>Press them…</Btn>
-                <Btn onClick={() => setIvSub("catV")}>The village…</Btn>
-                <Btn onClick={() => setIvSub("catH")}>The person…</Btn>
+                <Btn onClick={() => setIvSub("catN")}>The nights</Btn>
+                <Btn onClick={() => setIvSub("catP")}>Press them</Btn>
+                <Btn onClick={() => setIvSub("catV")}>The village</Btn>
+                <Btn onClick={() => setIvSub("catH")}>The person</Btn>
               </div>
               {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && (iv.id === s.mob.accuser || iv.id === s.mob.target) && (
                 <div className="grid grid-cols-1 gap-2 mt-2">
@@ -5375,7 +5385,7 @@ function MonsterVillage() {
                 <Btn small onClick={() => askQ("saw")}>Who did you see?</Btn>
               </div>
               <div className="grid grid-cols-1 gap-2 mt-2">
-                <Btn small onClick={() => setIvSub("person")}>Ask about a person…</Btn>
+                <Btn small onClick={() => setIvSub("person")}>Ask about someone</Btn>
                 <Btn small onClick={() => setIvSub(null)}>← Back</Btn>
               </div>
             </div>
@@ -5398,7 +5408,7 @@ function MonsterVillage() {
               <div className="mv-display" style={{ fontSize: 11, letterSpacing: 2, color: C.dim }}>THE VILLAGE</div>
               <div className="grid grid-cols-1 gap-2 mt-1">
                 <Btn small disabled={gossipUsed} onClick={() => askQ("gossip")}>What's the talk of the village?</Btn>
-                {shareCandidates.length > 0 && <Btn small onClick={() => setIvSub("share")}>Share what you know…</Btn>}
+                {shareCandidates.length > 0 && <Btn small onClick={() => setIvSub("share")}>Share what you know</Btn>}
                 {canReport && <Btn small kind="amber" onClick={() => askQ("report")}>Tell them what you saw</Btn>}
                 {s.coerceNote && !s.coerceNote.shown && <Btn small kind="red" onClick={showNote}>Show them the note</Btn>}
                 <Btn small onClick={() => setIvSub(null)}>← Back</Btn>
@@ -5521,21 +5531,17 @@ function MonsterVillage() {
     s.fled ? (
       <div className="flex flex-col gap-2">
         <Btn full kind="amber" onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</Btn>
-        <Btn full kind="red" onClick={() => setModal("rite")}>Perform the rite at dusk…</Btn>
+        <Btn full kind="red" onClick={() => setModal("rite")}>Perform the rite at dusk</Btn>
         <p style={{ color: C.dim, fontSize: 12 }} className="mt-1">It comes back every night now. Every rite performed with the wrong name costs a life, and the village will not stand in the circle for a third mistake. The right one ends this.</p>
       </div>
     ) : (
       <div className="flex flex-col gap-2">
-        <Btn full kind="amber" onClick={() => nightfall({ kind: "home" })}>Stay home. Bar the door.</Btn>
-        <Btn full kind="amber" onClick={() => setModal("watch")}>Investigate a villager…</Btn>
-        <Btn full kind="amber" onClick={() => setPlanSearchOpen((v) => !v)}>Search an area…</Btn>
-        {planSearchOpen && (
-          <div className="flex flex-col gap-1.5 mt-1">
-            {LOCS.map((l) => locBtn(l, () => startWalk(l), 46))}
-            {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 12 }}>Out, you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. And what hunts by night notices being hunted.</p>}
-          </div>
-        )}
-        {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 12 }} className="mt-1">Behind a barred door you are safest, but you learn nothing. Watching a door reveals where one person truly goes. Searching may find signs, or the thing itself.</p>}
+        <Btn full kind="amber" onClick={() => setModal("watch")}>Watch a villager's door</Btn>
+        <Btn full kind="amber" onClick={() => setModal("nightwalk")}>Search an area</Btn>
+        {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 12 }} className="mt-1">Watching a door reveals where one person truly goes. Searching may find signs, or the thing itself. Behind a barred door you are safest, but you learn nothing.</p>}
+        <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+          <Btn full kind="ghost" onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</Btn>
+        </div>
       </div>
     )
   ));
@@ -5711,7 +5717,7 @@ function MonsterVillage() {
             </Btn>
             <div className="grid grid-cols-2 gap-2 mt-2">
               <Btn disabled={s.ap < 1 || s.questionedToday.includes(n.id)} onClick={() => { setProfile(null); startInterview(n.id); }}>Interview them</Btn>
-              <Btn kind="red" disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}>Accuse them…</Btn>
+              <Btn kind="red" disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}>Accuse them</Btn>
             </div>
           </div>
         )}
@@ -5723,7 +5729,7 @@ function MonsterVillage() {
   return (
     <div className="min-h-screen mv-body" style={{ background: C.bg, color: C.text }}>
       <style>{CSS_ALL}</style>
-      {journal}{searchModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{watchModal}{unbindModal}{accuseModal}{profileModal}{resultSheet}
+      {journal}{searchModal}{nightWalkModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{watchModal}{unbindModal}{accuseModal}{profileModal}{resultSheet}
 
       <div className="sticky top-0 z-20 px-4 pt-2.5 pb-1.5" style={{ background: C.bg, borderBottom: `1px solid ${C.line}` }}>
         <div className="max-w-md mx-auto">
@@ -5839,11 +5845,11 @@ function MonsterVillage() {
               </Btn>
             )}
             {eligibleUnbind.length > 0 && (
-              <Btn small disabled={s.ap < 1} onClick={() => setModal("unbind")}>Attempt the Rite of Unbinding…</Btn>
+              <Btn small disabled={s.ap < 1} onClick={() => setModal("unbind")}>Attempt the Rite of Unbinding</Btn>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2 mt-3">
-            <Btn kind="red" disabled={s.fled} onClick={() => setModal("accuse")}>{s.fled ? "It is unmasked" : "Accuse…"}</Btn>
+            <Btn kind="red" disabled={s.fled} onClick={() => setModal("accuse")}>{s.fled ? "It is unmasked" : "Accuse"}</Btn>
             <Btn kind="amber" onClick={() => setModal("plan")}>Nightfall →</Btn>
           </div>
         </div>
