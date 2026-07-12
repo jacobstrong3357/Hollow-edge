@@ -540,6 +540,14 @@ const MOB_REASONS = [
   (t) => `my mother's rowan charm went black as a coal when ${t} passed our door. Charms do not lie. People lie.`,
   (t) => `count it yourself: every corpse so far crossed ${t} this past year. Every single one. That is not chance. That is a ledger being settled.`,
 ];
+/* A villager marks another for the rope. (accuser, target, reason) => card. */
+const MOB_ULTIMATUM = [
+  (acc, tgt, reason) => `${acc} stands in the square at first light, shaking, and points at ${tgt}: "If the truth is not found by TOMORROW DUSK, I put the rope on ${tgt} myself." No one argues. That is the frightening part.`,
+  (acc, tgt, reason) => `By noon it is not a suspicion but a plan. ${acc} has the rope already, coiled by the church door, and a deadline: tomorrow's dusk. Give the village someone truer than ${tgt} before then, or that is whose neck it goes around.`,
+  (acc, tgt, reason) => `${acc} says it to the whole square, flat and final: "${reason}" Then: "Tomorrow at dusk, ${tgt} answers for it, unless you show me better first." Heads nod that should know better.`,
+  (acc, tgt, reason) => `The talk has hardened overnight into a name and a time. ${acc} wants ${tgt} on a rope by tomorrow's dusk, and the frightening thing is how many look relieved that someone finally chose.`,
+  (acc, tgt, reason) => `${acc} corners you before you have your bearings. "${reason}" A breath. "I hang ${tgt} tomorrow at dusk unless you bring me the real one. Don't make me do it alone. Don't make me be wrong."`,
+];
 
 /* The player's death is a scene, not a sentence. (name, where) => beats */
 const DEATH_SCENES = {
@@ -1431,7 +1439,10 @@ const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s
 const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
 const aliveNpcs = (s) => s.npcs.filter((n) => n.alive && !n.fled);
 const possibleMonsters = (ticked) => MONSTERS.filter((m) => ticked.every((sg) => m.signs.includes(sg)));
-const ev = (t, pid) => ({ t, pid });
+/* pri ranks a dawn card for the five-card cap: 2 = must-keep (deaths, a
+   villager marked for the rope, the note), 1 = normal (your own night's
+   findings), 0 = atmosphere, dropped first. */
+const ev = (t, pid, pri) => ({ t, pid, pri: pri === undefined ? 1 : pri });
 const turnNightOf = (s, id) => { const d = s.deaths.find((x) => x.id === id && x.kind === "turned"); return d ? d.night : null; };
 
 function ritePreparer(s, excludeId) {
@@ -1529,7 +1540,7 @@ function newGame() {
     offerBeats: [], noteExposedPending: false,
   };
   const pre = [];
-  if (chance(0.4)) pre.push(ev(`${soundFor(type.id)} At the well this morning it is agreed, loudly, that it was only the wind.`));
+  if (chance(0.4)) pre.push(ev(`${soundFor(type.id)} At the well this morning it is agreed, loudly, that it was only the wind.`, undefined, 0));
   return resolveNight(s, "home", pre);
 }
 
@@ -1673,7 +1684,7 @@ function resolveNight(prev, planIn, preEvents) {
         beats.push(`It takes ${v.name} from the edge of the torchlight, almost gently, and is gone before the screaming starts.`);
         s.npcs = s.npcs.map((x) => (x.id === v.id ? { ...x, alive: false } : x));
         s.deaths.push({ night: n, id: v.id, name: v.name, kind: "slain", where: "Village Square", examined: false, found: [] });
-        dawn.push(ev(`${v.name} ${v.role} was taken at the failed rite. What is left was found at the tree line.`, v.id));
+        dawn.push(ev(`${v.name} ${v.role} was taken at the failed rite. What is left was found at the tree line.`, v.id, 2));
       }
       beats.push("Wrong. The books, the signs, something. You have very little village left to be wrong with, and no wrong names left at all.");
     } else {
@@ -1685,7 +1696,7 @@ function resolveNight(prev, planIn, preEvents) {
         beats.push(sk.beat(v));
         s.npcs = s.npcs.map((x) => (x.id === v.id ? { ...x, alive: false } : x));
         s.deaths.push({ night: n, id: v.id, name: v.name, kind: "slain", where: "home", examined: false, found: [] });
-        dawn.push(ev(sk.dawn(v), v.id));
+        dawn.push(ev(sk.dawn(v), v.id, 2));
       } else {
         dawn.push(ev("The night passes. It circles, and tests, and finds no one. There will not be many more such nights."));
       }
@@ -1778,10 +1789,12 @@ function resolveNight(prev, planIn, preEvents) {
 
   const finish = () => {
     s.nightLogs.push({ night: n, active, huntLoc, outMap, secretOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, odd: evOdd, fight: evFight, pair: evPair } : null });
-    /* Cap the morning at five cards. The death, its gore, any killer-message
-       and follow/watch results are all pushed first, so a first-five keep
-       protects what matters and trims only the trailing atmosphere. */
-    s.dawn = dawn.length > 5 ? dawn.slice(0, 5) : dawn;
+    /* Cap the morning at five cards, keeping the most important: rank by pri
+       (deaths, a villager marked, the note first), stable within a tier so the
+       night still reads in order, and drop trailing atmosphere. */
+    s.dawn = dawn.length > 5
+      ? dawn.map((e, i) => ({ e, i })).sort((a, b) => ((b.e.pri || 1) - (a.e.pri || 1)) || (a.i - b.i)).slice(0, 5).sort((a, b) => a.i - b.i).map((x) => x.e)
+      : dawn;
     s.nightBeats = beats; s.beatTitle = `NIGHT ${n}`; s.phase = "night";
     return s;
   };
@@ -2266,13 +2279,13 @@ function resolveNight(prev, planIn, preEvents) {
         s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, alive: false } : x));
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, examined: false, found: [] });
         if (n === 1) {
-          NIGHT_ONE_DAWN(victim, victimWhere).forEach((t) => dawn.push(ev(t, victim.id)));
+          NIGHT_ONE_DAWN(victim, victimWhere).forEach((t) => dawn.push(ev(t, victim.id, 2)));
           /* The opening kill is the collector's one gruesome statement. Let the
              first body carry a visceral detail most of the time, so night one
              lands hard instead of tastefully. */
           if (chance(0.75)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
         } else {
-          dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id));
+          dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id, 2));
           if (chance(0.85)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
         }
         if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
@@ -2452,15 +2465,16 @@ function resolveNight(prev, planIn, preEvents) {
     if (accuser.id === s.monster.vid || accuser.turned) tgtPool = tgtPool.filter((x) => x.id !== s.monster.vid && !x.turned);
     const target = pick(tgtPool);
     if (target) {
-      s.mob = { accuser: accuser.id, target: target.id, deadline: n + 1, reason: pick(MOB_REASONS)(target.name) };
-      dawn.push(ev(`${accuser.name} stands in the square at first light, shaking, and points at ${target.name}: "If the truth is not found by TOMORROW DUSK, I put the rope on ${target.name} myself." No one argues. That is the frightening part.`, target.id));
+      const mobReason = pick(MOB_REASONS)(target.name);
+      s.mob = { accuser: accuser.id, target: target.id, deadline: n + 1, reason: mobReason };
+      dawn.push(ev(pick(MOB_ULTIMATUM)(accuser.name, target.name, mobReason), target.id, 2));
     }
   }
 
   /* --- Pass G2: word of an exposed note reaches the square the morning
      after it was shown, never the same day --- */
   if (s.noteExposedPending) {
-    dawn.push(ev("Word of the note reaches the square before you do: what it asked, and that you did not simply burn it. People do not meet your eye today. It did not choose you at random, and the village has begun to wonder what you did to earn that."));
+    dawn.push(ev("Word of the note reaches the square before you do: what it asked, and that you did not simply burn it. People do not meet your eye today. It did not choose you at random, and the village has begun to wonder what you did to earn that.", undefined, 2));
     s.noteExposedPending = false;
   }
 
@@ -2474,7 +2488,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (noteCand.length) {
       const target = pick(noteCand);
       s.coerceNote = { target: target.id, night: n, shown: false };
-      dawn.push(ev(`Folded where only you would have reached, a scrap you did not put there, in a small unhurried hand: "GIVE ME ${target.name.toUpperCase()} AND THIS ENDS, FOR YOU. NO ONE ELSE NEED EVER KNOW WHY." You read it twice, alone, and are grateful you are.`, target.id));
+      dawn.push(ev(`Folded where only you would have reached, a scrap you did not put there, in a small unhurried hand: "GIVE ME ${target.name.toUpperCase()} AND THIS ENDS, FOR YOU. NO ONE ELSE NEED EVER KNOW WHY." You read it twice, alone, and are grateful you are.`, target.id, 2));
       s.clues.push(`Night ${n}: a note offering your own safety in exchange for ${target.name}. To hand it ${target.name} is to hang an innocent on a monster's word. Burn it, or show it in the square (open ${target.name}'s profile). Do not give it what it wants.`);
     }
   }
@@ -3140,8 +3154,8 @@ function computeAnswer(s, id, night, q, targetId) {
   if (q === "howare") {
     if (isMonster) {
       quote = pick([
-        `"Holding up?" A small smile. "Better than most, I think. I sleep well. I eat well." A beat too long. "You look tired, though. You should take better care of yourself. Someone ought to."`,
-        `"One day at a time, like everyone." The words are right. The eyes never once join in. "And you? You carry Hollow's Edge around on your back lately. That will be the death of you." It is said kindly. It does not land kindly.`,
+        `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
+        `"One day at a time, like everyone." The words are right, and the warmth almost reaches the eyes. "You look tired, though. You should rest. The village leans on you too hard." It is kindly meant. You spend a while, later, deciding whether you believe that.`,
       ]);
     } else if (npc.turned) {
       quote = pick([
@@ -3167,7 +3181,7 @@ function computeAnswer(s, id, night, q, targetId) {
   if (q === "mobcalm" && s.mob && id === s.mob.accuser) {
     const mt = npcById(s, s.mob.target);
     if (isMonster) {
-      quote = `"No." Pleasant, and final. "The village wants a name, and I have given it one. Would you rather it kept looking for a better fit?" Something underneath the question has teeth, and the teeth are for you.`;
+      quote = `"No." Pleasant, and final. "The village wants a name, and I have given it one. Would you rather it went on looking?" The reasoning is sound. That is the part that stays with you afterward: how sound it is, and how little saying it seems to cost them.`;
     } else if (npc.turned) {
       quote = `"The rope is decided," they say, in the flat cadence of a lesson being repeated. "Let it be ${mt ? mt.name : "anyone"}. Let it be anyone at all." The second sentence is the honest one.`;
     } else if (chance(Math.min(0.85, 0.35 + 0.2 * Math.max(0, npc.disp || 0)))) {
@@ -3183,13 +3197,13 @@ function computeAnswer(s, id, night, q, targetId) {
   if (q === "mobagree" && s.mob && id === s.mob.accuser) {
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     quote = isMonster
-      ? `"Good." The satisfaction in it is bottomless, and for one cold moment you feel less like someone being agreed with and more like something being fattened. "Good. Then we understand each other, you and I. I thought we might."`
+      ? `"Good." A slow nod, and something settles in them that you cannot quite name. "Then we understand each other, you and I. I thought we might." There is nothing in it you could repeat to anyone. Only that you leave feeling you agreed to more than you actually said.`
       : `Something in their shoulders lets go all at once. "Thank you. God help me - you don't know what it is, being the only one willing to say it out loud." They grip your hand too hard and too long. If the rope is wrong, you have just bought yourself a share of it, and you both know that too.`;
   }
 
   if (q === "mobplea" && s.mob && id === s.mob.target) {
     if (isMonster) {
-      quote = `"Let them bring their rope." It is said gently, while they look down at their own hands, as if consulting the hands about something. "I have been accused of worse, by better, in places you could not find on a map. Tomorrow will be an interesting dusk." A pause. "For someone."`;
+      quote = `"Let them bring their rope." It is said gently, while they study their own hands. "I have been doubted before, and outlived the doubting. Tomorrow will sort itself out." A pause, almost peaceable. "These things generally do."`;
     } else if (npc.turned) {
       quote = `"If they hang me, I stop," they say, with a mildness that takes the floor out from under the room. "That might be best for everyone. I don't say that the way it sounds." A pause. "Or perhaps I do."`;
     } else {
@@ -4588,8 +4602,6 @@ function MonsterVillage() {
   };
 
   const startWalk = (loc) => {
-    /* the dusk of a mob's deadline is no night for wandering choices */
-    if (s.mob && s.mob.deadline === s.nightNum + 1) { nightfall({ kind: "out", loc }); return; }
     const facts = sampleNight(s, monsterOf(s), s.nightNum + 1);
     const cand = s.npcs.filter((x) => x.alive && !x.fled && facts.outMap[x.id] && facts.outMap[x.id] !== "home");
     const queue = ["depart"];
@@ -4677,7 +4689,6 @@ function MonsterVillage() {
   };
 
   const startWatchWalk = (id) => {
-    if (s.mob && s.mob.deadline === s.nightNum + 1) { nightfall({ kind: "watch", id }); return; }
     const facts = sampleNight(s, monsterOf(s), s.nightNum + 1);
     const tLoc = facts.outMap[id];
     const leaves = !!(tLoc && tLoc !== "home");
