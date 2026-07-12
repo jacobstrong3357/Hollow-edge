@@ -2199,7 +2199,7 @@ function resolveNight(prev, planIn, preEvents) {
         const visitor = npcById(s, hw.visitorId);
         if (visitor) {
           s.clues.push(`Night ${n}: while you watched ${target.name}'s door, ${visitor.name} came to it in the dark, was let in without a knock, and was gone before the bell. Those two keep company nobody has mentioned.`);
-          dawn.push(ev(`You caught ${target.name} at nothing — but you caught ${visitor.name} slipping to their door in the dark, let in without a knock and gone before the bell. Whatever ties those two, they keep it quiet.`, visitor.id));
+          dawn.push(ev(`You caught ${target.name} at nothing, but you caught ${visitor.name} slipping to their door in the dark, let in without a knock and gone before the bell. Whatever ties those two, they keep it quiet.`, visitor.id));
         }
       } else if (hw.kind === "restless") {
         dawn.push(ev(WATCH_RESTLESS[hw.ri % WATCH_RESTLESS.length](target.name), watching));
@@ -2443,7 +2443,7 @@ function resolveNight(prev, planIn, preEvents) {
       const target = pick(noteCand);
       s.coerceNote = { target: target.id, night: n, shown: false };
       dawn.push(ev(`Folded somewhere only you would have reached for it, a scrap of paper you did not put there. The hand is small, careful, and utterly unhurried: "GIVE ME ${target.name.toUpperCase()} AND THIS ENDS, FOR YOU. NO ONE ELSE NEEDS EVER TO KNOW WHY." You read it twice, alone, and are grateful, for once, that you are.`, target.id));
-      s.clues.push(`Night ${n}: a note, left where only you could have found it, offering your own safety in exchange for ${target.name}. To hand it ${target.name} is to hang an innocent on a monster's word — that is the whole trap of it. You can burn it and say nothing, or take it to the square and let the village see how the thing bargains. (Open ${target.name}'s profile to show the note.)`);
+      s.clues.push(`Night ${n}: a note, left where only you could have found it, offering your own safety in exchange for ${target.name}. To hand it ${target.name} is to hang an innocent on a monster's word, that is the whole trap of it. You can burn it and say nothing, or take it to the square and let the village see how the thing bargains. (Open ${target.name}'s profile to show the note.)`);
     }
   }
 
@@ -4978,7 +4978,7 @@ function MonsterVillage() {
               const vis = hw && hw.kind === "visitor" ? npcById(s, hw.visitorId) : null;
               const quietText =
                 hw && hw.kind === "secret"
-                  ? `Through a gap in the shutter, ${t.name} does the very thing they have been lying about — alone, human, and sadder than you had let yourself expect. You have their secret now, and it is not the thing you hunt.`
+                  ? `Through a gap in the shutter, ${t.name} does the very thing they have been lying about, alone, human, and sadder than you had let yourself expect. You have their secret now, and it is not the thing you hunt.`
                   : hw && hw.kind === "visitor" && vis
                   ? `${t.name} never leaves. But past midnight a second figure crosses the lane to their door, is let in without a knock, and is gone before the bell. You know that gait. It is ${vis.name}.`
                   : hw && hw.kind === "restless"
