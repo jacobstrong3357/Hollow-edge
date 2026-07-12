@@ -2292,26 +2292,31 @@ function resolveNight(prev, planIn, preEvents) {
         }
         s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, alive: false } : x));
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, examined: false, found: [] });
+        /* A single death should not be a wall of cards. Give it who + where,
+           then AT MOST ONE flourish, so a kill reads in two or three cards,
+           not four or five. */
         if (n === 1) {
-          NIGHT_ONE_DAWN(victim, victimWhere).forEach((t) => dawn.push(ev(t, victim.id, 2)));
-          /* The opening kill is the collector's one gruesome statement. Let the
-             first body carry a visceral detail most of the time, so night one
-             lands hard instead of tastefully. */
-          if (chance(0.75)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
+          const nd = NIGHT_ONE_DAWN(victim, victimWhere); // [bell (who), place (where), witness]
+          dawn.push(ev(nd[0], victim.id, 2));
+          dawn.push(ev(nd[1], victim.id, 2));
+          /* one flourish: the contradictory accounts, or a visceral detail */
+          dawn.push(ev(chance(0.5) ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
         } else {
           dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id, 2));
-          if (chance(0.85)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
-        }
-        if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
-          const km = pick(KILLER_MESSAGES);
-          dawn.push(ev(km.line(victim.name)));
-          s.clues.push(`Night ${n}: ${km.clue}`);
-        }
-        if (firstBlood && n > 1) {
-          const fk = npcById(s, "falk");
-          dawn.push(fk && fk.alive && !fk.fled && fk.id !== victim.id
-            ? ev(`Doctor Falk looks at the wounds a long time and writes nothing down. "Whatever did this," he says at last, "was not hungry. It was signing its name."`, "falk")
-            : ev("Whoever examines the wounds says the same thing the last one did, in fewer words: this was not hunger. This was a signature."));
+          /* one flourish only, in priority order: a message it left (carries a
+             clue), then a first-blood signature, otherwise a visceral detail. */
+          if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
+            const km = pick(KILLER_MESSAGES);
+            dawn.push(ev(km.line(victim.name)));
+            s.clues.push(`Night ${n}: ${km.clue}`);
+          } else if (firstBlood && n > 1) {
+            const fk = npcById(s, "falk");
+            dawn.push(fk && fk.alive && !fk.fled && fk.id !== victim.id
+              ? ev(`Doctor Falk looks at the wounds a long time and writes nothing down. "Whatever did this," he says at last, "was not hungry. It was signing its name."`, "falk")
+              : ev("Whoever examines the wounds says the same thing the last one did, in fewer words: this was not hunger. This was a signature."));
+          } else if (chance(0.7)) {
+            dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
+          }
         }
         /* some nights it kills past need, for the pleasure of it */
         if (n >= 2 && chance(0.4)) dawn.push(ev(pickFreshIdx("crueltyDawn", CRUELTY_DAWN)));
