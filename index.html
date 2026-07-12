@@ -1725,7 +1725,11 @@ function resolveNight(prev, planIn, preEvents) {
 
   const finish = () => {
     s.nightLogs.push({ night: n, active, huntLoc, outMap, secretOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, odd: evOdd, fight: evFight, pair: evPair } : null });
-    s.dawn = dawn; s.nightBeats = beats; s.beatTitle = `NIGHT ${n}`; s.phase = "night";
+    /* Cap the morning at five cards. The death, its gore, any killer-message
+       and follow/watch results are all pushed first, so a first-five keep
+       protects what matters and trims only the trailing atmosphere. */
+    s.dawn = dawn.length > 5 ? dawn.slice(0, 5) : dawn;
+    s.nightBeats = beats; s.beatTitle = `NIGHT ${n}`; s.phase = "night";
     return s;
   };
 
@@ -2191,9 +2195,13 @@ function resolveNight(prev, planIn, preEvents) {
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, examined: false, found: [] });
         if (n === 1) {
           NIGHT_ONE_DAWN(victim, victimWhere).forEach((t) => dawn.push(ev(t, victim.id)));
+          /* The opening kill is the collector's one gruesome statement. Let the
+             first body carry a visceral detail most of the time, so night one
+             lands hard instead of tastefully. */
+          if (chance(0.75)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
         } else {
           dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id));
-          if (chance(0.45)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
+          if (chance(0.85)) dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
         }
         if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
           const km = pick(KILLER_MESSAGES);
@@ -2207,7 +2215,7 @@ function resolveNight(prev, planIn, preEvents) {
             : ev("Whoever examines the wounds says the same thing the last one did, in fewer words: this was not hunger. This was a signature."));
         }
         /* some nights it kills past need, for the pleasure of it */
-        if (n >= 3 && chance(0.18)) dawn.push(ev(pickFreshIdx("crueltyDawn", CRUELTY_DAWN)));
+        if (n >= 2 && chance(0.4)) dawn.push(ev(pickFreshIdx("crueltyDawn", CRUELTY_DAWN)));
         if (n > 1 && chance(0.12)) {
           const closeSign = m.signs[2];
           if (chance(0.5) && !s.foundSigns.includes(closeSign)) {
@@ -2395,7 +2403,7 @@ function resolveNight(prev, planIn, preEvents) {
       const target = pick(noteCand);
       s.coerceNote = { target: target.id, night: n, shown: false };
       dawn.push(ev(`Folded somewhere only you would have reached for it, a scrap of paper you did not put there. The hand is small, careful, and utterly unhurried: "GIVE ME ${target.name.toUpperCase()} AND THIS ENDS, FOR YOU. NO ONE ELSE NEEDS EVER TO KNOW WHY." You read it twice, alone, and are grateful, for once, that you are.`, target.id));
-      s.clues.push(`Night ${n}: a note, left where only you could have found it, offering your own safety in exchange for ${target.name}. Small, careful hand. Patient. It wants something from you now, not just blood.`);
+      s.clues.push(`Night ${n}: a note, left where only you could have found it, offering your own safety in exchange for ${target.name}. To hand it ${target.name} is to hang an innocent on a monster's word — that is the whole trap of it. You can burn it and say nothing, or take it to the square and let the village see how the thing bargains. (Open ${target.name}'s profile to show the note.)`);
     }
   }
 
@@ -3991,6 +3999,25 @@ function joinedFate(s, x) {
   return pool[idx % pool.length](x.name);
 }
 
+/* Burial fates, drawn distinct per victim so an epilogue full of dead does
+   not toll the same sentence over and over. */
+const BURIED_WIN = [
+  (nm) => `${nm} is buried in ground that can finally hold its dead. The bell tolled properly for them, at last.`,
+  (nm) => `${nm} rests under a stone with their true name on it, in a churchyard no longer afraid of its own dark.`,
+  (nm) => `${nm} is given the burying the nights denied them: slow, full, unhurried, the whole village standing witness.`,
+  (nm) => `They lower ${nm} at noon, in daylight, unafraid, and the grave stays closed this time.`,
+  (nm) => `${nm} has a proper stone now, and flowers no one is too frightened to bring.`,
+  (nm) => `The bell counts ${nm} out honestly, one stroke a year, in a village that can afford to grieve again.`,
+];
+const BURIED_LOSS = [
+  (nm) => `${nm} lies in ground that will not settle, in a village that no longer buries its dead one at a time.`,
+  (nm) => `${nm} went into a shared trench with the others, nameless by nightfall, where the stones and the mourners ran out at once.`,
+  (nm) => `${nm} was left where they fell, in the end. No one steady enough remained to lift them.`,
+  (nm) => `They meant to bury ${nm} properly. The dark came again before the digging was done.`,
+  (nm) => `${nm} has no marker. The hands that would have cut one were shaking too hard, or already still.`,
+  (nm) => `${nm} is one more name the survivors will not say aloud, in a village learning to bury its dead in haste.`,
+];
+
 /* What became of them: one line per villager, shaped by this run. */
 function epilogueLine(s, x) {
   const win = s.over.win;
@@ -4003,7 +4030,9 @@ function epilogueLine(s, x) {
     if (d.kind === "executed") return `${x.name} was innocent, and hanged on your word. Their name is the one part of this that no dawn will come clean of.`;
     if (d.kind === "mobbed") return `${x.name} was hanged by the mob while the truth waited. The square is quieter for it, and worse.`;
     if (x.turned) return `${x.name} died already changed, which the village calls a mercy, in the voice people use when they are not sure.`;
-    return win ? `${x.name} is buried in ground that can finally hold its dead. The bell tolled properly for them, at last.` : `${x.name} lies in ground that will not settle, in a village that no longer buries its dead one at a time.`;
+    const buriedIdx = Math.max(0, s.deaths.filter((dd) => dd.kind === "slain").findIndex((dd) => dd.id === x.id));
+    const buriedPool = seededShuffle(win ? BURIED_WIN : BURIED_LOSS, s.gameId + "-buried");
+    return buriedPool[buriedIdx % buriedPool.length](x.name);
   }
   if (x.fled) return null;
   /* cured-but-scarred: distinct from both a normal survivor and a loss-ending
