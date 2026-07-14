@@ -201,8 +201,7 @@ const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Taver
 const SIGNS = {
   claw: "Claw Marks", tracks: "Beast Tracks", bite: "Bite Marks",
   reflect: "Fogged Mirrors", cold: "Cold Aura", flora: "Withered Flora",
-  sulfur: "Sulfur Smell", hex: "Hex Marks", graves: "Disturbed Graves",
-  skin: "Shed Skin", wail: "Unearthly Wailing",
+  hex: "Hex Marks", graves: "Disturbed Graves", wail: "Unearthly Wailing",
 };
 
 /* What the signs FEEL like, told without ever naming themselves. Live
@@ -239,11 +238,6 @@ const SIGN_SENSE = {
     "Everything growing within a long stride has curled in on itself, days before its season.",
     "The leaves are the wrong colour for the time of year, and none of them fell naturally.",
   ],
-  sulfur: [
-    "The air carries the smell of struck matches, faint but unmistakable, with nothing nearby that could have made it.",
-    "A sourness on the tongue and a smell like scorched flint, gone as fast as it arrived.",
-    "Something has left the smell of a snuffed candle hanging in air that holds no candle.",
-  ],
   hex: [
     "Marks are scratched into the wood in a pattern that means nothing and unsettles anyway.",
     "Someone, or something, has scored lines here with intent. Not decoration, not damage. A working.",
@@ -253,11 +247,6 @@ const SIGN_SENSE = {
     "The ground here has not settled the way it should, months on. It sits loose, like it is still being used.",
     "The earth is disturbed in a place nothing living had cause to dig.",
     "Something has been in and out of this ground more than once, and did not bother to hide that it had.",
-  ],
-  skin: [
-    "A husk lies discarded here, papery and hollow, holding the shape of something it no longer is.",
-    "You find what looks at first like a shed snake's leaving, except far too large, and far too deliberately draped.",
-    "Something has been left behind that used to be a surface a living thing wore.",
   ],
   wail: [
     "A grief that is not yours moves through your chest and out the other side.",
@@ -289,8 +278,14 @@ const SIGN_SENSE_BODY = {
   graves: [
     "Grave dirt. It is under their nails, ground into the wounds, scattered around the body - old earth, from ground nothing living had cause to open.",
   ],
-  skin: [
-    "Caught in their fist is a scrap of something papery and pale. Not cloth. A shed surface, like a snake's leaving, except it once fit something the size of a person.",
+  hex: [
+    "Scratched into the floor beneath the body, half-hidden by it, a working: lines scored with intent, meaning nothing and unsettling anyway.",
+  ],
+  flora: [
+    "The plants nearest the body have gone grey and brittle to the root, curled in on themselves days before their season, as if the dying spread outward from the corpse.",
+  ],
+  reflect: [
+    "There is a mirror in the room, and it has fogged from the inside though nothing here is warm, and it gives your own face back to you a half-second late.",
   ],
 };
 const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pick(SIGN_SENSE_BODY[sg]) : senseFor(sg));
@@ -318,24 +313,24 @@ const METHOD_KILL_LINES = {
 };
 
 const MONSTERS = [
-  { id: "werewolf", name: "Werewolf", signs: ["claw", "tracks", "bite"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Village Square"], lore: "Bound to the moon. It hunts on exact, ritual nights, every third, and cannot break the pattern. Takes only those caught outdoors, and takes them apart. The books prescribe the silver blade." },
+  { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Village Square"], lore: "Bound to the moon. It hunts on exact, ritual nights, every third, and cannot break the pattern. Takes only those caught outdoors, and takes them apart. The books prescribe the silver blade." },
   { id: "vampire", name: "Vampire", signs: ["bite", "reflect", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], lore: "Its first feeding is always too deep: one body, torn, to open the account. After that it feeds when the thirst takes it, never two nights running, and slips through any door. From then on its victims do not die. They change, and they hide it. Only the stake ends it." },
   { id: "wraith", name: "Wraith", signs: ["reflect", "cold", "flora"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], lore: "Stalks almost every night, but takes only those who wander after dark. Bar your door and it passes by. It is unmade inside a ring of salt." },
   { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger. It dens among the graves and prowls from there, but takes anyone caught outdoors, wherever it finds them. Too craven to enter a home. Consecrated fire, and nothing less." },
-  { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Victims die without a mark of struggle. Burn the grimoire and the witch burns with it." },
-  { id: "demon", name: "Demon", signs: ["cold", "sulfur", "hex"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "turn", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens its work with one soul taken violently, as a signature. After that it claims souls when it pleases, never in haste; walls mean nothing to it, and its victims live on, hollowed out, passing for themselves. Only the rite of exorcism casts it out." },
-  { id: "shifter", name: "Shapeshifter", signs: ["claw", "tracks", "skin"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, then wears a borrowed face by day. Trust nothing you are told. Cold iron strips the borrowed face away." },
+  { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Some it curses dead, without a mark of struggle; others it bends into servants who walk on and lie for it, so a body one night and none the next are both its work. Burn the grimoire and the witch burns with it." },
+  { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens its work with one soul taken violently, as a signature. After that it claims souls as it pleases: some it hollows out and leaves walking, passing for themselves; some it simply tears apart for the joy of it. Walls mean nothing to it, and it keeps no pattern you can trust. Only the rite of exorcism casts it out." },
+  { id: "shifter", name: "Shapeshifter", signs: ["claw", "tracks", "reflect"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, then wears a borrowed face by day. Trust nothing you are told. Cold iron strips the borrowed face away." },
   { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door. Victims are found without a wound. It cannot bear its own face in a silver mirror." },
-  { id: "hellhound", name: "Hellhound", signs: ["tracks", "sulfur", "claw"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves the tracks of a hound too heavy to be a hound, claws its prey apart, and everywhere it goes there is the smell of struck matches. Holy water, and a steady hand to throw it." },
+  { id: "hellhound", name: "Hellhound", signs: ["tracks", "claw", "graves"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves the tracks of a hound too heavy to be a hound, claws its prey apart, and roots in the graveyard earth between kills. Holy water, and a steady hand to throw it." },
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
-  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["skin", "reflect", "hex"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, and leaves the ruin for the village to find. After that it does not kill. It replaces. Its victims walk and talk and pass for themselves, and only the mirrors and the shed skins say otherwise. No door stops something you would invite in. It is undone only by its true name said backwards, if anyone can learn it." },
+  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["reflect", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, and leaves the ruin for the village to find. After that it does not kill. It replaces. Its victims walk and talk and pass for themselves, and only the fogged mirrors and the marks it scratches in quiet places say otherwise. No door stops something you would invite in. It is undone only by its true name said backwards, if anyone can learn it." },
   { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers when the mood takes her, resting between, and wails AS she rides, not before. Walls mean nothing. Her dead have no wound, only a face frozen mid-scream. A hawthorn charm, pressed to her while she feeds." },
 ];
 
 const SIGN_CATS = {
   wounds: ["claw", "bite"],
-  ground: ["tracks", "graves", "skin"],
-  air: ["sulfur", "cold"],
+  ground: ["tracks", "graves"],
+  air: ["cold"],
   surroundings: ["reflect", "flora", "hex"],
 };
 /* The "none" lines must never read as "there is nothing here" - there is
@@ -345,7 +340,7 @@ const SIGN_CATS = {
 const INVEST_ACTS = [
   { key: "wounds", label: "Examine the wounds", none: ["There is too much wound and too little body to read any single cause in it. Whatever did this did not leave you one clean mark to name it by.", "The damage is beyond telling apart: you cannot say where one wound ends and the next begins, let alone what shape of thing made them.", "The crows and the cold got here before you did. What is left could have been opened by teeth, or claws, or nothing with hands at all. It will not say which."] },
   { key: "ground", label: "Search the ground nearby", none: ["Mud, frost, and the tracks of half the frightened village, laid over each other. Whatever the ground knew, it has been trampled out of it.", "So much was dragged through here, and so much soaked into it, that no single print survives to be read."] },
-  { key: "air", label: "Smell the air", none: ["Blood, earth, and cold morning air, and under it nothing that does not belong to any bad death. The thing left no scent of its own, or the morning has already taken it.", "The stink of it is only the stink of any killing. If the thing carried a smell of its own, it did not leave it here for you."] },
+  { key: "air", label: "Feel the air, the chill of it", none: ["The air here is only cold the way any dawn is cold. Whatever else the night left, it did not leave its own chill hanging for you to find.", "You stand still and let the air tell you what it will, and it tells you only that it is morning, and that something died here, and nothing of what."] },
   { key: "surroundings", label: "Study the surroundings", none: ["The place kept nothing back for you. Whatever stood here did its work and took its nature with it when it left.", "You turn a slow circle over the ruin of it. If the ground remembers what came, it is keeping the memory to itself."] },
 ];
 
@@ -930,10 +925,9 @@ const ANIMAL_SIGN = {
   claw: ["A dog lies opened along the fence, four deep parallel tears down its flank, torn and not bitten. No fox did that. Something with a hand did.", "A dead ewe in the ditch, raked open in four long lines, evenly spaced, far too wide for any paw you could name."],
   tracks: ["A dead hare in the frost, and around it a single line of prints too large and too deep for the thing that should have been hunting hares, going one way only and stopping dead.", "A goat lies dead in the mud, and the tracks that circle it are wrong in the toes and heavier than any beast that walks on four legs."],
   graves: ["A dead crow lies half-buried in fresh-turned earth by the churchyard wall, in ground nothing living had cause to open tonight.", "Something has been at a dog's grave by the path, dug up and left half out, the old earth loose again as if it is still being used."],
-  sulfur: ["A dead cat lies on the step, and the air over it carries the smell of struck matches, faint and unmistakable, with nothing near that could have made it.", "A hen lies dead and untouched in the lane, and the smell that hangs over the little body is scorched flint and a snuffed candle."],
   cold: ["A dog lies dead in the open, its coat rimed white with a frost that has touched nothing else around it, and the cold off the small body has nothing to do with the weather.", "A dead cat on the wall is frozen stiff through, though the night is mild, and your breath clouds when you lean close and nowhere else."],
   flora: ["A cat lies dead in a ring of grass gone grey and brittle from the root up, days before its season, as though the ground beneath it stopped feeding anything.", "A dead bird in the hedgerow, and the leaves around it have curled and blackened in a neat circle, out of all season."],
-  skin: ["Beside a dead hare lies something papery and hollow, draped and shed, holding the shape of something far larger than anything that should be out here.", "A dog lies dead by the path, and next to it, folded almost neatly, a husk of pale shed skin far too big to have come off the dog."],
+  reflect: ["A dead cat lies below a cottage window, and the glass above it has fogged from the inside, though the house is dark and cold, and gives your lantern back to you a beat too slow.", "A dog lies dead by the horse-trough, and the still black water beside it will not hold your reflection right: your face arrives in it late, and wrong."],
   hex: ["A cat lies dead at the centre of marks scratched into the flagstones around it, a pattern that means nothing and unsettles anyway, cut with intent.", "A dead crow is laid at the heart of lines scored deliberately into the earth, a working of some kind, and you find you cannot look at the shapes for long."],
 };
 const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pick(ANIMAL_SIGN[sg]) : null);
@@ -1443,7 +1437,7 @@ const FOLK_HINTS = [
   { m: ["hag", "banshee"], t: `"Two things wail, girl, and the difference is the timing. The grieving one wails the night BEFORE it takes you. The hag wails while she rides."` },
 ];
 
-const COLLECTOR_HINT = { m: ["vampire", "demon", "doppel"], t: `"The collecting kinds kill once, girl, the first night, to open the account. If the dying stops after one body, stop watching for bodies. Start counting the living."` };
+const COLLECTOR_HINT = { m: ["vampire", "doppel"], t: `"The collecting kinds kill once, girl, the first night, to open the account. If the dying stops after one body, stop watching for bodies. Start counting the living."` };
 
 const FLED_OPENERS = [
   (nm) => `They cannot keep still. "${nm}. I broke bread with ${nm}. I let it hold my child at the christening. Do not ask me to be calm."`,
@@ -2512,9 +2506,12 @@ function resolveNight(prev, planIn, preEvents) {
     if (pool.length) {
       victim = pick(pool);
       victimWhere = outMap[victim.id];
-      /* the collecting kinds announce themselves: one gruesome kill, then never another body */
-      const firstBlood = m.attack === "turn" && !s.deaths.some((d) => d.kind === "slain");
-      victimKind = firstBlood ? "kill" : m.attack;
+      /* the collecting kinds announce themselves: one gruesome kill, then never
+         another body. The "both" kinds (witch, demon) open the same way but do
+         not settle into pure collecting: after first blood they kill or change
+         from night to night, so a body is never proof it does not also change. */
+      const firstBlood = (m.attack === "turn" || m.attack === "both") && !s.deaths.some((d) => d.kind === "slain");
+      victimKind = firstBlood ? "kill" : (m.attack === "both" ? (chance(0.5) ? "kill" : "turn") : m.attack);
       if (victimKind === "kill") {
         if (n === 1) {
           beats.push(...NIGHT_ONE_SCENE(victim, victimWhere));
@@ -3352,7 +3349,7 @@ function computeAnswer(s, id, night, q, targetId) {
   }
 
   if (q === "strange") {
-    const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", reflect: "the mirrors in this village have all gone dull, have you noticed", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", sulfur: "there is a smell around lately, like struck matches", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled", skin: "something was found behind the tavern like a snake's leavings, but far larger" };
+    const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", reflect: "the mirrors in this village have all gone dull, have you noticed", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled" };
     if (npc.turned && night >= (tn || 0)) {
       /* the changed serve it now: they name signs the thing does NOT carry */
       const falseSigns = Object.keys(SIGN_TALK).filter((sg) => !m.signs.includes(sg));
