@@ -921,6 +921,46 @@ const WALK_ODD_SIGHTS = [
   (l) => `A gate swings open and shut on the wind ahead, except there is no wind tonight, and when you reach it the latch is whole and the hinge is dry and it hangs perfectly still.`,
 ];
 
+/* Animal victims that carry a real sign: a way to surface evidence on nights
+   the thing changed someone or took no human at all. Keyed by the sign each
+   scene reveals, so the tell is honest. Reflect is the one sign that will not
+   fit a dead animal, so it never appears here. */
+const ANIMAL_SIGN = {
+  bite: ["A cat lies dead by the path, small and cold and barely marked but for two deep punctures at the throat, paired and clean. Nothing that hunts cats leaves a bite like that.", "A farm dog is dead against its own kennel, and the only wound on it is a single bite, wider than a wolf's, that went through the neck in one closing."],
+  claw: ["A dog lies opened along the fence, four deep parallel tears down its flank, torn and not bitten. No fox did that. Something with a hand did.", "A dead ewe in the ditch, raked open in four long lines, evenly spaced, far too wide for any paw you could name."],
+  tracks: ["A dead hare in the frost, and around it a single line of prints too large and too deep for the thing that should have been hunting hares, going one way only and stopping dead.", "A goat lies dead in the mud, and the tracks that circle it are wrong in the toes and heavier than any beast that walks on four legs."],
+  graves: ["A dead crow lies half-buried in fresh-turned earth by the churchyard wall, in ground nothing living had cause to open tonight.", "Something has been at a dog's grave by the path, dug up and left half out, the old earth loose again as if it is still being used."],
+  sulfur: ["A dead cat lies on the step, and the air over it carries the smell of struck matches, faint and unmistakable, with nothing near that could have made it.", "A hen lies dead and untouched in the lane, and the smell that hangs over the little body is scorched flint and a snuffed candle."],
+  cold: ["A dog lies dead in the open, its coat rimed white with a frost that has touched nothing else around it, and the cold off the small body has nothing to do with the weather.", "A dead cat on the wall is frozen stiff through, though the night is mild, and your breath clouds when you lean close and nowhere else."],
+  flora: ["A cat lies dead in a ring of grass gone grey and brittle from the root up, days before its season, as though the ground beneath it stopped feeding anything.", "A dead bird in the hedgerow, and the leaves around it have curled and blackened in a neat circle, out of all season."],
+  skin: ["Beside a dead hare lies something papery and hollow, draped and shed, holding the shape of something far larger than anything that should be out here.", "A dog lies dead by the path, and next to it, folded almost neatly, a husk of pale shed skin far too big to have come off the dog."],
+  hex: ["A cat lies dead at the centre of marks scratched into the flagstones around it, a pattern that means nothing and unsettles anyway, cut with intent.", "A dead crow is laid at the heart of lines scored deliberately into the earth, a working of some kind, and you find you cannot look at the shapes for long."],
+};
+const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pick(ANIMAL_SIGN[sg]) : null);
+
+/* Thralls, met in the dark, doing what the changed do when they think no one
+   sees: the sight that tells you a neighbour belongs to it now. Monster-
+   agnostic; the incoherent lines are the enslaved mind leaking, not a tell. */
+/* The first warning, before you know who it is: a sound in the dark that a
+   living throat should not make. The player chooses to look, or to retreat. */
+const THRALL_SOUND = [
+  (l) => `Short of the ${l}, a sound stops you cold: something feeding, close by in the dark, fast and wet and ravaging, the way no person has ever eaten. And threaded under it, faint and tuneless, someone humming.`,
+  (l) => `You are almost at the ${l} when you hear it: a low, broken muttering off in the black, the same few words over and over, in a lane that should be dead empty. Every hair on you stands up.`,
+  (l) => `Something is up ahead near the ${l}, making sounds a throat should not make: a wet, mindless worrying at something, and between mouthfuls a small, contented noise that turns your stomach over.`,
+  (l) => `A wrongness reaches your ears before your eyes find it: a snuffling, tearing, gulping sound from the dark by the ${l}, and a voice, in the gaps, saying a child's rhyme with all the sense worn out of it.`,
+];
+const THRALL_RETREAT = [
+  (nm) => `You do not look closer. Whatever is feeding in that dark, you back away from it one slow step at a time, and it never stops, and you never learn for certain whose face it wore. Only that someone out here tonight is no longer a living neighbour.`,
+  (nm) => `Every animal part of you says do not look, and for once you listen. You retreat the way you came, and the sound follows you a little way, and then loses interest, and that is somehow the worst of all. Someone is changed. You could not stay to see who.`,
+];
+const THRALL_SIGHTS = [
+  (nm) => `${nm} is crouched over something small in the dark, and the wet, unhurried sounds that reach you are not sounds a person makes over their supper. When ${nm} lifts a face gone slack and wrong and looks straight through you, you understand: ${nm} is changed.`,
+  (nm) => `${nm} stands facing a blank wall, reciting the same few words over and over under the breath, a child's counting rhyme with the sense worn out of it, in a voice with a second, lower voice threaded underneath. ${nm} is not ${nm} anymore.`,
+  (nm) => `${nm} turns as you pass and says, too calm, in a voice not quite their own, "He is coming. He is coming for all of you, and I will hold the door." Then blinks, and seems not to know why you have stopped, or who you are. Changed. Wholly.`,
+  (nm) => `${nm} kneels in the mud pressing both palms flat to the ground, listening through their hands to something you cannot hear, and when they rise they say, "The graves talk, if you lie down close enough. You should try it. You should lie down." It is ${nm}'s mouth. It is not ${nm}.`,
+  (nm) => `${nm} walks the same short stretch of lane, back and forth, back and forth, never tiring, whispering "don't go in the woods, don't go in the woods" to no one, and does not stop or look up as you pass close enough to touch. Whatever this is, it is not a living neighbour.`,
+];
+
 const WALK_SOUND_LINES = [
   "Somewhere off your path: a sound. Wet, rhythmic, patient: a spade, or a jaw, or a prayer being said into the ground.",
   "From between the houses, brief and clear: a chain being tested, link by link, by something with all night to test it.",
@@ -1675,7 +1715,11 @@ function sampleNight(s, m, n) {
       else if (chance(0.75)) outMap[npc.id] = eventLoc;
       else if (SECRETS[npc.id] && chance(SECRETS[npc.id].outP)) { secretOut[npc.id] = true; outMap[npc.id] = SECRETS[npc.id].loc; }
       else outMap[npc.id] = "home";
-    } else if (!npc.turned && SECRETS[npc.id] && chance(SECRETS[npc.id].outP)) {
+    } else if (npc.turned) {
+      /* the changed do not keep to their beds: they serve it, and wander to
+         the eerie ground it keeps, where the player can catch them at it */
+      outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest"]) : "home";
+    } else if (SECRETS[npc.id] && chance(SECRETS[npc.id].outP)) {
       secretOut[npc.id] = true; outMap[npc.id] = SECRETS[npc.id].loc;
     } else {
       outMap[npc.id] = chance(0.25) ? pick(LOCS) : "home";
@@ -2024,7 +2068,7 @@ function resolveNight(prev, planIn, preEvents) {
         const bc = addBuildClue(s);
         if (bc.cands.length === 1) {
           s.clues.push(`Night ${n}: the hooded shape from the boundary lanes, bound for the ${huntLoc}. Taken with what you saw before, its build is certain now: ${bc.b}. That fits: ${bc.names.join(", ")}.`);
-          dawn.push(ev(`The shape you saw from the boundary lanes was making for the ${huntLoc}. Taken together, your sightings agree on its build: ${bc.b}. That narrows the field.`));
+          dawn.push(ev(`The shape you saw from the boundary lanes was making for the ${huntLoc}. Taken together, your sightings agree on its build: ${bc.b}. That narrows the field.`, undefined, 2));
         } else {
           s.clues.push(`Night ${n}: the hooded shape from the boundary lanes, bound for the ${huntLoc}: ${bc.pair[0]} or ${bc.pair[1]} of build, you could not swear which. That fits: ${bc.names.join(", ")}.`);
           dawn.push(ev(`A hooded shape crossed between the houses in the night, making for the ${huntLoc}. Its build: ${bc.pair[0]}, or perhaps ${bc.pair[1]}. Another look might settle it.`));
@@ -2088,7 +2132,7 @@ function resolveNight(prev, planIn, preEvents) {
           if (bc.cands.length === 1) {
             beats.push(`Between this night and the last, one thing is settled: the shape is ${bc.b} of build. No doubt is left in it.`);
             s.clues.push(`Night ${n}: the shape at the ${plan.loc} again. Taken with what you saw before, its build is certain now: ${bc.b}. By day, that fits: ${bc.names.join(", ")}.`);
-            dawn.push(ev(`A dark shape moved at the ${plan.loc}. Taken together, your sightings agree on its build: ${bc.b}. That narrows the field.`));
+            dawn.push(ev(`A dark shape moved at the ${plan.loc}. Taken together, your sightings agree on its build: ${bc.b}. That narrows the field.`, undefined, 2));
           } else {
             beats.push(`One thing you half-caught before the dark took it back: the shape was ${buildPhrase(bc.pair)}.`);
             s.clues.push(`Night ${n}: the shape at the ${plan.loc} was ${bc.pair[0]} or ${bc.pair[1]} of build; you could not swear which. By day, that fits: ${bc.names.join(", ")}.`);
@@ -2108,7 +2152,7 @@ function resolveNight(prev, planIn, preEvents) {
         if (bc.cands.length === 1) {
           s.clues.push(`Night ${n}: a hooded figure passed you in the lane, hurrying toward the ${huntLoc}. Taken with what you saw before, its build is certain now: ${bc.b}. That fits: ${bc.names.join(", ")}.`);
           beats.push(`A hooded figure passes you in the lane, hurrying toward the ${huntLoc}. And this time the sighting settles it: ${bc.b} of build, past all doubt. Neither of you speaks.`);
-          dawn.push(ev(`A hooded figure passed you in the night, making for the ${huntLoc}. Taken together, your sightings agree on its build: ${bc.b}.`));
+          dawn.push(ev(`A hooded figure passed you in the night, making for the ${huntLoc}. Taken together, your sightings agree on its build: ${bc.b}.`, undefined, 2));
         } else {
           s.clues.push(`Night ${n}: a hooded figure passed you in the lane, hurrying toward the ${huntLoc}. ${bc.pair[0].charAt(0).toUpperCase() + bc.pair[0].slice(1)} or ${bc.pair[1]} of build; you could not swear which. That fits: ${bc.names.join(", ")}.`);
           beats.push(`A hooded figure passes you in the lane, hurrying the other way, toward the ${huntLoc}. ${buildPhrase(bc.pair).charAt(0).toUpperCase() + buildPhrase(bc.pair).slice(1)}. Neither of you speaks.`);
@@ -2145,7 +2189,9 @@ function resolveNight(prev, planIn, preEvents) {
            here we only settle the ledger, never re-roll or re-narrate */
         if (mods.searchRoll.found && !s.foundSigns.includes(mods.searchRoll.found)) {
           s.foundSigns.push(mods.searchRoll.found);
-          dawn.push(ev(`Searching the ${plan.loc} by lantern light, you found something. ${mods.searchRoll.sense}`));
+          dawn.push(ev(mods.searchRoll.animal
+            ? `Near the ${plan.loc} in the night you found a dead animal that told you more than the ground did. ${mods.searchRoll.sense}`
+            : `Searching the ${plan.loc} by lantern light, you found something. ${mods.searchRoll.sense}`));
         } else if (!mods.searchRoll.found && !playerGlimpsed) {
           dawn.push(ev(pickFreshIdx("searchNothing", SEARCH_NOTHING)(plan.loc)));
         }
@@ -2176,6 +2222,20 @@ function resolveNight(prev, planIn, preEvents) {
           if (!npc || !npc.alive) continue;
           if (s.playerSaw.some((psw) => psw.night === n && psw.id === npc.id)) continue;
           s.playerSaw.push({ night: n, id: npc.id, loc: plan.loc });
+          /* a changed neighbour, caught in the dark being what they now are.
+             The reveal was lived interactively (the sound, then look or
+             retreat): only if the player LOOKED do they learn whose face it
+             was. Retreat keeps the nerve but not the name. */
+          if (npc.turned && !npc.known && mods.thrallId === npc.id) {
+            if (mods.thrallLooked) {
+              s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, known: true } : x2));
+              s.clues.push(`Night ${n}: at the ${plan.loc} you looked, and saw ${npc.name} feeding in the dark like no living thing. There is no unseeing it. ${npc.name} is changed, and belongs to the thing now.`);
+              dawn.push(ev(`You will not forget what you saw ${npc.name} doing at the ${plan.loc} in the night. It was not the act of a living neighbour. ${npc.name} is changed.`, npc.id, 2));
+            } else {
+              dawn.push(ev(`Something fed in the dark near the ${plan.loc} last night, and you did not stay to see whose face it wore. One of your neighbours is no longer your neighbour, and you cannot yet say which.`, undefined, 2));
+            }
+            continue;
+          }
           if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
           if (mods.style === "wait" && secretOut[npc.id] && !npc.secretKnown) {
             const sec = SECRETS[npc.id];
@@ -2659,8 +2719,12 @@ function actLookOver(prev, targetId) {
   }
   /* being examined like cattle costs trust, whatever the result */
   s.npcs = s.npcs.map((x) => (x.id === targetId ? { ...x, disp: clampDisp((x.disp || 0) - 2) } : x));
-  if (examiner.turned) {
-    s.dayEvents.push(ev(`${exName} examines ${target.name} at length, listens, peers, hums. "Nothing amiss," ${exName} says. "Nothing amiss at all."`, examiner.id));
+  /* An examiner who serves the thing (a thrall, OR the creature itself
+     wearing the physician's face) lies to protect its own: it clears the
+     changed, and clears itself. If the player later learns that "clean"
+     person was in fact changed, the lie points straight back at the examiner. */
+  if (examiner.turned || examiner.id === s.monster.vid) {
+    s.dayEvents.push(ev(`${exName} examines ${target.name} at length, listens, peers, hums. "Nothing amiss," ${exName} says, and something in the ease of it does not sit right. "Nothing amiss at all."`, examiner.id));
     return s;
   }
   const rate = targetId === "falk" ? 0.45 : 0.65;
@@ -4316,6 +4380,7 @@ function MonsterVillage() {
   const [profile, setProfile] = useState(null);
   const [iv, setIv] = useState(null);
   const [ivSub, setIvSub] = useState(null);
+  const [ivOpenerOpen, setIvOpenerOpen] = useState(false);
   const [invest, setInvest] = useState(null);
   const [walk, setWalk] = useState(null);
   const [factPage, setFactPage] = useState(-1);
@@ -4401,6 +4466,9 @@ function MonsterVillage() {
 
   /* -- a fresh profile opens at the latest page of its log -- */
   useEffect(() => { setFactPage(-1); }, [profile]);
+
+  /* -- the "how they received you" atmosphere collapses shut each new interview -- */
+  useEffect(() => { setIvOpenerOpen(false); }, [iv && iv.id]);
 
   /* -- heartbeat when the walk turns dangerous -- */
   useEffect(() => {
@@ -4812,16 +4880,38 @@ function MonsterVillage() {
         if (newMods.vigil === "shift") findP = Math.min(0.95, findP + 0.15);
         if (f.wx === "storm") findP = Math.max(0.15, findP - 0.2);
         const found = unfound.length && chance(findP) ? pick(unfound) : null;
-        newMods.searchRoll = { found, sense: found ? senseFor(found) : null };
-        if (found) extraLog.push(`Your lantern catches something half-hidden at your feet. You crouch, and look, and wish you had not. ${newMods.searchRoll.sense}`);
-        else if (newMods.vigil === "shift") extraLog.push(`You shift for the better look, and the figure is gone by the time you have the angle: only scuffed ground where something stood, and the feeling of the ${walk.loc} being one heartbeat emptier than it should be. Someone real was here. Or something.`);
-        else if (newMods.vigil === "hold") extraLog.push("You hold your vantage until your knees lock. The figure does not come again. Whatever it was, it waits better than you do.");
+        if (found) {
+          newMods.searchRoll = { found, sense: senseFor(found) };
+          extraLog.push(`Your lantern catches something half-hidden at your feet. You crouch, and look, and wish you had not. ${newMods.searchRoll.sense}`);
+        } else {
+          /* the ground gave up no mark tonight: a chance instead at an animal
+             victim carrying one of the thing's signs, so evidence still turns
+             up on nights it changed someone or took no one. Only ever ONE
+             sign, and only a sign the creature really leaves. */
+          const m2 = monsterOf(s);
+          const animalPool = m2.signs.filter((sg) => sg !== "wail" && !s.foundSigns.includes(sg) && ANIMAL_SIGN[sg]);
+          if (animalPool.length && chance(0.4)) {
+            const asg = pick(animalPool);
+            const scene = animalSignScene(asg);
+            newMods.searchRoll = { found: asg, sense: scene, animal: true };
+            extraLog.push(scene);
+          } else {
+            newMods.searchRoll = { found: null, sense: null };
+            if (newMods.vigil === "shift") extraLog.push(`You shift for the better look, and the figure is gone by the time you have the angle: only scuffed ground where something stood, and the feeling of the ${walk.loc} being one heartbeat emptier than it should be. Someone real was here. Or something.`);
+            else if (newMods.vigil === "hold") extraLog.push("You hold your vantage until your knees lock. The figure does not come again. Whatever it was, it waits better than you do.");
+          }
+        }
       }
     }
     const excluded = new Set([newMods.follow, newMods.hailed, newMods.followSeen, newMods.mingledWith].filter(Boolean));
     const companyIds = (walk.company || []).filter((id) => !excluded.has(id));
     if (newMods.approach !== "back" && !newMods.company && companyIds.length) {
-      setWalk({ ...walk, mods: { ...newMods, company: companyIds }, pre: extraLog, stage: "company" });
+      /* if a changed neighbour is among the company, pre-pick the sound and
+         the reveal now, so they stay stable across re-renders and the reveal
+         can be lived interactively (sound -> look or retreat -> the truth). */
+      const thrallId = companyIds.find((id) => { const x = npcById(s, id); return x && x.turned && !x.known; });
+      const thrallBits = thrallId ? { thrallId, thrallSound: pickFreshIdx("thrallSound", THRALL_SOUND)(walk.loc), thrallText: pickFreshIdx("thrallSights", THRALL_SIGHTS)(npcById(s, thrallId).name) } : {};
+      setWalk({ ...walk, mods: { ...newMods, company: companyIds }, pre: extraLog, stage: "company", thrallLooking: false, ...thrallBits });
       return;
     }
     setWalk({ ...walk, mods: newMods, pre: extraLog, stage: "return", closureLine: walk.closureLine || pickFreshIdx("walkClosures", WALK_CLOSURES)(walk.loc) });
@@ -5092,12 +5182,30 @@ function MonsterVillage() {
                 <Btn full kind="red" onClick={() => goReturn({ style: walk.vigilStyle, vigil: "shift" })}>Shift for a better look</Btn>
               </div>
             )}
-            {!isWatch && walk.stage === "company" && (() => {
-              /* who is shown here, and what they're doing, was fixed at
-                 startWalk time (walk.company): this is the ONLY place an
-                 "other villager also out tonight" encounter is narrated, so
-                 resolveNight's dawn report can only ever report on exactly
-                 what is shown on this screen (mods.company). */
+            {!isWatch && walk.stage === "company" && walk.thrallId && !walk.thrallLooking && (() => {
+              /* a changed neighbour is out here, caught being what they now
+                 are. First you only hear it. Look, and you learn who; retreat,
+                 and you keep your nerve but not the name. As tense as the
+                 monster itself, because it is the monster's work. */
+              return (
+                <div className="flex flex-col gap-2">
+                  {beat(walk.thrallSound, C.redBright)}
+                  <Btn full kind="red" onClick={() => setWalk({ ...walk, thrallLooking: true, pre: [] })}>Look closer. You have to know</Btn>
+                  <Btn full onClick={() => goReturn({ thrallId: walk.thrallId, thrallLooked: false })}>Back away, quietly, and don't look</Btn>
+                </div>
+              );
+            })()}
+            {!isWatch && walk.stage === "company" && walk.thrallId && walk.thrallLooking && (() => {
+              return (
+                <div className="flex flex-col gap-2">
+                  {beat(walk.thrallText, C.turn)}
+                  <Btn full kind="amber" onClick={() => goReturn({ thrallId: walk.thrallId, thrallLooked: true })}>Back away, sickened, before it minds you →</Btn>
+                </div>
+              );
+            })()}
+            {!isWatch && walk.stage === "company" && !walk.thrallId && (() => {
+              /* the plain company: other villagers also out tonight, each
+                 about their own business. resolveNight reports only these. */
               const ids = walk.mods.company || walk.company || [];
               const names = ids.map((id) => npcById(s, id).name);
               const secretId = walk.mods.style === "wait" ? ids.find((id) => walk.facts.secretOut[id] && !npcById(s, id).secretKnown) : null;
@@ -5345,6 +5453,7 @@ function MonsterVillage() {
             <p><strong>By day, 2 actions:</strong> investigate a fresh death where it happened, search a location, hold an interview, have someone examined for the change, or speak against a mob if one has chosen a neck.</p>
             <p className="mt-2"><strong>Interviews:</strong> one action buys three questions. Ask about the nights, press them about a particular person, ask who they suspect, or use their trade: Falk reads wounds, Hazel sees who comes home at dawn, Liesel hears everything said in the tavern, Ansel keeps the ledger of deaths, and Greta knows the old lore. Sit and talk of nothing, sometimes: warmth loosens tongues. On the mornings after gatherings, ask who came, who stayed away, and who was not themselves. People remember what you have asked. Pester them and they will tell you where to go.</p>
             <p className="mt-2"><strong>The journal ticks nothing for you.</strong> When a sign turns up, tick it yourself in the Evidence page, and the bestiary dims to match. Tap a creature to strike it out; tap a villager's page to strike them from suspicion. Your reasoning, your marks, your mistakes. A site ever holds only two of a creature's three signs: the third clings to its victims, not the ground.</p>
+            <p className="mt-2"><strong>The changed:</strong> not every horror kills. Some feed by <span style={{ color: C.turn }}>changing</span> people instead: the first victim still dies, gruesomely, to open the account, but after that its victims do not die. They are hollowed out and sent back, walking and talking and passing for themselves, and from then on they serve it and lie for it. A morning with no body is not a mercy; it usually means one more neighbour belongs to the thing now. You uncover the changed by watching them at night (they behave wrongly in the dark), by a villager staying home on a killing night while someone still dies, or by having them examined. Once you know someone is changed, their word is worthless, and you can attempt to unbind them.</p>
             <p className="mt-2"><strong>Liars:</strong> the thing lies well; the changed lie for it and point at nothing. Every honest neighbour hides one human secret, badly. Catch a lie and press it: the innocent confess something ordinary. The other kind do not.</p>
             <p className="mt-2"><strong>By night:</strong> bar your door, investigate one villager, or search an area. Searching is a walk: follow who you meet, hail them, press close or turn back. A villager seen home on a killing night is cleared. Fog hides faces; frost holds prints.</p>
             <p className="mt-2"><strong>The armed confrontation:</strong> work the journal down to a single possible creature and you walk the nights carrying its remedy. Catch the thing at its business and confront it, and you can name it and end it right there in the dark, before it takes another soul. Carry the wrong name into that moment and you will not carry anything home again.</p>
@@ -5550,16 +5659,44 @@ function MonsterVillage() {
           </div>
           {s.nightNum <= 2 && nights.length > 0 && <p style={{ fontSize: 11, color: C.dim }} className="mt-1">Pick which night you're asking about.</p>}
 
-          {iv.transcript.map((t, i) => (
-            <div key={i} className="mt-3">
-              {t.q && <p style={{ fontSize: 13, color: C.amber }}>{t.q} {t.night ? <span style={{ color: C.dim }}>(Night {t.night})</span> : null}</p>}
-              <p style={{ fontSize: 15, fontStyle: t.q ? "italic" : "normal", color: t.q ? C.text : C.dim }}>
-                {i === last && t.q ? <SpokenText text={t.a} /> : t.a}
-              </p>
-              {t.flag && <p style={{ fontSize: 13, color: C.redBright, fontWeight: 700 }}>✕ {t.flag}</p>}
-              {t.sign && <p style={{ fontSize: 13, color: C.amber }}>{senseFor(t.sign, 0)}</p>}
-            </div>
-          ))}
+          {(() => {
+            /* the opener lines (how they receive you, whether they clocked
+               you watching) are atmosphere. Once the first real question is
+               asked they collapse into a toggle so the transcript stays clean. */
+            const asked = iv.transcript.some((t) => t.q);
+            const openers = iv.transcript.filter((t) => !t.q);
+            const qa = iv.transcript.filter((t) => t.q);
+            const renderOpener = (t, i) => (
+              <p key={`o${i}`} style={{ fontSize: 14.5, color: C.dim }} className="mt-2">{t.a}</p>
+            );
+            return (
+              <>
+                {!asked
+                  ? openers.map(renderOpener)
+                  : (
+                    <div className="mt-3">
+                      <button onClick={() => setIvOpenerOpen((v) => !v)} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12, cursor: "pointer", padding: 0 }}>
+                        {ivOpenerOpen ? "▴ hide how they received you" : "▾ how they received you"}
+                      </button>
+                      {ivOpenerOpen && openers.map(renderOpener)}
+                    </div>
+                  )}
+                {qa.map((t, i) => {
+                  const isLast = i === qa.length - 1;
+                  return (
+                    <div key={`q${i}`} className="mt-3">
+                      <p style={{ fontSize: 13, color: C.amber }}>{t.q} {t.night ? <span style={{ color: C.dim }}>(Night {t.night})</span> : null}</p>
+                      <p style={{ fontSize: 15, fontStyle: "italic", color: C.text }}>
+                        {isLast ? <SpokenText text={t.a} /> : t.a}
+                      </p>
+                      {t.flag && <p style={{ fontSize: 13, color: C.redBright, fontWeight: 700 }}>✕ {t.flag}</p>}
+                      {t.sign && <p style={{ fontSize: 13, color: C.amber }}>{senseFor(t.sign, 0)}</p>}
+                    </div>
+                  );
+                })}
+              </>
+            );
+          })()}
 
           {lastFollowUps.length > 0 && (
             <div className="mt-2 ml-3 pl-3 flex flex-col gap-1.5" style={{ borderLeft: `2px solid ${C.amber}` }}>
@@ -5737,7 +5874,8 @@ function MonsterVillage() {
 
   const examineModal = modal === "examine" && modalWrap("Have whom examined for the change?", (
     <div className="flex flex-col gap-2">
-      <p style={{ color: C.dim, fontSize: 13 }}>Doctor Falk claims he can tell a changed soul by the coldness of the blood. Greta can examine Falk himself, if it comes to that. A clean result proves little, and the innocent do not enjoy being examined like cattle.</p>
+      <p style={{ color: C.dim, fontSize: 13 }}>Some horrors do not kill their victims. They <strong style={{ color: C.turn }}>change</strong> them: the body walks and talks and passes for itself, but it belongs to the thing now, and lies for it. Doctor Falk can feel the coldness of a changed soul's blood, and name one to you. Greta examines Falk himself, if it comes to that.</p>
+      <p style={{ color: C.dim, fontSize: 12 }}>A clean result proves little. And if your examiner has already been changed, they will call their own kind clean, so a clearance you later find was false points straight at whoever gave it.</p>
       {aliveNpcs(s).map((n) => villagerBtn(n, () => doAction((x) => actLookOver(x, n.id))))}
     </div>
   ));
