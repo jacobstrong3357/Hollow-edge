@@ -961,6 +961,33 @@ const THRALL_SIGHTS = [
   (nm) => `${nm} walks the same short stretch of lane, back and forth, back and forth, never tiring, whispering "don't go in the woods, don't go in the woods" to no one, and does not stop or look up as you pass close enough to touch. Whatever this is, it is not a living neighbour.`,
 ];
 
+/* The thing, in its own shape, overheard in the dark: smart, and dressing as
+   a neighbour by day, but out here it is deranged, delighted, and playing.
+   Never names or genders it: the voice is unrecognisable until you know the
+   face behind it. Surfaced as a night beat and, sometimes, a village rumour. */
+const MONSTER_VOICE = [
+  `Somewhere out past the last house, a voice is singing a child's counting rhyme, slow and off: "one for the ground, and two for the crow, and three for the little one nobody knows..." It is not singing to itself. It is keeping count.`,
+  `From no direction you can fix, a low and delighted whisper: "eeny... meeny... miny..." A long, savouring pause. Then, softer, pleased: "...caught one."`,
+  `It is reciting names in the dark. Your neighbours' names, one after another, in a fond little sing-song, and it has not yet reached the end of the list, and you do not want to be on the part it has left.`,
+  `A voice out in the black, talking pleasantly to someone who has stopped answering: "No, no. Hold still. It's nicer if you hold still. There. Isn't that nicer."`,
+  `Laughter comes over the rooftops, high and easy and far too happy for the hour, and then a voice, conversational, as if choosing an apple: "Which house tonight, do we think? Eeny. Meeny."`,
+  `Something is humming a lullaby in the dark, the one every mother here sings, note-perfect and with no warmth in it at all, and every dog in the village has gone silent to listen.`,
+  `A whisper threads down the lane, patient and amused: "I know which bed is yours. I know which board creaks. I have all the nights in the world, and you have so few left, and isn't that the joke of it."`,
+];
+/* A neighbour whose mind has gone to the thing: interviewed, they no longer
+   lie for it (that is the hidden thrall's job); they only leak, in fragments,
+   some of them almost useful, most of them not. */
+const TURNED_RAVING = [
+  `"He's coming," they say, pleasant and far away. "He's coming for you. And you. And you." They point at nothing, three times, and smile.`,
+  `"Don't go in the woods." A pause. "Don't go in the house. Don't go in the ground." Their eyes track something past your shoulder that is not there. "There's nowhere that's a door he can't open."`,
+  `"The graves talk, you know. If you lie down close enough to them. I lie down. I listen. They're all so happy now." They hum a little. It is not a tune.`,
+  `They answer a question you did not ask, in a voice with a second voice threaded under it: "Yes. Soon. All of them." Then they blink at you, mild and empty. "Did you want something?"`,
+  `"I used to be afraid of him." They say it wonderingly, as if it were someone else's life. "Isn't that funny. I used to be so afraid." They laugh, until it stops being a laugh.`,
+  `"Count us," they whisper, leaning in too close. "Go on. Count us at the well tomorrow. The number's wrong. It's been wrong for days and only I can hear it." They tap their own temple, gently, again and again.`,
+  `They recite your own history back at you, dates and names, flat and word-perfect, and finish with something that was never in it: "...and you die at the Graveyard, I think. Or the Tavern. He hasn't decided yet. He does like to be asked nicely."`,
+  `"Shh." They put a finger to their lips, delighted, conspiratorial. "You'll wake the others. There are so many of us now. You just haven't finished counting."`,
+];
+
 const WALK_SOUND_LINES = [
   "Somewhere off your path: a sound. Wet, rhythmic, patient: a spade, or a jaw, or a prayer being said into the ground.",
   "From between the houses, brief and clear: a chain being tested, link by link, by something with all night to test it.",
@@ -1980,6 +2007,11 @@ function resolveNight(prev, planIn, preEvents) {
   const nightSounds = () => {
     if (wailTonight) beats.push("A thin wailing rises over the rooftops, from everywhere and nowhere at once. It goes on far too long.");
     if (n > 1 && active && wx !== "storm" && chance(0.35)) beats.push(soundFor(m.id));
+    /* the thing, overheard in its own shape: deranged, playful, unrecognisable */
+    if (n > 1 && active && wx !== "storm" && chance(0.32)) {
+      beats.push(pickFreshIdx("monsterVoice", MONSTER_VOICE));
+      if (chance(0.5)) dawn.push(ev("Folk by the well swear something was heard out past the houses in the night, singing. A counting rhyme, said some. Names, said others. Nobody agrees on the words, and nobody slept.", undefined, 0));
+    }
     if (!plan.facts && n > 1 && chance(0.18)) {
       if (chance(0.25)) beats.push(pickFreshIdx("gossipNamed", GOSSIP_NAMED)(pick(s.npcs.filter((x) => x.alive)).name));
       else beats.push(pickFreshIdx("gossip", GOSSIP));
@@ -3021,6 +3053,13 @@ function computeAnswer(s, id, night, q, targetId) {
   const m = monsterOf(s);
   const npc = npcById(s, id);
   const per = PERSONA[id];
+  /* A villager known to be changed no longer keeps up the pretence: their
+     mind has gone to the thing, and what is left raves. It cannot lie for
+     the monster the way a hidden thrall does, and it cannot be pressed for
+     anything usable. It just leaks. (Sitting quietly with them still works.) */
+  if (npc.turned && npc.known && q !== "talk") {
+    return { quote: pickFreshIdx("turnedRaving", TURNED_RAVING), mentions: [], claim: null, flag: null, foundSign: null, clue: null, followUps: [], raving: true };
+  }
   const log = s.nightLogs.find((x) => x.night === night);
   const actual = log ? log.outMap[id] : undefined;
   const isMonster = id === s.monster.vid;
