@@ -273,7 +273,7 @@ const senseFor = (sg, i = null) => (i === null ? pick(SIGN_SENSE[sg]) : SIGN_SEN
 const SIGN_SENSE_BODY = {
   claw: [
     "The wounds are claw work: four parallel tears, deep and evenly spaced, ripped rather than cut. No knife, and no animal with a paw that broad.",
-    "Whatever opened them used claws, and used them the way a hand is used — spread wide, deliberate, far past any beast's reach.",
+    "Whatever opened them used claws, and used them the way a hand is used, spread wide, deliberate, far past any beast's reach.",
   ],
   bite: [
     "The killing wound is a bite. The jaw that made it was wider than a man's and worse than a dog's, and it bit exactly once.",
@@ -281,13 +281,13 @@ const SIGN_SENSE_BODY = {
   ],
   tracks: [
     "Prints circle the body, too large and too deep, the toes wrong in number. They come in from the dark and go back to it, one direction each.",
-    "The ground beside them holds a single line of prints, heavier than any villager, that stop dead a stride away — as if the maker stopped touching the ground.",
+    "The ground beside them holds a single line of prints, heavier than any villager, that stop dead a stride away, as if the maker stopped touching the ground.",
   ],
   cold: [
     "The body is colder than the night can account for, and the ground beneath it is rimed white in a perfect outline. Doctor Falk touches it once and pulls his hand back.",
   ],
   graves: [
-    "Grave dirt. It is under their nails, ground into the wounds, scattered around the body — old earth, from ground nothing living had cause to open.",
+    "Grave dirt. It is under their nails, ground into the wounds, scattered around the body - old earth, from ground nothing living had cause to open.",
   ],
   skin: [
     "Caught in their fist is a scrap of something papery and pale. Not cloth. A shed surface, like a snake's leaving, except it once fit something the size of a person.",
@@ -384,7 +384,7 @@ const HOME_LINES = [
   "You bank the fire low and lie counting the gaps between the dogs. The gaps are getting longer.",
   "You bar the door, bank the fire low, and sit where you can watch both windows.",
   "You check the bolt twice, then a third time, and settle in the chair that faces the door.",
-  "You salt the sill, the way Hazel says, feeling foolish, and doing it anyway.",
+  "You salt the sill, the way Greta says, feeling foolish, and doing it anyway.",
   "You sit in the dark on purpose. A lit window is an invitation, and you are done inviting.",
   "You wedge the settle against the door and sleep in your boots, if you sleep at all.",
 ];
@@ -753,68 +753,70 @@ const SIEGE_KILLS = [
   { beat: (v) => `In the worst hour the singing falters, and everyone hears it: ${v.name}'s voice, outside, calling to be let in. The bar is half lifted before old hands slam it down. ${v.name} is in the third pew, has been all night. The voice keeps calling till dawn, and by first light it has found one that isn't inside to answer.`, dawn: (v) => `${v.name} ${v.role} is gone from their house, the door open, the supper still on the table. Something called them out in a voice they trusted. Everyone in the church heard what it can do with a voice.` },
 ];
 
-/* Ten openings, two beats each, drawn fresh across replays. None of them
-   may hint at which of the twelve is loose. */
-const NIGHT_ONE_OPENINGS = [
-  [
-    "Word came with the peddler: a village three valleys over stopped answering letters. Men rode out and found it no longer a village. Tonight every door in Hollow's Edge is barred.",
-    "One of the faces you have known your whole life is not what it seems, and has waited a long time for the dark to matter.",
-  ],
-  [
-    "The trouble announces itself politely: three hens, a dog, the miller's cat - all found one morning, opened, none eaten, laid in a row on the church steps.",
-    "By dusk every door is barred. Behind one, a face you have always known is practicing being worn.",
-  ],
-  [
-    "A rider passes at noon, shouting over his shoulder: bar your doors, it crosses valleys. He is gone before anyone can ask what 'it' is.",
-    "Nobody laughs it off. Nine souls bar their doors tonight, and one has no need of the bar at all.",
-  ],
-  [
-    "Old Widow Hartmann, silent for years, stands in the square at midday, clear as a bell: it has already chosen the first one. Then she goes quiet.",
-    "Nobody believes her. Every door is barred by dusk anyway. Belief and fear keep different ledgers.",
-  ],
-  [
-    "It starts with the dogs. Every dog in Hollow's Edge, at the same hour, walks to its chain's end, faces the tree line, and goes silent.",
-    "Dogs know, the old men say, and bar their doors. What they know arrives with the dark, and already has a door of its own.",
-  ],
-  [
-    "The church bell rings at dusk for no service anyone called. Asked why, the ringer says only that it seemed the night for it.",
-    "It is exactly the night for it. Somewhere among the faces that heard it, something has waited years for this.",
-  ],
-  [
-    "The bishop's letter arrives late and water-stained: a warning, in a clerk's shaking hand, of what emptied a parish two valleys north. It ends mid-sentence.",
-    "Everyone who hears it bars their door before dark. One door in Hollow's Edge is barred only for show.",
-  ],
-  [
-    "The swallows leave the eaves at noon all at once, a dark ribbon pouring south, and do not return for the evening flies.",
-    "The old men watch in silence, then bar their doors. Whatever empties a sky like that arrived quietly, wearing a neighbour's face while it waited.",
-  ],
-  [
-    "Two families pass before noon, everything they own on one cart, answering nothing. The children ride backward, watching the tree line the whole way.",
-    "Whatever they flee, the grown ones would not name. By dusk Hollow's Edge believes them anyway, every bolt thrown before the light fails.",
-  ],
-  [
-    "The well water comes up wrong at dawn. Not foul - wrong, a taste of old iron, gone by the second bucket. Nobody says it aloud.",
-    "Everybody bars their door at dusk all the same. In a village this size fear moves faster than proof - and this once, it has it right.",
-  ],
+/* ---------- Night one: one bespoke POV death scene ----------
+   The whole first night is told close over the shoulder of the villager who
+   dies, from the evening's last chore to the moment the dark takes them. It
+   is assembled once the victim is known (NIGHT_ONE_SCENE), and every beat is
+   deliberately monster-agnostic: no wound, no cold, no sulfur, nothing that
+   would narrow the twelve. The village learns who died at dawn. */
+const N1_FRAME = [
+  "Night falls on Hollow's Edge, the first of the nights that will have a name.",
+  "The first true dark comes down on Hollow's Edge like a held breath. Somewhere in it, a thing that has waited a long time stops waiting.",
+  "Night falls on Hollow's Edge. Doors bar along the lane one by one, and the village tells itself it is only being careful.",
+  "The light goes out of the valley early and all at once, and Hollow's Edge shutters itself against a dark it does not yet have a name for.",
 ];
-const NIGHT_ONE_HOME_LINES = [
-  "You bar your door with the rest and sit in the dark, listening to a village remember how to be afraid.",
-  "You throw your bolt at dusk, then check it four more times before midnight, the way a tongue keeps finding a sore tooth.",
-  "You sit up with the fire and the bread knife and a heart you can hear, while past the walls the night makes its ordinary sounds - each one a question now.",
-  "You bar the door and stand with your hand on the wood, listening to Hollow's Edge go silent street by street, like a body falling asleep limb by limb.",
-  "Sleep comes in scraps. Every beam is a footstep, every fox a voice. Eventually you stop arguing and just lie there, taking the night's roll call.",
-  "You blow the candle out early. Light draws the eye, your grandmother used to say - and tonight you finally understand what her face did when she said it.",
+/* the victim's last ordinary act, by trade. Each keeps its own character's
+   gender; the shared beats below take pronouns from the victim. */
+const N1_OPEN = {
+  marta: (nm) => `${nm} damps the last of the ovens, pulls the bakery door shut on the day's warmth, and steps out into a dark that has come down too fast.`,
+  tobias: (nm) => `${nm} shoulders his spade and leaves the churchyard by the low gate, the way he has ten thousand nights, telling himself tonight is like the rest of them.`,
+  ansel: (nm) => `${nm} snuffs the altar candles one by one and locks the church behind him, and the turn of the key sounds smaller than it should against so much dark.`,
+  greta: (nm) => `${nm} ties off the last bunch of drying herbs and steps out of the warm green dark of her cottage into the colder dark at the forest's edge.`,
+  wilhelm: (nm) => `${nm} lets the forge fall to embers, sends the two boys up to their beds, and steps out to draw the shutters against a night that leans in to meet him.`,
+  liesel: (nm) => `${nm} calls the last of the drinkers out into the lane, bolts the taproom, and stands a moment in a quiet the tavern never used to hold at this hour.`,
+  falk: (nm) => `${nm} caps his inkwell, closes his bag on a day of small complaints, and sets off down the lane on his cane, slower than the dark is falling.`,
+  rosa: (nm) => `${nm} sets the needle down, folds the day's cloth by feel in the failing light, and steps out for one breath of air that isn't full of thread.`,
+};
+const N1_TENSION_1 = [
+  (nm, s, S, o, p) => `At first it is nothing: the night gone a shade too quiet, the way a room goes quiet when the talk in it had been about you.`,
+  (nm, s, S, o, p) => `Somewhere behind ${o} a sound falls that is almost a footstep, and when ${s} stops to be sure of it, it stops too, a half-beat late.`,
+  (nm, s, S, o, p) => `The cold finds ${o} first, or the quiet does, or the plain animal certainty of being watched by something that is in no hurry at all.`,
+  (nm, s, S, o, p) => `${S} tells ${o}self it is only the dark playing the old trick, the one where every shadow leans a little toward you. ${S} does not believe it tonight.`,
 ];
-const NIGHT_ONE_KILL_LINES = [
-  "Past the last house, one sound. Short. Wet. Final. Then a silence so complete you can hear your own blood. No one looks. It can wait for daylight.",
-  "Past midnight, beyond the last house, a scream climbs, breaks, and stops before it is finished. The silence after has weight. No one goes out.",
-  "You are still awake when it happens: a door far off opening - not breaking, opening - then a sound like the night swallowing once. You tell yourself it was nothing, till dawn.",
-  "Two sounds an hour apart: something heavy crossing a fence; then, much worse, a dragging that takes a long time to fade. Nobody sleeps. Nobody opens a door.",
-  "The dogs start it, every dog at once, then all fall quiet, and in that quiet something finishes what it came to do. Not loud - that is what nobody can explain come morning.",
-  "It happens without a scream, and the village hears it anyway - the way a house knows when someone in it has died. By the small hours, everyone awake knows the count is wrong.",
+const N1_TENSION_2 = [
+  (nm, s, S, o, p) => `${S} does not turn around. Everyone knows you do not turn around. ${S} walks faster. Whatever keeps pace does not trouble to.`,
+  (nm, s, S, o, p) => `There is time, just, to see that the shape standing between the houses ahead was not there a breath ago, is not a neighbour, and is not waiting to be asked in.`,
+  (nm, s, S, o, p) => `${nm} draws breath to call out a name, any name, anyone at all, and the night takes the breath before the word can leave.`,
+  (nm, s, S, o, p) => `The last lit window goes dark as ${s} passes it, and ${s} understands, too late, that ${s} is the only thing still moving on the whole of the lane.`,
 ];
+const N1_DEATH = [
+  (nm, s, S, o, p) => `What comes then comes fast, and not the way ${nm} has ever heard a death described. There is no time to be certain of anything, least of all what it was. And then the lane is empty, and Hollow's Edge is one soul lighter, and will not know it until dawn.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch, and understands all of it, and can tell no one. Then the dark closes over the place where ${s} stood, and keeps its own counsel until morning.`,
+  (nm, s, S, o, p) => `It is quick, or it is not; there is no one left by dawn who could say. The last thing the night grants ${o} is the knowledge that ${s} had been right, all along, to be afraid. The rest of it, the night keeps.`,
+  (nm, s, S, o, p) => `${nm} has time for one thought, and it is not fear, quite: it is recognition, the way you place a face you have known for years. Then even that is gone, and the lane holds nothing but the dark, and the dark is patient, and says nothing to anyone until light.`,
+];
+function NIGHT_ONE_SCENE(v, where) {
+  const s = v.sex === "f" ? "she" : "he";
+  const S = v.sex === "f" ? "She" : "He";
+  const o = v.sex === "f" ? "her" : "him";
+  const p = v.sex === "f" ? "her" : "his";
+  const nm = v.name;
+  const open = (N1_OPEN[v.id] || ((n) => `${n} finishes the last of the day's work and steps out into a dark that has come down too fast.`))(nm);
+  const journey = where === "home"
+    ? `The way home is short, and ${nm} has walked it a thousand times. Tonight ${s} walks it too fast, not quite running, and throws the bolt behind ${o} with hands that will not keep still.`
+    : `But one last thing needs doing, and it takes ${nm} out past the last lit window, toward the ${where}, where the dark does not fall so much as rise up out of the ground to meet ${o}.`;
+  return [
+    pickFreshIdx("n1frame", N1_FRAME),
+    open,
+    journey,
+    pickFreshIdx("n1t1", N1_TENSION_1)(nm, s, S, o, p),
+    pickFreshIdx("n1t2", N1_TENSION_2)(nm, s, S, o, p),
+    pickFreshIdx("n1death", N1_DEATH)(nm, s, S, o, p),
+  ];
+}
+
 const N1_BELL = [
-  (v) => `The church bell starts ringing while it is still dark — not the hour, not a service, just ringing. It means a death. ${v.name} ${v.role} is dead.`,
+  (v) => `The church bell starts ringing while it is still dark, not the hour, not a service, just ringing. It means a death. ${v.name} ${v.role} is dead.`,
   (v) => `The bell will not stop before dawn, until someone takes the rope from the ringer's shaking hands. By then everyone knows: ${v.name} ${v.role} is dead.`,
   (v) => `No bell. Just a name carried door to door before dawn: ${v.name}. ${v.name}. By sunrise the whole village stands in the square, saying it.`,
   (v) => `First light shows a silent crowd in the lane, all facing one door. You do not need to ask whose. ${v.name} ${v.role} is dead.`,
@@ -959,7 +961,7 @@ const QUIET_APPROACH_LINES = [
 
 const RUMOR_STRANGE = [
   (name) => `${name} was seen standing at their window before dawn. Just standing, for the longest time.`,
-  (name) => `Marta says ${name} has not bought bread since the trouble began. Not once.`,
+  (name) => `Hazel says ${name} has not bought bread since the trouble began. Not once.`,
   (name) => `${name} did not take communion on Sunday. Folk noticed.`,
   (name) => `The children will not go near ${name}'s door anymore. Children know, people say.`,
   (name) => `${name}'s cat sits outside now, in all weathers, and will not be coaxed back in.`,
@@ -1173,10 +1175,10 @@ const EVENT_DAWN = [
 ];
 
 const NPC_DEFS = [
-  { id: "marta", name: "Marta", role: "the Baker", build: "slight", sex: "f" },
+  { id: "marta", name: "Hazel", role: "the Baker", build: "slight", sex: "f" },
   { id: "tobias", name: "Old Tobias", role: "the Gravedigger", build: "stooped", sex: "m" },
   { id: "ansel", name: "Father Ansel", role: "the Priest", build: "tall", sex: "m" },
-  { id: "greta", name: "Hazel", role: "the Herbalist", build: "slight", sex: "f" },
+  { id: "greta", name: "Greta", role: "the Herbalist", build: "slight", sex: "f" },
   { id: "wilhelm", name: "Wilhelm", role: "the Blacksmith", build: "stout", sex: "m" },
   { id: "liesel", name: "Liesel", role: "the Innkeeper", build: "stout", sex: "f" },
   { id: "falk", name: "Doctor Falk", role: "the Physician", build: "stooped", sex: "m" },
@@ -1297,7 +1299,7 @@ const FOLK_HINTS = [
   { m: ["hag", "banshee"], t: `"Two things wail, girl, and the difference is the timing. The grieving one wails the night BEFORE it takes you. The hag wails while she rides."` },
 ];
 
-const COLLECTOR_HINT = { m: ["vampire", "demon", "doppel"], t: `"The collecting kinds kill once, girl \u2014 the first night, to open the account. If the dying stops after one body, stop watching for bodies. Start counting the living."` };
+const COLLECTOR_HINT = { m: ["vampire", "demon", "doppel"], t: `"The collecting kinds kill once, girl, the first night, to open the account. If the dying stops after one body, stop watching for bodies. Start counting the living."` };
 
 const FLED_OPENERS = [
   (nm) => `They cannot keep still. "${nm}. I broke bread with ${nm}. I let it hold my child at the christening. Do not ask me to be calm."`,
@@ -1527,18 +1529,18 @@ const turnNightOf = (s, id) => { const d = s.deaths.find((x) => x.id === id && x
 function ritePreparer(s, excludeId) {
   const ok = (id) => { const n = npcById(s, id); return n && n.alive && !n.fled && !n.turned && id !== excludeId; };
   if (ok("ansel")) return "Father Ansel";
-  if (ok("greta")) return "Hazel, who keeps her grandmother's lore";
+  if (ok("greta")) return "Greta, who keeps her grandmother's lore";
   if (ok("wilhelm")) return "Wilhelm, from the rites his grandfather kept behind the anvil";
   return "You yourself, from the old books";
 }
 
 /* Same priority order as ritePreparer, with the success odds the Rite of
-   Unbinding hangs on: the priest first, then Hazel, then Wilhelm or, failing
+   Unbinding hangs on: the priest first, then Greta, then Wilhelm or, failing
    everyone, the player's own unsteady hand. */
 function officiantFor(s, excludeId) {
   const ok = (id) => { const n = npcById(s, id); return n && n.alive && !n.fled && !n.turned && id !== excludeId; };
   if (ok("ansel")) return { name: "Father Ansel", p: 0.65 };
-  if (ok("greta")) return { name: "Hazel", p: 0.45 };
+  if (ok("greta")) return { name: "Greta", p: 0.45 };
   if (ok("wilhelm")) return { name: "Wilhelm", p: 0.3 };
   return { name: "you yourself", p: 0.3 };
 }
@@ -1802,11 +1804,9 @@ function resolveNight(prev, planIn, preEvents) {
   }
 
   if (n === 1) {
-    /* Night one is its own bespoke chapter: no generic dusk pool, no weather
-       aside, no gathering, no watch/out variants: the game always resolves
-       the very first night as a night spent behind a barred door. */
-    beats.push(...pickFreshIdx("n1open", NIGHT_ONE_OPENINGS, 8));
-    beats.push(pickFreshIdx("n1home", NIGHT_ONE_HOME_LINES, 4));
+    /* Night one is one bespoke, close-third-person death scene told from the
+       victim's own evening: it is assembled later, once the victim is known
+       (see the attack section). Nothing is pushed here. */
   } else if (!plan.facts) {
     beats.push(pickFreshIdx("duskLines", DUSK_LINES));
     /* -- follow-through: last night's panic, or last night's false calm,
@@ -2342,7 +2342,7 @@ function resolveNight(prev, planIn, preEvents) {
       victimKind = firstBlood ? "kill" : m.attack;
       if (victimKind === "kill") {
         if (n === 1) {
-          beats.push(pickFreshIdx("n1kill", NIGHT_ONE_KILL_LINES, 4));
+          beats.push(...NIGHT_ONE_SCENE(victim, victimWhere));
         } else {
           beats.push(huntsCrowd && victimWhere === eventLoc
             ? pick(EVENT_KILL)(evn.name, victim.name)
@@ -2708,7 +2708,7 @@ function actSearch(prev, loc) {
       `You search the ${loc} in daylight and find nothing. Whatever the night left there, the sun and the foot traffic have already taken it.`,
       `An hour combing the ${loc} turns up nothing worth writing down. If something passed through, it covered its going.`,
       `The ${loc} by daylight looks like any ordinary morning. That is all it gives you.`,
-      `You go over the ${loc} in good light and find only the prints of everyone who has walked it since dawn — your own among them.`,
+      `You go over the ${loc} in good light and find only the prints of everyone who has walked it since dawn, your own among them.`,
     ])));
   }
   return s;
@@ -2986,7 +2986,7 @@ function computeAnswer(s, id, night, q, targetId) {
       } else if (claim && claim !== "home" && s.playerSaw.some((f) => f.night === night && f.id === id && f.loc === claim)) {
         quote += ` "But then, you know that already. You were there yourself. I saw your lantern."`;
       } else if ((isMonster || npc.turned) && claim === "home" && (npc.sawYouOut || []).some((e2) => e2.night === night) && chance(0.5)) {
-        quote += ` A pause, one beat too long. "Strange question, though \u2014 from you. I could swear I saw YOU abroad that night. What is it you do out there, in the dark, while honest folk sleep?"`;
+        quote += ` A pause, one beat too long. "Strange question, though, from you. I could swear I saw YOU abroad that night. What is it you do out there, in the dark, while honest folk sleep?"`;
       }
     }
   }
@@ -4467,10 +4467,10 @@ function MonsterVillage() {
           {!veteran && (
             <>
               <p className="mvIn mt-3" style={{ animationDelay: "0.8s", color: C.parch, fontSize: 15 }}>
-                One of your eight neighbours is a monster in disguise, and it kills at night. Your job: work out <strong style={{ color: C.redBright }}>who it is</strong> and <strong style={{ color: C.redBright }}>what kind of creature it is</strong> — then accuse them, so the right rite can end it.
+                One of your eight neighbours is a monster in disguise, and it kills at night. Your job: work out <strong style={{ color: C.redBright }}>who it is</strong> and <strong style={{ color: C.redBright }}>what kind of creature it is</strong>, then accuse them, so the right rite can end it.
               </p>
               <p className="mvIn mt-2" style={{ animationDelay: "1.0s", color: C.dim, fontSize: 13.5 }}>
-                By day, question the villagers and search for the signs it leaves. By night, watch a door or walk the dark yourself. Every creature in the bestiary leaves different signs — match what you find to a name before the village runs out of people.
+                By day, question the villagers and search for the signs it leaves. By night, watch a door or walk the dark yourself. Every creature in the bestiary leaves different signs - match what you find to a name before the village runs out of people.
               </p>
               <div className="mvIn mt-5" style={{ animationDelay: "1.1s" }}>
                 <div className="grid grid-cols-4 gap-x-3 gap-y-3 place-items-center" style={{ opacity: 0.6, filter: "grayscale(0.35)" }}>
@@ -5345,7 +5345,7 @@ function MonsterVillage() {
         {tab === "help" && (
           <div style={{ fontSize: 14 }}>
             <p><strong>By day, 2 actions:</strong> investigate a fresh death where it happened, search a location, hold an interview, have someone examined for the change, or speak against a mob if one has chosen a neck.</p>
-            <p className="mt-2"><strong>Interviews:</strong> one action buys three questions. Ask about the nights, press them about a particular person, ask who they suspect, or use their trade: Falk reads wounds, Marta sees who comes home at dawn, Liesel hears everything said in the tavern, Ansel keeps the ledger of deaths, and Hazel knows the old lore. Sit and talk of nothing, sometimes: warmth loosens tongues. On the mornings after gatherings, ask who came, who stayed away, and who was not themselves. People remember what you have asked. Pester them and they will tell you where to go.</p>
+            <p className="mt-2"><strong>Interviews:</strong> one action buys three questions. Ask about the nights, press them about a particular person, ask who they suspect, or use their trade: Falk reads wounds, Hazel sees who comes home at dawn, Liesel hears everything said in the tavern, Ansel keeps the ledger of deaths, and Greta knows the old lore. Sit and talk of nothing, sometimes: warmth loosens tongues. On the mornings after gatherings, ask who came, who stayed away, and who was not themselves. People remember what you have asked. Pester them and they will tell you where to go.</p>
             <p className="mt-2"><strong>The journal ticks nothing for you.</strong> When a sign turns up, tick it yourself in the Evidence page, and the bestiary dims to match. Tap a creature to strike it out; tap a villager's page to strike them from suspicion. Your reasoning, your marks, your mistakes. A site ever holds only two of a creature's three signs: the third clings to its victims, not the ground.</p>
             <p className="mt-2"><strong>Liars:</strong> the thing lies well; the changed lie for it and point at nothing. Every honest neighbour hides one human secret, badly. Catch a lie and press it: the innocent confess something ordinary. The other kind do not.</p>
             <p className="mt-2"><strong>By night:</strong> bar your door, investigate one villager, or search an area. Searching is a walk: follow who you meet, hail them, press close or turn back. A villager seen home on a killing night is cleared. Fog hides faces; frost holds prints.</p>
@@ -5739,7 +5739,7 @@ function MonsterVillage() {
 
   const examineModal = modal === "examine" && modalWrap("Have whom examined for the change?", (
     <div className="flex flex-col gap-2">
-      <p style={{ color: C.dim, fontSize: 13 }}>Doctor Falk claims he can tell a changed soul by the coldness of the blood. Hazel can examine Falk himself, if it comes to that. A clean result proves little, and the innocent do not enjoy being examined like cattle.</p>
+      <p style={{ color: C.dim, fontSize: 13 }}>Doctor Falk claims he can tell a changed soul by the coldness of the blood. Greta can examine Falk himself, if it comes to that. A clean result proves little, and the innocent do not enjoy being examined like cattle.</p>
       {aliveNpcs(s).map((n) => villagerBtn(n, () => doAction((x) => actLookOver(x, n.id))))}
     </div>
   ));
