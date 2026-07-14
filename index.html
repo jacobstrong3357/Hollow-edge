@@ -1163,7 +1163,7 @@ function rollHomeWatch(s, id) {
   if (!target || id === s.monster.vid) return { kind: "quiet" };
   const roll = Math.random();
   const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id && x.id !== s.monster.vid);
-  if (SECRETS[id] && !target.secretKnown && roll < 0.3) return { kind: "secret", short: SECRETS[id].short };
+  if (secretOf(s, id) && !target.secretKnown && roll < 0.3) return { kind: "secret", short: secretOf(s, id).short };
   if (others.length && roll < 0.52) return { kind: "visitor", visitorId: pick(others).id };
   if (roll < 0.7) return { kind: "restless", ri: Math.floor(Math.random() * WATCH_RESTLESS.length) };
   return { kind: "quiet" };
@@ -1274,42 +1274,125 @@ const PERSONA = {
 };
 
 /* ---------- innocent secrets ----------
-   Every villager has one mundane, human secret that takes them out at night
-   and makes them lie about it. Lies are no longer proof of guilt. */
-const SECRETS = {
-  marta: { loc: "Graveyard", outP: 0.3, short: "she visits her husband's unmarked stone by night",
-    walk: (nm) => `${nm} kneels at a river-stone with no name cut into it, talking to it softly, the way you talk to the living. Her husband. Three winters drowned, and she visits him where the village cannot count her tears.`,
-    hail: (nm) => `${nm} startles so badly she nearly cries out. "Couldn't sleep. The ovens." She is holding dried flowers, and hiding them badly, and she hurries on.`,
-    confess: `Her chin comes up. "I visit my husband. At night, when no one is watching me grieve. Three winters, and this village still counts my tears at the market. So yes. I lied. Hang me for missing him."` },
-  tobias: { loc: "Graveyard", outP: 0.3, short: "he digs graves before anyone has died, because the ground tells him one is coming",
-    walk: (nm) => `${nm}, waist-deep in a fresh grave that belongs to no one yet, digging with terrible patience. He is not hiding a body. He is getting ahead of the week. The ground has told him one is coming.`,
-    hail: (nm) => `${nm} does not startle. Old men are past startling. "Evening," he says, spade over his shoulder, offering nothing else, and walks on toward the stones.`,
-    confess: `He looks at his own hands a long time. "I dig them early. Before they're needed. The ground goes soft where it knows, and it's known all month. Folk would call it unlucky. Folk would be right. But someone has to be ready."` },
-  ansel: { loc: "Old Church", outP: 0.3, short: "he drinks alone in the crypt, because his faith has gone and his flock must not see it",
-    walk: (nm) => `Candlelight, low in the crypt, and ${nm} with a bottle that has no place on any altar. He is not praying. He is reading the burial ledger over and over, and drinking, and his lips are moving around no psalm you know.`,
-    hail: (nm) => `${nm} draws himself up to his full height, and the smell reaches you before the blessing does. "Walking the bounds of the flock," he says, too carefully. "Go home."`,
-    confess: `The height goes out of him all at once. "I drink. In the crypt, where God stopped looking first. My faith went before the killings started, and a shepherd who no longer believes in wolves must at least keep them from seeing it. That is my whole crime. I wish it were a better one."` },
-  greta: { loc: "Dark Forest", outP: 0.35, short: "she cuts grave-rowan and moon-herbs she has no right to take",
-    walk: (nm) => `${nm}, at the forest's edge with a curved knife, cutting rowan from over the churchyard wall where it grows on the dead. Poaching from graves, by moonlight, with the calm of long practice. For remedies. Probably for remedies.`,
-    hail: (nm) => `${nm} does not turn around. "You walk loudly for a spy. Some things must be cut by moonlight, and some questions shouldn't be asked in the dark. Go home."`,
-    confess: `"The rowan over the churchyard wall. It roots in the dead, and it's the only rowan worth a charm, and Father Ansel would sooner burn me than let me cut it. So I take it at night, like a thief, to make the charms that keep this village's children breathing. There. Now you know my terrible secret."` },
-  wilhelm: { loc: "Dark Forest", outP: 0.3, short: "he poaches the lord's deer to feed his boys",
-    walk: (nm) => `A snare line, worked with a smith's neat hands, and ${nm} crouched over a young deer that is not his to take. Two boys, no wife, and a forge that pays in promises. He is poaching, and he is good at it.`,
-    hail: (nm) => `${nm}'s hand goes to something at his belt before he knows you. "You saw nothing," he says, low. "And I was nowhere. We understand each other." It is not quite a threat. It is a father's arithmetic.`,
-    confess: `He folds his arms like a gate closing, then unfolds them. "Deer. The lord's deer. My boys eat meat because I take it at night, and if that reaches the manor I lose my hands. That's what I was doing. Feeding my sons. Write it in your damned journal."` },
-  liesel: { loc: "Dark Forest", outP: 0.3, short: "she meets a married man from the next village where the road forks",
-    walk: (nm) => `Two figures where the road forks under the trees: ${nm}, and a man you half-know from the next village over, who wears a wedding ring and is not wearing it tonight. They stand close. This is not a first meeting.`,
-    hail: (nm) => `${nm} laughs, too loud for the hour, the innkeeper's laugh she keeps for difficult customers. "A woman walks, love. Best thing for the complexion. Yours could use a walk in the other direction."`,
-    confess: `She pours herself something first. "His name is not your business. He has a wife, and I have a reputation, and between the two of us we have one hour a week where neither thing exists. That's where I go at night. Judge me on Sunday like everyone else."` },
-  falk: { loc: "Village Square", outP: 0.3, short: "laudanum for the pain, and he walks the square until his hands stop shaking",
-    walk: (nm) => `${nm}, alone by the well, taking something from a small brown bottle with the practiced speed of shame. Then he walks the square. Around, and around, cane ticking on the stones, until his hands are still enough to belong to a physician again.`,
-    hail: (nm) => `${nm} slides something into his coat before turning. "Insomnia. Professionally speaking." His pupils are wrong, and his hands, for once, are perfectly steady.`,
-    confess: `He sets the little brown bottle on the table between you, defiantly. "Laudanum. For a spine that is forty years older than the rest of me. I dose after dark and walk it off in the square, because a physician whose hands shake is a physician no one sends for. You'd have found the bottle eventually. You have that kind of face."` },
-  rosa: { loc: "Village Square", outP: 0.3, short: "she watches the north road for someone from the life she fled",
-    walk: (nm) => `${nm} stands at the mouth of the north road, perfectly still, watching the way a sentry watches. Not waiting for someone. Watching FOR someone. Whatever life she left behind, part of her stands guard against it every night.`,
-    hail: (nm) => `${nm} does not startle either, which is its own answer. "Where I am from, you learn to watch the roads." She looks past you as she says it, north. "Go inside. You make noise."`,
-    confess: `A long silence, and then, quietly: "I left a husband. The kind you leave at night, without a note, with the bruises still counting themselves. Two springs I have watched the north road in case he learned the way here. That is my history no one can confirm. Now one person can."` },
+   Every villager has a POOL of possible human secrets; one is chosen per game
+   (s.secretPick holds the index, which survives serialization). Each takes
+   them out at night and makes them lie about it, so a lie is never proof of
+   guilt. secretOf(s, id) returns the chosen secret's data + text functions. */
+const SECRET_POOL = {
+  marta: [
+    { loc: "Graveyard", outP: 0.3, short: "she visits her husband's unmarked stone by night",
+      walk: (nm) => `${nm} kneels at a river-stone with no name cut into it, talking to it softly, the way you talk to the living. Her husband. Three winters drowned, and she visits him where the village cannot count her tears.`,
+      hail: (nm) => `${nm} startles so badly she nearly cries out. "Couldn't sleep. The ovens." She is holding dried flowers, and hiding them badly, and she hurries on.`,
+      confess: `Her chin comes up. "I visit my husband. At night, when no one is watching me grieve. Three winters, and this village still counts my tears at the market. So yes. I lied. Hang me for missing him."` },
+    { loc: "Dark Forest", outP: 0.3, short: "she slips out to meet a woman she loves from over the parish line",
+      walk: (nm) => `Two women stand too close at the field's edge: ${nm} and one you do not know, from somewhere over the parish line. When one laughs low and the other hushes her with a hand against her mouth, there is a tenderness in it a whole village has decided it has no room for.`,
+      hail: (nm) => `${nm} steps quickly in front of you, colour rising in her cheeks. "Walking. Alone. Couldn't sleep." Behind her, soft and quick, footsteps go the other way, and she will not let you look toward them.`,
+      confess: `"There is a woman, from over the parish line. I love her, and we meet where no one keeps a count of us, and if that reaches this village they will find a word for it that ends in a rope or a road out. So yes, I have lied about my nights. And I will go on lying about them, gladly, for as long as she'll have me."` },
+    { loc: "Dark Forest", outP: 0.3, short: "she carries bread to a deserter she is hiding in the woods",
+      walk: (nm) => `${nm} moves through the trees with a cloth-wrapped bundle and hands it to a gaunt young man in a soldier's ruined coat who will not come near the moonlight. A deserter. She feeds him, says nothing, and turns for home.`,
+      hail: (nm) => `${nm}'s hand goes white on the bundle. "Bread. For... for no one. For myself, on the walk." She is a poor liar, and the dark behind her holds its breath.`,
+      confess: `"There's a lad hiding in the trees. Ran from the war half-starved, younger than my own would have been. I feed him. They hang deserters, and they hang the ones who feed them, and I decided some months back I'd sooner hang than watch another boy starve in the dark. Now you know the whole of it."` },
+  ],
+  tobias: [
+    { loc: "Graveyard", outP: 0.3, short: "he digs graves before anyone has died, because the ground tells him one is coming",
+      walk: (nm) => `${nm}, waist-deep in a fresh grave that belongs to no one yet, digging with terrible patience. He is not hiding a body. He is getting ahead of the week. The ground has told him one is coming.`,
+      hail: (nm) => `${nm} does not startle. Old men are past startling. "Evening," he says, spade over his shoulder, offering nothing else, and walks on toward the stones.`,
+      confess: `He looks at his own hands a long time. "I dig them early. Before they're needed. The ground goes soft where it knows, and it's known all month. Folk would call it unlucky. Folk would be right. But someone has to be ready."` },
+    { loc: "Village Square", outP: 0.3, short: "he leaves a certain neighbour's gate unlatched at night, half-hoping the thing finds that door first",
+      walk: (nm) => `${nm} stops at a gate that is not his, lifts the latch with great care, and leaves it hanging open. It is the gate of the man he has blamed, forty years, for the fever that took his first wife. He does not hope out loud. He just leaves the gate, and walks on.`,
+      hail: (nm) => `${nm} lets the latch fall shut again, unhurried, caught and not much caring. "Gate was open. I closed it. Or opened it. Old hands, boy. Go home."`,
+      confess: `"There's a man in this village I've hated longer than you've been alive. When the killing started I found myself leaving his gate open, on the nights. Telling myself the thing would choose, and if it chose him, well. I'm old and I'll answer for it soon enough. But I'll not stand here and pretend I didn't."` },
+    { loc: "Graveyard", outP: 0.3, short: "he opens fresh graves by night to take back the keepsakes the grieving buried with their dead",
+      walk: (nm) => `${nm} is waist-deep in a grave filled only last week, working by feel, and what he lifts out and pockets is small and bright: a ring, a coin, whatever the grieving could not bear to keep. He fills the grave back so neat that no one will ever know it was opened.`,
+      hail: (nm) => `${nm} lays his spade across the open grave, unbothered. "Ground settles wrong, needs turning." His pockets clink, very faintly, and he does not explain that.`,
+      confess: `"Forty years burying this village, and it pays in thanks, and thanks don't feed a man. So I take back what the grieving throw in after them. Rings. Coin. They don't need it and I do, and the dead have never once complained. Hang me by the grave-robbers, then. At least I'll know the ground I'm put in."` },
+  ],
+  ansel: [
+    { loc: "Old Church", outP: 0.3, short: "he drinks alone in the crypt, because his faith has gone and his flock must not see it",
+      walk: (nm) => `Candlelight, low in the crypt, and ${nm} with a bottle that has no place on any altar. He is not praying. He is reading the burial ledger over and over, and drinking, and his lips are moving around no psalm you know.`,
+      hail: (nm) => `${nm} draws himself up to his full height, and the smell reaches you before the blessing does. "Walking the bounds of the flock," he says, too carefully. "Go home."`,
+      confess: `The height goes out of him all at once. "I drink. In the crypt, where God stopped looking first. My faith went before the killings started, and a shepherd who no longer believes in wolves must at least keep them from seeing it. That is my whole crime. I wish it were a better one."` },
+    { loc: "Old Church", outP: 0.3, short: "he alters the parish ledger by night to hide a child he fathered and never owned",
+      walk: (nm) => `${nm} bent over the ledger by one candle, not reading it but changing it: scraping a name, writing another, hiding a birth that would end him. His own child, by a woman long gone, entered under another man's name in his own careful hand.`,
+      hail: (nm) => `${nm} closes the ledger over his hand too quickly. "Parish business. Names and dates. Nothing that concerns the living." The candle shakes, and priests' hands do not usually shake over names and dates.`,
+      confess: `"There is a child in this valley who calls another man father. The fault is mine, from before I took the collar, and I have spent twenty years and a great deal of ink making certain the ledger never says so. That is where I go at night. Not to God. To the book, to keep on lying in it. Now there are two of us who know."` },
+    { loc: "Graveyard", outP: 0.3, short: "he rereads by moonlight the letters of a man he loved, and grieves him where no one can see",
+      walk: (nm) => `${nm} sits among the stones with a bundle of letters gone soft at the folds, reading them by moonlight, his mouth moving over words that are plainly not scripture, plainly meant for one person, plainly the kind of love the pulpit he stands in would damn.`,
+      hail: (nm) => `${nm} folds the letters away against his chest as if they might be taken from him. "A parishioner's effects. I was deciding what to do with them." He has been deciding for years, and you both hear it.`,
+      confess: `"His name was Anton. We were young men together at the seminary, and then we were rather more than that, and then he died a long way from here. I read his letters at night because it is the one hour I let myself have him. I preach against it on Sunday and I grieve it on Tuesday. That is the whole shape of my faith now. Do with it what you will."` },
+  ],
+  greta: [
+    { loc: "Dark Forest", outP: 0.35, short: "she cuts grave-rowan and moon-herbs she has no right to take",
+      walk: (nm) => `${nm}, at the forest's edge with a curved knife, cutting rowan from over the churchyard wall where it grows on the dead. Poaching from graves, by moonlight, with the calm of long practice. For remedies. Probably for remedies.`,
+      hail: (nm) => `${nm} does not turn around. "You walk loudly for a spy. Some things must be cut by moonlight, and some questions shouldn't be asked in the dark. Go home."`,
+      confess: `"The rowan over the churchyard wall. It roots in the dead, and it's the only rowan worth a charm, and Father Ansel would sooner burn me than let me cut it. So I take it at night, like a thief, to make the charms that keep this village's children breathing. There. Now you know my terrible secret."` },
+    { loc: "Old Church", outP: 0.3, short: "she carries a merciful poison to those dying in agony, and helps them go",
+      walk: (nm) => `${nm} slips from a house where someone has been dying loud and long, tucking a small stoppered bottle back into her shawl. Behind her, the crying has stopped. She has done this before. She will do it again. It may be the kindest crime there is.`,
+      hail: (nm) => `${nm} meets your eyes without a flicker. "Someone was suffering. Now they are not. Ask me no more than that, and you can tell yourself you never knew." She walks past you, and does not hurry.`,
+      confess: `"When the dying beg, and the physician has nothing left but to watch, I bring them the last mercy in a bottle. Yes. I help them go. The church calls it murder, and the sufferers called it grace, and I stopped letting the church do my deciding a long time ago. Do what you must with it."` },
+    { loc: "Dark Forest", outP: 0.3, short: "she keeps a hidden child out past the last field, one the village must never know she has",
+      walk: (nm) => `${nm} goes to a woodcutter's hut past the last field, and through the window you watch her lift a small child, and feed it, and sing to it, low. No one in the village knows the child exists. She means to keep it that way for as long as she draws breath.`,
+      hail: (nm) => `${nm} steps between you and the hut. "There is nothing out here but my herbs and my business, and both of them bite. Go home before you find out which." Behind her, faintly, a child fusses, and she does not turn her head.`,
+      confess: `"My sister died bearing it, and the father wanted it drowned for the shame, so I took it and hid it, and I have raised it in a hut in the trees for three years on lies and moonlight. If the village learns of it, they will hand it back to the same men who wanted it dead. So I lie about my nights. Endlessly, and without one ounce of shame."` },
+  ],
+  wilhelm: [
+    { loc: "Dark Forest", outP: 0.3, short: "he poaches the lord's deer to feed his boys",
+      walk: (nm) => `A snare line, worked with a smith's neat hands, and ${nm} crouched over a young deer that is not his to take. Two boys, no wife, and a forge that pays in promises. He is poaching, and he is good at it.`,
+      hail: (nm) => `${nm}'s hand goes to something at his belt before he knows you. "You saw nothing," he says, low. "And I was nowhere. We understand each other." It is not quite a threat. It is a father's arithmetic.`,
+      confess: `He folds his arms like a gate closing, then unfolds them. "Deer. The lord's deer. My boys eat meat because I take it at night, and if that reaches the manor I lose my hands. That's what I was doing. Feeding my sons. Write it in your damned journal."` },
+    { loc: "Dark Forest", outP: 0.3, short: "he forges blades by night for men who mean to rise against the lord",
+      walk: (nm) => `${nm} meets three men at the tree line and hands over a wrapped bundle that rings faintly of good steel. Blades, made after hours, off the ledger. Whatever these men intend for the manor, ${nm} is arming it, one honest hammer-stroke at a time.`,
+      hail: (nm) => `${nm} steps square into your path, all shoulders. "You're a long way out for a man with no business. Whatever you think you saw, you didn't, and we'll both live longer for it." The others are already gone into the dark.`,
+      confess: `"There are men in this valley done with kneeling, and they need steel, and I'm the one who makes it. Aye. I forge for the rising. My boys will not grow up bowing to the man who's working their grandfather into an early grave. If that's treason, the manor's welcome to my hands. They'll have to catch them first."` },
+    { loc: "Dark Forest", outP: 0.3, short: "he meets a man he loves after dark, a thing the forge and the village would break him for",
+      walk: (nm) => `${nm}, who is all iron and few words by daylight, stands close in the dark with another man, foreheads nearly touching, talking too low to hear. When they part, the smith holds on a moment longer than any handshake, and watches the man go the way you watch a thing you cannot keep.`,
+      hail: (nm) => `${nm}'s whole body goes to iron. "Say nothing." Not a threat, for once. Something closer to a plea, from a man who has never asked anyone for anything. "Please. I've two boys. Say nothing."`,
+      confess: `"There's a man. That's all you get of him, and if you're any kind of decent it's all you'll ever say. I've two sons and a forge and a village that would put me out of all three for this, so I take my one hour in the dark and ask nothing else of the world. You're the second soul alive who knows. Be a better one than most have been."` },
+  ],
+  liesel: [
+    { loc: "Dark Forest", outP: 0.3, short: "she meets a married man from the next village where the road forks",
+      walk: (nm) => `Two figures where the road forks under the trees: ${nm}, and a man you half-know from the next village over, who wears a wedding ring and is not wearing it tonight. They stand close. This is not a first meeting.`,
+      hail: (nm) => `${nm} laughs, too loud for the hour, the innkeeper's laugh she keeps for difficult customers. "A woman walks, love. Best thing for the complexion. Yours could use a walk in the other direction."`,
+      confess: `She pours herself something first. "His name is not your business. He has a wife, and I have a reputation, and between the two of us we have one hour a week where neither thing exists. That's where I go at night. Judge me on Sunday like everyone else."` },
+    { loc: "Tavern", outP: 0.3, short: "she quietly bleeds a well-off man for the worst secret she overheard across her bar",
+      walk: (nm) => `${nm} meets a well-dressed man behind the tavern, and money changes hands, his to hers, and the look on his face is not the look of a man paying for ale. A tavern hears everything said across it, and some of it, she has learned, is worth a great deal more than the drink.`,
+      hail: (nm) => `${nm}'s smile does not reach her eyes tonight. "Late for a stroll, love. A person could hear things out here they'd be safer not knowing. Take it from a woman who hears everything: go to bed."`,
+      confess: `"A tavern hears every secret in a village, love, and secrets keep better than ale and sell for more. So yes, there's a man who pays me to forget what he said drunk. I've a bar to keep and no husband to keep it with, and I stopped being ashamed of surviving a long time ago. You'd have done the same. Everyone swears they wouldn't."` },
+    { loc: "Village Square", outP: 0.3, short: "she sends her savings by night to a daughter she bore too young and gave away",
+      walk: (nm) => `${nm} waits at the square for the night coach and presses a purse into the driver's hand with an address whispered too low to catch. Every spare coin the tavern makes goes north, to a grown woman who does not know the innkeeper paying her debts was ever her mother.`,
+      hail: (nm) => `${nm} tucks the purse away fast. "Paying a debt, love, same as everyone does. Mind your own and I'll mind mine, and we'll both sleep the sounder for it."`,
+      confess: `"I was sixteen, and it was given away before I'd properly held it, and it grew up in the city calling another woman mother. I found her, years on. She doesn't know me. But every coin this bar can spare goes to her, in the dark, through the coach, and it's the only good thing I've ever done in secret. Laugh at that, and I'll bar you for life."` },
+  ],
+  falk: [
+    { loc: "Village Square", outP: 0.3, short: "laudanum for the pain, and he walks the square until his hands stop shaking",
+      walk: (nm) => `${nm}, alone by the well, taking something from a small brown bottle with the practiced speed of shame. Then he walks the square. Around, and around, cane ticking on the stones, until his hands are still enough to belong to a physician again.`,
+      hail: (nm) => `${nm} slides something into his coat before turning. "Insomnia. Professionally speaking." His pupils are wrong, and his hands, for once, are perfectly steady.`,
+      confess: `He sets the little brown bottle on the table between you, defiantly. "Laudanum. For a spine that is forty years older than the rest of me. I dose after dark and walk it off in the square, because a physician whose hands shake is a physician no one sends for. You'd have found the bottle eventually. You have that kind of face."` },
+    { loc: "Old Church", outP: 0.3, short: "he signs false causes of death so the shamed and the self-killed can lie in holy ground",
+      walk: (nm) => `${nm} comes away from a house of grief having written, in his careful hand, a lie: fever, where it was a rope; a failing heart, where it was a bottle taken on purpose. So the dead can lie in the churchyard and the living can grieve without the extra shame. He has filled a page of the ledger with such mercies.`,
+      hail: (nm) => `${nm} caps his pen. "A death to certify. They come at all hours, the dead. One does not keep them waiting." He does not offer to show you what he wrote, and you know better than to ask.`,
+      confess: `"The church will not bury a suicide in hallowed ground, nor an unshriven shame. So I lie on the certificate. Fever. Failure of the heart. A hundred small lies in my own hand, so a mother can bury her boy by the wall and not at the crossroads. Report me to the bishop. I'll sign my own the same merciful way when it comes."` },
+    { loc: "Village Square", outP: 0.3, short: "he practises under a dead colleague's name, having been struck off in the city for a death",
+      walk: (nm) => `${nm} burns something by the well in the small hours: papers, an old licence, a name that is not the one this village calls him. Whatever he was in the city, he has spent years making certain no one here could ever look it up.`,
+      hail: (nm) => `${nm}'s steadiness slips, just for a breath. "Old correspondence. Nothing keeps like the past, and nothing is more useless." He watches the last of it curl black before he moves on.`,
+      confess: `"Falk was the man I trained under. He died, and I took his name, because my own had been struck from every register in the country after a girl died on my table and the fault was mine. This village needed a physician and I needed to stop being who I'd been. So I'm a dead man's name and a steady enough hand, and I have saved more here than I lost there. It will have to be enough. It's all I've got."` },
+  ],
+  rosa: [
+    { loc: "Village Square", outP: 0.3, short: "she watches the north road for someone from the life she fled",
+      walk: (nm) => `${nm} stands at the mouth of the north road, perfectly still, watching the way a sentry watches. Not waiting for someone. Watching FOR someone. Whatever life she left behind, part of her stands guard against it every night.`,
+      hail: (nm) => `${nm} does not startle either, which is its own answer. "Where I am from, you learn to watch the roads." She looks past you as she says it, north. "Go inside. You make noise."`,
+      confess: `A long silence, and then, quietly: "I left a husband. The kind you leave at night, without a note, with the bruises still counting themselves. Two springs I have watched the north road in case he learned the way here. That is my history no one can confirm. Now one person can."` },
+    { loc: "Village Square", outP: 0.3, short: "she writes under a man's name and sends the pages to a city press by the night coach",
+      walk: (nm) => `${nm} seals a thick packet of close-written pages, addresses it in a hand not quite her own, and leaves it for the night coach. Whatever she writes, she signs a man's name to it, because a woman's would never see print, and she has decided the world will read her either way.`,
+      hail: (nm) => `${nm} turns the packet face-down against her skirt. "Letters. To no one you know, in a city you will never see." She watches you the way she watches everything, deciding how much of it you understood.`,
+      confess: `"I write. Stories, and worse than stories: the kind that ask why the men who own us get to own us. No press in the country prints a woman, so I sign a man's name and send them off in the dark, and half this county has read me without one soul knowing it was the seamstress. That is my secret. It's the only thing I brought out of my old life worth the keeping."` },
+    { loc: "Old Church", outP: 0.3, short: "she teaches the village girls their letters by night, against every father's wishes",
+      walk: (nm) => `${nm} lights a single candle in a back room, and a half-dozen girls file in out of the dark, and for an hour she teaches them their letters, heads bent over a slate, while their fathers sleep believing their daughters safe in bed and safely ignorant.`,
+      hail: (nm) => `${nm} pulls the door to behind her, quick. "A private matter. Women's business, the kind men make dangerous by forbidding it." She does not step aside, and there is chalk on her fingers.`,
+      confess: `"I teach the girls to read. At night, because their fathers would beat it out of them and me out of the village if they knew. Where I am from, keeping a woman ignorant was the first fence they built around her, and I have spent my whole life climbing fences. So yes. That is my crime. Spelling. Turn me in for spelling."` },
+  ],
 };
+const secretOf = (s, id) => { const pool = SECRET_POOL[id]; if (!pool) return null; const i = (s.secretPick && s.secretPick[id] != null) ? s.secretPick[id] : 0; return pool[i % pool.length]; };
 
 const SUSPECT_REASONS = [
   (t) => `"${t}. No one arrives from nowhere, and no one stays a stranger this long by accident."`,
@@ -1656,6 +1739,8 @@ function newGame() {
     foundSigns: [], playerSigns: [], struckNpcs: [], locEvidence: Object.fromEntries(LOCS.map((l) => [l, []])),
     deaths: [], nightLogs: [], statements: [], playerSaw: [], clues: [], hardCleared: [],
     sideQuest: null, secretSpread: {},
+    /* one human secret chosen per villager per game, by index into SECRET_POOL */
+    secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
     knownBuild: null, buildClues: [], faceKnown: null, monsterSawYou: false, mob: null, embolden: 0,
     dawn: [], dawnScene: null, dayEvents: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
@@ -1713,14 +1798,14 @@ function sampleNight(s, m, n) {
     } else if (evn) {
       if (npc.turned) outMap[npc.id] = chance(0.5) ? eventLoc : "home";
       else if (chance(0.75)) outMap[npc.id] = eventLoc;
-      else if (SECRETS[npc.id] && chance(SECRETS[npc.id].outP)) { secretOut[npc.id] = true; outMap[npc.id] = SECRETS[npc.id].loc; }
+      else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) { secretOut[npc.id] = true; outMap[npc.id] = secretOf(s, npc.id).loc; }
       else outMap[npc.id] = "home";
     } else if (npc.turned) {
       /* the changed do not keep to their beds: they serve it, and wander to
          the eerie ground it keeps, where the player can catch them at it */
       outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest"]) : "home";
-    } else if (SECRETS[npc.id] && chance(SECRETS[npc.id].outP)) {
-      secretOut[npc.id] = true; outMap[npc.id] = SECRETS[npc.id].loc;
+    } else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) {
+      secretOut[npc.id] = true; outMap[npc.id] = secretOf(s, npc.id).loc;
     } else {
       outMap[npc.id] = chance(0.25) ? pick(LOCS) : "home";
     }
@@ -2007,7 +2092,7 @@ function resolveNight(prev, planIn, preEvents) {
         : "You slip away with what you know, and what you know follows you home.");
       dawn.push(ev(`What you watched ${fw.name} do in the night was not the act of a living neighbour. You are certain now: they are changed.${helped ? " You tried to reach them. Whatever answered was not quite them yet." : ""}`, fw.id));
     } else if (secretOut[fw.id]) {
-      const sec = SECRETS[fw.id];
+      const sec = secretOf(s, fw.id);
       s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, secretKnown: true } : x));
       beats.push("You leave without being seen. Some secrets are only secrets.");
       s.clues.push(`Night ${n}: ${fw.name}'s night errand, witnessed: ${sec.short}. Human, and nothing worse. Their lies about the nights are explained.`);
@@ -2238,7 +2323,7 @@ function resolveNight(prev, planIn, preEvents) {
           }
           if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
           if (mods.style === "wait" && secretOut[npc.id] && !npc.secretKnown) {
-            const sec = SECRETS[npc.id];
+            const sec = secretOf(s, npc.id);
             s.npcs = s.npcs.map((x) => (x.id === npc.id ? { ...x, secretKnown: true } : x));
             s.clues.push(`Night ${n}: ${npc.name}'s night errand, witnessed from your vantage: ${sec.short}. Human, and nothing worse.`);
             dawn.push(ev(`You know ${npc.name}'s secret now: ${sec.short}. Whatever they claim about their nights, you know the human truth of it.`, npc.id));
@@ -2260,7 +2345,7 @@ function resolveNight(prev, planIn, preEvents) {
             seenHere.push(npc.name);
             if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
             if (mods.style === "wait" && secretOut[npc.id] && !npc.secretKnown) {
-              const sec = SECRETS[npc.id];
+              const sec = secretOf(s, npc.id);
               s.npcs = s.npcs.map((x) => (x.id === npc.id ? { ...x, secretKnown: true } : x));
               beats.push(`From your vantage, you watch long enough to understand. ${sec.walk(npc.name)}`);
               s.clues.push(`Night ${n}: ${npc.name}'s night errand, witnessed from your vantage: ${sec.short}. Human, and nothing worse.`);
@@ -3249,7 +3334,7 @@ function computeAnswer(s, id, night, q, targetId) {
   }
 
   if (q === "press") {
-    const sec = SECRETS[id];
+    const sec = secretOf(s, id);
     const secretNight = log && log.secretOut && log.secretOut[id] ? night
       : (() => { const lg = [...s.nightLogs].reverse().find((x) => x.secretOut && x.secretOut[id]); return lg ? lg.night : null; })();
     if (isMonster) {
@@ -3445,7 +3530,7 @@ function computeAnswer(s, id, night, q, targetId) {
 
   if (q === "share" && targetId) {
     const owner = npcById(s, targetId);
-    const sec = SECRETS[targetId];
+    const sec = secretOf(s, targetId);
     if (owner && sec) {
       s.secretSpread = s.secretSpread || {};
       const rec = s.secretSpread[targetId] || { by: s.dayNum, told: [] };
@@ -4944,7 +5029,7 @@ function MonsterVillage() {
     const dest = walk.facts.outMap[wid] || walk.loc;
     if (wid === s.monster.vid && walk.facts.active) return { kind: "monster", dest, text: pickFreshIdx("followMonster", FOLLOW_MONSTER_SCENES)(w.name, dest) };
     if (w.turned) return { kind: "turned", dest, text: pickFreshIdx("followTurned", FOLLOW_TURNED_SCENES)(w.name, dest) };
-    if (walk.facts.secretOut[wid]) return { kind: "secret", dest, text: SECRETS[wid].walk(w.name) };
+    if (walk.facts.secretOut[wid]) return { kind: "secret", dest, text: secretOf(s, wid).walk(w.name) };
     return { kind: "plain", dest, text: pickFreshIdx("followPlain", FOLLOW_PLAIN_SCENES)(w.name, dest) };
   };
 
@@ -4953,7 +5038,7 @@ function MonsterVillage() {
     const dest = walk.facts.outMap[wid];
     if (wid === s.monster.vid && walk.facts.active) return pickFreshIdx("hailMonster", HAIL_MONSTER_LINES)(w.name, dest);
     if (w.turned) return pickFreshIdx("hailTurned", HAIL_TURNED_LINES)(w.name);
-    if (walk.facts.secretOut[wid]) return SECRETS[wid].hail(w.name);
+    if (walk.facts.secretOut[wid]) return secretOf(s, wid).hail(w.name);
     return pickFreshIdx("hailPlain", HAIL_PLAIN_LINES)(w.name, dest);
   };
 
@@ -4962,7 +5047,7 @@ function MonsterVillage() {
     const w = npcById(s, wid);
     if (wid === s.monster.vid && walk.facts.active) return `${w.name} raises a cup to you across the firelight, easy, unbothered. "Strange night for merriment," they say, and the smile takes one beat too long to arrive. "But then, here we both are."`;
     if (w.turned) return `${w.name} stands at the edge of the light and does not drink, does not dance, does not quite manage a smile that reaches anywhere past the mouth. "Good evening," they say, and the words come out a beat behind the lips that made them.`;
-    if (walk.facts.secretOut[wid]) return SECRETS[wid].hail(w.name);
+    if (walk.facts.secretOut[wid]) return secretOf(s, wid).hail(w.name);
     return `"${w.name}!" You fall into easy talk for a few minutes, nothing that matters, and all the more welcome for it.`;
   };
   const mingleObservation = (excludeId) => {
@@ -5210,7 +5295,7 @@ function MonsterVillage() {
               const names = ids.map((id) => npcById(s, id).name);
               const secretId = walk.mods.style === "wait" ? ids.find((id) => walk.facts.secretOut[id] && !npcById(s, id).secretKnown) : null;
               const text = secretId
-                ? SECRETS[secretId].walk(npcById(s, secretId).name)
+                ? secretOf(s, secretId).walk(npcById(s, secretId).name)
                 : names.length === 1
                 ? `A lantern across the way: ${names[0]}, out on some errand of their own. You keep to your shadow and let them pass.`
                 : `You are not alone out here tonight. ${names.join(" and ")}, each about their own business, lanterns bobbing at a careful distance.`;
@@ -5632,7 +5717,7 @@ function MonsterVillage() {
     const talkUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:talk`);
     const howareUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:howare:`);
     const pastUsed = (s.askedLog[iv.id] || []).includes("past");
-    const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && SECRETS[x.id]);
+    const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && secretOf(s, x.id));
     const canReport = s.sideQuest && s.sideQuest.giver === iv.id && s.sideQuest.done && !s.sideQuest.reported;
     const lastFollowUps = last >= 0 ? (iv.transcript[last].followUps || []) : [];
     return (
@@ -6037,8 +6122,8 @@ function MonsterVillage() {
           <div>
             <p style={{ fontSize: 13, fontStyle: "italic", color: C.dim }}>{lore.body}</p>
             <p className="mt-1" style={{ fontSize: 12, color: C.dim }}>{n.build} of build{n.alive && s.knownBuild === n.build ? ": like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ": could be the shape in the dark" : ""}</p>
-            {n.secretKnown && SECRETS[n.id] && (
-              <p className="mt-1" style={{ fontSize: 12, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {SECRETS[n.id].short}.</p>
+            {n.secretKnown && secretOf(s, n.id) && (
+              <p className="mt-1" style={{ fontSize: 12, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {secretOf(s, n.id).short}.</p>
             )}
             {n.alive && !n.fled && (
               <p className="mt-1" style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
