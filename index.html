@@ -4279,6 +4279,153 @@ function MonsterArt({ id, size = 64 }) {
   );
 }
 
+/* The kill, seen: the creature's own art dying by the rite that ended it.
+   One animation family per method, so silver reads as a pierce, fire as a
+   burning, and the crossroads as the ground closing over it. */
+const METHOD_FX = {
+  silver: "pierce", stake: "pierce", iron: "pierce",
+  fire: "burn", grimoire: "burn", holy: "burn",
+  mirror: "shatter", bell: "shatter", backname: "shatter",
+  salt: "dissolve", exorcism: "dissolve",
+  crossroads: "sink", rest: "sink",
+  hawthorn: "shrink", quicksilver: "shrink",
+};
+function MonsterDeath({ id, method, size = 120 }) {
+  const fx = METHOD_FX[method] || "dissolve";
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      <div className="mvKillGround" />
+      <div className={`mvKill-${fx}`} style={{ width: size, height: size }}>
+        <MonsterArt id={id} size={size} />
+      </div>
+      {fx === "burn" && [0.15, 0.38, 0.6, 0.8].map((fr, i) => (
+        <span key={i} className="mvEmber" style={{ left: `${fr * 100}%`, bottom: 10, animationDelay: `${0.6 + i * 0.5}s` }} />
+      ))}
+      {fx === "pierce" && <div className="mvKillFlash" />}
+    </div>
+  );
+}
+
+/* The room you are received in: each villager's own walls and tools behind
+   the talk, in the same woodcut-silhouette style as the location scenes. */
+function InterviewScene({ id, height = 92 }) {
+  const glow = (x, y, r = 26) => (
+    <g key={`g${x}`}>
+      <circle cx={x} cy={y} r={r} fill={C.amber} opacity="0.10" />
+      <circle cx={x} cy={y} r={r / 2.6} fill={C.amber} opacity="0.2" />
+    </g>
+  );
+  const candle = (x, y) => (
+    <g key={`c${x}`}>
+      <rect x={x - 2} y={y} width="4" height="11" fill={C.parch} opacity="0.75" />
+      <ellipse cx={x} cy={y - 3.5} rx="2" ry="3.8" fill={C.amber} className="mvFlick" />
+    </g>
+  );
+  const table = (x, w, y = 92) => (
+    <g key={`t${x}`}>
+      <rect x={x} y={y} width={w} height={5} fill={C.sil} />
+      <rect x={x + 4} y={y + 5} width={5} height={112 - y - 5} fill={C.sil} />
+      <rect x={x + w - 9} y={y + 5} width={5} height={112 - y - 5} fill={C.sil} />
+    </g>
+  );
+  const propsFor = {
+    marta: (<g>
+      <path d="M40,92 C40,56 100,56 100,92 Z" fill={C.sil} />
+      <path d="M54,92 C54,72 86,72 86,92 Z" fill="#2A140D" />
+      <ellipse cx="70" cy="88" rx="12" ry="4.5" fill={C.red} opacity="0.55" className="mvFlick" />
+      {glow(70, 84, 26)}
+      <g transform="rotate(12 150 52)"><rect x="148" y="22" width="4" height="60" fill={C.sil} /><ellipse cx="150" cy="20" rx="9" ry="5" fill={C.sil} /></g>
+      {table(210, 130)}
+      {[226, 258, 292].map((x) => <ellipse key={x} cx={x} cy={89} rx="14" ry="6" fill={C.sil} />)}
+      {candle(340, 76)}
+    </g>),
+    tobias: (<g>
+      <g transform="rotate(-14 70 80)"><rect x="68" y="34" width="4" height="70" fill={C.sil} /><path d="M62,100 h16 l-3,12 h-10 Z" fill={C.sil} /></g>
+      <g transform="rotate(10 92 80)"><rect x="90" y="38" width="4" height="66" fill={C.sil} /><path d="M84,100 h16 l-3,12 h-10 Z" fill={C.sil} /></g>
+      <ellipse cx="170" cy="104" rx="22" ry="7" fill={C.sil} />
+      <ellipse cx="170" cy="100" rx="16" ry="5" fill={C.sil} />
+      <rect x="250" y="30" width="44" height="52" fill="#0B0E1C" />
+      <rect x="262" y="52" width="18" height="30" rx="9" fill={C.sil} />
+      {candle(320, 78)}
+      {glow(320, 74, 22)}
+    </g>),
+    ansel: (<g>
+      <rect x="60" y="26" width="26" height="60" rx="13" fill="#0B0E1C" />
+      {table(150, 120, 84)}
+      <rect x="204" y="52" width="5" height="32" fill={C.parch} opacity="0.8" />
+      <rect x="196" y="60" width="21" height="5" fill={C.parch} opacity="0.8" />
+      {candle(170, 70)}
+      {candle(250, 70)}
+      {glow(210, 66, 30)}
+      <rect x="310" y="60" width="34" height="24" fill={C.sil} />
+      <path d="M310,60 L327,50 L344,60" fill="none" stroke={C.sil} strokeWidth="4" />
+    </g>),
+    greta: (<g>
+      <rect x="30" y="16" width="340" height="4" fill={C.sil} />
+      {[70, 120, 170, 225, 280].map((x, i) => (
+        <g key={x}>
+          <path d={`M${x},20 L${x},${34 + (i % 3) * 4}`} stroke={C.sil} strokeWidth="1.6" />
+          <path d={`M${x - 8},${52 + (i % 3) * 4} L${x + 8},${52 + (i % 3) * 4} L${x},${32 + (i % 3) * 4} Z`} fill={C.sil} />
+        </g>
+      ))}
+      {table(250, 110)}
+      {[266, 288, 312].map((x, i) => <rect key={x} x={x} y={80 - (i % 2) * 4} width="13" height={12 + (i % 2) * 4} rx="2" fill={C.sil} />)}
+      {candle(340, 76)}
+      {glow(340, 72, 22)}
+    </g>),
+    wilhelm: (<g>
+      <path d="M60,74 h56 l-8,10 h-14 v14 h20 l4,10 h-52 l4,-10 h20 v-14 h-22 Z" fill={C.sil} />
+      {glow(200, 90, 34)}
+      <path d="M170,92 C170,68 230,68 230,92 Z" fill={C.sil} />
+      <ellipse cx="200" cy="90" rx="18" ry="6" fill={C.red} opacity="0.6" className="mvFlick" />
+      <g transform="rotate(-30 300 60)"><rect x="298" y="40" width="5" height="44" fill={C.sil} /><rect x="288" y="30" width="25" height="13" rx="2" fill={C.sil} /></g>
+      <path d="M330,54 l10,30 M342,54 l-2,30" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
+    </g>),
+    liesel: (<g>
+      {table(40, 190, 82)}
+      {[70, 104, 140].map((x) => (
+        <g key={x}><rect x={x} y={68} width="14" height="14" rx="2" fill={C.sil} /><path d={`M${x + 14},72 q6,3 0,7`} stroke={C.sil} strokeWidth="2.5" fill="none" /></g>
+      ))}
+      <ellipse cx="290" cy="86" rx="26" ry="26" fill={C.sil} />
+      <rect x="264" y="60" width="52" height="52" rx="10" fill={C.sil} />
+      <path d="M264,86 h52" stroke="#0B0E1C" strokeWidth="2" />
+      {[340, 362].map((x, i) => <g key={x}><path d={`M${x},20 L${x},${30 + i * 3}`} stroke={C.sil} strokeWidth="1.6" /><rect x={x - 6} y={30 + i * 3} width="12" height="13" rx="2" fill={C.sil} /></g>)}
+      {candle(180, 68)}
+      {glow(180, 64, 24)}
+    </g>),
+    falk: (<g>
+      <rect x="50" y="30" width="120" height="4" fill={C.sil} />
+      {[62, 84, 104, 128, 148].map((x, i) => <rect key={x} x={x} y={16 - (i % 2) * 3} width={9 + (i % 3) * 3} height={14 + (i % 2) * 3} rx="2" fill={C.sil} />)}
+      {table(210, 120, 86)}
+      <path d="M238,86 C238,72 268,72 268,86 Z" fill={C.sil} />
+      <rect x="248" y="68" width="10" height="6" rx="2" fill={C.sil} />
+      <path d="M320,50 C330,52 332,62 326,66 L318,112" stroke={C.sil} strokeWidth="4" fill="none" strokeLinecap="round" />
+      {candle(290, 72)}
+      {glow(290, 68, 22)}
+    </g>),
+    rosa: (<g>
+      <path d="M80,44 C64,52 64,76 80,84 L96,84 C112,76 112,52 96,44 Z" fill={C.sil} />
+      <rect x="85" y="84" width="6" height="24" fill={C.sil} />
+      <path d="M70,108 h36" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
+      <circle cx="88" cy="36" r="6" fill={C.sil} />
+      {table(190, 120, 88)}
+      {[206, 232, 258].map((x, i) => <rect key={x} x={x} y={78 - i * 2} width="22" height={10 + i * 2} rx="2" fill={C.sil} />)}
+      <path d="M300,40 q30,14 8,44" stroke={C.parch} strokeWidth="1.4" fill="none" opacity="0.6" />
+      <path d="M300,40 l6,-8" stroke={C.parch} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+      {candle(340, 74)}
+      {glow(340, 70, 22)}
+    </g>),
+  }[id] || null;
+  return (
+    <svg viewBox="0 0 400 120" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMid slice">
+      <rect width="400" height="120" fill="#131628" />
+      <rect width="400" height="5" fill="#0B0E1C" />
+      <rect y="112" width="400" height="8" fill={C.ground} />
+      {propsFor}
+    </svg>
+  );
+}
+
 /* ================= UI ================= */
 
 const fontStyles = `
@@ -4336,6 +4483,22 @@ const EXTRA_CSS = `
   background-image: repeating-conic-gradient(#000 0deg 1deg, transparent 1deg 2deg); background-size: 5px 5px; }
 .mvScorch { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(rgba(10,6,4,0.72), rgba(28,10,6,0.5)), radial-gradient(ellipse at 50% 100%, rgba(158,48,57,0.25), rgba(0,0,0,0) 65%); }
+.mvKillGround { position:absolute; left:15%; right:15%; bottom:4px; height:6px; border-radius:50%; background:#000; opacity:0.35; }
+.mvKillFlash { position:absolute; left:16%; top:6%; width:2.5px; height:72%; background:linear-gradient(#FFF6E0, rgba(233,223,200,0)); transform:rotate(26deg); opacity:0; animation: mvkflash 4s ease forwards; }
+@keyframes mvkflash { 0%,14% { opacity:0; } 18% { opacity:1; } 32% { opacity:0; } 100% { opacity:0; } }
+.mvKill-burn { animation: mvkburn 4.5s ease-in forwards; }
+@keyframes mvkburn { 0% { filter:none; opacity:1; } 45% { filter: sepia(1) saturate(3) hue-rotate(-28deg) brightness(1.35); } 100% { filter: sepia(1) saturate(4) hue-rotate(-38deg) brightness(2.1) blur(3px); opacity:0; transform: translateY(-16px) scale(0.96); } }
+.mvKill-pierce { transform-origin: 50% 100%; animation: mvkpierce 4s ease-in forwards; }
+@keyframes mvkpierce { 0% { opacity:1; } 20% { transform:none; filter:none; } 26% { transform: translateX(4px); filter: brightness(1.8); } 34% { transform: translateX(-2px); } 100% { transform: translateY(12px) scaleY(0.7); filter: grayscale(1) brightness(0.55); opacity: 0.3; } }
+.mvKill-shatter { animation: mvkshatter 4s ease-in forwards; }
+@keyframes mvkshatter { 0% { opacity:1; } 35% { filter: brightness(1.7); transform:none; } 45% { transform: rotate(2.5deg); } 55% { transform: rotate(-3deg) scale(1.05); } 100% { transform: scale(1.12); filter: blur(5px) brightness(1.4); opacity: 0; } }
+.mvKill-sink { transform-origin: 50% 100%; animation: mvksink 4.5s ease-in forwards; }
+@keyframes mvksink { 0%, 30% { transform:none; opacity:1; } 100% { transform: translateY(24px) scaleY(0.5); opacity: 0; filter: brightness(0.35); } }
+.mvKill-shrink { animation: mvkshrink 4.5s ease-in forwards; }
+@keyframes mvkshrink { 0%, 30% { transform:none; opacity:1; } 100% { transform: scale(0.12) rotate(10deg); opacity: 0; } }
+.mvKill-dissolve { animation: mvkdissolve 4.5s ease-in forwards; }
+@keyframes mvkdissolve { 0% { opacity:1; } 50% { filter: blur(1px); opacity: 0.8; } 100% { filter: blur(6px); opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { .mvKill-burn, .mvKill-pierce, .mvKill-shatter, .mvKill-sink, .mvKill-shrink, .mvKill-dissolve, .mvKillFlash { animation: none; opacity: 0.3; filter: grayscale(1); } }
 `;
 const CSS_ALL = fontStyles + EXTRA_CSS;
 const DAY_TINTS = [
@@ -5074,6 +5237,14 @@ function MonsterVillage() {
             <h1 className="mv-display mt-1" style={{ fontSize: 30, lineHeight: 1.1, color: C.parch }}>{s.over.win ? "It is over." : joined ? "It is over, and you did not stay to see the rest." : "It is over, and not in your favour."}</h1>
             <p className="mt-2" style={{ fontSize: 15 }}>{s.over.text}</p>
           </div>
+
+          {s.over.win && (
+            <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.panel, border: `1px solid ${C.line}` }}>
+              <div className="mv-display" style={{ color: C.redBright, fontSize: 12, letterSpacing: 2 }}>THE RITE, DONE RIGHT</div>
+              <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} /></div>
+              <p className="mt-1 text-center" style={{ fontSize: 13.5, color: C.parch }}>{METHOD_KILL_LINES[m.method]}</p>
+            </div>
+          )}
 
           <div className="mvIn mt-4 rounded-lg p-3 flex gap-3 items-center" style={{ animationDelay: "0.9s", background: C.panel, border: `1px solid ${C.line}` }}>
             <MonsterArt id={m.id} size={72} />
@@ -6019,6 +6190,9 @@ function MonsterVillage() {
     return (
       <div className="fixed inset-0 z-30 mv-body overflow-hidden" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
         <div className="max-w-md mx-auto px-5 pt-10 pb-8 h-full overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+          <div className="rounded-lg overflow-hidden mb-3" style={{ border: `1px solid ${C.line}` }}>
+            <InterviewScene id={n.id} height={92} />
+          </div>
           <div className="mv-display mb-3" style={{ fontSize: 13, letterSpacing: 3, color: C.amber }}>DAY {s.dayNum} · THE INTERVIEW</div>
           <div className="flex gap-3 items-start">
             <Portrait id={n.id} size={64} turnedKnown={n.turned && n.known} />
