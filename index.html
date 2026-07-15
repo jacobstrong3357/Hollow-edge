@@ -4937,8 +4937,8 @@ const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fas
    in-game Journal's Help tab). Kept to four small sections so a first-time
    player can read it in one breath instead of being handed a manual. */
 const HOW_TO_PLAY = [
-  { h: "THE GOAL", b: "One of your eight neighbours is not what they seem. Work out who, work out what kind of horror wears their face, then accuse them so the right rite can end it." },
-  { h: "THE RHYTHM", b: "By day you get two actions: question a villager, search a location, examine the dead, or the like. By night you bar your door, watch someone's, or walk the dark yourself. Every night you spend looking is a night the thing might notice you looking." },
+  { h: "THE GOAL", b: "One of your eight neighbours is not what they seem. Learn which of them it is, and what kind of horror wears their face, then accuse them so the proper rite can end it." },
+  { h: "THE RHYTHM", b: "By day you get two actions: question a villager, search a location, examine the dead, or the like. By night you bar your door, watch someone's, or walk the dark yourself. Hunt it too openly, though, and it starts to hunt you back." },
   { h: "WINNING AND LOSING", b: "Name the right person AND the right creature together, and it ends there. Get either wrong and someone innocent may hang for it, or worse, you might. Let too many nights pass unanswered and the village runs out of people to save." },
   { h: "IF YOU GET STUCK", b: "The Journal (bottom of the screen once you're in) keeps every sign you've ticked, every creature you've struck off, and a full Help tab with the fine print." },
 ];
@@ -5529,10 +5529,12 @@ function MonsterVillage() {
               {ACH.map((a) => {
                 const got = meta && meta.ach.includes(a.id);
                 return (
-                  <div key={a.id} className="flex gap-3 items-baseline py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: got ? 1 : 0.45 }}>
-                    <span style={{ width: 16, color: got ? C.red : C.inkDim }}>{got ? "✠" : "·"}</span>
-                    <span style={{ fontWeight: 700, minWidth: 130 }}>{a.name}</span>
-                    <span style={{ fontSize: 13, color: C.inkDim }}>{a.desc}</span>
+                  <div key={a.id} className="flex gap-2.5 items-baseline py-2" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: got ? 1 : 0.5 }}>
+                    <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.red : C.inkDim }}>{got ? "✠" : "·"}</span>
+                    <div className="min-w-0">
+                      <div style={{ fontWeight: 700 }}>{a.name}</div>
+                      <div style={{ fontSize: 13, color: C.inkDim, lineHeight: 1.35 }}>{a.desc}</div>
+                    </div>
                   </div>
                 );
               })}
