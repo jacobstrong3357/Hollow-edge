@@ -11,7 +11,13 @@
 <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 <style>
-  html, body { margin: 0; padding: 0; min-height: 100%; background: #0a0a0b; }
+  html, body { margin: 0; padding: 0; min-height: 100%; background: #0a0a0b;
+    -webkit-text-size-adjust: 100%; -moz-text-size-adjust: 100%; text-size-adjust: 100%; }
+  /* Android Chrome inflates small fonts in text blocks ("font boosting"),
+     which distorts tight grids like the monster chart differently on every
+     device. Pin every element to its authored size so layouts render the
+     same everywhere. */
+  * { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   #boot {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px; text-align: center;
@@ -5369,14 +5375,14 @@ function MonsterVillage() {
                   <span className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>THE BLACK BOOK</span>
                   <span style={{ fontSize: 12, color: C.dim }}>{defeatedCount} of {MONSTERS.length} horrors ended</span>
                 </div>
-                <div className="grid grid-cols-5 gap-1 mt-2 place-items-center">
+                <div className="grid grid-cols-5 gap-1 mt-2 items-start">
                   {MONSTERS.map((mm) => {
                     const done = !!meta.defeated[mm.id];
                     return (
-                      <div key={mm.id} className="flex flex-col items-center" title={mm.name}
+                      <div key={mm.id} className="flex flex-col items-center w-full" title={mm.name}
                         style={{ opacity: done ? 1 : 0.18, filter: done ? "none" : "grayscale(1)" }}>
                         <MonsterArt id={mm.id} size={38} />
-                        <span style={{ fontSize: 8, color: done ? C.parch : C.dim, lineHeight: "9px" }}>{done ? mm.name : "?"}</span>
+                        <span style={{ fontSize: 8.5, lineHeight: 1.1, color: done ? C.parch : C.dim, textAlign: "center", width: "100%", overflowWrap: "break-word", wordBreak: "break-word" }}>{done ? mm.name : "?"}</span>
                       </div>
                     );
                   })}
