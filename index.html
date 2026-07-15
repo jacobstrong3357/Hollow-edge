@@ -1864,7 +1864,7 @@ const TALK_LINES = {
 };
 const TALK_MONSTER = [
   `They are good company. That is the thing you will remember afterward, lying awake: how easy the hour was, how well they listened, how the stories fit together like dovetailed joints. Polished. Practiced. As if the whole warm evening had been rehearsed in front of a mirror that no longer works.`,
-  `They laugh in all the right places. Every single one. You have never met anyone who laughs in all the right places, because real people don't. It is a lovely evening, and it sits in your stomach like a stone.`,
+  `They laugh in all the right places, every one, warm and easy and exactly on the beat. Most people miss a few. It is a lovely evening, and it sits in your stomach like a stone, and you cannot, walking home, say for certain why.`,
   `An hour of easy talk, and afterward you realize they asked everything and answered nothing. You know no more about them than when you knocked. They know a great deal more about you.`,
 ];
 /* "How are you holding up?" - one honest, human answer each. */
@@ -5006,6 +5006,11 @@ function demeanorLine(s, id) {
   const npc = npcById(s, id);
   if (id === s.monster.vid) return chance(0.3) ? pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal);
   if (npc.turned) return chance(0.5) ? pickFreshIdx("demeanorTurnedTell", DEMEANOR.turnedTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal);
+  /* A badly frightened innocent can read exactly as unnervingly composed as
+     the thing does: too still, too easy, too rested. The uncanny demeanor is
+     a lean, never proof - the monster wears it more often, but it is not the
+     monster's alone, so seeing it can never settle anything by itself. */
+  if (chance(0.14)) return pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell);
   return pickFreshIdx("demeanorNormal", DEMEANOR.normal);
 }
 
