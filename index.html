@@ -1704,6 +1704,15 @@ const DISCREET_ID = "ansel";
 /* the one secret whose exposure is genuinely life-or-death for its keeper */
 const FLEE_ON_SECRET_ID = "wilhelm";
 
+/* A villager who thinks little of you does not hand over their best clue for
+   free: they set a price first. The price is a night's watching, and paying
+   it (report back tomorrow) unlocks the whole ledger. */
+const GATE_LINES = [
+  (t) => `They look you over a long moment, and shake their head. "No. Not for the asking, and not on trust I don't have in you yet. You want what I know? Watch ${t}'s door tonight, and come tell me true what you saw. Do that, and I'll open the whole ledger to you."`,
+  (t) => `"Everyone wants what's in my head lately, and nobody's yet given me a reason to hand it over." A pause. "Here's your reason. Follow ${t} tonight - just watch, mind, nothing more - and bring me the truth of it tomorrow. Prove your word is worth something, and mine is yours."`,
+  (t) => `"I'll tell you what I know when I know what YOU'RE worth." They nod toward the window. "${t}. Tonight. Watch, and come tell me what you saw. That's the price, and I'm not haggling."`,
+];
+
 const SIDE_QUEST_ASK = [
   (target) => `Before you go, they catch your sleeve. "One more thing. Keep an eye on ${target} tonight, would you? I don't like how they've seemed lately. Come tell me tomorrow what you saw."`,
   (target) => `"Actually-" They hesitate at the door. "Would you watch ${target}, tonight? Just watch. I'd sleep easier knowing someone had eyes on them."`,
@@ -3600,7 +3609,13 @@ function computeAnswer(s, id, night, q, targetId) {
   }
 
   if (q === "craft") {
-    if (lying && !isMonster && chance(0.5)) {
+    const gateTargets = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id);
+    if (!isMonster && !npc.turned && (npc.disp || 0) <= -1 && !s.sideQuest && gateTargets.length && chance(0.75)) {
+      /* trust runs one way with this one: the big clue is quest-gated */
+      const gt = pick(gateTargets);
+      s.sideQuest = { giver: id, target: gt.id, night: s.nightNum, done: false, reported: false, gated: true };
+      quote = pickFreshIdx("gateLines", GATE_LINES)(gt.name);
+    } else if (lying && !isMonster && chance(0.5)) {
       quote = `"Not today. My head aches. Everything aches, since." They do not say since what.`;
     } else {
       const c = craftAnswer(s, id);
@@ -3770,7 +3785,7 @@ function computeAnswer(s, id, night, q, targetId) {
         summary = `${target.name} was out at the ${loc}, plain as anything, the whole night.`;
         useful = true;
       }
-      quote = `"${summary}"`;
+      quote = s.sideQuest.gated ? `"${summary}" A slow nod, mostly to themselves. "So your word is worth something after all. Fair is fair, then. Ask me what you came to ask."` : `"${summary}"`;
       s.sideQuest = { ...s.sideQuest, reported: true };
       s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + (useful ? 2 : 1)) } : x));
       const recip = craftAnswer(s, id);
@@ -6678,8 +6693,8 @@ function MonsterVillage() {
               <Portrait id={giver.id} size={32} turnedKnown={giver.turned && giver.known} />
               <p style={{ fontSize: 13, color: C.parch }}>
                 {s.sideQuest.done
-                  ? <><strong>{giver.name}</strong> is waiting to hear what you saw of <strong>{sqTarget ? sqTarget.name : "them"}</strong>.</>
-                  : <><strong>{giver.name}</strong> asked you to watch <strong>{sqTarget ? sqTarget.name : "them"}</strong> tonight.</>}
+                  ? <><strong>{giver.name}</strong> is waiting to hear what you saw of <strong>{sqTarget ? sqTarget.name : "them"}</strong>.{s.sideQuest.gated ? " Report back, and they'll open up what they know." : ""}</>
+                  : <><strong>{giver.name}</strong> asked you to watch <strong>{sqTarget ? sqTarget.name : "them"}</strong> tonight.{s.sideQuest.gated ? " Do it, and they'll trade you what they know." : ""}</>}
               </p>
             </div>
           </div>
