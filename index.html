@@ -295,6 +295,7 @@ const METHODS = {
   fire: "Consecrated Fire", grimoire: "Burn the Grimoire", exorcism: "Rite of Exorcism",
   iron: "Cold Iron", mirror: "Silver Mirror", holy: "Holy Water", crossroads: "Burial at the Crossroads",
   backname: "Its Name Said Backwards", hawthorn: "Hawthorn Charm",
+  rest: "Rite of Eternal Rest", quicksilver: "Draught of Quicksilver", bell: "Consecrated Bell",
 };
 
 const METHOD_KILL_LINES = {
@@ -310,6 +311,9 @@ const METHOD_KILL_LINES = {
   crossroads: "It is dragged to the crossroads and put in the ground, and the roads themselves hold it down.",
   backname: "Its true name is read aloud backwards, syllable by syllable, and it unravels the same way.",
   hawthorn: "The hawthorn charm closes over it, and the wailing thing shrinks and shrinks until the night is only quiet.",
+  rest: "The Rite of Eternal Rest is read over the open graves, and every servant it raised lies down where it stands. The ground takes the necromancer last, and slowest.",
+  quicksilver: "The quicksilver goes down its throat mid-change, and every shape it ever borrowed tries to happen at once. What is left when they run out is small, and grey, and still.",
+  bell: "The consecrated bell rings once, clear, and the charm cracks off it like ice off a bough. The second note stops the starved thing underneath in mid-reach.",
 };
 
 const MONSTERS = [
@@ -325,6 +329,9 @@ const MONSTERS = [
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
   { id: "doppel", name: "Doppelg\u00e4nger", signs: ["reflect", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, and leaves the ruin for the village to find. After that it does not kill. It replaces. Its victims walk and talk and pass for themselves, and only the fogged mirrors and the marks it scratches in quiet places say otherwise. No door stops something you would invite in. It is undone only by its true name said backwards, if anyone can learn it." },
   { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers when the mood takes her, resting between, and wails AS she rides, not before. Walls mean nothing. Her dead have no wound, only a face frozen mid-scream. A hawthorn charm, pressed to her while she feeds." },
+  { id: "necromancer", name: "Necromancer", signs: ["graves", "hex", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "rest", hunts: ["Graveyard", "Old Church"], lore: "It kills once with its own hands, to seed the ground. After that it sends the village's own dead: they rise, walk to doors they knew in life, and are let in gladly, by name. Every kill swells its congregation. Read the Rite of Eternal Rest over the graves and the dead lie down mid-stride, and drag their master under with them." },
+  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "reflect", "cold", "flora", "hex", "graves", "wail"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two of its nights agree. It kills a new way each time, wearing manners of murder the way other things wear faces, and it strews signs behind it: real ones, all of them, and all of them true of nothing. When the evidence will not add up to any one creature, it has already added up to this one. Quicksilver, forced down mid-change." },
+  { id: "succubus", name: "Succubus", signs: ["hex", "reflect", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It does not break in, and it does not need to catch you outdoors. It calls, and the called rise from their own beds, unbar their own doors, and walk out smiling to wherever it waits. Its dead are found at its chosen ground, never at home, barely marked. What is heard on its nights is not grief: it is nearer a song. One clear note of the consecrated bell breaks the charm, and the thing with it." },
 ];
 
 const SIGN_CATS = {
@@ -345,17 +352,17 @@ const INVEST_ACTS = [
 ];
 
 /* Night sounds are deliberately ambiguous: every line fits five or six of
-   the twelve horrors, with heavy overlap, so a sound narrows the field only
+   the fifteen horrors, with heavy overlap, so a sound narrows the field only
    a little and never on its own. */
 const AMBIENT_SOUNDS = [
-  { m: ["werewolf", "hellhound", "banshee", "hag", "wraith", "ghoul"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. A wolf, some will say. The rest say nothing at all." },
-  { m: ["ghoul", "revenant", "witch", "hellhound", "werewolf", "shifter"], t: "From out in the dark, a patient working sound. Digging, or chewing. Or both, taking turns." },
-  { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
-  { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
-  { m: ["vampire", "demon", "banshee", "wraith", "witch", "hag"], t: "Something passed over the rooftops: a cloak in the wind, or wings, or both. The dogs did not bark, which is worse." },
-  { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon"], t: "Every sound in the village stopped at once. No dog, no owl, no wind. The whole village holding one breath, and something walking through it." },
-  { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
-  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
+  { m: ["werewolf", "hellhound", "banshee", "hag", "wraith", "ghoul", "mimic"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. A wolf, some will say. The rest say nothing at all." },
+  { m: ["ghoul", "revenant", "witch", "hellhound", "werewolf", "shifter", "necromancer", "mimic"], t: "From out in the dark, a patient working sound. Digging, or chewing. Or both, taking turns." },
+  { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon", "necromancer"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
+  { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire", "necromancer", "succubus"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
+  { m: ["vampire", "demon", "banshee", "wraith", "witch", "hag", "succubus"], t: "Something passed over the rooftops: a cloak in the wind, or wings, or both. The dogs did not bark, which is worse." },
+  { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon", "necromancer", "succubus"], t: "Every sound in the village stopped at once. No dog, no owl, no wind. The whole village holding one breath, and something walking through it." },
+  { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith", "succubus", "mimic"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
+  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon", "mimic"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
 ];
 const soundFor = (mid) => pickFreshIdx(`ambient:${mid}`, AMBIENT_SOUNDS.filter((a) => a.m.includes(mid))).t;
 
@@ -650,6 +657,24 @@ const DEATH_SCENES = {
     `"There you are," it whispers, in a voice like a rusted hinge, and rides you down, its weight pressing the air out of you in shallower and shallower pulls until the last one does not come back in.`,
     `The scream you die making never reaches your mouth. Your face keeps it, twisted mid-cry, and that is how they find you at the ${w} come morning: peaceful sheets, terrible face, and the first man there covering you quickly, before the children can see what fear looks like when it has nowhere left to go.`,
   ],
+  necromancer: (nm, w) => [
+    `Someone is standing in the road ahead at the ${w}, patient, familiar. You know the coat before you know the face. You helped carry that coat, and the man inside it, to the churchyard.`,
+    `You say the buried name, and it is ${nm}'s voice that answers, from somewhere behind you, pleased: "Good. You remember them. They all remember YOU. It makes the knocking so much easier."`,
+    `Hands take you then, grave-cold and more of them than one body should own, and the strength in them is borrowed from ground that does not tire. They hold you, considerately, the way the dead hold anything, while ${nm} takes all the time in the world walking over.`,
+    `What is done then is unhurried, and when it is finished you are not left where you fell. You are walked, on your own dead legs, back toward the village, to a door you knew in life. Somebody you love answers the knocking. That is the last errand you ever run.`,
+  ],
+  mimic: (nm, w) => [
+    `You have studied every death in Hollow's Edge, matched sign to page, page to name. What comes at you out of the dark at the ${w} matches none of them, and then, horribly, several of them in turn.`,
+    `It moves like the wolf, and then like the cold, and then like nothing at all, as if it were leafing through ways to kill you and saving your eyes for the last page.`,
+    `${nm}'s face is the only fixed thing on it, worn crooked now, like a mask pushed up for comfort. "Which of them frightened you most?" it asks, trying several voices on the way through the sentence. "Be honest. I take requests."`,
+    `The searchers argue at dawn and for years after: the wounds say claws, the ground around you says frost, the fence post says teeth. Every one of them is right. That is the whole answer, and nobody at your graveside knows to hear it.`,
+  ],
+  succubus: (nm, w) => [
+    `Somewhere between one step and the next, you stop wanting to go home. It is not a thought. It is a change in the weather of you, and the night is suddenly warmer in the direction of the ${w}.`,
+    `${nm} is waiting there, and looks glad to see you, gladder than anyone has looked at you in years, and some cold surviving corner of you notes that your feet are still walking and will not be argued with.`,
+    `"There you are," it says, and takes your face in both hands, kindly. What it takes then does not grow back, and it takes it slowly, and the horror is that you help.`,
+    `They find you at the ${w} at first light, sat peaceful against the stones, empty as a drained cup. The first searcher there puts a sheet over your face quickly. Nobody says the word "smiling". Everybody carries it home with them anyway.`,
+  ],
 };
 
 /* Two wrong names is one too many: on the second, the thing stops feeding on
@@ -729,6 +754,21 @@ const OFFER_SCENES = {
     `${nm}'s face hangs upside down over yours, delighted, patient, in no hurry at all now to finish what delight usually finishes quickly.`,
     `"There you are," it says, in the rusted-hinge voice, almost tender. "I have ridden a great many sleepers down and never once been asked to stay. Ride the nights beside me instead of under me, and you will wake from every one of them. Refuse, and this scream finishes reaching your mouth."`,
   ],
+  necromancer: (nm) => [
+    `The dead hands close on your arms and simply hold, grave-cold, unhurried, while ${nm} walks over at leisure, and does not give the order they were raised to carry out.`,
+    `"I have a village full of servants who had to die first," it says, studying you with a scholar's disappointment in its own collection. "Obedient. Tireless. And no conversation in a single one of them."`,
+    `"Stay above the ground and talk with me. Learn what I know: there is so much of it, and the dead are wasted on it. Keep me company on this side of the soil and I will never once have a use for yours. Refuse, and these hands finish what they were sent to start."`,
+  ],
+  mimic: (nm) => [
+    `It stops mid-change with your death half-decided: claws on one hand, frost on its breath, and none of it committed to yet.`,
+    `"I have killed a hundred ways," it says, in a voice built of several. "I could make yours the most interesting one yet. I find I do not want to."`,
+    `"You are the only soul in this village who looked at my work and tried to READ it. Come with me and watch me perform, town after town, and I will never once perform on you. Refuse, and I will finish choosing."`,
+  ],
+  succubus: (nm) => [
+    `The call is already in you, and your feet already answered it, and now it stands close enough to finish what the calling started, and does not.`,
+    `"Everyone comes when I call," it says, ${nm}'s face tilted, genuinely curious. "You are the first to come ANGRY. Do you know how long it has been since anything surprised me?"`,
+    `"Walk with me willingly, eyes open, knowing what I am, and I will never once sing at you. It would be the first honest company I have kept in three hundred years. Refuse, and the song finishes, and you will smile like all the others did."`,
+  ],
 };
 const COERCE_NOTE_BOND_MIN = 1;
 const OFFER_BOND_MIN = 2;
@@ -741,7 +781,7 @@ const OFFER_MIN_NIGHT = 3;
    The first night is the first chapter of the book, not a roll of the generic
    pools. It is guaranteed a kill (see the n===1 handling in sampleNight and
    resolveNight) and its own dusk/kill/dawn text, deliberately unspecific about
-   which of the twelve horrors is loose, though signs may surface: nothing here
+   which of the fifteen horrors is loose, though signs may surface: nothing here
    should narrow the field the way BRUTAL_DETAILS deliberately does not. */
 /* Siege nights: what the unmasked thing does to the barricaded village.
    One entry per night, no repeats while the pool holds out. */
@@ -757,7 +797,7 @@ const SIEGE_KILLS = [
    dies, from the evening's last chore to the moment the dark takes them. It
    is assembled once the victim is known (NIGHT_ONE_SCENE), and every beat is
    deliberately monster-agnostic: no wound, no cold, no sulfur, nothing that
-   would narrow the twelve. The village learns who died at dawn. */
+   would narrow the field. The village learns who died at dawn. */
 /* the victim's last ordinary act, by trade, with the night-falls framing
    folded in. Kept short: the whole scene is five tight beats. */
 const N1_OPEN = {
@@ -951,6 +991,28 @@ const ANIMAL_SIGN = {
   hex: ["A cat lies dead at the centre of marks scratched into the flagstones around it, a pattern that means nothing and unsettles anyway, cut with intent.", "A dead crow is laid at the heart of lines scored deliberately into the earth, a working of some kind, and you find you cannot look at the shapes for long."],
 };
 const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pick(ANIMAL_SIGN[sg]) : null);
+
+/* ---------- the raised dead, and the called ----------
+   Two horrors kill in ways the generic scream cannot carry. The necromancer
+   sends the village's own buried to the doors they knew in life; the
+   succubus calls the living out of their beds to it. Each gets its own
+   night beat and its own morning, because HOW these two kill IS the clue. */
+const NECRO_KILL = [
+  (v, d) => `A knocking somewhere down the lanes, patient, unhurried. Then ${v}'s voice, glad and disbelieving through the dark, saying a name the whole village buried: "${d}?" A bolt is drawn back. After that the night goes on as if nothing had happened, which is worse.`,
+  (v, d) => `Late, very late, boots come up the lane with grave-mud in the tread and no hurry in the step, and stop at ${v}'s door. Whoever answers, answers gladly, by name. There is no scream for a long while. Then there is.`,
+];
+const NECRO_DAWN = [
+  (v, d) => `The mud at ${v}'s door holds boot-prints coming and going, and the village knows the boots: they went into the ground on ${d}'s feet. ${d}'s grave stands open this morning, and nobody will go close enough to say whether it is empty.`,
+  (v, d) => `${v} let their killer in: no forcing, a lamp lit, a chair pulled out. The neighbours heard ${v} through the wall, talking to a visitor, and swear to a man that the voice answering was ${d}'s. Dead and buried these past days, ${d}.`,
+];
+const SUCCUBUS_KILL = [
+  (v, w) => `In the deadest hour a bolt slides back somewhere along the lane: drawn from the inside, unhurried. Bare feet go up the road after something only they can hear, light, almost dancing. ${v}'s feet. No struggle ever comes.`,
+  (v, w) => `A voice out in the dark, sweet and low, and then a door opening that had no reason to open. ${v} goes up the lane in nightclothes, smiling at something no one else can see, and does not once look back at the house.`,
+];
+const SUCCUBUS_DAWN = [
+  (v, w) => `${v}'s own door stood open all night, unforced, the bolt drawn back from the inside. The trail to the ${w} is one set of footprints, bare, evenly spaced, in no hurry at all. ${v} walked there. Nothing walked with them. Something was waiting.`,
+  (v, w) => `${v} went out barefoot in the cold, and the prints do not wander: straight to the ${w}, the way a called dog goes. There was singing in the night, the neighbours say, and not one of them can hum it back with a steady voice.`,
+];
 
 /* Thralls, met in the dark, doing what the changed do when they think no one
    sees: the sight that tells you a neighbour belongs to it now. Monster-
@@ -1459,7 +1521,10 @@ const FOLK_HINTS = [
   { m: ["shifter"], t: `"A face-thief kills the pattern along with the person. If nothing about the nights makes sense, that is itself the answer."` },
   { m: ["werewolf", "shifter", "hellhound"], t: `"Three things leave claw and track both. The moon-cursed bites. The face-thief sheds. The hound stinks of brimstone. Find the third mark and you have it."` },
   { m: ["revenant", "ghoul"], t: `"Disturbed graves can be hunger or homecoming. The hungry one bites what it takes. The one that came home leaves its dead cold as the stone it slept under."` },
-  { m: ["hag", "banshee"], t: `"Two things wail, girl, and the difference is the timing. The grieving one wails the night BEFORE it takes you. The hag wails while she rides."` },
+  { m: ["hag", "banshee", "succubus"], t: `"Three things cry in the night, girl, and you'd best learn which is which. The grieving one wails the night BEFORE it takes you. The hag wails while she rides. And if what you hear is nearer a song, and you catch your own hand on your own bolt, wedge the door and stop your ears."` },
+  { m: ["necromancer", "revenant", "ghoul"], t: `"Disturbed graves are three different stories. The hungry one digs DOWN, for meat. The homesick one digs up, once, and walks. And if the ground is opening in twos and threes, from below, then somebody is calling them up, and you should be counting your buried."` },
+  { m: ["mimic"], t: `"My grandmother knew a village where the signs never matched twice: claw one night, frost the next, hexes on a third. They hunted six different devils and hanged four neighbours. It was one thing. It wears murders the way you'd wear coats."` },
+  { m: ["succubus", "vampire", "necromancer"], t: `"When the dead are found away from their own beds and the door shows no forcing, stop asking what got IN. Ask what they got up and opened the door FOR."` },
 ];
 
 const COLLECTOR_HINT = { m: ["vampire", "doppel"], t: `"The collecting kinds kill once, girl, the first night, to open the account. If the dying stops after one body, stop watching for bodies. Start counting the living."` };
@@ -2011,11 +2076,15 @@ function resolveNight(prev, planIn, preEvents) {
     if (evWander) dawn.push(ev(`Talk at the well: ${npcById(s, evWander).name} wandered off from the ${evn.name} alone, toward the trees, and nobody thought to call them back.`, evWander, 0));
   }
 
-  const wailTonight = n === 1 ? false : ((m.id === "banshee" && n % m.rhythm.n === 0) || (m.id === "hag" && active));
+  const wailTonight = n === 1 ? false : ((m.id === "banshee" && n % m.rhythm.n === 0) || ((m.id === "hag" || m.id === "succubus") && active));
   if (wailTonight) {
-    dawn.push(ev(n <= 3
-      ? "In the small hours, a thin wailing rolled over the rooftops. Wind, said some. Not wind, said others."
-      : "The wailing came again in the night, closer this time."));
+    dawn.push(ev(m.id === "succubus"
+      ? (n <= 3
+        ? "In the small hours, a voice carried over the rooftops: wailing, said some. Singing, said others, and would not meet anyone's eye saying it."
+        : "The voice came again in the night, closer this time, and sweeter, which is worse.")
+      : (n <= 3
+        ? "In the small hours, a thin wailing rolled over the rooftops. Wind, said some. Not wind, said others."
+        : "The wailing came again in the night, closer this time.")));
     if (exposed && !s.foundSigns.includes("wail")) {
       s.foundSigns.push("wail");
       dawn.push(ev(`You were out when it came. That was no wind. ${senseFor("wail")}`));
@@ -2025,7 +2094,9 @@ function resolveNight(prev, planIn, preEvents) {
      door: pushed by nightSounds() at the point of the night they belong,
      AFTER an interactive walk's own outcome. */
   const nightSounds = () => {
-    if (wailTonight) beats.push("A thin wailing rises over the rooftops, from everywhere and nowhere at once. It goes on far too long.");
+    if (wailTonight) beats.push(m.id === "succubus"
+      ? "A voice threads over the rooftops, nearer a song than a cry, very beautiful and very patient. You find you have taken one step toward the door before you notice your feet doing it."
+      : "A thin wailing rises over the rooftops, from everywhere and nowhere at once. It goes on far too long.");
     if (n > 1 && active && wx !== "storm" && chance(0.35)) {
       const heardLine = soundFor(m.id);
       if (heardLine !== mods.soundHeard) beats.push(heardLine);
@@ -2541,11 +2612,22 @@ function resolveNight(prev, planIn, preEvents) {
          from night to night, so a body is never proof it does not also change. */
       const firstBlood = (m.attack === "turn" || m.attack === "both") && !s.deaths.some((d) => d.kind === "slain");
       victimKind = firstBlood ? "kill" : (m.attack === "both" ? (chance(0.5) ? "kill" : "turn") : m.attack);
+      /* the succubus never kills at home: it calls its victims OUT, to its
+         own ground, and the bodies are found there come morning */
+      if (m.id === "succubus" && victimKind === "kill") victimWhere = huntLoc || pick(m.hunts);
+      /* the necromancer, past its first seeding kill, sends the buried */
+      const necroDead = m.id === "necromancer" && n > 1
+        ? [...s.deaths].reverse().find((d) => d.kind === "slain" || d.kind === "executed" || d.kind === "mobbed")
+        : null;
       if (victimKind === "kill") {
         if (n === 1) {
           beats.push(...NIGHT_ONE_SCENE(victim, victimWhere));
         } else {
-          beats.push(huntsCrowd && victimWhere === eventLoc
+          beats.push(m.id === "necromancer" && necroDead
+            ? pickFreshIdx("necroKill", NECRO_KILL)(victim.name, necroDead.name)
+            : m.id === "succubus"
+            ? pickFreshIdx("succKill", SUCCUBUS_KILL)(victim.name, victimWhere)
+            : huntsCrowd && victimWhere === eventLoc
             ? pick(EVENT_KILL)(evn.name, victim.name)
             : wx === "storm" && chance(0.5)
             ? "Under the thunder, something happens that no one hears. The storm keeps its counsel till morning."
@@ -2573,9 +2655,22 @@ function resolveNight(prev, planIn, preEvents) {
           dawn.push(ev(chance(0.5) ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
         } else {
           dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id, 2));
-          /* one flourish only, in priority order: a message it left (carries a
-             clue), then a first-blood signature, otherwise a visceral detail. */
-          if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
+          /* one flourish only, in priority order: the sent-dead or the call
+             (these ARE the clue for their kinds), a message it left, a
+             first-blood signature, otherwise a visceral detail. */
+          if (m.id === "necromancer" && necroDead) {
+            dawn.push(ev(pickFreshIdx("necroDawn", NECRO_DAWN)(victim.name, necroDead.name), victim.id));
+            if (!s.necroClueGiven) {
+              s.necroClueGiven = true;
+              s.clues.push(`Night ${n}: the prints at ${victim.name}'s door were made by the buried, and ${necroDead.name}'s grave stands open. The dead of Hollow's Edge are being SENT. Something raises them and points them at doors they knew.`);
+            }
+          } else if (m.id === "succubus") {
+            dawn.push(ev(pickFreshIdx("succDawn", SUCCUBUS_DAWN)(victim.name, victimWhere), victim.id));
+            if (!s.succClueGiven) {
+              s.succClueGiven = true;
+              s.clues.push(`Night ${n}: ${victim.name} drew their own bolt and walked out to the ${victimWhere} alone, barefoot, unhurried. Nothing forced that door. Whatever kills here CALLS its victims to it.`);
+            }
+          } else if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
             const km = pick(KILLER_MESSAGES);
             dawn.push(ev(km.line(victim.name)));
             s.clues.push(`Night ${n}: ${km.clue}`);
@@ -2591,7 +2686,7 @@ function resolveNight(prev, planIn, preEvents) {
         /* some nights it kills past need, for the pleasure of it */
         if (n >= 2 && chance(0.4)) dawn.push(ev(pickFreshIdx("crueltyDawn", CRUELTY_DAWN)));
         if (n > 1 && chance(0.12)) {
-          const closeSign = m.signs[2];
+          const closeSign = m.id === "mimic" ? pick(m.signs.filter((sg) => sg !== "wail")) : m.signs[2];
           if (chance(0.5) && !s.foundSigns.includes(closeSign)) {
             s.foundSigns.push(closeSign);
             dawn.push(ev(`${victim.name} did not die at once. The searchers found them still breathing, and everyone kneeling there noticed the same thing before the end came. ${senseFor(closeSign)}`, victim.id));
@@ -2614,7 +2709,10 @@ function resolveNight(prev, planIn, preEvents) {
     }
     if (victimKind === "kill" && n > 1 && chance(0.4)) dawn.push(ev(pickFreshIdx("carterLines", CARTER_LINES)(huntLoc)));
     const placed = s.locEvidence[huntLoc];
-    const site = m.signs.slice(0, 2).filter((sg) => !placed.includes(sg));
+    /* the mimic strews a DIFFERENT sign every night it hunts: many traces,
+       all real, all true of nothing. Everything else leaves its own two. */
+    const sitePool = m.id === "mimic" ? Object.keys(SIGNS).filter((sg) => sg !== "wail") : m.signs.slice(0, 2);
+    const site = sitePool.filter((sg) => !placed.includes(sg));
     if (site.length) placed.push(pick(site));
     /* -- counterplay: a thing that knows it is hunted plants false marks -- */
     if ((s.wrongExecutions > 0 || s.monsterSawYou || s.enraged) && chance(0.45)) {
@@ -3039,7 +3137,13 @@ function craftAnswer(s, id) {
 
   if (id === "falk") {
     const d = [...s.deaths].reverse().find((x) => x.kind === "slain");
+    const slainAll = s.deaths.filter((x) => x.kind === "slain");
     if (!d) quote = `"No bodies, no wounds, no opinion. A rare mercy in my line."`;
+    else if (m.id === "mimic" && slainAll.length >= 2) {
+      const a = slainAll[slainAll.length - 2], b = slainAll[slainAll.length - 1];
+      quote = `"I will say this once and deny it in company. ${a.name}'s wounds and ${b.name}'s cannot have been made by the same creature. Not the same teeth, not the same hands, not the same anything. Either Hollow's Edge has two horrors, or it has one that does not kill the same way twice."`;
+      clue = `Falk, Day ${s.dayNum}: no two bodies agree. Either two horrors walk this village, or one that changes how it kills from night to night.`;
+    }
     else {
       const woundy = m.signs.includes("claw") || m.signs.includes("bite");
       if (woundy) { quote = `"I have dressed wounds from wolf, boar, and men with knives. ${d.name}'s were none of those, and all of those. Something with an animal's tools and a man's intent. Rule out anything that kills without touching."`; clue = `Falk, Day ${s.dayNum}: the wounds are a beast's work. Whatever it is, it kills with tooth or claw.`; }
@@ -4116,8 +4220,45 @@ function MonsterArt({ id, size = 64 }) {
       <polygon points="66,45 68,49 70,45" fill={C.parch} />
       {eye(70, 40, C.amber)}
     </g>),
+    necromancer: (<g>
+      {/* hooded figure with a lit staff, and the ground opening at its feet */}
+      <path d="M52,26 C40,30 36,50 38,68 L30,100 L82,100 L74,66 C78,48 72,30 62,26 Z" fill={C.sil} />
+      <circle cx="57" cy="22" r="10" fill={C.sil} />
+      <path d="M57,10 L44,23 L57,19 L70,23 Z" fill={C.sil} />
+      <path d="M76,62 L94,30" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
+      <circle cx="95" cy="27" r="5" fill={C.turn} opacity="0.35" />
+      <circle cx="95" cy="27" r="2.4" fill={C.turn} />
+      <rect x="10" y="86" width="15" height="6" rx="3" fill={C.sil} />
+      <path d="M17,86 L17,74 M13,78 L21,78" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M98,100 L98,86 M93,91 L98,86 L103,91" stroke={C.pale} strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.85" />
+      <path d="M24,100 L106,100" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
+      {eye(53, 22, C.turn)}{eye(61, 22, C.turn)}
+    </g>),
+    mimic: (<g>
+      {/* a shape that has not decided what it is: borrowed teeth, borrowed
+         claws, and three eyes that do not match */}
+      <path d="M28,94 C18,74 26,50 46,42 C54,26 78,26 86,40 C102,46 106,66 96,80 C100,92 88,100 74,96 C62,106 40,104 28,94 Z" fill={C.sil} />
+      <path d="M36,96 C36,104 32,108 32,112 M58,101 C58,109 62,113 60,117 M84,95 C86,103 82,107 84,111" stroke={C.sil} strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M92,58 L106,50 M94,66 L108,63" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      <polygon points="46,74 50,84 54,74" fill={C.parch} />
+      <polygon points="56,76 59,84 62,76" fill={C.parch} />
+      <polygon points="64,74 67,82 70,74" fill={C.parch} />
+      {eye(44, 58, C.amber)}{eye(66, 52, C.redBright)}{eye(80, 64, C.parch)}
+    </g>),
+    succubus: (<g>
+      {/* horned, winged, elegant; a song rising off it */}
+      <path d="M40,46 C20,36 10,52 16,72 C24,62 32,64 36,72 Z" fill={C.sil} />
+      <path d="M80,46 C100,36 110,52 104,72 C96,62 88,64 84,72 Z" fill={C.sil} />
+      <path d="M60,34 C52,44 54,58 60,66 C54,78 52,90 56,104 L68,104 C72,88 68,76 64,66 C70,56 70,44 60,34 Z" fill={C.sil} />
+      <circle cx="60" cy="28" r="10" fill={C.sil} />
+      <path d="M52,21 C47,15 49,8 54,6 C52,12 54,16 57,19 Z M68,21 C73,15 71,8 66,6 C68,12 66,16 63,19 Z" fill={C.sil} />
+      <path d="M66,100 C84,96 92,84 88,74" stroke={C.sil} strokeWidth="2.6" fill="none" strokeLinecap="round" />
+      <polygon points="85,69 93,75 84,79" fill={C.sil} />
+      <path d="M26,32 q2,-7 9,-7 M94,28 q-2,-7 -9,-7" stroke={C.pale} strokeWidth="1.4" fill="none" opacity="0.5" />
+      {eye(56, 27, C.redBright)}{eye(64, 27, C.redBright)}
+    </g>),
   }[id];
-  const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6 }[id] || 1;
+  const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14 }[id] || 1;
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} style={{ display: "block" }}>
       <defs>
@@ -4375,15 +4516,15 @@ const ACH = [
   { id: "norope", name: "No Rope", desc: "Win without an innocent hanged.", test: (s) => s.over.win && !s.deaths.some((d) => d.kind === "executed" || d.kind === "mobbed") },
   { id: "firstlight", name: "First Light", desc: "Win by the third dawn.", test: (s) => s.over.win && s.nightNum <= 3 },
   { id: "shepherd", name: "Shepherd", desc: "Win with six or more souls still living.", test: (s) => s.over.win && s.npcs.filter((x) => x.alive && !x.fled && !x.turned).length >= 6 },
-  { id: "scholar", name: "Scholar of Signs", desc: "Win with all three of its signs surfaced.", test: (s) => s.over.win && monsterOf(s).signs.every((sg) => s.foundSigns.includes(sg)) },
+  { id: "scholar", name: "Scholar of Signs", desc: "Win with all three of its signs surfaced.", test: (s) => s.over.win && (monsterOf(s).id === "mimic" ? s.foundSigns.filter((sg) => sg !== "wail").length >= 3 : monsterOf(s).signs.every((sg) => s.foundSigns.includes(sg))) },
   { id: "twice", name: "Looked Twice", desc: "Settle its build from two uncertain sightings.", test: (s) => !!s.knownBuild && (s.buildClues || []).length >= 2 },
   { id: "confessor", name: "Confessor", desc: "Draw a neighbour's innocent secret into the light.", test: (s) => s.npcs.some((x) => x.secretKnown) },
   { id: "marked", name: "It Knew Your Face", desc: "Win after it has seen you hunting it.", test: (s) => s.over.win && s.monsterSawYou },
   { id: "longdark", name: "The Long Dark", desc: "Survive seven nights.", test: (s) => s.nightNum >= 7 },
   { id: "unmasker", name: "Right Face, Wrong Name", desc: "Win after a failed rite.", test: (s) => s.over.win && s.riteFails > 0 },
   { id: "saltcraft", name: "Salted Trail", desc: "Expose a mark the thing planted for you.", test: (s) => (s.planted || []).some((p) => p.exposed) },
-  { id: "half", name: "Half the Black Book", desc: "End six different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 6 },
-  { id: "book", name: "The Whole Black Book", desc: "End all twelve horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 12 },
+  { id: "half", name: "Half the Black Book", desc: "End eight different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 8 },
+  { id: "book", name: "The Whole Black Book", desc: "End all fifteen horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= MONSTERS.length },
   { id: "asked", name: "It Asked Nicely", desc: "Receive the monster's offer.", test: (s) => s.offerMade },
 ];
 
@@ -4449,6 +4590,21 @@ const LOSS_DEATHS = {
     (nm) => `${nm} went to bed tired, the way everyone is tired now, and did not wake. Whatever rode them down into that sleep left no mark but the scream caught behind their own face, twisted mid-cry and never released.`,
     (nm) => `They found ${nm} in bed, sheets barely disturbed, expression almost peaceful except around the eyes, and utterly, permanently gone. The hag does not leave a struggle to clean up after; she prefers her work tidy.`,
     (nm) => `${nm}'s heart stopped somewhere in the deepest part of the night, ridden down by something delighted, unhurried, and far heavier than it looked, that took its time about finishing.`,
+  ],
+  necromancer: [
+    (nm) => `${nm} answered a knock in the small hours, because the voice through the door was one they had wept over at a graveside, and love does not check the tread for grave-mud. The door was found open. ${nm} was not found at all, until the ground by the churchyard wall would not stop being freshly turned.`,
+    (nm) => `${nm} was taken by hands the village had folded and buried itself, and the worst of it came after: ${nm} seen at other doors in the nights that followed, knocking, patient, saying the names of the people inside.`,
+    (nm) => `${nm} barred the door against monsters and opened it to a dead friend, which by then was the same mistake. What walked them out into the dark walked slowly, because nothing that serves the necromancer has ever needed to hurry.`,
+  ],
+  mimic: [
+    (nm) => `${nm} died in a way that matched nothing in anyone's grandmother's stories, and the argument over what did it outlived every soul who took a side. It killed them a new way on purpose. By then it was performing.`,
+    (nm) => `What was done to ${nm} carried every sign the village had learned to dread, all at once: claw and frost and grave-dirt together, evidence of everything, proof of nothing. The searchers stopped reading the ground after that. There was no sense left in it to read.`,
+    (nm) => `${nm} was found surrounded by the marks of six different horrors, and by then the village finally understood the joke, and there was nobody left in a state to laugh.`,
+  ],
+  succubus: [
+    (nm) => `${nm} drew their own bolt in the deepest hour and went up the lane barefoot, smiling, to something that had been singing their name below the hearing of everyone else. The prints did not wander. They never do.`,
+    (nm) => `${nm} was found at the tree line, sat gently against a trunk, empty as a drained cup, with an expression the burial party covered quickly and never described. They went to it gladly. That is the part the village cannot put down.`,
+    (nm) => `The night it called ${nm}, three other doors along the lane were found unbarred by morning, opened in sleep by hands that never woke. Only ${nm} finished the walk. The rest of the lane has slept in ropes and knots since, tied by their own hands, against their own hands.`,
   ],
   generic: [
     (nm) => `${nm} did not survive the thing that finally, fully took the village. What is left of the story does not include how.`,
@@ -4739,9 +4895,9 @@ function MonsterVillage() {
               <div className="mvIn mt-3 rounded-lg p-3" style={{ animationDelay: "0.8s", background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}` }}>
                 <div className="flex items-baseline justify-between">
                   <span className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>THE BLACK BOOK</span>
-                  <span style={{ fontSize: 12, color: C.dim }}>{defeatedCount} of 12 horrors ended</span>
+                  <span style={{ fontSize: 12, color: C.dim }}>{defeatedCount} of {MONSTERS.length} horrors ended</span>
                 </div>
-                <div className="grid grid-cols-6 gap-1 mt-2 place-items-center">
+                <div className="grid grid-cols-5 gap-1 mt-2 place-items-center">
                   {MONSTERS.map((mm) => {
                     const done = !!meta.defeated[mm.id];
                     return (
@@ -4979,7 +5135,7 @@ function MonsterVillage() {
           )}
 
           <p className="mvIn mt-3" style={{ animationDelay: "3s", color: C.dim, fontSize: 13 }}>
-            {s.nightNum} night{s.nightNum === 1 ? "" : "s"} survived · {s.foundSigns.filter((sg) => m.signs.includes(sg)).length}/3 true signs surfaced · {s.deaths.filter((d) => d.kind === "executed").length} executed on your word{mobbed.length ? ` · ${mobbed.map((d) => d.name).join(", ")} hanged by the mob` : ""}
+            {s.nightNum} night{s.nightNum === 1 ? "" : "s"} survived · {Math.min(3, s.foundSigns.filter((sg) => m.signs.includes(sg)).length)}/3 true signs surfaced · {s.deaths.filter((d) => d.kind === "executed").length} executed on your word{mobbed.length ? ` · ${mobbed.map((d) => d.name).join(", ")} hanged by the mob` : ""}
           </p>
           <div className="mvIn mt-3 grid grid-cols-1 gap-2" style={{ animationDelay: "3.2s" }}>
             <Btn kind="red" full onClick={() => setS(null)}>Return to the village gate</Btn>
@@ -5617,7 +5773,7 @@ function MonsterVillage() {
                       <span className="mv-display" style={{ fontSize: 18, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
                       <span style={{ fontSize: 13, color: C.red, fontWeight: 700 }}>{METHODS[mm.method]}</span>
                     </div>
-                    <div style={{ fontSize: 13, color: C.inkDim }}>{mm.signs.map((sg, si) => (<span key={sg}><span style={{ color: s.playerSigns.includes(sg) ? C.red : C.inkDim, fontWeight: s.playerSigns.includes(sg) ? 700 : 400 }}>{SIGNS[sg]}</span>{si < mm.signs.length - 1 ? " \u00b7 " : ""}</span>))}</div>
+                    <div style={{ fontSize: 13, color: C.inkDim }}>{mm.id === "mimic" ? <span style={{ fontStyle: "italic" }}>every sign there is, and never the same two nights running</span> : mm.signs.map((sg, si) => (<span key={sg}><span style={{ color: s.playerSigns.includes(sg) ? C.red : C.inkDim, fontWeight: s.playerSigns.includes(sg) ? 700 : 400 }}>{SIGNS[sg]}</span>{si < mm.signs.length - 1 ? " \u00b7 " : ""}</span>))}</div>
                     <p style={{ fontSize: 14 }} className="mt-1">{mm.lore}</p>
                   </div>
                 </div>
@@ -5676,7 +5832,7 @@ function MonsterVillage() {
           <div style={{ fontSize: 14 }}>
             <p><strong>By day, 2 actions:</strong> investigate a fresh death where it happened, search a location, hold an interview, have someone examined for the change, or speak against a mob if one has chosen a neck.</p>
             <p className="mt-2"><strong>Interviews:</strong> one action buys three questions. Ask about the nights, press them about a particular person, ask who they suspect, or use their trade: Falk reads wounds, Hazel sees who comes home at dawn, Liesel hears everything said in the tavern, Ansel keeps the ledger of deaths, and Greta knows the old lore. Sit and talk of nothing, sometimes: warmth loosens tongues. On the mornings after gatherings, ask who came, who stayed away, and who was not themselves. People remember what you have asked. Pester them and they will tell you where to go.</p>
-            <p className="mt-2"><strong>The journal ticks nothing for you.</strong> When a sign turns up, tick it yourself in the Evidence page, and the bestiary dims to match. Tap a creature to strike it out; tap a villager's page to strike them from suspicion. Your reasoning, your marks, your mistakes. A site ever holds only two of a creature's three signs: the third clings to its victims, not the ground.</p>
+            <p className="mt-2"><strong>The journal ticks nothing for you.</strong> When a sign turns up, tick it yourself in the Evidence page, and the bestiary dims to match. Tap a creature to strike it out; tap a villager's page to strike them from suspicion. Your reasoning, your marks, your mistakes. A site ever holds only two of a creature's three signs: the third clings to its victims, not the ground. The Mimic is the one exception: it strews any sign it pleases, a fresh one each night, so evidence that will not agree with itself is evidence of the Mimic.</p>
             <p className="mt-2"><strong>The changed:</strong> not every horror kills. Some feed by <span style={{ color: C.turn }}>changing</span> people instead: the first victim still dies, gruesomely, to open the account, but after that its victims do not die. They are hollowed out and sent back, walking and talking and passing for themselves, and from then on they serve it and lie for it. A morning with no body is not a mercy; it usually means one more neighbour belongs to the thing now. You uncover the changed by watching them at night (they behave wrongly in the dark), by a villager staying home on a killing night while someone still dies, or by having them examined. Once you know someone is changed, their word is worthless, and you can attempt to unbind them.</p>
             <p className="mt-2"><strong>Liars:</strong> the thing lies well; the changed lie for it and point at nothing. Every honest neighbour hides one human secret, badly. Catch a lie and press it: the innocent confess something ordinary. The other kind do not.</p>
             <p className="mt-2"><strong>By night:</strong> bar your door, investigate one villager, or search an area. Searching is a walk: follow who you meet, hail them, press close or turn back. A villager seen home on a killing night is cleared. Fog hides faces; frost holds prints.</p>
@@ -6126,7 +6282,7 @@ function MonsterVillage() {
 
   const riteModal = modal === "rite" && modalWrap("Circle the creature. The rite follows the name.", (
     <div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {MONSTERS.map((mm) => {
           const struckM = s.struck.includes(mm.id);
           const dim = struckM || !compatM(mm);
@@ -6173,7 +6329,7 @@ function MonsterVillage() {
           <Portrait id={accusePick} size={44} />
           <p style={{ fontSize: 13, color: C.dim }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
         </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {MONSTERS.map((mm) => {
           const struckM = s.struck.includes(mm.id);
           const dim = struckM || !compatM(mm);
