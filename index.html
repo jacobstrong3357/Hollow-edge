@@ -1051,9 +1051,16 @@ const NECRO_KILL = [
   (v, d) => `A knocking somewhere down the lanes, soft, even, repeated. Then ${v}'s voice, glad and disbelieving through the dark, saying a name the whole village buried: "${d}?" A bolt is drawn back. After that the night simply goes on, as if nothing had happened at all.`,
   (v, d) => `Late, very late, boots come up the lane with grave-mud in the tread and no hurry in the step, and stop at ${v}'s door. Whoever answers, answers gladly, by name. There is no scream for a long while. Then there is.`,
 ];
+/* Deliberately ambiguous: no forced door, no struggle, a visitor let in
+   without fear. That fits a dozen things in this village's dark - a
+   doppelganger, a shifter wearing a trusted face, plain human trust
+   misplaced. What actually did it is never handed over here. It has to be
+   dug for, literally, by choosing to search the graveyard by daylight (see
+   actSearch): this is a clue you earn, not one the morning gives you free. */
 const NECRO_DAWN = [
-  (v, d) => `The mud at ${v}'s door holds boot-prints coming and going, and the village knows the boots: they went into the ground on ${d}'s feet. ${d}'s grave stands open this morning, and nobody will go close enough to say whether it is empty.`,
-  (v, d) => `${v} let their killer in: no forcing, a lamp lit, a chair pulled out. The neighbours heard ${v} through the wall, talking to a visitor, and swear to a man that the voice answering was ${d}'s. Dead and buried these past days, ${d}.`,
+  (v, d) => `${v} let their killer in: no forcing, a lamp lit, a chair pulled out for a guest. The neighbours heard two voices through the wall long after dark, easy with each other, right up until they weren't.`,
+  (v, d) => `No broken latch at ${v}'s door, no struggle anyone heard. Whoever came, ${v} knew well enough to let in without a sound, and never got the chance to be afraid of them.`,
+  (v, d) => `${v} opened that door themselves. Everyone agrees on that much, and nobody agrees on anything else: not the voice, not the hour, not what was said before it stopped being talk.`,
 ];
 const SUCCUBUS_KILL = [
   (v, w) => `In the deadest hour a bolt slides back somewhere along the lane: drawn from the inside, slowly. Bare feet go up the road after something only they can hear, light, almost dancing. ${v}'s feet. No struggle ever comes.`,
@@ -1678,6 +1685,18 @@ const FLED_OPENERS = [
   (nm) => `"I keep seeing ${nm}'s face at the window in my sleep. Except it is not ${nm}'s face anymore, is it. It never was."`,
 ];
 
+/* You have seen its face in the dark and it did not kill you for it - a
+   deliberate restraint, not an oversight (see the "Yet." beats in the night
+   walk). Sitting across from that same face by daylight, before you have
+   said a word out loud to anyone, deserves its own charged atmosphere: both
+   of you know, and neither of you says so first. Never shown once the
+   village itself knows (s.fled), which gets its own FLED_OPENERS instead. */
+const FACE_KNOWN_OPENERS = [
+  (nm) => `They receive you exactly as they always have: warm, unhurried, unbothered. For one unguarded half-second before the mask settles back into place, something in their eyes says, quite plainly, that they know precisely why you keep coming back. Neither of you says so aloud.`,
+  (nm) => `${nm} talks to you the way ${nm} has always talked to you. It is, you realize partway through, a performance now, and a good one, and you are both aware of it, and neither of you is the one who says so first.`,
+  (nm) => `There is a stillness in ${nm} today that was not there before you learned that face in the dark. Not fear. Something nearer patience. Whatever this is, it has decided to let the visit play out a little longer.`,
+];
+
 const DEMEANOR = {
   normal: [
     "There are new locks on their door. Three, and the marks where a fourth is being fitted.",
@@ -1873,6 +1892,16 @@ const GOSSIP_EVENT_FIGHT = [
 const GOSSIP_EVENT_PAIR = [
   (a, b) => `"Talk of the village is ${a} and ${b}, slipping off together last night, thick as thieves. Draw your own conclusions. Everyone else has."`,
 ];
+/* A secret the player let slip stays the talk of the village for a few
+   days after it reaches its owner, not just a one-time dawn card. (name,
+   short-description) => line. */
+const GOSSIP_LEAKED_SECRET = [
+  (nm, short) => `"Have you heard? ${nm} - ${short}. The whole village has had a week of Sundays on it already."`,
+  (nm, short) => `"Everyone's still chewing on the ${nm} business. ${short}, if you hadn't heard. Somebody's mouth ran faster than their sense."`,
+  (nm, short) => `They lower their voice, delighted despite themselves. "${nm}, of all people - ${short}. I'd never have guessed it. Somebody let that slip, and ${nm} would dearly love to know who."`,
+  (nm, short) => `"Poor ${nm}." They do not sound sorry at all. "${short}. Secrets don't keep in a village this size. Somebody always tells."`,
+];
+
 const GOSSIP_TRUE_HINT = [
   (t) => `They lean in, voice dropping. "Between us - ${t} has stopped humming while they work. People don't stop humming for no reason. I'd watch them, if I were the watching sort."`,
   (t) => `"I probably shouldn't say this," they say, and say it anyway. "${t} hasn't been right since the killings started. Not wrong exactly. Just not right."`,
@@ -2832,10 +2861,6 @@ function resolveNight(prev, planIn, preEvents) {
              first-blood signature, otherwise a visceral detail. */
           if (m.id === "necromancer" && necroDead) {
             dawn.push(ev(pickFreshIdx("necroDawn", NECRO_DAWN)(victim.name, necroDead.name), victim.id));
-            if (!s.necroClueGiven) {
-              s.necroClueGiven = true;
-              s.clues.push(`Night ${n}: the prints at ${victim.name}'s door were made by the buried, and ${necroDead.name}'s grave stands open. The dead of Hollow's Edge are being SENT. Something raises them and points them at doors they knew.`);
-            }
           } else if (m.id === "succubus") {
             dawn.push(ev(pickFreshIdx("succDawn", SUCCUBUS_DAWN)(victim.name, victimWhere), victim.id));
             if (!s.succClueGiven) {
@@ -3017,6 +3042,7 @@ function resolveNight(prev, planIn, preEvents) {
       if (!rec || rec.reached) continue;
       if (n - rec.by >= 1 && chance(0.5)) {
         rec.reached = true;
+        rec.reachedNight = n;
         const owner = npcById(s, ownerId);
         if (owner && owner.alive && !owner.fled) {
           s.npcs = s.npcs.map((x) => (x.id === ownerId ? { ...x, secretKnown: true, disp: -2 } : x));
@@ -3192,6 +3218,22 @@ function actSearch(prev, loc) {
   const s = JSON.parse(JSON.stringify(prev));
   s.ap -= 1;
   s.searchCount[loc] = (s.searchCount[loc] || 0) + 1;
+  /* The necromancer's real tell is never handed over in a dawn card: you
+     have to choose to search the graveyard by daylight and find it
+     yourself. Ties to whichever villager it seeded its work with first, the
+     one whose grave stays disturbed the whole game, once, ever. */
+  if (loc === "Graveyard" && !s.necroGraveFound) {
+    const mm = monsterOf(s);
+    if (mm.id === "necromancer") {
+      const seed = s.deaths.find((d) => d.kind === "slain" || d.kind === "executed" || d.kind === "mobbed");
+      if (seed && chance(0.4)) {
+        s.necroGraveFound = true;
+        s.clues.push(`Day ${s.dayNum}: ${seed.name}'s plot stands open, dug from the inside, the earth thrown outward and heaped wrong, as if the digging went the wrong direction entirely. Whatever left that grave did not need help getting out of it.`);
+        s.dayEvents.push(ev(`Something at the ${loc} stops you cold: ${seed.name}'s grave, freshly turned again though the burying was days ago, the dirt piled the wrong way. You did not imagine that.`, seed.id));
+        return s;
+      }
+    }
+  }
   /* a second daylight look can expose a planted mark */
   const suspect = (s.planted || []).find((p) => p.loc === loc && !p.exposed && s.foundSigns.includes(p.sg));
   if (suspect && chance(0.65)) {
@@ -3876,10 +3918,20 @@ function computeAnswer(s, id, night, q, targetId) {
         quote = `"Only that folk are whispering about ${t.name}. ${pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name).slice(1)}`;
       } else quote = `"Nothing worth repeating. This village gossips about everything and knows nothing true."`;
     } else {
+      /* a secret the player let slip is, for a few days, the single juiciest
+         thing this village has to talk about - takes priority over grudges
+         and event tittle-tattle while it's still fresh. */
+      const leakedEntry = Object.entries(s.secretSpread || {}).find(([oid, rec]) => rec && rec.reached && rec.reachedNight != null && s.nightNum - rec.reachedNight <= 3 && oid !== id && npcById(s, oid) && npcById(s, oid).alive);
       const grudgeEntries = Object.entries(s.grudges).filter(([gid, g]) => g && s.dayNum <= g.until && gid !== id && g.other !== id && npcById(s, gid) && npcById(s, gid).alive && npcById(s, g.other) && npcById(s, g.other).alive);
       const lastLog = s.nightLogs.length ? s.nightLogs[s.nightLogs.length - 1] : null;
       const hidden = s.npcs.filter((x) => x.alive && x.turned && !x.known && x.id !== id);
-      if (grudgeEntries.length) {
+      if (leakedEntry) {
+        const [oid] = leakedEntry;
+        const owner = npcById(s, oid);
+        const sec = secretOf(s, oid);
+        mentions.push({ id: oid, kind: "gossip" });
+        quote = pickFreshIdx("gossipLeakedSecret", GOSSIP_LEAKED_SECRET)(owner.name, sec.short);
+      } else if (grudgeEntries.length) {
         const [gid, g] = pick(grudgeEntries);
         const a = npcById(s, gid), b = npcById(s, g.other);
         mentions.push({ id: a.id, kind: "gossip" }, { id: b.id, kind: "gossip" });
@@ -3938,8 +3990,18 @@ function computeAnswer(s, id, night, q, targetId) {
       const lg = s.nightLogs.find((l) => l.night === wn);
       const loc = lg ? lg.outMap[s.sideQuest.target] : undefined;
       const turnedThatNight = target && target.turned && target.known && turnNightOf(s, target.id) === wn;
+      /* The big one: the person they asked you to watch turned out to be
+         the thing itself, and you have the face confirmed to prove it. This
+         earns its own scene, not the generic "was out at the X" line, and a
+         real reward - one genuine sign, blurted out of them by the shock of
+         it - the same shape of payoff the Rite of Unbinding gives, never
+         the rite or the name itself. */
+      const monsterConfirmed = target && target.id === s.monster.vid && s.faceKnown === target.id;
       let useful = false, summary;
-      if (target && turnedThatNight) {
+      if (monsterConfirmed) {
+        summary = `${target.name}. It is ${target.name}. I watched its face come apart in the dark and put itself back on wrong, and I have not stopped shaking since I saw it.`;
+        useful = true;
+      } else if (target && turnedThatNight) {
         summary = `${target.name} is changed. I watched it happen with my own eyes, and I will not forget it.`;
         useful = true;
       } else if (!loc || loc === "home") {
@@ -3948,14 +4010,29 @@ function computeAnswer(s, id, night, q, targetId) {
         summary = `${target.name} was out at the ${loc}, plain as anything, the whole night.`;
         useful = true;
       }
-      quote = s.sideQuest.gated ? `"${summary}" A slow nod, mostly to themselves. "So your word is worth something after all. Fair is fair, then. Ask me what you came to ask."` : `"${summary}"`;
       s.sideQuest = { ...s.sideQuest, reported: true };
-      s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + (useful ? 2 : 1)) } : x));
-      const recip = craftAnswer(s, id);
-      if (recip.quote) quote += ` They study you a long moment, then offer something back for the favour: ${recip.quote}`;
-      if (recip.foundSign) foundSign = recip.foundSign || foundSign;
-      if (recip.clue) clue = recip.clue;
-      recip.mentions.forEach((mm) => mentions.push(mm));
+      if (monsterConfirmed) {
+        s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 3) } : x));
+        quote = `"${summary}" They go the colour of chalk and grip the table to steady themselves. "Then it's true. God help all of us, it's true."`;
+        const unfoundSign = m.signs.find((sg) => !s.foundSigns.includes(sg));
+        if (unfoundSign) {
+          s.foundSigns.push(unfoundSign);
+          const senseTxt = senseFor(unfoundSign);
+          quote += ` A long, shaking breath. "Wait. There was something, now I let myself think on it. ${senseTxt} I never let myself wonder what that meant. Does that help? Tell me that helps."`;
+          clue = `Day ${s.dayNum}: told ${npc.name} what you saw of ${target.name}. Badly shaken, ${npc.name} remembered something too: ${senseTxt}`;
+        } else {
+          quote += ` "Whatever kills a thing like that, you find it soon. Don't wait on my account. Go."`;
+        }
+        s.clues.push(`Day ${s.dayNum}: you told ${npc.name} that ${target.name} is confirmed as what wears the monster's face. The village does not know yet. You do, and so does ${npc.name}.`);
+      } else {
+        quote = s.sideQuest.gated ? `"${summary}" A slow nod, mostly to themselves. "So your word is worth something after all. Fair is fair, then. Ask me what you came to ask."` : `"${summary}"`;
+        s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + (useful ? 2 : 1)) } : x));
+        const recip = craftAnswer(s, id);
+        if (recip.quote) quote += ` They study you a long moment, then offer something back for the favour: ${recip.quote}`;
+        if (recip.foundSign) foundSign = recip.foundSign || foundSign;
+        if (recip.clue) clue = recip.clue;
+        recip.mentions.forEach((mm) => mentions.push(mm));
+      }
     } else {
       quote = `"There's nothing to tell you yet."`;
     }
@@ -5053,6 +5130,13 @@ function epilogueLine(s, x) {
     ? `${x.name} woke at dawn as if from a long fever, remembering nothing. Their hands are still cold. Their hands will always be cold.`
     : joined ? joinedFate(s, x) : lossFate(s, x, "enslaved");
   if (!win) return joined ? joinedFate(s, x) : lossFate(s, x, m.attack === "turn" ? "enslaved" : "dead");
+  /* secretKnown only ever means the PLAYER learned it. Whether it stayed
+     between the two of you, or the player used "share" and it reached the
+     owner's own ears (s.secretSpread[x.id].reached), are very different
+     endings and must not both read as "kept it". */
+  if (x.secretKnown && s.secretSpread && s.secretSpread[x.id] && s.secretSpread[x.id].reached) {
+    return `${x.name} knows their secret went further than you. It was all the village could talk of for a day, and ${x.name} has a fair idea whose mouth it came out of. There is a loyalty this village might have offered you. It is not yours.`;
+  }
   if (x.secretKnown) return `${x.name} knows you learned their secret, and kept it. There is a loyalty in this village now that was not there before, and it is yours.`;
   if (s.hardCleared.includes(x.id)) return `${x.name} knows their neck was saved by a night you spent in the cold watching their door, and has never once said thank you out loud. Bread appears on your step anyway.`;
   if (x.offendedExam) return `${x.name} survived, and has not forgiven the glass you put to their chest. Survival, they would tell you, is not the same as thanks.`;
@@ -6419,6 +6503,7 @@ function MonsterVillage() {
     const opener = [demeanorLine(s2, id), pickFreshIdx(`dispLine:${dispTier(npc.disp)}`, DISP_LINES[dispTier(npc.disp)])];
     if (npc.sawYouWatching) opener.push(`Before you can speak: "I saw you. The other night, in the lane, watching my door. So am I a suspect, then? Say it to my face."`);
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
+    if (id === s2.monster.vid && s2.faceKnown === id && !s2.fled) opener.push(pickFreshIdx(`faceKnownOpener:${id}`, FACE_KNOWN_OPENERS)(npc.name));
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
     setS(s2); setModal(null);
     const valid = s2.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
