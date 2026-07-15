@@ -353,11 +353,11 @@ const AMBIENT_SOUNDS = [
   { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
   { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
   { m: ["vampire", "demon", "banshee", "wraith", "witch", "hag"], t: "Something passed over the rooftops: a cloak in the wind, or wings, or both. The dogs did not bark, which is worse." },
-  { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon"], t: "The night went wrong-quiet all at once. No dog, no owl, no wind. The whole village holding one breath, something walking through it." },
+  { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon"], t: "Every sound in the village stopped at once. No dog, no owl, no wind. The whole village holding one breath, and something walking through it." },
   { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
-  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon"], t: "Something heavy circled the village once at a run, close along the walls, gone before a shutter opened." },
+  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
 ];
-const soundFor = (mid) => pick(AMBIENT_SOUNDS.filter((a) => a.m.includes(mid))).t;
+const soundFor = (mid) => pickFreshIdx(`ambient:${mid}`, AMBIENT_SOUNDS.filter((a) => a.m.includes(mid))).t;
 
 /* ---------- text pools ---------- */
 
@@ -580,7 +580,7 @@ const MOB_ULTIMATUM = [
 const DEATH_SCENES = {
   werewolf: (nm, w) => [
     `Breathing, first: close, ragged, enormous, timed to your own footsteps like something that has been pacing you for a hundred yards and finally tired of the game.`,
-    `You turn. The moon is generous. It shows you the wrongness of the joints, the breadth of the shoulders, and in the ruin of the face, patient as a debt: ${nm}'s eyes.`,
+    `You turn. The moon is generous. It shows you knees that bend the wrong way, shoulders too broad for any coat in the village, and in the ruin of the face, patient as a debt: ${nm}'s eyes.`,
     `It takes you at the shoulder first, and the crunch arrives through your bones before it arrives through your ears, and the arm on that side stops being anything you own. Then you are down in the mud with the heat of its mouth working in the wound, and your own blood is in your throat now, and the screaming you can hear is coming out of you in bubbles.`,
     `It does not stop at the kill. This is not animal hunger. It eats while you are still learning that you are dying, unhurried, tugging with an almost sociable patience, like a man carving at his own table. There is a reason they carry you home in two sacks, and none of it fit for the children to watch pass.`,
   ],
@@ -591,7 +591,7 @@ const DEATH_SCENES = {
     `The cold spreads outward from the wound until it reaches your fingers, and the last thing you feel is the creature straightening your collar, tender as a parent. At dawn they find you laid out neat at the ${w}, drained past white, not a hair out of place.`,
   ],
   wraith: (nm, w) => [
-    `The ${w} goes wrong-quiet: not silence, but the sound of every small living thing nearby deciding, all at once, to stop breathing.`,
+    `The ${w} goes quiet in the wrong way: not silence, but the sound of every small living thing nearby deciding, all at once, to stop breathing.`,
     `Your lantern gutters with no wind to gutter it, and something that is mostly absence stands where the path should be, wearing the shape of ${nm} the way fog wears a fence.`,
     `You try to run and your breath does not come with you. A cold hand passes through your coat, through your ribs, and closes around the warmest thing inside you, and the last sound you make is a held note with no air left behind it.`,
     `It does not gloat. It has no mouth to gloat with. It only takes what it came for and is gone before your knees find the ground. Your lantern burns beside the road until dawn, the only warm thing left at the ${w}, and by then the whole village knows what a lantern burning alone at that hour means.`,
@@ -770,20 +770,39 @@ const N1_OPEN = {
   falk: (nm) => `Night falls, and ${nm} closes his bag on a day of small complaints and sets off down the lane on his cane.`,
   rosa: (nm) => `Night falls, and ${nm} sets down the needle, folds the day's cloth by feel, and steps out for one breath of thread-free air.`,
 };
+/* Two sets of tension/death beats: one for a victim caught OUTDOORS, one for
+   a victim taken AT HOME behind their own bolt. They must never mix - a
+   soul who just barred their door cannot then be "the only thing moving on
+   the lane". */
 const N1_TENSION_1 = [
-  (nm, s, S, o, p) => `Then the night goes wrong-quiet, and ${s} knows, the way an animal knows, that ${s} is the only thing still moving on the lane.`,
-  (nm, s, S, o, p) => `A sound falls behind ${o} that is almost a footstep, and does not stop when ${s} does.`,
-  (nm, s, S, o, p) => `The quiet finds ${o} first, then the plain animal certainty of being watched by something in no hurry.`,
+  (nm, s, S, o, p) => `Then the night goes quiet all at once, and ${s} knows, the way an animal knows, that ${s} is the only thing still moving on the lane.`,
+  (nm, s, S, o, p) => `A sound falls in behind ${o} that is almost a footstep, and does not stop when ${s} does.`,
+  (nm, s, S, o, p) => `The quiet finds ${o} first. Then the plain animal certainty of being watched by something in no hurry.`,
 ];
 const N1_TENSION_2 = [
   (nm, s, S, o, p) => `${S} does not turn around. Everyone knows you do not turn around. ${S} walks faster. Whatever keeps pace does not trouble to.`,
   (nm, s, S, o, p) => `The shape ahead was not there a breath ago, is not a neighbour, and is not waiting to be asked in.`,
-  (nm, s, S, o, p) => `The last lit window goes dark as ${s} passes it, and ${s} is the only thing still moving on the whole lane.`,
+  (nm, s, S, o, p) => `The last lit window goes dark as ${s} passes it, and after that the lane belongs to ${o} and to one other thing.`,
 ];
 const N1_DEATH = [
-  (nm, s, S, o, p) => `What comes then comes fast, not the way ${nm} ever heard a death described. Then the lane is empty, and Hollow's Edge is one soul lighter, and will not know it until dawn.`,
-  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch, and can tell no one. Then the dark closes over the place ${s} stood, and keeps its counsel until morning.`,
+  (nm, s, S, o, p) => `What comes then comes fast. There is no scream worth the name. Then the lane is empty again, and Hollow's Edge is one soul lighter, and will not know it until dawn.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch, and can tell no one, ever. Then the dark closes over the place ${s} stood and keeps its counsel until morning.`,
   (nm, s, S, o, p) => `It is quick, or it is not; no one is left by dawn to say. The last thing the night grants ${o} is knowing ${s} had been right to be afraid.`,
+];
+const N1_TENSION_1_HOME = [
+  (nm, s, S, o, p) => `${S} is barely done with the bolt when the dog next door stops barking mid-note, all at once, the way a sound stops when a hand closes over it.`,
+  (nm, s, S, o, p) => `Then, from the lane outside, one set of footsteps comes up to the door, evenly, without hurry. And stops.`,
+  (nm, s, S, o, p) => `The fire settles low. Somewhere at the back of the house, a latch ${nm} shut an hour ago tries itself, quietly, twice.`,
+];
+const N1_TENSION_2_HOME = [
+  (nm, s, S, o, p) => `${S} sits very still and waits for a knock. No knock comes. The silence outside the door simply goes on standing there.`,
+  (nm, s, S, o, p) => `${S} tells ${o}self it is the wind, and the house answers with the one sound a house should never make: the bolt, easing back on its own.`,
+  (nm, s, S, o, p) => `The candle leans. There is no draught in the room. It leans anyway, toward the window, and ${nm} watches it and does not move.`,
+];
+const N1_DEATH_HOME = [
+  (nm, s, S, o, p) => `Whatever comes in does not use the door. By the time it is in the room there is nothing left to do with the moment, and the house keeps what it saw to itself until morning.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, there in ${p} own home, between ${o} and the fire. The candle goes out. The village sleeps on.`,
+  (nm, s, S, o, p) => `It is quick, or it is not; the walls do not say. At dawn the door is still bolted from the inside, and that is the first thing the village will fail to explain.`,
 ];
 function NIGHT_ONE_SCENE(v, where) {
   const s = v.sex === "f" ? "she" : "he";
@@ -791,16 +810,17 @@ function NIGHT_ONE_SCENE(v, where) {
   const o = v.sex === "f" ? "her" : "him";
   const p = v.sex === "f" ? "her" : "his";
   const nm = v.name;
+  const home = where === "home";
   const open = (N1_OPEN[v.id] || ((n) => `Night falls, and ${n} finishes the day's work and steps out into the dark.`))(nm);
-  const journey = where === "home"
+  const journey = home
     ? `The way home is short. Tonight ${s} walks it too fast, and throws the bolt behind ${o} with hands that will not keep still.`
     : `But one last errand takes ${nm} past the last lit window, toward the ${where}, where the dark seems to rise from the ground to meet ${o}.`;
   return [
     open,
     journey,
-    pickFreshIdx("n1t1", N1_TENSION_1)(nm, s, S, o, p),
-    pickFreshIdx("n1t2", N1_TENSION_2)(nm, s, S, o, p),
-    pickFreshIdx("n1death", N1_DEATH)(nm, s, S, o, p),
+    pickFreshIdx(home ? "n1t1h" : "n1t1", home ? N1_TENSION_1_HOME : N1_TENSION_1)(nm, s, S, o, p),
+    pickFreshIdx(home ? "n1t2h" : "n1t2", home ? N1_TENSION_2_HOME : N1_TENSION_2)(nm, s, S, o, p),
+    pickFreshIdx(home ? "n1dh" : "n1death", home ? N1_DEATH_HOME : N1_DEATH)(nm, s, S, o, p),
   ];
 }
 
@@ -941,7 +961,7 @@ const THRALL_SOUND = [
   (l) => `Short of the ${l}, a sound stops you cold: something feeding, close by in the dark, fast and wet and ravaging, the way no person has ever eaten. And threaded under it, faint and tuneless, someone humming.`,
   (l) => `You are almost at the ${l} when you hear it: a low, broken muttering off in the black, the same few words over and over, in a lane that should be dead empty. Every hair on you stands up.`,
   (l) => `Something is up ahead near the ${l}, making sounds a throat should not make: a wet, mindless worrying at something, and between mouthfuls a small, contented noise that turns your stomach over.`,
-  (l) => `A wrongness reaches your ears before your eyes find it: a snuffling, tearing, gulping sound from the dark by the ${l}, and a voice, in the gaps, saying a child's rhyme with all the sense worn out of it.`,
+  (l) => `The sound reaches you before your eyes can find it: a snuffling, tearing, gulping from the dark by the ${l}, and a voice, in the gaps between mouthfuls, saying a child's rhyme with all the sense worn out of it.`,
 ];
 const THRALL_RETREAT = [
   (nm) => `You do not look closer. Whatever is feeding in that dark, you back away from it one slow step at a time, and it never stops, and you never learn for certain whose face it wore. Only that someone out here tonight is no longer a living neighbour.`,
@@ -1016,7 +1036,7 @@ const QUIET_APPROACH_LINES = [
 
 const RUMOR_STRANGE = [
   (name) => `${name} was seen standing at their window before dawn. Just standing, for the longest time.`,
-  (name) => `Hazel says ${name} has not bought bread since the trouble began. Not once.`,
+  (name) => `${name} has stopped buying bread. Since the trouble began, not one loaf. People notice a thing like that.`,
   (name) => `${name} did not take communion on Sunday. Folk noticed.`,
   (name) => `The children will not go near ${name}'s door anymore. Children know, people say.`,
   (name) => `${name}'s cat sits outside now, in all weathers, and will not be coaxed back in.`,
@@ -1047,7 +1067,7 @@ const HIDE_INTRO_LINES = [
   (l) => `Footsteps fall into the dark ahead of you, coming your way, and do not vary their pace for anything.`,
   (l) => `Something is moving toward you with the patience of a thing that has already decided how the night ends.`,
   (l) => `A shape detaches itself from the dark at the far end of the lane and starts toward you. Not fast. Fast would be better. Fast would mean it thought it needed to be.`,
-  (l) => `The lane behind you was empty. You would have sworn to it. Now there is a tread in it, closing, and a wrongness to the rhythm your ears refuse to explain.`,
+  (l) => `The lane behind you was empty. You would have sworn to it. Now there is a tread in it, closing, and the rhythm is off: two steps, a pause, two steps, like something remembering how walking goes.`,
   (l) => `Between one step and the next, the night acquires company: something on the ${l} road ahead, coming on with the ease of a thing walking ground it owns.`,
 ];
 const HIDE_CHOICES = {
@@ -1078,7 +1098,7 @@ const TENSION_CONFRONT = [
 ];
 const TENSION_WATCH = [
   "You still your breathing and watch, and make your eyes do the remembering.",
-  "The gait. The build. The wrongness of it. You take it piece by piece, like a man memorising a debt.",
+  "The gait. The build. The way the head sits forward of the shoulders. You take it piece by piece, like a man memorising a debt.",
   "Then its head comes up, and the air between you pulls taut as a rope.",
 ];
 const TENSION_FLEE = [
@@ -1098,7 +1118,7 @@ const VIGIL_LINES = [
 /* The follow-reveal is the night walk's biggest beat: it must not read the
    same twice. Monster texts stay monster-agnostic. */
 const FOLLOW_MONSTER_SCENES = [
-  (nm, dest) => `You track ${nm} all the way to the ${dest}. And there, thinking itself alone, ${nm} stops pretending. Nothing about the way the body moves now is ${nm}: the gait is wrong, the stillness is wrong, the head turns too far. Every instinct you own is saying one word: away.`,
+  (nm, dest) => `You track ${nm} all the way to the ${dest}. And there, thinking itself alone, ${nm} stops pretending. The stride goes longer than ${nm}'s legs should make it, the stillness between steps is total, the head turns too far around. Every instinct you own is saying one word: away.`,
   (nm, dest) => `You keep ${nm} in sight all the way to the ${dest}, and it is at the ${dest} that ${nm} stops being worth the name. The shoulders let go of their human hang. The head swings low and slow, scenting. What stands there now wears ${nm} loosely, like a coat unbuttoned at the end of a working day.`,
   (nm, dest) => `Two shadows back is close enough to learn something no neighbour should ever have taught you: ${nm} makes no sound. None. Not a boot scuff, not a breath, the whole road to the ${dest}. And when it arrives, it bends to some business in the dark with a practiced ease that empties your stomach where you stand.`,
 ];
@@ -1239,6 +1259,11 @@ const NPC_DEFS = [
   { id: "falk", name: "Doctor Falk", role: "the Physician", build: "stooped", sex: "m" },
   { id: "rosa", name: "Rosa", role: "the Seamstress", build: "tall", sex: "f" },
 ];
+
+/* Where a villager's own roof already stands. Never offered as their random
+   night errand and never phrased as somewhere they went "out" to: Liesel
+   sleeps above the taproom, Ansel in the vestry. */
+const HOME_LOC = { liesel: "Tavern", ansel: "Old Church" };
 
 const NPC_LORE = {
   marta: { bio: "Took over the bakery when her husband was lost to the river three winters past. Up before every dawn; the first lit window in the village is hers, and she sees who comes home at first light.", body: "A small, quick woman, flour to the elbows, slight as a reed." },
@@ -1824,11 +1849,11 @@ function sampleNight(s, m, n) {
     } else if (npc.turned) {
       /* the changed do not keep to their beds: they serve it, and wander to
          the eerie ground it keeps, where the player can catch them at it */
-      outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest"]) : "home";
+      outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest"].filter((l) => l !== HOME_LOC[npc.id])) : "home";
     } else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) {
       secretOut[npc.id] = true; outMap[npc.id] = secretOf(s, npc.id).loc;
     } else {
-      outMap[npc.id] = chance(0.25) ? pick(LOCS) : "home";
+      outMap[npc.id] = chance(0.25) ? pick(LOCS.filter((l) => l !== HOME_LOC[npc.id])) : "home";
     }
   }
   /* Night one always draws blood: if the horror can only take those caught
@@ -1849,6 +1874,7 @@ function sampleNight(s, m, n) {
 function resolveNight(prev, planIn, preEvents) {
   const s = JSON.parse(JSON.stringify(prev));
   const m = monsterOf(s);
+  const prevFaceKnown = prev.faceKnown;
   const n = s.nightNum + 1;
   s.nightNum = n; s.dayNum = n;
   for (const id of Object.keys(s.patience)) {
@@ -2000,7 +2026,10 @@ function resolveNight(prev, planIn, preEvents) {
      AFTER an interactive walk's own outcome. */
   const nightSounds = () => {
     if (wailTonight) beats.push("A thin wailing rises over the rooftops, from everywhere and nowhere at once. It goes on far too long.");
-    if (n > 1 && active && wx !== "storm" && chance(0.35)) beats.push(soundFor(m.id));
+    if (n > 1 && active && wx !== "storm" && chance(0.35)) {
+      const heardLine = soundFor(m.id);
+      if (heardLine !== mods.soundHeard) beats.push(heardLine);
+    }
     /* the thing, overheard in its own shape: deranged, playful, unrecognisable */
     if (n > 1 && active && wx !== "storm" && chance(0.32)) {
       beats.push(pickFreshIdx("monsterVoice", MONSTER_VOICE));
@@ -2102,7 +2131,7 @@ function resolveNight(prev, planIn, preEvents) {
       } else if (act === "watch") {
         if (!s.knownBuild) { s.knownBuild = fw.build; s.buildClues = [...(s.buildClues || []), [fw.build, fw.build]]; }
         s.monsterSawYou = chance(0.6) ? true : s.monsterSawYou;
-        beats.push(`You stay, and you watch, and you memorize everything: the gait, the build, the wrongness, until it lifts its head and tastes the air, and you leave before it finishes.`);
+        beats.push(`You stay, and you watch, and you memorize everything: the gait, the build, the length of the stride, until it lifts its head and tastes the air, and you leave before it finishes.`);
         dawn.push(ev(`You have seen the face it wears: ${fw.name}. Whatever kind of thing it is, it goes about in ${fw.name}, and you would swear to it in any court. Now you need only its true nature.`, fw.id, 2));
       } else {
         s.monsterSawYou = chance(0.4) ? true : s.monsterSawYou;
@@ -2185,7 +2214,7 @@ function resolveNight(prev, planIn, preEvents) {
           dawn.push(ev(`A hooded shape crossed between the houses in the night, making for the ${huntLoc}. Its build: ${bc.pair[0]}, or perhaps ${bc.pair[1]}. Another look might settle it.`));
         }
       } else {
-        dawn.push(ev(`Something crossed between the houses last night, making for the ${huntLoc}, with a purpose nothing innocent owns. Whoever claims that road was empty is lying.`));
+        dawn.push(ev(`Something crossed between the houses last night, making for the ${huntLoc}: straight, fast, and carrying no lantern. No errand looks like that. Whoever claims that road was empty is lying.`));
       }
     }
 
@@ -2237,7 +2266,7 @@ function resolveNight(prev, planIn, preEvents) {
         playerGlimpsed = true;
       } else {
         s.playerSaw.push({ night: n, id: null, loc: plan.loc });
-        beats.push(`Across the open ground, a shape moves with terrible purpose${wx === "fog" ? ", smeared to nothing by the fog" : ""}. You press yourself flat against cold stone and watch.`);
+        beats.push(`Across the open ground, a shape moves low and quick, carrying no light and wasting no steps${wx === "fog" ? ", smeared to nothing by the fog" : ""}. You press yourself flat against cold stone and watch.`);
         if (!s.knownBuild && chance(press ? 1 : wx === "fog" ? 0.4 : 0.9)) {
           const bc = addBuildClue(s);
           if (bc.cands.length === 1) {
@@ -2247,7 +2276,7 @@ function resolveNight(prev, planIn, preEvents) {
           } else {
             beats.push(`One thing you half-caught before the dark took it back: the shape was ${buildPhrase(bc.pair)}.`);
             s.clues.push(`Night ${n}: the shape at the ${plan.loc} was ${bc.pair[0]} or ${bc.pair[1]} of build; you could not swear which. By day, that fits: ${bc.names.join(", ")}.`);
-            dawn.push(ev(`A dark shape moved at the ${plan.loc} with terrible purpose. Its build: ${bc.pair[0]}, or perhaps ${bc.pair[1]}. Another look might settle it.`));
+            dawn.push(ev(`A dark shape crossed the ${plan.loc} in the night, fast and without a lantern. Its build: ${bc.pair[0]}, or perhaps ${bc.pair[1]}. Another look might settle it.`));
           }
         } else {
           dawn.push(ev(`Again a dark shape at the ${plan.loc}. Whoever claims that place was quiet last night is lying.`));
@@ -2280,7 +2309,7 @@ function resolveNight(prev, planIn, preEvents) {
     let wraithHomeP = 0.2;
     if (s.monsterProtects) wraithHomeP = Math.max(0.02, wraithHomeP - 0.15);
     if (!wentHome && m.id === "wraith" && active && plan.loc !== huntLoc && !s.over && chance(wraithHomeP)) {
-      beats.push("The lane behind you has gone wrong-quiet. The cold arrives before it does.");
+      beats.push("Every sound in the lane behind you stops at once. The cold arrives before whatever brings it.");
       if (s.monsterFancies && s.bond >= OFFER_BOND_MIN && n >= OFFER_MIN_NIGHT && !s.offerMade) {
         s.offerMade = true;
         s.pendingOffer = { name: monsterNpc.name, where: "road home", overText: "A cold you had never known closed around you on the road home. The Wraith takes those who wander." };
@@ -2602,11 +2631,32 @@ function resolveNight(prev, planIn, preEvents) {
     dawn.push(ev(pickFreshIdx("quietDawn", QUIET_DAWN)));
   }
 
-  /* ---- the mob's ultimatum falls due at FIRST LIGHT ---- */
+  /* ---- the mob's ultimatum falls due at FIRST LIGHT ----
+     But the night in between counted for something: if the player spent it
+     on the accused's own door (watching or following them), or came home
+     having seen whose face the thing actually wears, that testimony stands
+     between the rope and the neck. The promised "day and night to find the
+     truth" must actually be honoured at dawn. ---- */
   if (s.mob && n === s.mob.deadline && !s.fled && !s.over) {
     const tgt = npcById(s, s.mob.target);
     const acc = npcById(s, s.mob.accuser);
-    if (tgt && tgt.alive) {
+    const spentNightOnAccused = tgt && (watching === tgt.id || mods.follow === tgt.id) && !(tgt.id === s.monster.vid && active);
+    const learnedFaceTonight = tgt && s.faceKnown && s.faceKnown !== prevFaceKnown && s.faceKnown !== tgt.id;
+    if (tgt && tgt.alive && (spentNightOnAccused || learnedFaceTonight)) {
+      const accName = acc && acc.alive ? acc.name : "The mob";
+      if (learnedFaceTonight) {
+        const fn = npcById(s, s.faceKnown);
+        beats.push(`First light, and the rope comes up the lane for ${tgt.name}, and you put yourself in front of it with what the night just showed you: the thing wears ${fn ? fn.name : "another"}'s face. You saw it with your own eyes, hours ago, and you say so, plainly, to the whole crowd.`);
+        beats.push(`${accName} looks at you a long moment, then at the coil of rope, and lets it fall in the mud. "Then we watch ${fn ? fn.name : "them"}," someone says, and the crowd that came to hang ${tgt.name} breaks apart into frightened knots of talk.`);
+      } else {
+        beats.push(`First light. ${accName} comes with the rope and the crowd behind, and finds you already at ${tgt.name}'s door, having never left it. You tell them what you watched, hour by hour, and what the night did and did not hold.`);
+        beats.push(`${accName} looks from you to the door and back, a long time. Then the coil of rope drops in the mud. "On your eyes, then. Not mine." The crowd thins away in ones and twos, ashamed of its own torches.`);
+      }
+      if (spentNightOnAccused && victim && victimKind === "kill" && watching === tgt.id && !s.hardCleared.includes(tgt.id)) s.hardCleared.push(tgt.id);
+      s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, disp: clampDisp((x.disp || 0) + 2) } : x));
+      dawn.push(ev(`${tgt.name} keeps their neck this morning because you spent the night earning it. The village saw who stood between them and the rope.`, tgt.id, 2));
+      s.mob = null;
+    } else if (tgt && tgt.alive) {
       beats.push(`First light. ${acc && acc.alive ? acc.name : "The mob"} keeps the promise made in the square: torches and rope at ${tgt.name}'s door, and no one moves to stop it. Not even you.`);
       if (tgt.id === s.monster.vid) {
         beats.push(`The rope goes over the beam. ${tgt.name} does not struggle. ${tgt.name} smiles, and keeps smiling while the knot is tied, and it is the smiling that empties the front row.`);
@@ -2666,12 +2716,24 @@ function resolveNight(prev, planIn, preEvents) {
     }
   }
 
-  /* --- side quest: did the player watch/follow the quest target tonight? --- */
+  /* --- side quest: did the player watch/follow the quest target tonight?
+     The favour was asked for THIS night. Ignore it and the asker knows by
+     morning, says so to your face, and thinks the less of you for it. --- */
   if (s.sideQuest && !s.sideQuest.done) {
     const qt = s.sideQuest.target;
     if (watching === qt || mods.follow === qt) {
       s.sideQuest = { ...s.sideQuest, done: true, doneNight: n };
-    } else if (n - s.sideQuest.night > 2) {
+    } else {
+      const giver = npcById(s, s.sideQuest.giver);
+      const qtN = npcById(s, qt);
+      if (giver && giver.alive && !giver.fled && !s.over) {
+        s.npcs = s.npcs.map((x) => (x.id === giver.id ? { ...x, disp: clampDisp((x.disp || 0) - 1) } : x));
+        dawn.push(ev(pickFreshIdx("sideQuestFail", [
+          (g, t) => `${g} catches you at the well, already knowing the answer. "You didn't watch ${t}, did you." A short nod, to no one. "Good to know what my asking is worth."`,
+          (g, t) => `${g} does not ask how the night went. "I sat up half of it wondering if you'd kept your word about ${t}," they say. "I'll not wonder again."`,
+          (g, t) => `Word travels fast in a village this small: you were nowhere near ${t}'s door last night. ${g} passes you in the lane and does not stop.`,
+        ])(giver.name, qtN ? qtN.name : "them"), giver.id));
+      }
       s.sideQuest = null;
     }
   } else if (s.sideQuest && s.sideQuest.done && !s.sideQuest.reported && n - s.sideQuest.night > 2) {
@@ -3092,8 +3154,8 @@ function computeAnswer(s, id, night, q, targetId) {
       else {
         const r = Math.random();
         if (r < 0.6) s.monsterClaims[night] = { loc: "home", admitOut: false };
-        else if (r < 0.8) s.monsterClaims[night] = { loc: pick(LOCS.filter((l) => l !== truth)), admitOut: false };
-        else s.monsterClaims[night] = { loc: pick(LOCS.filter((l) => l !== truth)), admitOut: true };
+        else if (r < 0.8) s.monsterClaims[night] = { loc: pick(LOCS.filter((l) => l !== truth && l !== HOME_LOC[id])), admitOut: false };
+        else s.monsterClaims[night] = { loc: pick(LOCS.filter((l) => l !== truth && l !== HOME_LOC[id])), admitOut: true };
       }
     }
     return s.monsterClaims[night];
@@ -3156,7 +3218,7 @@ function computeAnswer(s, id, night, q, targetId) {
       claim = "home";
       quote = pick(per.whereHome)();
       if (evn && chance(0.4)) quote += ` "I had no heart for the ${evn.name}. Not with things as they are."`;
-      else if (log && log.active && log.huntLoc && dispChance(0.35, npc.disp)) quote += ` "Though I heard something, late, out toward the ${log.huntLoc}. I did not open the shutters to look."`;
+      else if (log && log.active && log.huntLoc && dispChance(0.35, npc.disp)) quote += HOME_LOC[id] === log.huntLoc ? ` "Though I heard something, late, moving along the wall of this very house. I did not open the shutters to look."` : ` "Though I heard something, late, out toward the ${log.huntLoc}. I did not open the shutters to look."`;
     } else {
       claim = actual;
       quote = pick(per.whereOut)(actual);
@@ -3776,8 +3838,9 @@ function actAccuse(prev, id, typeId) {
   for (const pid of Object.keys(s.patience)) s.patience[pid] = Math.max(0, s.patience[pid] - 1);
   beats.push(`${npc.name} protests. To the end, ${npc.name} protests.`);
   if (npc.turned) beats.push(`As the rite begins, their eyes flash with something that was never theirs. Changed. They were changed.`);
-  beats.push(`The ${METHODS[declared.method]} does its work on plain human flesh. The village does not have a dead monster. It has a dead neighbour, and everyone's silence.`);
-  beats.push(`They go home in the dark, and no one meets your eye.`);
+  beats.push(`The ${METHODS[declared.method]} is put to them, and it does nothing that it would not do to you or me: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, the rite has just shown the whole square it is not a ${declared.name}.`);
+  beats.push(`It should end there. It does not. The village has come too far and brought too much rope. They hang ${npc.name} from the beam by the church door on your word, still protesting, and every soul watching helps by not stopping it.`);
+  beats.push(`The village does not have a dead monster. It has a hanged neighbour, and everyone's silence. They go home in the dark, and no one meets your eye.`);
   s.calmHope = npc.name;
   /* -- Pass G2: the grim bargain pays off, quietly, without ever announcing
      itself as a reward -- */
@@ -4142,13 +4205,15 @@ const DAY_TINTS = [
   "linear-gradient(rgba(233,223,200,0.10), rgba(0,0,0,0))",
 ];
 
-function SpokenText({ text, speed = 38 }) {
+function SpokenText({ text, speed = 38, delay = 0 }) {
   const words = text.split(" ");
-  const [n, setN] = useState(1);
+  const [n, setN] = useState(delay > 0 ? 0 : 1);
   useEffect(() => {
-    setN(1);
-    const t = setInterval(() => setN((x) => (x >= words.length ? (clearInterval(t), x) : x + 1)), speed);
-    return () => clearInterval(t);
+    setN(delay > 0 ? 0 : 1);
+    let t = null;
+    const begin = () => { setN(1); t = setInterval(() => setN((x) => (x >= words.length ? (clearInterval(t), x) : x + 1)), speed); };
+    const d = delay > 0 ? setTimeout(begin, delay) : (begin(), null);
+    return () => { if (t) clearInterval(t); if (d) clearTimeout(d); };
   }, [text]);
   return <span onClick={() => setN(words.length)} style={{ cursor: "pointer" }}>{words.slice(0, n).join(" ")}<span style={{ opacity: 0.4 }}>{n < words.length ? " ▍" : ""}</span></span>;
 }
@@ -4972,9 +5037,28 @@ function MonsterVillage() {
      turn back). Dynamically excludes anyone already handled by a lane/event
      interaction this same walk, since startWalk could not have known those
      choices in advance. */
+  /* Funnels the settled mods on toward "company" (if there are villagers
+     left to reveal) or "return". Split out of goReturn so the "found" stage
+     - where discoveries are lived as full beats, not greyed lead-ins - can
+     resume the same path after the player has taken them in. */
+  const advanceAfterSearch = (w, newMods, preLines) => {
+    const excluded = new Set([newMods.follow, newMods.hailed, newMods.followSeen, newMods.mingledWith].filter(Boolean));
+    const companyIds = (w.company || []).filter((id) => !excluded.has(id));
+    if (newMods.approach !== "back" && !newMods.company && companyIds.length) {
+      /* if a changed neighbour is among the company, pre-pick the sound and
+         the reveal now, so they stay stable across re-renders and the reveal
+         can be lived interactively (sound -> look or retreat -> the truth). */
+      const thrallId = companyIds.find((id) => { const x = npcById(s, id); return x && x.turned && !x.known; });
+      const thrallBits = thrallId ? { thrallId, thrallSound: pickFreshIdx("thrallSound", THRALL_SOUND)(w.loc), thrallText: pickFreshIdx("thrallSights", THRALL_SIGHTS)(npcById(s, thrallId).name) } : {};
+      setWalk({ ...w, mods: { ...newMods, company: companyIds }, pre: preLines, stage: "company", thrallLooking: false, ...thrallBits });
+      return;
+    }
+    setWalk({ ...w, mods: newMods, pre: preLines, stage: "return", closureLine: w.closureLine || pickFreshIdx("walkClosures", WALK_CLOSURES)(w.loc) });
+  };
+
   const goReturn = (extraMods) => {
     const newMods = { ...walk.mods, ...(extraMods || {}) };
-    const extraLog = []; /* shown as the next stage's lead-in lines */
+    const extraLog = []; /* lived as full beats in the "found" stage */
     const f = walk.facts;
     if (newMods.approach !== "back") {
       /* -- the boundary circuit pays out live, never silently -- */
@@ -4983,7 +5067,7 @@ function MonsterVillage() {
         const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && f.outMap[x.id] && f.outMap[x.id] !== "home" && f.outMap[x.id] !== walk.loc && ![newMods.follow, newMods.hailed, newMods.followSeen, newMods.mingledWith].includes(x.id));
         if (f.active && f.huntLoc && f.huntLoc !== walk.loc && chance(0.55)) {
           newMods.circleFigure = true;
-          extraLog.push(`Half the circuit done, you see it: a hooded shape cutting between the houses at a distance, moving toward the ${f.huntLoc} with a purpose nothing innocent owns. Too far to swear to a face. Near enough that your body makes several decisions without consulting you.`);
+          extraLog.push(`Half the circuit done, you see it: a hooded shape cutting between the houses at a distance, making for the ${f.huntLoc} straight and fast, no lantern, no errand that would explain it. Too far to swear to a face. Near enough that your body makes several decisions without consulting you.`);
         } else if (others.length && chance(0.7)) {
           const cw = pick(others);
           newMods.circleSaw = cw.id;
@@ -5024,18 +5108,15 @@ function MonsterVillage() {
         }
       }
     }
-    const excluded = new Set([newMods.follow, newMods.hailed, newMods.followSeen, newMods.mingledWith].filter(Boolean));
-    const companyIds = (walk.company || []).filter((id) => !excluded.has(id));
-    if (newMods.approach !== "back" && !newMods.company && companyIds.length) {
-      /* if a changed neighbour is among the company, pre-pick the sound and
-         the reveal now, so they stay stable across re-renders and the reveal
-         can be lived interactively (sound -> look or retreat -> the truth). */
-      const thrallId = companyIds.find((id) => { const x = npcById(s, id); return x && x.turned && !x.known; });
-      const thrallBits = thrallId ? { thrallId, thrallSound: pickFreshIdx("thrallSound", THRALL_SOUND)(walk.loc), thrallText: pickFreshIdx("thrallSights", THRALL_SIGHTS)(npcById(s, thrallId).name) } : {};
-      setWalk({ ...walk, mods: { ...newMods, company: companyIds }, pre: extraLog, stage: "company", thrallLooking: false, ...thrallBits });
+    /* Anything the night just handed over - a sign in the mud, a dead animal
+       carrying a mark, a figure crossing between the houses - is a beat, not
+       a lead-in. It gets its own stage, typed out one line at a time, so
+       nothing important is ever a grey footnote to something else. */
+    if (extraLog.length) {
+      setWalk({ ...walk, mods: newMods, stage: "found", foundLines: extraLog, foundIdx: 0, pre: [] });
       return;
     }
-    setWalk({ ...walk, mods: newMods, pre: extraLog, stage: "return", closureLine: walk.closureLine || pickFreshIdx("walkClosures", WALK_CLOSURES)(walk.loc) });
+    advanceAfterSearch(walk, newMods, []);
   };
 
   const chooseHide = (choice) => { Snd.relief(); setWalk({ ...walk, mods: { ...walk.mods, hid: choice }, stage: nextStage(walk, "hide"), pre: [pick(HIDE_CHOICES[choice]), `When the lane is empty again, you go on toward the ${walk.loc}.`] }); };
@@ -5143,10 +5224,13 @@ function MonsterVillage() {
         died ? "red" : "amber"
       );
     };
-    /* the current beat: typed out, one block, choices directly under it */
+    /* the current beat: typed out, one block, choices directly under it.
+       Lead-in (pre) lines land one at a time first, so the beat's own
+       typing waits for them rather than everything arriving at once. */
+    const preDelay = (walk.pre || []).length * 900;
     const beat = (text, color) => (
       <p style={{ fontSize: 16, lineHeight: 1.5, color: color || C.parch, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
-        <SpokenText text={text} speed={40} />
+        <SpokenText text={text} speed={40} delay={preDelay} />
       </p>
     );
     return (
@@ -5158,7 +5242,7 @@ function MonsterVillage() {
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 mt-6" style={{ WebkitOverflowScrolling: "touch" }}>
             {(walk.pre || []).map((t, i) => (
-              <p key={`${walk.stage}:${i}`} className="mb-3" style={{ fontSize: 14.5, lineHeight: 1.5, color: "rgba(233,223,200,0.6)", textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{t}</p>
+              <p key={`${walk.stage}:${i}`} className="mb-3 mvIn" style={{ animationDelay: `${i * 0.9}s`, fontSize: 14.5, lineHeight: 1.5, color: "rgba(233,223,200,0.75)", textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{t}</p>
             ))}
 
             {walk.stage === "fate" && walk.fate && (
@@ -5280,7 +5364,7 @@ function MonsterVillage() {
               <div className="flex flex-col gap-2">
                 {beat(atEvent
                   ? `You reach the edge of the ${evn.name}'s firelight, and something about the crowd feels wrong before you can say why: a shape moving against the grain of the dancing, patient, at the margins where the light gives out.`
-                  : `You are close now. And something is already at the ${walk.loc}: a movement low against the stones, with terrible purpose in it. Your heart is louder than your boots.`, C.redBright)}
+                  : `You are close now. And something is already at the ${walk.loc}: a movement low against the stones, deliberate, unhurried, busy at some work you cannot see. Your heart is louder than your boots.`, C.redBright)}
                 <Btn full kind="red" onClick={() => rollApproachFate("press")}>Press closer. You need to SEE it</Btn>
                 <Btn full kind="amber" onClick={() => rollApproachFate("shadow")}>Hold to the shadows and watch</Btn>
                 <Btn full onClick={() => goReturn({ approach: "back" })}>Turn for home, while you can</Btn>
@@ -5293,7 +5377,8 @@ function MonsterVillage() {
                   : (walk.approachLine || QUIET_APPROACH_LINES[0](walk.loc)))}
                 <Btn full kind="amber" onClick={() => chooseStyle("ground")}>Search the ground, inch by inch</Btn>
                 <Btn full kind="amber" onClick={() => chooseStyle("wait")}>Find a vantage and wait. Watch who comes</Btn>
-                <Btn full kind="amber" onClick={() => chooseStyle("circle")}>Circle the boundary lanes</Btn>
+                <Btn full kind="amber" onClick={() => chooseStyle("circle")}>Walk the village boundary, watching the lanes</Btn>
+                <p style={{ fontSize: 12, color: C.dim }}>Search the ground here for the marks it leaves. Wait at a vantage to see who else comes to the {walk.loc}. Or leave the {walk.loc} to itself and walk the ring of lanes around the village, catching whoever crosses between the houses.</p>
               </div>
             )}
             {!isWatch && walk.stage === "vigil" && (
@@ -5303,6 +5388,24 @@ function MonsterVillage() {
                 <Btn full kind="red" onClick={() => goReturn({ style: walk.vigilStyle, vigil: "shift" })}>Shift for a better look</Btn>
               </div>
             )}
+            {!isWatch && walk.stage === "found" && (() => {
+              /* the night's findings, delivered one at a time as full beats */
+              const lines = walk.foundLines || [];
+              const idx = Math.min(walk.foundIdx || 0, lines.length - 1);
+              return (
+                <div className="flex flex-col gap-3">
+                  {lines.slice(0, idx).map((t, i) => (
+                    <p key={i} style={{ fontSize: 16, lineHeight: 1.5, color: C.parch, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{t}</p>
+                  ))}
+                  <p style={{ fontSize: 16, lineHeight: 1.5, color: C.parch, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                    <SpokenText text={lines[idx]} speed={40} />
+                  </p>
+                  {idx < lines.length - 1
+                    ? <Btn full kind="amber" onClick={() => setWalk({ ...walk, foundIdx: idx + 1 })}>And then →</Btn>
+                    : <Btn full kind="amber" onClick={() => advanceAfterSearch(walk, walk.mods, [])}>Take it in, and go on →</Btn>}
+                </div>
+              );
+            })()}
             {!isWatch && walk.stage === "company" && walk.thrallId && !walk.thrallLooking && (() => {
               /* a changed neighbour is out here, caught being what they now
                  are. First you only hear it. Look, and you learn who; retreat,
@@ -5397,7 +5500,7 @@ function MonsterVillage() {
               const vis = hw && hw.kind === "visitor" ? npcById(s, hw.visitorId) : null;
               const quietText =
                 hw && hw.kind === "secret"
-                  ? `Through a gap in the shutter, ${t.name} does the very thing they have been lying about, alone, human, and sadder than you had let yourself expect. You have their secret now, and it is not the thing you hunt.`
+                  ? `Through a gap in the shutter, you finally see what ${t.name} has been lying about: ${hw.short}. Human, and sadder than you had let yourself expect. You have their secret now, and it is not the thing you hunt.`
                   : hw && hw.kind === "visitor" && vis
                   ? `${t.name} never leaves. But past midnight a second figure crosses the lane to their door, is let in without a knock, and is gone before the bell. You know that gait. It is ${vis.name}.`
                   : hw && hw.kind === "restless"
@@ -5663,10 +5766,11 @@ function MonsterVillage() {
           style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
           <Scene loc="Village Square" kind="quiet" height={56} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.9) 0%, rgba(8,10,18,0.12) 72%)" }} />
-          <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>Patrol the Lanes</span>
+          <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 18, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>Patrol the Lanes</span>
+          <span style={{ position: "absolute", left: 12, bottom: 5, color: C.dim, fontSize: 10.5, textShadow: "0 1px 6px #000" }}>no destination · the night picks your road</span>
         </button>
       </div>
-      {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Patrol the lanes to let the night choose where. What hunts by night notices being hunted.</p>}
+      {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Patrolling the lanes means walking without a destination and letting the night decide what you run into. What hunts by night notices being hunted.</p>}
     </div>
   ));
 
