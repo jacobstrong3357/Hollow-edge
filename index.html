@@ -1514,7 +1514,7 @@ const PERSONA = {
   falk: { patience: 3, craftLabel: "His opinion of the wounds",
     refusal: [`"I am old, I am tired, and you are repeating yourself. Good day."`, `"My surgery hours are over and so is my patience. Good day to you."`],
     whereOut: [(l) => `"At the ${l}. An old man's constitutional. My physician recommends it. I am my physician."`, (l) => `"The ${l}. Insomnia, professionally speaking. Nothing cures it. I have checked the literature."`],
-    whereHome: [() => `"At home with my books and a bad hip. Ask the hip. It keeps excellent records."`, () => `"Home. Reading by one candle, on doctor's orders. The doctor is a fool, but he is all I have."`],
+    whereHome: [() => `"At home with my books and a bad hip. Ask the hip. It keeps excellent records."`, () => `"Home. Reading by one candle, on my own doctor's orders. I am the fool who gives them and the fool who ignores them."`],
     annoyed: [`"Repetition is a symptom, you know. Of several things. None flattering."`, `"Asked and answered. I do not repeat prescriptions and I do not repeat myself."`] },
   rosa: { patience: 3, craftLabel: "What does an outsider notice?",
     refusal: [`"I answered you. Twice. In this village that has never once bought a person safety."`, `"No. Every word I give you is a thread someone will hang me with. I am done spinning."`],
@@ -4851,6 +4851,17 @@ function defendLabel(s, mobT) {
 
 const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fastestWin: null, hanged: 0, nights: 0, defeated: {}, ach: [], sound: false };
 
+/* A short, deliberately incomplete rulebook for the title screen: the goal
+   and the rhythm of play, not the whole reference (that lives in the
+   in-game Journal's Help tab). Kept to four small sections so a first-time
+   player can read it in one breath instead of being handed a manual. */
+const HOW_TO_PLAY = [
+  { h: "THE GOAL", b: "One of your eight neighbours is not what they seem. Work out who, work out what kind of horror wears their face, then accuse them so the right rite can end it." },
+  { h: "THE RHYTHM", b: "By day you get two actions: question a villager, search a location, examine the dead, or the like. By night you bar your door, watch someone's, or walk the dark yourself. Every night you spend looking is a night the thing might notice you looking." },
+  { h: "WINNING AND LOSING", b: "Name the right person AND the right creature together, and it ends there. Get either wrong and someone innocent may hang for it, or worse, you might. Let too many nights pass unanswered and the village runs out of people to save." },
+  { h: "IF YOU GET STUCK", b: "The Journal (bottom of the screen once you're in) keeps every sign you've ticked, every creature you've struck off, and a full Help tab with the fine print." },
+];
+
 const ACH = [
   { id: "first", name: "First Dawn", desc: "End a horror for the first time.", test: (s) => s.over.win },
   { id: "norope", name: "No Rope", desc: "Win without an innocent hanged.", test: (s) => s.over.win && !s.deaths.some((d) => d.kind === "executed" || d.kind === "mobbed") },
@@ -5070,6 +5081,9 @@ function MonsterVillage() {
   const [meta, setMeta] = useState(null);
   const [newAch, setNewAch] = useState([]);
   const [showAch, setShowAch] = useState(false);
+  const [showHowTo, setShowHowTo] = useState(false);
+  const [showBestiaryHome, setShowBestiaryHome] = useState(false);
+  const [showStatsHome, setShowStatsHome] = useState(false);
   const [snd, setSndOn] = useState(false);
   const [dawnDone, setDawnDone] = useState(false);
   const [dayEventsExpanded, setDayEventsExpanded] = useState(false);
@@ -5228,11 +5242,19 @@ function MonsterVillage() {
                 </div>
                 <div className="mv-display text-center mt-3" style={{ color: C.dim, fontSize: 11, letterSpacing: 3 }}>THE FACES YOU KNOW · ONE YOU DO NOT</div>
               </div>
+              <button className="mvIn mt-4 mv-body text-center" style={{ animationDelay: "1.2s", background: "transparent", border: `1px solid ${C.line}`, color: C.parch, fontSize: 13, cursor: "pointer", padding: "8px 0", borderRadius: 8, width: "100%" }}
+                onClick={() => setShowHowTo(true)}>
+                How to Play · the goal, in brief
+              </button>
             </>
           )}
           {veteran && (
             <>
-              <div className="mvIn mt-3 rounded-lg p-3" style={{ animationDelay: "0.8s", background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}` }}>
+              <p className="mvIn mt-2" style={{ animationDelay: "0.7s", color: C.dim, fontSize: 13, fontStyle: "italic" }}>
+                One of eight neighbours still isn't what they seem. Go and find them again.
+              </p>
+              <button className="mvIn mt-3 rounded-lg p-3 text-left w-full" style={{ animationDelay: "0.8s", background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}`, cursor: "pointer" }}
+                onClick={() => setShowBestiaryHome(true)}>
                 <div className="flex items-baseline justify-between">
                   <span className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>THE BLACK BOOK</span>
                   <span style={{ fontSize: 12, color: C.dim }}>{defeatedCount} of {MONSTERS.length} horrors ended</span>
@@ -5249,16 +5271,24 @@ function MonsterVillage() {
                     );
                   })}
                 </div>
-              </div>
-              <div className="mvIn mt-2 flex justify-between" style={{ animationDelay: "1.1s", fontSize: 12, color: C.dim }}>
+                <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>tap to open the bestiary →</div>
+              </button>
+              <button className="mvIn mt-2 flex justify-between w-full text-left rounded-lg p-2" style={{ animationDelay: "1.1s", fontSize: 12, color: C.dim, background: "transparent", border: `1px solid ${C.line}`, cursor: "pointer" }}
+                onClick={() => setShowStatsHome(true)}>
                 <span><span style={{ color: C.parch }}>{meta.wins}</span>-{meta.losses} dawns</span>
                 <span>streak <span style={{ color: C.parch }}>{meta.streak}</span> · best {meta.bestStreak}</span>
                 <span>{meta.fastestWin ? <>fastest: night <span style={{ color: C.parch }}>{meta.fastestWin}</span></> : `${meta.nights} nights walked`}</span>
-              </div>
-              <button className="mvIn mt-2 mv-body text-left" style={{ animationDelay: "1.3s", background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
-                onClick={() => setShowAch(true)}>
-                ✠ Deeds {meta.ach.length}/{ACH.length}
               </button>
+              <div className="mvIn mt-2 flex gap-4" style={{ animationDelay: "1.3s" }}>
+                <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
+                  onClick={() => setShowAch(true)}>
+                  ✠ Deeds {meta.ach.length}/{ACH.length}
+                </button>
+                <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
+                  onClick={() => setShowHowTo(true)}>
+                  How to Play
+                </button>
+              </div>
             </>
           )}
           <div className="mvIn mt-auto pb-6" style={{ animationDelay: "1.5s" }}>
@@ -5271,6 +5301,77 @@ function MonsterVillage() {
             </div>
           </div>
         </div>
+        {showHowTo && (
+          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowHowTo(false)}>
+            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-baseline justify-between">
+                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>How to Play</span>
+                <button onClick={() => setShowHowTo(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+              </div>
+              {HOW_TO_PLAY.map((sec, i) => (
+                <div key={i} className="mt-3">
+                  <div className="mv-display" style={{ fontSize: 12, letterSpacing: 1.5, color: C.red }}>{sec.h}</div>
+                  <p className="mt-1" style={{ fontSize: 14 }}>{sec.b}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {showBestiaryHome && meta && (
+          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowBestiaryHome(false)}>
+            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-baseline justify-between">
+                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>The Black Book</span>
+                <button onClick={() => setShowBestiaryHome(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+              </div>
+              <p style={{ fontSize: 12, color: C.inkDim }} className="mt-1">{defeatedCount} of {MONSTERS.length} horrors ended, across every game you've played. A horror's true nature stays hidden until you've beaten it once.</p>
+              {MONSTERS.map((mm) => {
+                const done = !!meta.defeated[mm.id];
+                return (
+                  <div key={mm.id} className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: done ? 1 : 0.4 }}>
+                    <div className="shrink-0"><MonsterArt id={mm.id} size={56} /></div>
+                    <div>
+                      <div className="flex items-baseline gap-3 flex-wrap">
+                        <span className="mv-display" style={{ fontSize: 17 }}>{done ? mm.name : "?????"}</span>
+                        {done && <span style={{ fontSize: 12, color: C.red }}>ended {meta.defeated[mm.id]}×</span>}
+                      </div>
+                      <p style={{ fontSize: 13.5 }} className="mt-1">{done ? mm.lore : "Defeat this horror once to reveal what it is and how it kills."}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {showStatsHome && meta && (
+          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowStatsHome(false)}>
+            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-baseline justify-between">
+                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Your Record</span>
+                <button onClick={() => setShowStatsHome(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {[
+                  ["Games played", meta.games],
+                  ["Dawns won", meta.wins],
+                  ["Villages lost", meta.losses],
+                  ["Current streak", meta.streak],
+                  ["Best streak", meta.bestStreak],
+                  ["Fastest win", meta.fastestWin ? `night ${meta.fastestWin}` : "-"],
+                  ["Total nights walked", meta.nights],
+                  ["Innocents hanged", meta.hanged],
+                  ["Horrors ended", `${defeatedCount} of ${MONSTERS.length}`],
+                  ["Deeds earned", `${meta.ach.length} of ${ACH.length}`],
+                ].map(([label, val]) => (
+                  <div key={label} className="rounded p-2" style={{ border: `1px solid ${C.parchLine}` }}>
+                    <div style={{ fontSize: 11, color: C.inkDim }}>{label}</div>
+                    <div className="mv-display" style={{ fontSize: 18 }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {showAch && (
           <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowAch(false)}>
             <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
