@@ -254,7 +254,7 @@ const SIGN_SENSE = {
     "Tonight the night makes no sound at all, which is not the same as quiet.",
   ],
 };
-const senseFor = (sg, i = null) => (i === null ? pick(SIGN_SENSE[sg]) : SIGN_SENSE[sg][i % SIGN_SENSE[sg].length]);
+const senseFor = (sg, i = null) => (i === null ? pickFreshIdx(`sense:${sg}`, SIGN_SENSE[sg]) : SIGN_SENSE[sg][i % SIGN_SENSE[sg].length]);
 
 /* What a sign looks like ON OR AROUND A BODY, for the death-scene
    investigation: the environmental phrasings above ("a fence rail", "the
@@ -288,7 +288,7 @@ const SIGN_SENSE_BODY = {
     "There is a mirror in the room, and it has fogged from the inside though nothing here is warm, and it gives your own face back to you a half-second late.",
   ],
 };
-const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pick(SIGN_SENSE_BODY[sg]) : senseFor(sg));
+const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg}`, SIGN_SENSE_BODY[sg]) : senseFor(sg));
 
 const METHODS = {
   silver: "Silver Blade", stake: "Wooden Stake", salt: "Ring of Salt",
@@ -847,7 +847,7 @@ const N1_DEATH = [
 const N1_TENSION_1_HOME = [
   (nm, s, S, o, p) => `${S} is barely done with the bolt when the dog next door stops barking mid-note, the way a sound stops when a hand closes over it.`,
   (nm, s, S, o, p) => `Then, from the lane outside, one set of footsteps comes up to the door, evenly, without hurry. And stops.`,
-  (nm, s, S, o, p) => `The fire settles low. Somewhere at the back of the house, a latch ${nm} shut an hour ago tries itself, quietly, twice.`,
+  (nm, s, S, o, p) => `The fire settles low. Somewhere at the back of the house, a latch that ${nm} shut an hour ago tries itself, quietly, twice.`,
 ];
 const N1_TENSION_2_HOME = [
   (nm, s, S, o, p) => `${S} sits very still and waits for a knock. No knock comes. The silence outside the door simply goes on standing there.`,
@@ -856,9 +856,18 @@ const N1_TENSION_2_HOME = [
 ];
 const N1_DEATH_HOME = [
   (nm, s, S, o, p) => `Whatever comes in does not use the door. By the time it is in the room there is nothing left to do with the moment, and the house keeps what it saw to itself until morning.`,
-  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, there in ${p} own home, between ${o} and the fire. The candle goes out. The village sleeps on.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, there in ${p} own home, close enough to touch. The candle goes out. The village sleeps on.`,
   (nm, s, S, o, p) => `It is quick, or it is not; the walls do not say. At dawn the door is still bolted from the inside, and that is the first thing the village will fail to explain.`,
 ];
+/* Ansel and Liesel do not have a separate home to walk to: their whole
+   world already closed up in the N1_OPEN beat (the church locked, the
+   taproom bolted), since the vestry and the room above the bar ARE their
+   homes (see HOME_LOC). The generic "way home is short" journey line would
+   have them walking to, and bolting, a door they already just bolted. */
+const N1_ALREADY_HOME = {
+  ansel: (nm, s, S, o, p) => `There is no walk left to make. The church is where ${nm} sleeps, too, and locking its door was the whole of the going home. ${S} sits a long while with the too-small key still in ${p} fist.`,
+  liesel: (nm, s, S, o, p) => `There is no walk left to make. The stair up from the taproom is the whole of ${p} journey, and ${s} takes it slowly, the one bolt this house owns already thrown.`,
+};
 function NIGHT_ONE_SCENE(v, where) {
   const s = v.sex === "f" ? "she" : "he";
   const S = v.sex === "f" ? "She" : "He";
@@ -868,7 +877,7 @@ function NIGHT_ONE_SCENE(v, where) {
   const home = where === "home";
   const open = (N1_OPEN[v.id] || ((n) => `Night falls, and ${n} finishes the day's work and steps out into the dark.`))(nm);
   const journey = home
-    ? `The way home is short. Tonight ${s} walks it too fast, and throws the bolt behind ${o} with hands that will not keep still.`
+    ? (N1_ALREADY_HOME[v.id] ? N1_ALREADY_HOME[v.id](nm, s, S, o, p) : `The way home is short. Tonight ${s} walks it too fast, and throws the bolt behind ${o} with hands that will not keep still.`)
     : `But one last errand takes ${nm} past the last lit window, toward the ${where}, where the dark seems to rise from the ground to meet ${o}.`;
   return [
     open,
@@ -884,7 +893,7 @@ const N1_BELL = [
   (v) => `The bell will not stop before dawn, until someone takes the rope from the ringer's shaking hands. By then everyone knows: ${v.name} ${v.role} is dead.`,
   (v) => `No bell. Just a name carried door to door before dawn: ${v.name}. ${v.name}. By sunrise the whole village stands in the square, saying it.`,
   (v) => `First light shows a silent crowd in the lane, all facing one door. You do not need to ask whose. ${v.name} ${v.role} is dead.`,
-  (v) => `It is ${v.name}'s door that tells the village, open at first light onto an empty house. ${v.name} ${v.role} is gone.`,
+  (v) => `It is ${v.name}'s own door that gives it away: standing open at first light, when it was barred fast at dusk. ${v.name} ${v.role} is dead behind it.`,
 ];
 const N1_PLACE_HOME = [
   "Barred from the inside. It did not matter.",
@@ -1031,7 +1040,7 @@ const ANIMAL_SIGN = {
   reflect: ["A dead cat lies below a cottage window, and the glass above it has fogged from the inside, though the house is dark and cold, and gives your lantern back to you a beat too slow.", "A dog lies dead by the horse-trough, and the still black water beside it will not hold your reflection right: your face arrives in it late, and wrong."],
   hex: ["A cat lies dead at the centre of marks scratched into the flagstones around it, a pattern that means nothing and unsettles anyway, cut with intent.", "A dead crow is laid at the heart of lines scored deliberately into the earth, a working of some kind, and you find you cannot look at the shapes for long."],
 };
-const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pick(ANIMAL_SIGN[sg]) : null);
+const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pickFreshIdx(`animalSign:${sg}`, ANIMAL_SIGN[sg]) : null);
 
 /* ---------- the raised dead, and the called ----------
    Two horrors kill in ways the generic scream cannot carry. The necromancer
@@ -1401,7 +1410,7 @@ function rollHomeWatch(s, id) {
   const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id && x.id !== s.monster.vid);
   if (secretOf(s, id) && !target.secretKnown && roll < 0.3) return { kind: "secret", short: secretOf(s, id).short };
   if (others.length && roll < 0.52) return { kind: "visitor", visitorId: pick(others).id };
-  if (roll < 0.7) return { kind: "restless", ri: Math.floor(Math.random() * WATCH_RESTLESS.length) };
+  if (roll < 0.7) return { kind: "restless", ri: freshIndex(`watchRestless:${id}`, WATCH_RESTLESS.length) };
   return { kind: "quiet" };
 }
 
@@ -1873,13 +1882,19 @@ const GOSSIP_TRUE_HINT = [
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const _recent = new Map();
-function pickFreshIdx(key, arr, memory = 2) {
+/* The index-level engine behind pickFreshIdx: exposed on its own so call
+   sites that need to STORE the chosen index (not just the resolved text) -
+   e.g. rollHomeWatch, which has to reuse the same roll for both the live
+   walk and the morning recap - still get the same repeat-avoidance as
+   every other text pool in the game. */
+function freshIndex(key, len, memory = 2) {
   const seen = _recent.get(key) || [];
-  const candidates = arr.map((_, i) => i).filter((i) => !seen.includes(i));
-  const idx = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : Math.floor(Math.random() * arr.length);
-  _recent.set(key, [idx, ...seen].slice(0, Math.min(memory, Math.max(arr.length - 1, 0))));
-  return arr[idx];
+  const candidates = Array.from({ length: len }, (_, i) => i).filter((i) => !seen.includes(i));
+  const idx = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : Math.floor(Math.random() * len);
+  _recent.set(key, [idx, ...seen].slice(0, Math.min(memory, Math.max(len - 1, 0))));
+  return idx;
 }
+function pickFreshIdx(key, arr, memory = 2) { return arr[freshIndex(key, arr.length, memory)]; }
 const chance = (p) => Math.random() < p;
 /* Deterministic pick for text that must NOT change between renders of the
    same state (e.g. a villager's mood line on their profile card). */
@@ -2827,7 +2842,7 @@ function resolveNight(prev, planIn, preEvents) {
               s.clues.push(`Night ${n}: ${victim.name} drew their own bolt and walked out to the ${victimWhere} alone, barefoot, in no hurry. Nothing forced that door. Whatever kills here CALLS its victims to it.`);
             }
           } else if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
-            const km = pick(KILLER_MESSAGES);
+            const km = pickFreshIdx("killerMessages", KILLER_MESSAGES);
             dawn.push(ev(km.line(victim.name)));
             s.clues.push(`Night ${n}: ${km.clue}`);
           } else if (firstBlood && n > 1) {
@@ -3015,9 +3030,9 @@ function resolveNight(prev, planIn, preEvents) {
     }
   }
 
-  if (victim && victimKind === "kill") s.dawnScene = { loc: victimWhere === "home" ? "Cottage" : victimWhere, kind: "body" };
+  if (victim && victimKind === "kill") s.dawnScene = { loc: victimWhere === "home" ? (HOME_LOC[victim.id] || "Cottage") : victimWhere, kind: "body" };
   else if (out) s.dawnScene = { loc: plan.loc, kind: "quiet" };
-  else if (watching) s.dawnScene = { loc: "Cottage", kind: "quiet" };
+  else if (watching) s.dawnScene = { loc: HOME_LOC[watching] || "Cottage", kind: "quiet" };
   else s.dawnScene = { loc: LOCS[(n + 2) % LOCS.length], kind: "quiet" };
 
   s.dayEvents = []; s.ap = 2; s.questionedToday = []; s.investigatedNight = null;
@@ -3074,7 +3089,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (accuser.id === s.monster.vid || accuser.turned) tgtPool = tgtPool.filter((x) => x.id !== s.monster.vid && !x.turned);
     const target = pick(tgtPool);
     if (target) {
-      const mobReason = pick(MOB_REASONS)(target.name);
+      const mobReason = pickFreshIdx("mobReasons", MOB_REASONS)(target.name);
       s.mob = { accuser: accuser.id, target: target.id, deadline: n + 1, reason: mobReason };
       dawn.push(ev(pick(MOB_ULTIMATUM)(accuser.name, target.name, mobReason), target.id, 2));
     }
@@ -3307,11 +3322,11 @@ function craftAnswer(s, id) {
     }
   } else if (id === "greta") {
     const hints = [...FOLK_HINTS, COLLECTOR_HINT].filter((h) => h.m.some((mm) => remaining.find((r) => r.id === mm)));
-    quote = hints.length ? pick(hints).t : `"I have told you what the old stories hold. The rest is in the ground and the mirrors and the dead, not in my jars."`;
+    quote = hints.length ? pickFreshIdx("folkHints", hints).t : `"I have told you what the old stories hold. The rest is in the ground and the mirrors and the dead, not in my jars."`;
   } else if (id === "tobias") {
     const gy = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg));
     if (gy.length && dispChance(0.6, speakerDisp)) { foundSign = pick(gy); quote = `"Come and see, then." He shows you, out among the stones. "${senseFor(foundSign)} Been that way three days. The ground don't lie, whatever else does."`; }
-    else quote = pick([`"The ground's unhappy. Won't settle over the new graves like it should. Beyond that it's keeping its own counsel, same as me."`, `"Nothing new among the stones. Old bones lying quiet. It's the quiet above ground I'd worry at."`]);
+    else quote = pickFreshIdx("craftFallback:tobias", [`"The ground's unhappy. Won't settle over the new graves like it should. Beyond that it's keeping its own counsel, same as me."`, `"Nothing new among the stones. Old bones lying quiet. It's the quiet above ground I'd worry at."`]);
   } else if (id === "ansel") {
     const kills = s.deaths.filter((d) => d.kind === "slain").map((d) => d.night);
     const wails = s.nightLogs.filter((l) => l.wail).map((l) => l.night);
@@ -3332,7 +3347,7 @@ function craftAnswer(s, id) {
         mentions.push({ id: oid, loc, kind: "craft", night: lg.night });
         quote = `"Tavern hears everything, love. Night ${lg.night}, ${npcById(s, oid).name} came past late, mud to the knee, from the ${loc} way. Make of it what you will. I pour, I don't judge."`;
       } else quote = `"Quiet as the grave in here lately. Poor choice of words. Buy something."`;
-    } else quote = pick([`"Half of what I hear is lies and the other half is worse. Come back tomorrow, the vintage improves."`, `"Nothing worth your time tonight, love. Even the liars are staying home."`]);
+    } else quote = pickFreshIdx("craftFallback:liesel", [`"Half of what I hear is lies and the other half is worse. Come back tomorrow, the vintage improves."`, `"Nothing worth your time tonight, love. Even the liars are staying home."`]);
   } else if (id === "marta") {
     const logs = s.nightLogs.slice(-3).filter((l) => Object.values(l.outMap).some((v) => v !== "home"));
     if (logs.length && dispChance(0.5, speakerDisp)) {
@@ -3346,8 +3361,8 @@ function craftAnswer(s, id) {
     } else {
       const recentKill = s.deaths.some((d) => d.kind === "slain" && d.night >= s.nightNum - 2);
       quote = recentKill
-        ? pick([`"I was at the ovens before light, same as always. Nobody came home past my window that I saw. Whoever did that kept off the lanes, or knew which window is mine."`, `"After a morning like this one you want me to have seen something. I know. I didn't. The lane was empty at first light, and I have never hated an empty lane more."`])
-        : pick([`"I see who comes home at dawn, when there is anyone to see. Lately everyone claims to sleep like saints. Saints don't bolt their doors."`, `"Nothing this morning but frost and my own breath."`]);
+        ? pickFreshIdx("craftFallback:marta:recent", [`"I was at the ovens before light, same as always. Nobody came home past my window that I saw. Whoever did that kept off the lanes, or knew which window is mine."`, `"After a morning like this one you want me to have seen something. I know. I didn't. The lane was empty at first light, and I have never hated an empty lane more."`])
+        : pickFreshIdx("craftFallback:marta:calm", [`"I see who comes home at dawn, when there is anyone to see. Lately everyone claims to sleep like saints. Saints don't bolt their doors."`, `"Nothing this morning but frost and my own breath."`]);
     }
   } else if (id === "rosa") {
     const speaker = npcById(s, id);
@@ -3363,7 +3378,7 @@ function craftAnswer(s, id) {
       const t = pick(hidden);
       mentions.push({ id: t.id, kind: "odd" });
       quote = `"Where I am from we watch the small things. ${t.name} has stopped humming while they work. People do not stop humming. Something took the song out of them, and recently."`;
-    } else quote = pick([`"You all watch the dark. I watch the living. So far the living are lying to each other at roughly the usual rate."`, `"I have sewn four shrouds and let out no wedding dresses. That is everything I know about this village, in one sentence."`]);
+    } else quote = pickFreshIdx("craftFallback:rosa", [`"You all watch the dark. I watch the living. So far the living are lying to each other at roughly the usual rate."`, `"I have sewn four shrouds and let out no wedding dresses. That is everything I know about this village, in one sentence."`]);
   }
   return { quote, foundSign, clue, mentions };
 }
@@ -3399,12 +3414,12 @@ function computeAnswer(s, id, night, q, targetId) {
   s.askedLog[id] = s.askedLog[id] || [];
   if (s.askedLog[id].includes(key)) {
     s.patience[id] = Math.max(0, (s.patience[id] || 3) - 1);
-    return { quote: pick(per.annoyed), mentions, claim, flag: null, foundSign, clue, repeat: true, followUps: [] };
+    return { quote: pickFreshIdx(`annoyed:${id}`, per.annoyed), mentions, claim, flag: null, foundSign, clue, repeat: true, followUps: [] };
   }
   s.askedLog[id].push(key);
 
   if ((s.patience[id] || 0) <= 0 && !isMonster && q !== "talk") {
-    return { quote: pick(per.refusal), mentions, claim, flag: null, foundSign, clue, refused: true, followUps: [] };
+    return { quote: pickFreshIdx(`refusal:${id}`, per.refusal), mentions, claim, flag: null, foundSign, clue, refused: true, followUps: [] };
   }
 
   const monsterClaim = () => {
@@ -3439,7 +3454,7 @@ function computeAnswer(s, id, night, q, targetId) {
         s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
         quote = `"The ${playerWitnessed.loc}. You saw me yourself. Sleep and I have parted ways, that is all."`;
         witnessedHandled = true;
-      } else if (mc.loc === "home" && actual === "home") quote = pick(per.whereHome)();
+      } else if (mc.loc === "home" && actual === "home") quote = pickFreshIdx(`whereHome:${id}`, per.whereHome)();
       else if (evn && mc.loc === evn.loc && actual === evn.loc) quote = `"At the ${evn.name}, with half the village. Ask anyone there."`;
       else if (mc.loc === "home") quote = `"Home, with the door barred, like any sane soul."`;
       else if (mc.admitOut) quote = `"I was out, yes. At the ${mc.loc}, walking. Sleep does not come anymore, and I have stopped pretending otherwise."`;
@@ -3461,7 +3476,7 @@ function computeAnswer(s, id, night, q, targetId) {
         witnessedHandled = true;
       } else {
         claim = "home";
-        quote = pick([
+        quote = pickFreshIdx(`secretHomeLie:${id}`, [
           `"Home. Abed early." They do not meet your eye when they say it.`,
           `"Home, of course. Where else?" The answer arrives half a beat too fast, rehearsed on the way over.`,
           `"At home. Alone. Doors barred." Three answers to one question, each smaller than the last.`,
@@ -3476,12 +3491,12 @@ function computeAnswer(s, id, night, q, targetId) {
       quote = `"At the ${evn.name}, with half the village around me, thank God. Ask anyone who was there."`;
     } else if (actual === "home") {
       claim = "home";
-      quote = pick(per.whereHome)();
+      quote = pickFreshIdx(`whereHome:${id}`, per.whereHome)();
       if (evn && chance(0.4)) quote += ` "I had no heart for the ${evn.name}. Not with things as they are."`;
       else if (log && log.active && log.huntLoc && dispChance(0.35, npc.disp)) quote += HOME_LOC[id] === log.huntLoc ? ` "Though I heard something, late, moving along the wall of this very house. I did not open the shutters to look."` : ` "Though I heard something, late, out toward the ${log.huntLoc}. I did not open the shutters to look."`;
     } else {
       claim = actual;
-      quote = pick(per.whereOut)(actual);
+      quote = pickFreshIdx(`whereOut:${id}`, per.whereOut)(actual);
     }
     /* -- the night walk is remembered, both ways -- */
     if (!witnessedHandled) {
@@ -3577,14 +3592,14 @@ function computeAnswer(s, id, night, q, targetId) {
     const g = s.grudges[id];
     if (g && g.other === targetId && s.dayNum <= g.until && !isMonster) {
       mentions.push({ id: targetId, kind: "suspects" });
-      quote = pick([
+      quote = pickFreshIdx(`grudgeOpinion:${id}`, [
         `"${t.name}? We had words, and I meant every one of mine. I'd tie the knot in the rope myself."`,
         `"Ask me tomorrow, when my knuckles stop aching. Today my opinion of ${t.name} is not fit for church ears."`,
       ]);
     } else if (isMonster) {
       if (targetId !== s.monster.vid && chance(0.6)) {
         mentions.push({ id: targetId, kind: "suspects" });
-        quote = pick(SUSPECT_REASONS)(t.name);
+        quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name);
       } else quote = `"${t.name}? Solid as church stone. You are wasting your daylight."`;
     } else if (lying) {
       if (targetId === s.monster.vid) {
@@ -3592,7 +3607,7 @@ function computeAnswer(s, id, night, q, targetId) {
         quote = `"It is certainly not ${t.name}. Put it out of your mind entirely."`;
       } else {
         mentions.push({ id: targetId, kind: "suspects" });
-        quote = pick(SUSPECT_REASONS)(t.name);
+        quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name);
       }
     } else {
       let vouched = false;
@@ -3610,7 +3625,7 @@ function computeAnswer(s, id, night, q, targetId) {
         break;
       }
       if (!vouched) {
-        quote = chance(0.4) ? pick(SUSPECT_REASONS)(t.name) : pick([
+        quote = chance(0.4) ? pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name) : pickFreshIdx("opinionNoVouch", [
           `"I've known ${t.name} for years. But then, I would have said that of anyone, a month ago."`,
           `"${t.name}? I could not say. I trust nobody past their own doorstep now."`,
           `"They keep to themselves. That used to be a virtue."`,
@@ -3628,7 +3643,7 @@ function computeAnswer(s, id, night, q, targetId) {
     } else if (isMonster) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id));
       mentions.push({ id: t.id, kind: "suspects" });
-      quote = `"You want a name. Fine. ${pick(SUSPECT_REASONS)(t.name).slice(1)}`;
+      quote = `"You want a name. Fine. ${pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name).slice(1)}`;
     } else if (lying) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
       if (t) { mentions.push({ id: t.id, kind: "suspects" }); quote = `"${t.name}. I feel it when they pass. Do not ask me to explain a feeling."`; }
@@ -3656,7 +3671,7 @@ function computeAnswer(s, id, night, q, targetId) {
         } else {
           const t2 = pick(s.npcs.filter((x) => x.alive && x.id !== id));
           mentions.push({ id: t2.id, kind: "suspects" });
-          quote = pick(SUSPECT_REASONS)(t2.name) + ` "But it is a feeling, mind. Feelings have hanged better people than us."`;
+          quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t2.name) + ` "But it is a feeling, mind. Feelings have hanged better people than us."`;
         }
       } else if (s.ropeStain && s.ropeStain !== id && npcById(s, s.ropeStain) && npcById(s, s.ropeStain).alive && chance(0.4)) {
         const rs = npcById(s, s.ropeStain);
@@ -3665,7 +3680,7 @@ function computeAnswer(s, id, night, q, targetId) {
       } else {
         const t = pick(s.npcs.filter((x) => x.alive && x.id !== id));
         mentions.push({ id: t.id, kind: "suspects" });
-        quote = pick(SUSPECT_REASONS)(t.name) + ` "But it is a feeling, mind. Feelings have hanged better people than us."`;
+        quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name) + ` "But it is a feeling, mind. Feelings have hanged better people than us."`;
       }
     }
   }
@@ -3676,18 +3691,18 @@ function computeAnswer(s, id, night, q, targetId) {
       /* the changed serve it now: they name signs the thing does NOT carry */
       const falseSigns = Object.keys(SIGN_TALK).filter((sg) => !m.signs.includes(sg));
       if (chance(0.6)) {
-        const fs = pick(falseSigns);
+        const fs = pickFreshIdx(`strangeFalseSign:${id}`, falseSigns);
         quote = `"Strange?" They laugh, and it is not quite their laugh. "Only that ${SIGN_TALK[fs]}. Worth a look, I'd have thought. Worth a tick in that journal of yours."`;
       } else {
         quote = `"Everything is strange now. Pick a thing."`;
       }
     } else if (isMonster) {
       if (s.monsterSawYou && chance(0.5)) quote = `"Strange? You look tired, is what I notice. All that standing about in cold lanes at night. A person could catch their death."`;
-      else quote = pick([`"Only the fear. The fear is the strangest thing of all, don't you find?"`, `"Nothing you have not already heard."`, `"The village has never been so devout, or so well locked. Take your pick of miracles."`]);
+      else quote = pickFreshIdx("strangeMonster", [`"Only the fear. The fear is the strangest thing of all, don't you find?"`, `"Nothing you have not already heard."`, `"The village has never been so devout, or so well locked. Take your pick of miracles."`]);
     } else {
       quote = chance(0.4) && log && log.active && log.huntLoc
         ? `"I will say this. The dogs would not settle that night, and they were all of them facing the ${log.huntLoc}."`
-        : pick([`"Nothing I could put a name to. A feeling, at dusk. Everyone has it now."`, `"Ask the priest. He has stopped sleeping, and priests know why they stop sleeping."`, `"The birds have gone from the churchyard. Make of that what you like."`, `"My candle burns blue some nights. My grandmother had a word for that. I've been afraid to remember it."`]);
+        : pickFreshIdx(`strangeFallback:${id}`, [`"Nothing I could put a name to. A feeling, at dusk. Everyone has it now."`, `"Ask the priest. He has stopped sleeping, and priests know why they stop sleeping."`, `"The birds have gone from the churchyard. Make of that what you like."`, `"My candle burns blue some nights. My grandmother had a word for that. I've been afraid to remember it."`]);
     }
   }
 
@@ -3696,13 +3711,13 @@ function computeAnswer(s, id, night, q, targetId) {
     const secretNight = log && log.secretOut && log.secretOut[id] ? night
       : (() => { const lg = [...s.nightLogs].reverse().find((x) => x.secretOut && x.secretOut[id]); return lg ? lg.night : null; })();
     if (isMonster) {
-      quote = pick([
+      quote = pickFreshIdx("pressMonster", [
         `"Lied?" The word sits comfortably in their mouth. "Memory frays, in times like these. Yours as much as mine, I'd imagine. You look like you haven't slept."`,
         `They hold your gaze a fraction too long. "If my nights don't add up, look to whoever did the counting. I've nothing to hide, and nothing more to say."`,
         `"You press everyone this way? No wonder the village sleeps badly." The smile arrives, eventually. Nothing else about the face moves.`,
       ]);
     } else if (npc.turned) {
-      quote = pick([
+      quote = pickFreshIdx(`pressTurned:${id}`, [
         `A long pause, as if the answer had to travel a distance to reach them. "I was mistaken. I am often mistaken now." They touch their own wrist, once.`,
         `"Did I lie?" they say, mildly, as though asking about the weather. "Then I lied. It hardly seems to matter anymore, does it."`,
       ]);
@@ -3713,7 +3728,7 @@ function computeAnswer(s, id, night, q, targetId) {
     } else if (sec && npc.secretKnown) {
       quote = `"You know why I lied. You've known since you dragged it out of me. Do not make me say it twice in one lifetime."`;
     } else {
-      quote = pick([
+      quote = pickFreshIdx(`pressFallback:${id}`, [
         `"Then I misspoke. God's teeth, we are all of us half-mad with fear. I barely know what I said an hour ago, let alone a night ago."`,
         `They flush, angry and ashamed at once. "Fine. I was out, briefly, and I said home because HOME IS THE ONLY SAFE ANSWER NOW. You've seen what happens to people who were out."`,
       ]);
@@ -3747,7 +3762,7 @@ function computeAnswer(s, id, night, q, targetId) {
       mentions.push({ id: acc2.id, kind: "suspects" });
       quote = `They lower their voice. "${acc2.name} was quickest to the rope. Quickest by a street. My grandmother had a saying: grief reaches for God, and something else reaches for rope. I am not saying it. I am saying my grandmother said it."`;
     } else {
-      quote = pick([
+      quote = pickFreshIdx(`mobviewFallback:${id}`, [
         `"${mt2.name}?" They shake their head, and keep shaking it. "I have shared a table with ${mt2.name} a hundred times. But then, whoever it is, someone has shared a table with them a hundred times. That is the whole horror of it."`,
         `"If the rope is wrong, the thing wins twice: the grave and the guilt. If it is right, we sleep. Half the village is hoping without asking which half of that bargain we get."`,
         `"I keep away from the square now. Whatever ${mt2.name} is or is not, a crowd holding rope is not my neighbour either."`,
@@ -3775,11 +3790,11 @@ function computeAnswer(s, id, night, q, targetId) {
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
     if (isMonster) {
-      quote = pick(TALK_MONSTER);
+      quote = pickFreshIdx("talkMonster", TALK_MONSTER);
     } else if (npc.turned) {
-      quote = pick(TALK_TURNED);
+      quote = pickFreshIdx(`talkTurned:${id}`, TALK_TURNED);
     } else {
-      quote = pick(TALK_LINES[id] || [`They talk, and you listen, and for an hour the village is only a village again.`]);
+      quote = pickFreshIdx(`talkLines:${id}`, TALK_LINES[id] || [`They talk, and you listen, and for an hour the village is only a village again.`]);
       const lastActive = [...s.nightLogs].reverse().find((lg) => lg.active && lg.huntLoc);
       if (lastActive && dispChance(0.3, (npc.disp || 0) + 1)) {
         quote += ` Then, at the door, quieter: "Keep away from the ${lastActive.huntLoc} after dark. Don't ask me how I know. Just keep away."`;
@@ -3790,17 +3805,17 @@ function computeAnswer(s, id, night, q, targetId) {
 
   if (q === "howare") {
     if (isMonster) {
-      quote = pick([
+      quote = pickFreshIdx("howareMonster", [
         `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
         `"One day at a time, like everyone." The words are right, and the warmth almost reaches the eyes. "You look tired, though. You should rest. The village leans on you too hard." It is kindly meant. You spend a while, later, deciding whether you believe that.`,
       ]);
     } else if (npc.turned) {
-      quote = pick([
+      quote = pickFreshIdx(`howareTurned:${id}`, [
         `"I am well," they say, and stop, as if the sentence has run out of the things it was given to say. "I am well," they say again, softer, checking the fit of it.`,
         `A long pause. "It is quieter now," they say at last. "Inside." They seem to believe that answers the question. Perhaps, somewhere, it does.`,
       ]);
     } else {
-      quote = pick(HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
+      quote = pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
       if (chance(0.5)) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     }
   }
@@ -3857,7 +3872,7 @@ function computeAnswer(s, id, night, q, targetId) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
       if (t) {
         mentions.push({ id: t.id, kind: "gossip" });
-        quote = `"Only that folk are whispering about ${t.name}. ${pick(SUSPECT_REASONS)(t.name).slice(1)}`;
+        quote = `"Only that folk are whispering about ${t.name}. ${pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name).slice(1)}`;
       } else quote = `"Nothing worth repeating. This village gossips about everything and knows nothing true."`;
     } else {
       const grudgeEntries = Object.entries(s.grudges).filter(([gid, g]) => g && s.dayNum <= g.until && gid !== id && g.other !== id && npcById(s, gid) && npcById(s, gid).alive && npcById(s, g.other) && npcById(s, g.other).alive);
@@ -3969,7 +3984,7 @@ function computeAnswer(s, id, night, q, targetId) {
       })();
       quote = seenLoc
         ? `"Watch the ${seenLoc}, some night you feel it in your bones. ${t.name} was there once already, and the guilty go back to their own ground."`
-        : pick([
+        : pickFreshIdx(`proofFallback:${id}`, [
             `"Watch their door, some night you think it might act. Proof is patience, mostly, and a cold few hours."`,
             `"Search wherever ${t.name} was last seen acting strangely, if anyone can name the place."`,
             `"Catch them at it, or catch them lying about it. There is no third way with a thing like this."`,
@@ -5030,7 +5045,7 @@ function epilogueLine(s, x) {
   if (s.hardCleared.includes(x.id)) return `${x.name} knows their neck was saved by a night you spent in the cold watching their door, and has never once said thank you out loud. Bread appears on your step anyway.`;
   if (x.offendedExam) return `${x.name} survived, and has not forgiven the glass you put to their chest. Survival, they would tell you, is not the same as thanks.`;
   if (x.sawYouWatching) return `${x.name} survived. They still glance at the shadow opposite their door before sleeping, and they still know it was you standing in it.`;
-  return pick([
+  return pickFreshIdx(`plainEpilogue:${s.gameId}`, [
     `${x.name} goes on. Doors in the village are left unbarred again, one by one, and theirs was among the first.`,
     `${x.name} survived it all, and tells the story badly at the tavern, and you let every wrong detail stand.`,
     `${x.name} lives. On feast days they leave a place set for the dead, and never say which ones.`,
@@ -5783,7 +5798,7 @@ function MonsterVillage() {
                       {walk.chatText && <p className="mt-1" style={{ fontSize: 14, fontStyle: "italic" }}>{walk.chatText}</p>}
                     </div>
                   </div>
-                  {!walk.chatUsed && <Btn full onClick={() => setWalk({ ...walk, chatUsed: true, chatText: pick(LANE_CHAT_LINES) })}>Ask what they've seen</Btn>}
+                  {!walk.chatUsed && <Btn full onClick={() => setWalk({ ...walk, chatUsed: true, chatText: pickFreshIdx("laneChat", LANE_CHAT_LINES) })}>Ask what they've seen</Btn>}
                   <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "lane"), pre: [`You met ${hw.name} in the lane. They went their way, and you go yours, toward the ${walk.loc}.`] })}>Go your way →</Btn>
                 </div>
               );
@@ -6590,7 +6605,7 @@ function MonsterVillage() {
     setInvest({ left: 2, used: [], findings: [] });
   };
   const investModal = invest && freshDeath && (() => {
-    const loc = freshDeath.where === "home" ? "Cottage" : freshDeath.where;
+    const loc = freshDeath.where === "home" ? (HOME_LOC[freshDeath.id] || "Cottage") : freshDeath.where;
     return (
       <div className="fixed inset-0 z-30 mv-body overflow-hidden" style={{ background: `linear-gradient(#181017, ${C.bg} 65%)`, color: C.text }}>
         <div className="max-w-md mx-auto h-full flex flex-col">
