@@ -589,6 +589,48 @@ const CRUELTY_DAWN = [
   "Blood on the milestone half a mile out, and small bare footprints running into the field, wide-spaced, desperate. They stop mid-stride in open ground, the frost past them unbroken.",
 ];
 
+/* ---------- lasting village afflictions ----------
+   Modelled on the church burning: each is a persistent wound to the village
+   that, once dealt, changes the world for the rest of the game. It gets a
+   dawn announcement, it blocks the gatherings that used to happen at that
+   place, it re-colours every later interview with the person it fell on,
+   and it hangs over the dusks that follow. Each can happen only once. */
+const AFFLICTION_DAWN = {
+  breadRiot: (nm) => `Hunger and fear boil over before dawn: a crowd breaks into ${nm}'s bakery, takes what bread there is, and overturns what they cannot carry. ${nm} is left standing in the spilled flour, looking at neighbours she has fed her whole life as if she has never seen them before.`,
+  wellFouled: () => `The village well comes up wrong this morning: the water black, the smell off it like old iron and rot, something dead down the shaft or something worse. Nobody will draw from it. They queue at the cold stream instead, and watch each other's buckets, and say nothing.`,
+  tavernShut: (nm) => `${nm} bolts the tavern for good and will not open it. The one warm room left in Hollow's Edge goes dark. "I'm done pouring for a village that's eating itself," is all she says through the barred door, and the drinkers stand in the cold lane a while before they drift home to their own.`,
+  churchBurn: (nm) => `In the small hours someone put fire to the Old Church. "If God will not clean His house, fire will." It burned to the rafters while the village watched and fetched no water.${nm ? ` ${nm} stood closest of all, and his face held no grief.` : ""}`,
+};
+/* What you witness of it if you are out in the lanes when it happens. */
+const AFFLICTION_WALK = {
+  breadRiot: (nm) => `You come on it in the dark: a knot of neighbours at ${nm ? nm + "'s" : "the"} bakery, the door broken in, arms full of stolen loaves, and ${nm || "the baker"} in the doorway not shouting anymore, just watching. Hunger has done what the thing in the woods only threatened. You keep to the shadows and let it burn itself out.`,
+  wellFouled: () => `A crowd stands about the village well by lantern-light, and the smell reaches you before you understand it: the water has come up black and foul. Someone is being blamed. Someone is always being blamed now. You go the long way around them.`,
+  tavernShut: (nm) => `The tavern windows are dark for the first time in memory, and ${nm || "the innkeeper"} is out front driving the last bolt home by lantern, deaf to the drinkers pleading at her back. The one lit room in Hollow's Edge, going out while you watch.`,
+  churchBurn: (nm) => `The sky over the churchyard is the wrong colour, and then the smell of it reaches you: the Old Church is burning, a great tearing sheet of flame, and the village stands in a ring around it and fetches no water. ${nm ? nm + " stands closest of all, and does not weep." : "No one weeps."} You feel the heat of it from the lane.`,
+};
+/* The muffled version, heard through your own shutters on a night you stayed in. */
+const AFFLICTION_HOME_BEAT = {
+  breadRiot: "Shouting reaches you through the shutters past midnight, from the direction of the bakery. Not a scream, though. A crowd. You do not open the door to see what a hungry crowd does.",
+  wellFouled: "There is a commotion at the well in the small hours, lanterns and low furious voices, and a smell rides in on the night air that has no business in clean water.",
+  tavernShut: "The tavern's light, always the last on the lane to go out, goes out early tonight and does not come back. The dark outside your window is one lamp deeper for it.",
+  churchBurn: "The edges of your shutters go orange. Something enormous is burning off toward the churchyard, and the sound of it carries: a roar, and beneath the roar, a crowd that does no shouting at all.",
+};
+/* one dusk-mood line each, surfaced on later nights so the wound stays felt */
+const AFFLICTION_MOOD = {
+  breadRiot: "The ovens have stayed cold since the riot. Folk go to bed hungry now, and the hunger sharpens the fear, and the fear feeds on the hunger, and round it goes.",
+  wellFouled: "Nobody has touched the well in days. The walk to the stream is long and cold, and the queues there are silent, and everybody counts everybody else in line.",
+  tavernShut: "The tavern stays dark and bolted. There is nowhere left to be a person for an hour among other people, and the village feels the lack of it the way a mouth feels a pulled tooth.",
+  churchBurned: "Where the church stood there is a black ruin now, and nowhere to carry a Sunday's fear. A few still pray in the lane by the ash. Most have given it up.",
+};
+/* the affected villager's interview opener, once the wound is theirs */
+const AFFLICTION_OPENER = {
+  marta: (nm) => `The bakery is half-wreckage behind her, the ovens cold. "They took the bread," ${nm} says, flat, not quite meeting your eye. "People I've fed since they were children. I keep the door open anyway. I don't know what else to do with a door."`,
+  liesel: (nm) => `${nm} talks to you through a gap in the barred tavern door and does not open it further. "Bar's shut. Bar stays shut. I poured for this village through births and buryings both, and this is what it did with the last of my kindness. Say what you came to say and let me be."`,
+  ansel: (nm) => `${nm} receives you in the crypt now, the only stone the fire left him. Smoke is still in his clothes. "They burned God's house to be rid of what's in the village," he says, "and the thing walked out of the flames same as everyone. Ask your questions. I have fewer answers and more time than I did."`,
+  greta: (nm) => `${nm}'s cottage is full of the sick from the fouled well, laid on every surface. She works while she talks to you, not stopping. "Bad water on top of everything else. I've salves for the flux and nothing at all for the other thing. Be quick, I've the living to tend."`,
+  falk: (nm) => `${nm} looks grayer than the last time, run ragged since the well went bad. "Half the village has the flux and the other half is too frightened to drink at all. I am one old man with one bag. Whatever you want of me, want it fast."`,
+};
+
 const MOB_REASONS = [
   (t) => `${t} was seen out the night it started. SEEN. Ask anyone. Ask everyone.`,
   (t) => `the deaths began the very week ${t} took to barring their shutters in daylight. Innocent people do not fear the sun.`,
@@ -2080,10 +2122,37 @@ function isActive(s, m, n) {
 function sampleNight(s, m, n) {
   const active = isActive(s, m, n);
   const wx = chance(0.3) ? pick(["fog", "storm", "frost"]) : null;
+
+  /* A lasting affliction may fall on the village tonight. It is decided HERE,
+     before the walk, so it can be lived on-screen in the lanes (see the
+     "affliction" walk node) and not merely reported at dawn. It never lands
+     the same night the mob's rope comes due - grief has enough to do that
+     night - but it is fully independent of the monster's hunt, so the church
+     can burn and the thing can still kill, and a walk can show you both. */
+  let affliction = null;
+  const hangingDue = !!(s.mob && n === s.mob.deadline);
+  if (n >= 3 && !hangingDue) {
+    const slainSoFar = s.deaths.filter((d) => d.kind === "slain").length;
+    if (slainSoFar >= 2) {
+      const marta = npcById(s, "marta"), liesel = npcById(s, "liesel");
+      const opts = [];
+      if (!s.breadRiot && marta && marta.alive && !marta.fled) opts.push("breadRiot");
+      if (!s.wellFouled) opts.push("wellFouled");
+      if (!s.tavernShut && liesel && liesel.alive && !liesel.fled) opts.push("tavernShut");
+      if (!(s.burned || []).includes("Old Church") && slainSoFar >= 3) opts.push("churchBurn");
+      if (opts.length && chance(0.18)) affliction = pick(opts);
+    }
+  }
+  const afflictLoc = { breadRiot: "Village Square", wellFouled: "Village Square", tavernShut: "Tavern", churchBurn: "Old Church" }[affliction];
+
   let evn = null;
+  /* A gathering cannot be held where the place for it no longer exists: the
+     burned church, the bolted tavern, or the place an affliction is tearing
+     apart tonight. Those events drop out of the pool. */
+  const evPool = EVENTS.filter((e) => !((s.burned || []).includes(e.loc) || (s.tavernShut && e.loc === "Tavern") || (afflictLoc && e.loc === afflictLoc)));
   /* Night one is its own bespoke chapter: no village gathering competing with it. */
   if (n === 1) evn = null;
-  else if (chance(wx === "storm" ? 0.07 : 0.15)) evn = pick(EVENTS);
+  else if (evPool.length && chance(wx === "storm" ? 0.07 : 0.15)) evn = pick(evPool);
   const eventLoc = evn ? evn.loc : null;
   const huntsCrowd = active && !!evn && m.reach !== "home" && chance(0.5);
   const outMap = {};
@@ -2126,7 +2195,7 @@ function sampleNight(s, m, n) {
     }
   }
   const huntLoc = active ? outMap[s.monster.vid] : null;
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, huntLoc };
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, huntLoc, affliction };
 }
 
 function resolveNight(prev, planIn, preEvents) {
@@ -2213,7 +2282,7 @@ function resolveNight(prev, planIn, preEvents) {
   const watching = plan.kind === "watch" ? plan.id : null;
   const exposed = out || !!watching;
   const f = plan.facts || sampleNight(s, m, n);
-  const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, huntLoc } = f;
+  const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, huntLoc, affliction } = f;
   if (active) s.lastActive = n;
   const dawn = [...(preEvents || [])];
   const beats = [...preBeats];
@@ -3085,22 +3154,44 @@ function resolveNight(prev, planIn, preEvents) {
     s.calmHope = null; s.calmSaid = false;
   }
 
-  /* --- panic does its own damage --- */
+  /* --- a lasting affliction, decided at dusk (sampleNight) so it could be
+     witnessed in the walk, now takes hold for good: the flag is set, the
+     morning reports it, and on a night spent barred indoors a muffled
+     version reaches you through the shutters. --- */
+  if (affliction && !s.over) {
+    s.lastAfflictionNight = n;
+    const marta = npcById(s, "marta"), liesel = npcById(s, "liesel"), ansel = npcById(s, "ansel");
+    if (affliction === "breadRiot") { s.breadRiot = { night: n }; dawn.push(ev(AFFLICTION_DAWN.breadRiot(marta ? marta.name : "the baker"), "marta", 2)); }
+    else if (affliction === "wellFouled") { s.wellFouled = { night: n }; dawn.push(ev(AFFLICTION_DAWN.wellFouled(), undefined, 2)); }
+    else if (affliction === "tavernShut") { s.tavernShut = { night: n }; dawn.push(ev(AFFLICTION_DAWN.tavernShut(liesel ? liesel.name : "the innkeeper"), "liesel", 2)); }
+    else if (affliction === "churchBurn") { if (!s.burned.includes("Old Church")) s.burned.push("Old Church"); dawn.push(ev(AFFLICTION_DAWN.churchBurn(ansel && ansel.alive ? ansel.name : null), "ansel", 2)); }
+    /* a stay-home night did not live it in the lanes: give it a muffled beat */
+    if (!plan.facts) beats.push(AFFLICTION_HOME_BEAT[affliction]);
+  }
+
+  /* --- panic does its own damage: the lighter, one-off acts of fear (never
+     on a night an affliction already struck) --- */
   const slainSoFar = s.deaths.filter((d) => d.kind === "slain").length;
-  if (!s.over && n >= 3 && chance(0.12 + s.wrongExecutions * 0.08 + (slainSoFar >= 3 ? 0.08 : 0))) {
-    if (!s.burned.includes("Old Church") && slainSoFar >= 3 && chance(0.5)) {
-      s.burned.push("Old Church");
-      const ans = npcById(s, "ansel");
-      dawn.push(ev(`In the small hours someone put fire to the Old Church. "If God will not clean His house, fire will." It burned to the rafters while the village watched and fetched no water.${ans && ans.alive ? " Ansel stood closest of all, and his face held no grief." : ""}`));
-    } else {
-      const pv = pick(s.npcs.filter((x) => x.alive && !x.fled));
-      if (pv) {
-        const panicLine = pickFreshIdx("panicLines", PANIC_LINES);
-        const panicIdx = PANIC_LINES.indexOf(panicLine);
-        dawn.push(ev(panicLine(pv.name), chance(0.5) ? pv.id : null));
-        s.lastPanic = { kind: panicIdx, name: pv.name, night: n };
-      }
+  if (!s.over && !affliction && n >= 3 && chance(0.12 + s.wrongExecutions * 0.08 + (slainSoFar >= 3 ? 0.08 : 0))) {
+    const pv = pick(s.npcs.filter((x) => x.alive && !x.fled));
+    if (pv) {
+      const panicLine = pickFreshIdx("panicLines", PANIC_LINES);
+      const panicIdx = PANIC_LINES.indexOf(panicLine);
+      dawn.push(ev(panicLine(pv.name), chance(0.5) ? pv.id : null));
+      s.lastPanic = { kind: panicIdx, name: pv.name, night: n };
     }
+  }
+
+  /* --- an ongoing affliction hangs over later mornings (low priority, so it
+     yields to real news on busy dawns and surfaces on quiet ones), but never
+     the same morning its own announcement lands --- */
+  if (!s.over && s.lastAfflictionNight !== n) {
+    const moods = [];
+    if (s.breadRiot) moods.push(AFFLICTION_MOOD.breadRiot);
+    if (s.wellFouled) moods.push(AFFLICTION_MOOD.wellFouled);
+    if (s.tavernShut) moods.push(AFFLICTION_MOOD.tavernShut);
+    if ((s.burned || []).includes("Old Church")) moods.push(AFFLICTION_MOOD.churchBurned);
+    if (moods.length && chance(0.4)) dawn.push(ev(pick(moods), undefined, 0));
   }
 
   /* --- the village reckons with yesterday's rope --- */
@@ -5767,6 +5858,17 @@ function MonsterVillage() {
     const facts = sampleNight(s, monsterOf(s), s.nightNum + 1);
     const cand = s.npcs.filter((x) => x.alive && !x.fled && facts.outMap[x.id] && facts.outMap[x.id] !== "home");
     const queue = ["depart"];
+    /* a village affliction tearing itself open tonight is witnessed early,
+       before the errand proper: you come upon it in the lanes on your way. */
+    let afflictionBeat = null;
+    if (facts.affliction) {
+      queue.push("affliction");
+      const ansel = npcById(s, "ansel");
+      const nm = facts.affliction === "breadRiot" ? (npcById(s, "marta") || {}).name
+        : facts.affliction === "tavernShut" ? (npcById(s, "liesel") || {}).name
+        : facts.affliction === "churchBurn" ? (ansel && ansel.alive ? ansel.name : null) : null;
+      afflictionBeat = AFFLICTION_WALK[facts.affliction](nm);
+    }
     let lane = null;
     if (cand.length && chance(0.7)) {
       const w = pick(cand);
@@ -5791,7 +5893,7 @@ function MonsterVillage() {
     if (company.length) queue.push("company");
     queue.push("return");
     setModal(null);
-    setWalk({ mode: "out", loc, facts, mods: {}, queue, lane, company, hideIsMonster, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
+    setWalk({ mode: "out", loc, facts, mods: {}, queue, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
   };
 
   const commitWalk = (extra) => nightfall({ kind: "out", loc: extra.loc || walk.loc, mods: { ...walk.mods, ...extra, closureLine: walk.closureLine || null }, facts: walk.facts });
@@ -5912,7 +6014,15 @@ function MonsterVillage() {
     if (!leaves) facts.homeWatch = rollHomeWatch(s, id);
     setModal(null);
     const openLine = pickFreshIdx("watchLines", WATCH_LINES)(npcById(s, id).name);
-    setWalk({ mode: "watch", targetId: id, facts, mods: {}, leaves, quietLine: pickFreshIdx("quietWatch", QUIET_WATCH_LINES)(npcById(s, id).name), retireLine: pickFreshIdx("retireLines", RETIRE_LINES)(npcById(s, id).name), openLine, pre: watchIntroSeen ? [] : ["You will live this night in the lanes, choice by choice."], stage: "post" });
+    let afflictionBeat = null;
+    if (facts.affliction) {
+      const ansel = npcById(s, "ansel");
+      const nm = facts.affliction === "breadRiot" ? (npcById(s, "marta") || {}).name
+        : facts.affliction === "tavernShut" ? (npcById(s, "liesel") || {}).name
+        : facts.affliction === "churchBurn" ? (ansel && ansel.alive ? ansel.name : null) : null;
+      afflictionBeat = AFFLICTION_WALK[facts.affliction](nm);
+    }
+    setWalk({ mode: "watch", targetId: id, facts, mods: {}, leaves, afflictionBeat, quietLine: pickFreshIdx("quietWatch", QUIET_WATCH_LINES)(npcById(s, id).name), retireLine: pickFreshIdx("retireLines", RETIRE_LINES)(npcById(s, id).name), openLine, pre: watchIntroSeen ? [] : ["You will live this night in the lanes, choice by choice."], stage: "post" });
     if (!watchIntroSeen) setWatchIntroSeen(true);
   };
 
@@ -6031,6 +6141,12 @@ function MonsterVillage() {
                 {beat(walk.openLine)}
                 {walk.facts.wx && <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
                 <Btn full kind="amber" onClick={() => { const extra = []; if (walk.facts.wx) extra.push(WEATHER_WALK[walk.facts.wx]); if (chance(0.55)) extra.push(pick(WALK_ODD_SIGHTS)(walk.loc)); setWalk({ ...walk, stage: nextStage(walk, "depart"), pre: extra }); }}>Into the dark →</Btn>
+              </div>
+            )}
+            {!isWatch && walk.stage === "affliction" && (
+              <div className="flex flex-col gap-2">
+                {beat(walk.afflictionBeat, C.redBright)}
+                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "affliction"), pre: [] })}>Walk on, past it →</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "lane" && (
@@ -6249,7 +6365,13 @@ function MonsterVillage() {
               <div className="flex flex-col gap-2">
                 {beat(walk.openLine)}
                 {walk.facts.wx && <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
-                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: walk.leaves ? "leave" : "quiet", pre: [] })}>Settle in and watch →</Btn>
+                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: walk.afflictionBeat ? "waffliction" : (walk.leaves ? "leave" : "quiet"), pre: [] })}>Settle in and watch →</Btn>
+              </div>
+            )}
+            {isWatch && walk.stage === "waffliction" && (
+              <div className="flex flex-col gap-2">
+                {beat(walk.afflictionBeat, C.redBright)}
+                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: walk.leaves ? "leave" : "quiet", pre: [] })}>Back to your vantage →</Btn>
               </div>
             )}
             {isWatch && walk.stage === "leave" && (() => {
@@ -6475,6 +6597,7 @@ function MonsterVillage() {
             <p className="mt-2"><strong>By night:</strong> bar your door, investigate one villager, or search an area. Searching is a walk: follow who you meet, hail them, press close or turn back. A villager seen home on a killing night is cleared. Fog hides faces; frost holds prints.</p>
             <p className="mt-2"><strong>The armed confrontation:</strong> work the journal down to a single possible creature and you walk the nights carrying its remedy. Catch the thing at its business and confront it, and you can name it and end it right there in the dark, before it takes another soul. Carry the wrong name into that moment and you will not carry anything home again.</p>
             <p className="mt-2"><strong>It fights back:</strong> hunted, it plants false marks where it never walks. Search the same ground twice by day to expose them.</p>
+            <p className="mt-2"><strong>The village turns on itself:</strong> as the dying goes on, fear does its own damage. Mobs form, the church may burn, the bakery may be looted, the well fouled, the tavern bolted for good. These wounds last: a burned church or a shut tavern hosts no more gatherings, and the people they fall on will receive you differently ever after.</p>
             <p className="mt-2"><strong>The mob:</strong> when the village chooses a neck, the rope falls due at FIRST LIGHT the next day. You have the day and the whole night in between: find the truth, speak for them in the square, or watch the accused's door yourself after dark.</p>
             <p className="mt-2"><strong>Accusing:</strong> name a person and a creature together. Right on both, it ends. Wrong person: an innocent dies by the rite. Right face, wrong name: it flees and besieges the village. Get it wrong twice in any mix, and it stops feeding on the village and comes for you.</p>
           </div>
@@ -6511,7 +6634,7 @@ function MonsterVillage() {
       <Scene loc={l} kind="quiet" height={h} />
       {(s.burned || []).includes(l) && <div className="mvScorch" />}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.9) 0%, rgba(8,10,18,0.12) 72%)" }} />
-      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{(s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span> : ""}</span>
+      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{(s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span> : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 12 }}> · shut</span> : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · well fouled</span> : ""}</span>
     </button>
   );
 
@@ -6577,6 +6700,11 @@ function MonsterVillage() {
     const opener = [demeanorLine(s2, id), pickFreshIdx(`dispLine:${dispTier(npc.disp)}`, DISP_LINES[dispTier(npc.disp)])];
     if (npc.sawYouWatching) opener.push(`Before you can speak: "I saw you. The other night, in the lane, watching my door. So am I a suspect, then? Say it to my face."`);
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
+    /* a lasting affliction re-colours the room this person receives you in */
+    if (id === "marta" && s2.breadRiot) opener.push(AFFLICTION_OPENER.marta(npc.name));
+    else if (id === "liesel" && s2.tavernShut) opener.push(AFFLICTION_OPENER.liesel(npc.name));
+    else if (id === "ansel" && (s2.burned || []).includes("Old Church")) opener.push(AFFLICTION_OPENER.ansel(npc.name));
+    else if ((id === "greta" || id === "falk") && s2.wellFouled) opener.push(AFFLICTION_OPENER[id](npc.name));
     if (id === s2.monster.vid && s2.faceKnown === id && !s2.fled) opener.push(pickFreshIdx(`faceKnownOpener:${id}`, FACE_KNOWN_OPENERS)(npc.name));
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
     setS(s2); setModal(null);
