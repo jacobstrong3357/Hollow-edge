@@ -5070,6 +5070,13 @@ const ACH = [
   { id: "trusted", name: "Earned It", desc: "Prove your word is worth something to someone who doubted you.", test: (s) => !!s.gatedTrustEarned },
   { id: "keptfaith", name: "Kept Faith", desc: "Win having learned a secret, and never once let it slip.", test: (s) => s.over.win && s.npcs.some((x) => x.secretKnown) && !Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
   { id: "looselips", name: "Loose Lips", desc: "A secret you shared reached the one it was about.", test: (s) => Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
+  { id: "interview_vampire", name: "Interview with a Vampire", desc: "Sit down and question the thing itself — while it wears a Vampire.", test: (s) => monsterOf(s).id === "vampire" && (s.askedLog[s.monster.vid] || []).length > 0 },
+  { id: "say_my_name", name: "Say My Name", desc: "End a Doppelgänger.", test: (s) => s.over.win && monsterOf(s).id === "doppel" },
+  { id: "baskervilles", name: "Hound of the Baskervilles", desc: "End a Hellhound.", test: (s) => s.over.win && monsterOf(s).id === "hellhound" },
+  { id: "not_today_satan", name: "Not Today, Satan", desc: "End a Demon.", test: (s) => s.over.win && monsterOf(s).id === "demon" },
+  { id: "eat_cake", name: "Let Them Eat Cake", desc: "Win a village that rioted for its bread.", test: (s) => s.over.win && !!s.breadRiot },
+  { id: "last_orders", name: "Last Orders", desc: "Win a village whose tavern went dark.", test: (s) => s.over.win && !!s.tavernShut },
+  { id: "ashes", name: "Ashes to Ashes", desc: "Win a village whose church burned.", test: (s) => s.over.win && (s.burned || []).includes("Old Church") },
 ];
 
 /* The village falls: brutal, specific, permanent. Every surviving soul gets
