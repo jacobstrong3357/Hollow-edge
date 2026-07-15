@@ -2218,6 +2218,7 @@ function resolveNight(prev, planIn, preEvents) {
      and it chose not to. That is not nothing: it knows your face now. -- */
   if (mods.hideSpared && !s.over) {
     s.monsterSawYou = true;
+    s.wasSpared = true;
     if (s.monsterFancies) s.bond = (s.bond || 0) + 1;
     s.clues.push(`Night ${n}: hidden in the dark, you were found and let go, addressed in a voice warped past knowing. Whatever it is, it has seen your face now and chose not to use it.`);
     dawn.push(ev(`Something found you in the dark last night, close enough to end it, and chose not to. It knows your face now, whatever wears it.`, undefined, 2));
@@ -2345,6 +2346,7 @@ function resolveNight(prev, planIn, preEvents) {
               beats.push(`It goes very still. For one long breath the two of you stand together in the dark it thought it owned, and it understands, before anyone else in the village does, that you have done the arithmetic.`);
               beats.push(METHOD_KILL_LINES[guess.method]);
               beats.push(`What dies at the ${fDest} wore ${fw.name}'s face for years. No torches. No square. No rope. Just you, and the dark, and the end of it, one full night before it would have fed again.`);
+              s.wonInDark = true;
               s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fDest}: a ${guess.name}. The ${METHODS[guess.method]} ended it in the dark, before it could take one more soul.` };
               return true;
             }
@@ -4025,6 +4027,7 @@ function computeAnswer(s, id, night, q, targetId) {
         }
         s.clues.push(`Day ${s.dayNum}: you told ${npc.name} that ${target.name} is confirmed as what wears the monster's face. The village does not know yet. You do, and so does ${npc.name}.`);
       } else {
+        if (s.sideQuest.gated) s.gatedTrustEarned = true;
         quote = s.sideQuest.gated ? `"${summary}" A slow nod, mostly to themselves. "So your word is worth something after all. Fair is fair, then. Ask me what you came to ask."` : `"${summary}"`;
         s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + (useful ? 2 : 1)) } : x));
         const recip = craftAnswer(s, id);
@@ -4927,7 +4930,7 @@ function defendLabel(s, mobT) {
 
 /* ================= META · THE BLACK BOOK ================= */
 
-const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fastestWin: null, hanged: 0, nights: 0, defeated: {}, ach: [], sound: false };
+const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fastestWin: null, hanged: 0, nights: 0, defeated: {}, ach: [], sound: false, secretsFound: {} };
 
 /* A short, deliberately incomplete rulebook for the title screen: the goal
    and the rhythm of play, not the whole reference (that lives in the
@@ -4955,6 +4958,16 @@ const ACH = [
   { id: "half", name: "Half the Black Book", desc: "End eight different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 8 },
   { id: "book", name: "The Whole Black Book", desc: "End all fifteen horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= MONSTERS.length },
   { id: "asked", name: "It Asked Nicely", desc: "Receive the monster's offer.", test: (s) => s.offerMade },
+  { id: "brought_back", name: "Brought Back", desc: "Free someone from what changed them.", test: (s) => s.npcs.some((x) => x.cured) },
+  { id: "darkend", name: "In The Dark, Alone", desc: "End it yourself, before dawn, with no rite and no crowd.", test: (s) => s.over.win && s.wonInDark },
+  { id: "defiant", name: "Defiant to the End", desc: "Refuse what it offered you.", test: (s) => !!s.diedRefusingOffer },
+  { id: "joined_it", name: "One Of Its Own", desc: "Take its hand, and walk on.", test: (s) => !s.over.win && s.over.reason === "joined" },
+  { id: "newblood", name: "New Blood", desc: "End the Necromancer, the Mimic, or the Succubus.", test: (s) => s.over.win && ["necromancer", "mimic", "succubus"].includes(monsterOf(s).id) },
+  { id: "gravedigger", name: "Dug It Up Yourself", desc: "Find the reopened grave with your own two hands.", test: (s) => !!s.necroGraveFound },
+  { id: "spared", name: "Not Tonight", desc: "Be found, and be let go.", test: (s) => !!s.wasSpared },
+  { id: "trusted", name: "Earned It", desc: "Prove your word is worth something to someone who doubted you.", test: (s) => !!s.gatedTrustEarned },
+  { id: "keptfaith", name: "Kept Faith", desc: "Win having learned a secret, and never once let it slip.", test: (s) => s.over.win && s.npcs.some((x) => x.secretKnown) && !Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
+  { id: "looselips", name: "Loose Lips", desc: "A secret you shared reached the one it was about.", test: (s) => Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
 ];
 
 /* The village falls: brutal, specific, permanent. Every surviving soul gets
@@ -5169,6 +5182,7 @@ function MonsterVillage() {
   const [showHowTo, setShowHowTo] = useState(false);
   const [showBestiaryHome, setShowBestiaryHome] = useState(false);
   const [showStatsHome, setShowStatsHome] = useState(false);
+  const [showSecretsHome, setShowSecretsHome] = useState(false);
   const [snd, setSndOn] = useState(false);
   const [dawnDone, setDawnDone] = useState(false);
   const [dayEventsExpanded, setDayEventsExpanded] = useState(false);
@@ -5216,6 +5230,19 @@ function MonsterVillage() {
     const won = !!s.over.win;
     const defeated = { ...meta.defeated };
     if (won) defeated[s.monster.type] = (defeated[s.monster.type] || 0) + 1;
+    /* every secret the player ever learned, across every game, filed under
+       that villager's own name: a second collection alongside the Black
+       Book, since each villager only ever carries one secret PER GAME but
+       the pool behind it (SECRET_POOL) is small enough to fill in over time. */
+    const secretsFound = { ...(meta.secretsFound || {}) };
+    s.npcs.forEach((npc) => {
+      if (npc.secretKnown && s.secretPick && s.secretPick[npc.id] != null && SECRET_POOL[npc.id]) {
+        const idx = s.secretPick[npc.id] % SECRET_POOL[npc.id].length;
+        const arr = secretsFound[npc.id] ? [...secretsFound[npc.id]] : [];
+        if (!arr.includes(idx)) arr.push(idx);
+        secretsFound[npc.id] = arr;
+      }
+    });
     const next = {
       ...meta,
       games: meta.games + 1,
@@ -5227,6 +5254,7 @@ function MonsterVillage() {
       hanged: meta.hanged + s.deaths.filter((d) => d.kind === "executed").length,
       nights: meta.nights + s.nightNum,
       defeated,
+      secretsFound,
       ach: [...meta.ach],
     };
     const earned = ACH.filter((a) => !next.ach.includes(a.id) && a.test(s, next)).map((a) => a.id);
@@ -5361,10 +5389,14 @@ function MonsterVillage() {
                 <span>streak <span style={{ color: C.parch }}>{meta.streak}</span> · best {meta.bestStreak}</span>
                 <span>{meta.fastestWin ? <>fastest: night <span style={{ color: C.parch }}>{meta.fastestWin}</span></> : `${meta.nights} nights walked`}</span>
               </button>
-              <div className="mvIn mt-2 flex gap-4" style={{ animationDelay: "1.3s" }}>
+              <div className="mvIn mt-2 flex gap-4 flex-wrap" style={{ animationDelay: "1.3s" }}>
                 <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
                   onClick={() => setShowAch(true)}>
                   ✠ Deeds {meta.ach.length}/{ACH.length}
+                </button>
+                <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
+                  onClick={() => setShowSecretsHome(true)}>
+                  ✒ Secrets {Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)}/{Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)}
                 </button>
                 <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
                   onClick={() => setShowHowTo(true)}>
@@ -5451,6 +5483,39 @@ function MonsterVillage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+        {showSecretsHome && meta && (
+          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowSecretsHome(false)}>
+            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-baseline justify-between">
+                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Secrets Kept</span>
+                <button onClick={() => setShowSecretsHome(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+              </div>
+              <p style={{ fontSize: 12, color: C.inkDim }} className="mt-1">Every human secret you've ever drawn out of a neighbour, across every game you've played. Each villager only ever carries one per game - it can take a few playthroughs to hear them all.</p>
+              {NPC_DEFS.map((n) => {
+                const pool = SECRET_POOL[n.id] || [];
+                const found = (meta.secretsFound && meta.secretsFound[n.id]) || [];
+                return (
+                  <div key={n.id} className="py-3" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
+                    <div className="flex items-center gap-3">
+                      <Portrait id={n.id} size={40} />
+                      <div className="flex items-baseline gap-2">
+                        <span className="mv-display" style={{ fontSize: 15 }}>{n.name} {n.role}</span>
+                        <span style={{ fontSize: 12, color: C.inkDim }}>{found.length} of {pool.length} known</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {pool.map((sec, i) => (
+                        <p key={i} style={{ fontSize: 13, color: found.includes(i) ? C.ink : C.inkDim, fontStyle: found.includes(i) ? "normal" : "italic" }}>
+                          {found.includes(i) ? sec.short : "????? - not yet learned"}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -5549,6 +5614,7 @@ function MonsterVillage() {
       setS({
         ...s,
         pendingOffer: null,
+        diedRefusingOffer: true,
         nightBeats: ["It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting.", ...deathBeats],
         beatTitle: `NIGHT ${s.nightNum} · REFUSED`,
         phase: "night",
