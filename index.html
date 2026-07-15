@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Hollow's Edge</title>
-<meta name="description" content="A village. Five nights. Something among you." />
+<meta name="description" content="A village. As many nights as it takes. Something among you." />
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -1203,23 +1203,51 @@ const HIDE_INTRO_LINES = [
   (l) => `You smell it before you hear anything: cold earth and old iron on the air of the lane ahead, and under it, faint, something lately dead. It is coming your way at a walk.`,
   (l) => `Two gates down, hinges creak, one after another, each nearer than the last. Something is coming through the yards instead of down the lane, and it is not troubling to be quiet about it.`,
 ];
+/* The concealment itself: how you disappear. What happens next is a
+   separate beat (HIDE_RESOLVE_*), never folded silently into this line, so
+   the payoff always gets its own moment on screen instead of vanishing
+   into a grey lead-in. */
 const HIDE_CHOICES = {
   doorway: [
-    "You fold yourself into a doorway's shadow, flat, and hold your breath. Whatever it is passes close enough to touch, close enough, for one bad second, to half-see.",
-    "You press into a doorway until the wood bites your back, and it goes by an arm's length away - a smell of cold earth with it, and a tread that isn't in any hurry.",
-    "You slide into the nearest doorway and become part of the frame, cheek against the cold wood, listening to the tread come level with you and, after a lifetime, go past.",
+    "You fold yourself into a doorway's shadow, flat, and hold your breath.",
+    "You press into a doorway until the wood bites your back.",
+    "You slide into the nearest doorway and become part of the frame, cheek against the cold wood.",
   ],
   shadow: [
-    "You drop low behind the nearest wall, trough, whatever the dark offers, and become a shape among shapes. It goes by, or it doesn't. You do not look up to check which.",
-    "You go down behind a rain barrel and stop being a person, become a sack, a stump, nothing worth pausing for. The steps pass. Eventually your knees agree to work again.",
-    "You fold down into the black beside a water butt and let the dark do the rest. Whatever passes, passes within a spade's length of your bowed head, and does not pause.",
+    "You drop low behind the nearest wall, trough, whatever the dark offers, and become a shape among shapes.",
+    "You go down behind a rain barrel and stop being a person, become a sack, a stump, nothing worth pausing for.",
+    "You fold down into the black beside a water butt and let the dark do the rest.",
   ],
   still: [
     "You stand exactly where you are and go as still as the stones, telling yourself stillness is its own kind of hiding. It may not be.",
-    "You freeze in the open like a hare under a hawk, every instinct screaming two different orders at once. Whatever passes, passes. Whether it marked you, the dark keeps to itself.",
-    "You stop where you stand, mid-lane, and give the night nothing that moves. The tread comes on, and level, and past. Your heart bangs loud enough to betray you, and somehow does not.",
+    "You freeze in the open like a hare under a hawk, every instinct screaming two different orders at once.",
+    "You stop where you stand, mid-lane, and give the night nothing that moves.",
   ],
 };
+/* The payoff, always its own beat, never a throwaway line: what the thing
+   you hid from actually does. Most nights it simply passes (HIDE_RESOLVE_
+   PASS). Sometimes something else pulls its attention off you entirely
+   (HIDE_RESOLVE_DISTRACT). Rarely, and only when what was coming really was
+   the horror itself, it knows exactly where you are and lets you keep
+   breathing anyway (HIDE_RESOLVE_SPARE) - the one moment in the whole walk
+   where it looks back. */
+const HIDE_RESOLVE_PASS = [
+  (l) => `It passes without slowing, close enough to touch, and does not so much as turn its head. When the lane is empty again, you let yourself breathe, and go on toward the ${l}.`,
+  (l) => `Whatever it is keeps its own pace and its own business, and neither breaks for you. You count to fifty after it is gone before your legs agree to work again, then go on toward the ${l}.`,
+  (l) => `It goes by, unhurried, and the last of it - a hem, a shadow, you cannot swear which - is gone around the corner before your heart finds its ordinary rhythm again. You go on toward the ${l}.`,
+  (l) => `The tread reaches you, holds level a long moment, and moves on without pausing. Whatever it was looking for tonight, it did not look here. You go on toward the ${l} on legs that do not quite trust the ground yet.`,
+];
+const HIDE_RESOLVE_DISTRACT = [
+  (l) => `Something else moves first: a cat off a wall, a loose slate, a fox breaking cover. Whatever was closing the distance breaks toward the sound instead, and is gone before you can be properly grateful. You go on toward the ${l}.`,
+  (l) => `A dog starts up two doors down, frantic, and the tread in the lane peels off toward it instead of coming on. You do not wait to learn how that ends. You go on toward the ${l}.`,
+  (l) => `A shutter bangs somewhere behind you, and whatever was closing on you changes course toward the noise, in no hurry, as if it had all night to look into it instead. You do not test whether it comes back. You go on toward the ${l}.`,
+  (l) => `Out past the last wall, something else moves - too loud, too careless to be it - and draws the tread away at an angle, toward whatever made the racket. You use the gift and go on toward the ${l}.`,
+];
+const HIDE_RESOLVE_SPARE = [
+  (l) => `It stops. It knows exactly where you are - you can feel the knowing, like a hand almost laid on your shoulder - and it does not reach for you. A voice comes instead, warped past any recognizing, almost gentle: "You shouldn't be out in the dark, little one." Then it is simply gone, and you are simply still standing there, alive, and cannot say why.`,
+  (l) => `It could have you, and does not take you. For one endless breath you are looked at properly, the way nothing has looked at you in years, and then something that might be amusement moves through the dark. "Not tonight," says a voice you could never describe to another living soul. It is gone before you can decide whether you imagined it.`,
+  (l) => `It draws level with your hiding place and simply waits there, a long moment, deciding something. Whatever it decides, it does not cost you anything tonight. "Go home," says a voice with no business being that quiet, that close. You do, on legs you do not remember telling to move.`,
+];
 /* ---------- the held breath: staged suspense before a dangerous choice
    resolves. Lines land one at a time, slow, before the outcome shows. */
 const TENSION_APPROACH = [
@@ -2140,6 +2168,15 @@ function resolveNight(prev, planIn, preEvents) {
   const beats = [...preBeats];
   const mods = plan.mods || {};
   const monsterNpc = npcById(s, s.monster.vid);
+
+  /* -- the rare hide-beat spare: it truly was the horror, it truly had you,
+     and it chose not to. That is not nothing: it knows your face now. -- */
+  if (mods.hideSpared && !s.over) {
+    s.monsterSawYou = true;
+    if (s.monsterFancies) s.bond = (s.bond || 0) + 1;
+    s.clues.push(`Night ${n}: hidden in the dark, you were found and let go, addressed in a voice warped past knowing. Whatever it is, it has seen your face now and chose not to use it.`);
+    dawn.push(ev(`Something found you in the dark last night, close enough to end it, and chose not to. It knows your face now, whatever wears it.`, undefined, 2));
+  }
 
   /* event incidents */
   let evFight = null, evPair = null, evWander = null, evOdd = [], evSweepFind = null, evSweepSense = null;
@@ -5102,7 +5139,7 @@ function MonsterVillage() {
 
   /* -- heartbeat when the walk turns dangerous -- */
   useEffect(() => {
-    const danger = walk && (walk.stage === "hide" || walk.stage === "fate" || (walk.stage === "chased" && walk.facts.active) || (walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc));
+    const danger = walk && (walk.stage === "hide" || walk.stage === "hidden" || walk.stage === "fate" || (walk.stage === "chased" && walk.facts.active) || (walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc));
     Snd.beat(!!danger);
   }, [walk]);
 
@@ -5466,7 +5503,12 @@ function MonsterVillage() {
     }
     if (facts.evn && facts.eventLoc !== loc) queue.push("event");
     if (facts.wx !== "storm" && chance(0.55)) queue.push("sound");
-    if (facts.active && (facts.huntLoc === loc || chance(0.25))) queue.push("hide");
+    /* Whether this hide beat is really the horror (huntLoc === loc) or an
+       ambiguous phantom (the flat 25% roll, which might be nothing at all)
+       is decided here, once, and carried on the walk: it gates whether the
+       rare "spared" resolution can ever fire. */
+    let hideIsMonster = false;
+    if (facts.active && (facts.huntLoc === loc || chance(0.25))) { queue.push("hide"); hideIsMonster = facts.huntLoc === loc; }
     queue.push("approach");
     /* "company": every OTHER living villager (besides the monster, and
        besides whoever the "lane" node already covered) whose sampled
@@ -5477,7 +5519,7 @@ function MonsterVillage() {
     if (company.length) queue.push("company");
     queue.push("return");
     setModal(null);
-    setWalk({ mode: "out", loc, facts, mods: {}, queue, lane, company, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
+    setWalk({ mode: "out", loc, facts, mods: {}, queue, lane, company, hideIsMonster, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
   };
 
   const commitWalk = (extra) => nightfall({ kind: "out", loc: extra.loc || walk.loc, mods: { ...walk.mods, ...extra, closureLine: walk.closureLine || null }, facts: walk.facts });
@@ -5571,7 +5613,18 @@ function MonsterVillage() {
     advanceAfterSearch(walk, newMods, []);
   };
 
-  const chooseHide = (choice) => { Snd.relief(); setWalk({ ...walk, mods: { ...walk.mods, hid: choice }, stage: nextStage(walk, "hide"), pre: [pick(HIDE_CHOICES[choice]), `When the lane is empty again, you go on toward the ${walk.loc}.`] }); };
+  const chooseHide = (choice) => {
+    Snd.relief();
+    const roll = Math.random();
+    const spared = walk.hideIsMonster && roll < 0.12;
+    const distracted = !spared && roll < 0.4;
+    const resolve = spared
+      ? pickFreshIdx("hideResolveSpare", HIDE_RESOLVE_SPARE)(walk.loc)
+      : distracted
+      ? pickFreshIdx("hideResolveDistract", HIDE_RESOLVE_DISTRACT)(walk.loc)
+      : pickFreshIdx("hideResolvePass", HIDE_RESOLVE_PASS)(walk.loc);
+    setWalk({ ...walk, mods: { ...walk.mods, hid: choice, hideSpared: spared }, stage: "hidden", hideResolve: resolve, pre: [pick(HIDE_CHOICES[choice])] });
+  };
 
   const chooseStyle = (style) => {
     if ((style === "ground" || style === "wait") && walk.vigilRoll) setWalk({ ...walk, vigilStyle: style, stage: "vigil", pre: [] });
@@ -5820,6 +5873,12 @@ function MonsterVillage() {
                 <Btn full kind="amber" onClick={() => chooseHide("shadow")}>Drop into shadow and wait it out</Btn>
                 <Btn full kind="red" onClick={() => chooseHide("still")}>Stand very still, and hope</Btn>
                 <Btn full onClick={() => setWalk({ ...walk, mods: { ...walk.mods, approach: "back" }, stage: "return", pre: [], closureLine: "You give the night back its road and go home the way you came, one careful step at a time. You do not learn what it was. You are alive not to know." })}>Back away the way you came. Home</Btn>
+              </div>
+            )}
+            {!isWatch && walk.stage === "hidden" && (
+              <div className="flex flex-col gap-2">
+                {beat(walk.hideResolve, walk.mods.hideSpared ? C.turn : C.redBright)}
+                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "hide"), pre: [] })}>Breathe again →</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "approach" && danger && (
@@ -6226,10 +6285,12 @@ function MonsterVillage() {
         {LOCS.map((l) => locBtn(l, () => startWalk(l), 56))}
         <button onClick={() => startWalk(pick(LOCS))} className="mv-btn rounded w-full overflow-hidden relative"
           style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
-          <Scene loc="Village Square" kind="quiet" height={56} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.9) 0%, rgba(8,10,18,0.12) 72%)" }} />
-          <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 18, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>Patrol the Lanes</span>
-          <span style={{ position: "absolute", left: 12, bottom: 5, color: C.dim, fontSize: 10.5, textShadow: "0 1px 6px #000" }}>no destination · the night picks your road</span>
+          <Scene loc="Village Square" kind="quiet" height={72} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.92) 0%, rgba(8,10,18,0.15) 72%)" }} />
+          <div style={{ position: "absolute", left: 12, right: 10, bottom: 6, display: "flex", flexDirection: "column", gap: 1 }}>
+            <span className="mv-display" style={{ color: C.parch, fontSize: 13, letterSpacing: 0.5, textShadow: "0 1px 6px #000", lineHeight: 1.15, whiteSpace: "nowrap" }}>Patrol the Lanes</span>
+            <span style={{ color: C.dim, fontSize: 9.5, textShadow: "0 1px 6px #000", lineHeight: 1.25 }}>no destination · the night picks your road</span>
+          </div>
         </button>
       </div>
       {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Patrolling the lanes means walking without a destination and letting the night decide what you run into. What hunts by night notices being hunted.</p>}
