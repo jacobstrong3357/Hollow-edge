@@ -549,6 +549,44 @@ const GOSSIP_NAMED = [
   (name) => `Two low voices: "\u2026just saying, ${name} wasn't at the burying. Who misses a burying\u2026"`,
   (name) => `"\u2026watch ${name}'s chimney," someone murmurs. "Cold three nights running. Where do they cook? Where do they SLEEP?"`,
 ];
+/* ---------- the daylight search, lived ----------
+   A daytime search is a scene, not a die roll: the village is awake around
+   you while you work. These pools add texture only - a face, a whisper, and
+   now and then something small and quietly wrong - and never touch the odds
+   of actually finding a sign. */
+const DAY_SEARCH_STYLES = {
+  ground: { label: "Quarter the ground, slow and low", line: (l) => `You start with the earth itself: hands and knees where it matters, reading the ${l} a stride at a time, the way you'd read a letter with bad news in it.` },
+  walls: { label: "Work the walls, posts and hedges", line: (l) => `You give the morning to everything at shoulder height and below: fence rails, door posts, the hedge-line, every place a passing thing might have left a little of itself behind.` },
+  listen: { label: "Stand a while, and let the place talk", line: (l) => `You find a spot at the edge of the ${l} and stand in it, longer than feels reasonable, letting the place forget you are there before you start looking.` },
+};
+const DAY_SEARCH_FOLK = [
+  (nm, l) => `${nm} is at the ${l} too, on some business of their own, and gives you a nod that says everyone's errands are strange now.`,
+  (nm, l) => `You cross paths with ${nm} partway through. Neither of you asks what the other is looking for. Neither of you has to.`,
+  (nm, l) => `${nm} watches you work the ground for a while before moving on. "Find it," they say, quietly, and do not stop to hear an answer.`,
+  (nm, l) => `${nm} passes with a basket and does not stop, but their eyes go to the same corners yours do. Everyone reads the ground now.`,
+  (nm, l) => `${nm} lingers at the edge of the ${l}, arms folded. "My grandmother searched like that," they offer, "the winter nobody names." Then they leave you to it.`,
+  (nm, l) => `Halfway through the morning, ${nm} appears with something wrapped in cloth: bread, still warm. "You're the only one doing anything," they say, and go before you can argue with either half of that.`,
+];
+const DAY_GOSSIP = [
+  `Two women pass with baskets, voices low: "\u2026counted the candles in the church and there's one gone missing\u2026" They hush when they see you looking.`,
+  `From over a wall: "\u2026won't let the children past the well anymore, not since\u2026" The voices move off before the since.`,
+  `A knot of men by the fence: "\u2026said the milk turned in the pail the same morning it happened. The pail, mind\u2026" They scatter to their work when you straighten up.`,
+  `Somewhere behind you: "\u2026asked the priest, and the priest said pray. That's when I knew he didn't know either\u2026"`,
+  `"\u2026third dog this week gone off its feed," someone says, passing, and someone else answers with nothing at all.`,
+  `Two children run by playing a counting game you have never heard, and the words of it snag on you: "\u2026one for the door and one for the dark and one for the one who knocks\u2026" They made it up this week. Children always know first.`,
+];
+/* small, quiet traces the thing leaves in the daylight: never a sign, never
+   proof, just a note of being watched. Slightly likelier on ground it
+   actually hunts, so the unease is a whisper of signal, not a handout. */
+const DAY_TRACES = [
+  (l) => `Somewhere off across the ${l}, someone is humming: a slow tune, patient, almost fond. It stops the moment you stand still to place it, and does not start again.`,
+  (l) => `A child's giggle, short and bright, from a corner of the ${l} with no child in it. When you look, a bird lifts off. You choose to believe it was always a bird.`,
+  (l) => `Scratched small and neat into a post, fresh this morning: a tally. Six strokes. You do not know of six of anything. Yet.`,
+  (l) => `Pebbles on the ground at the ${l}, set in a tidy little ring, too deliberate for children and too careful for weather. You scatter them with your boot, and feel watched doing it.`,
+  (l) => `The back of your neck prickles halfway across the ${l}, and something, very far off or very close, hums three notes. Kind ones. That is somehow worse.`,
+  (l) => `In the dust low on a wall of the ${l}, in a fine small hand: "STILL LOOKING?" The morning's rain-spots have not touched it.`,
+  (l) => `A whistle starts up somewhere past the ${l}, the kind a man uses to call a dog. No dog comes. It goes on a while, unbothered, and you never find the mouth it belongs to.`,
+];
 /* Gore is told through the village's mouths, mostly committing to one grim,
    specific detail; one or two entries keep the contradictory-accounts device
    in reserve, where fear does its own butchery and none of it names the creature. */
@@ -1161,6 +1199,13 @@ const TURNED_RAVING = [
   `"Count us," they whisper, leaning in too close. "Go on. Count us at the well tomorrow. The number's wrong. It's been wrong for days and only I can hear it." They tap their own temple, gently, again and again.`,
   `They recite your own history back at you, dates and names, flat and word-perfect, and finish with something that was never in it: "...and you die at the Graveyard, I think. Or the Tavern. He hasn't decided yet. He does like to be asked nicely."`,
   `"Shh." They put a finger to their lips, delighted, conspiratorial. "You'll wake the others. There are so many of us now. You just haven't finished counting."`,
+];
+/* The moment the examination lands: the pretence drops in the room, with
+   you standing in it. Leads straight into the raving interview above. */
+const TURNED_FACED = [
+  (nm) => `${nm} hears the verdict and does not argue with it. Something behind the eyes shifts its weight instead, unhurried, and looks out at you with a new frankness. The pretence is done with. You are in the room with what is left, and it is willing to talk.`,
+  (nm) => `The word "changed" lands, and ${nm} - what wears ${nm} now - lets the shoulders drop, the way an actor lets a part go at the door. "Well," they say, mildly. "That took everyone so long." Ask what you will of it.`,
+  (nm) => `${nm} does not weep, and does not protest, and that is the worst of it. They simply fold their hands and wait, patient as a held breath, while the doctor backs out of reach. Whatever you would ask, ask it now, while it is still amused enough to answer.`,
 ];
 
 const WALK_SOUND_LINES = [
@@ -3335,6 +3380,16 @@ function actSearch(prev, loc) {
     s.dayEvents.push(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`));
     return s;
   }
+  /* --- the village is awake around you while you work: one social beat,
+     sometimes, before the ground gives its answer. Texture only - none of
+     this touches the find odds below. --- */
+  const folk = s.npcs.filter((x) => x.alive && !x.fled);
+  if (folk.length && chance(0.4)) {
+    const w = pick(folk);
+    s.dayEvents.push(ev(pickFreshIdx("daySearchFolk", DAY_SEARCH_FOLK)(w.name, loc), w.id, 0));
+  } else if (chance(0.5)) {
+    s.dayEvents.push(ev(pickFreshIdx("dayGossip", DAY_GOSSIP), undefined, 0));
+  }
   const unfound = s.locEvidence[loc].filter((sg) => !s.foundSigns.includes(sg));
   /* last night's weather works for you or against you by daylight */
   const lastWx = (s.nightLogs[s.nightLogs.length - 1] || {}).weather;
@@ -3342,7 +3397,13 @@ function actSearch(prev, loc) {
   if (unfound.length && chance(dayFindP)) {
     const sg = pick(unfound);
     s.foundSigns.push(sg);
-    s.dayEvents.push(ev(`Searching the ${loc} in daylight, you find it. ${senseFor(sg)} ${lastWx === "frost" ? "The frost held it for you overnight, sharp as the moment it was made." : "Fainter than it would have been by night, but real."}`));
+    /* the sign is sometimes carried by a small dead thing instead of lying
+       bare on the ground: same find, same odds, told closer to home. Only
+       signs whose animal vignettes read right by daylight qualify. */
+    const dayAnimal = ["bite", "claw", "tracks", "flora", "hex"].includes(sg) && chance(0.4);
+    s.dayEvents.push(ev(dayAnimal
+      ? `Your search of the ${loc} finds its answer in a small dead thing. ${animalSignScene(sg)}`
+      : `Searching the ${loc} in daylight, you find it. ${senseFor(sg)} ${lastWx === "frost" ? "The frost held it for you overnight, sharp as the moment it was made." : "Fainter than it would have been by night, but real."}`));
   } else if (lastWx === "storm") {
     s.dayEvents.push(ev(`The storm did the ${loc} no favours: mud over everything, the ground churned and rinsed, every mark scoured down to guesses. If it knew the rain was coming, it chose its night well.`));
   } else {
@@ -3352,6 +3413,12 @@ function actSearch(prev, loc) {
       `The ${loc} by daylight looks like any ordinary morning. That is all it gives you.`,
       `You go over the ${loc} in good light and find only the prints of everyone who has walked it since dawn, your own among them.`,
     ])));
+  }
+  /* --- and now and then, last of all, the thing lets you know it noticed:
+     a hum, a giggle, a small mark. Never a sign, never proof - a whisper
+     likelier on the ground it actually keeps. --- */
+  if (chance(monsterOf(s).hunts.includes(loc) ? 0.3 : 0.12)) {
+    s.dayEvents.push(ev(pickFreshIdx("dayTraces", DAY_TRACES)(loc), undefined, 0));
   }
   return s;
 }
@@ -6697,12 +6764,13 @@ function MonsterVillage() {
   const runSearchScene = (loc) => {
     setModal(null);
     const next = actSearch(s, loc);
-    const fresh = next.dayEvents.slice(s.dayEvents.length).map((e) => e.t);
+    /* keep who said what: portraits ride along with the beats */
+    const fresh = next.dayEvents.slice(s.dayEvents.length);
     setS(next);
-    setDayScene({ loc, beats: fresh, open: pickFreshIdx("daySearchOpen", [
-      (l) => `You give the daylight to the ${l}, quartering the ground slowly, stopping at everything that looks wrong.`,
-      (l) => `Morning light is honest light. You walk the ${l} end to end with your eyes down and your collar up.`,
-      (l) => `You take the ${l} a stride at a time, reading the ground the way Old Tobias taught you: slowly, twice.`,
+    setDayScene({ loc, beats: fresh, stage: "arrive", idx: 0, open: pickFreshIdx("daySearchOpen", [
+      (l) => `The ${l} lies open under the morning light, ordinary and unhelpful, keeping whatever it keeps. The daylight is yours. How will you spend it?`,
+      (l) => `Morning light is honest light, and the ${l} sits in it looking like it has nothing to hide. That is what everything looks like now. The daylight is yours. How will you spend it?`,
+      (l) => `You reach the ${l} with the dew still down, before the village can trample whatever the night left. The daylight is yours. How will you spend it?`,
     ])(loc) });
   };
 
@@ -6710,23 +6778,56 @@ function MonsterVillage() {
     <div className="flex flex-col gap-1.5">{LOCS.map((l) => locBtn(l, () => runSearchScene(l), 46))}</div>
   ));
 
-  const daySceneModal = dayScene && (
-    <div className="fixed inset-0 z-40 mv-body overflow-hidden" style={{ background: `linear-gradient(#2A2F3E, ${C.bg} 75%)`, color: C.parch }}>
-      <div className="max-w-md mx-auto h-full flex flex-col">
-        <Scene loc={dayScene.loc} kind="quiet" height={120} />
-        <div className="px-6 pt-4 pb-10 flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="mv-display" style={{ fontSize: 14, letterSpacing: 3, color: C.amber }}>DAY {s.dayNum} · THE {dayScene.loc.toUpperCase()}</div>
-          <p className="mt-4" style={{ fontSize: 14.5, color: "rgba(233,223,200,0.6)", lineHeight: 1.5 }}>{dayScene.open}</p>
-          <div className="mt-4">
-            {dayScene.beats.map((t, i) => (
-              <p key={i} className="mt-3 first:mt-0" style={{ fontSize: 16, lineHeight: 1.5 }}><SpokenText text={t} speed={35} /></p>
-            ))}
+  const daySceneModal = dayScene && (() => {
+    /* the daylight search, staged: choose how to work the place, then live
+       the morning's findings one beat at a time. The choice is texture -
+       everything the search will yield was already settled in actSearch -
+       but the morning is lived, not read off a card. */
+    const beats = dayScene.beats || [];
+    const arriving = dayScene.stage !== "beats";
+    const idx = Math.min(dayScene.idx || 0, Math.max(0, beats.length - 1));
+    const beatEl = (e, i, spoken) => {
+      const npc = e.pid ? npcById(s, e.pid) : null;
+      return (
+        <div key={i} className="mt-3 first:mt-0 flex gap-3 items-start">
+          {npc && <div className="shrink-0 mt-0.5"><Portrait id={npc.id} size={40} dead={!npc.alive} turnedKnown={npc.turned && npc.known} /></div>}
+          <p style={{ fontSize: 16, lineHeight: 1.5 }}>{spoken ? <SpokenText text={e.t} speed={35} /> : e.t}</p>
+        </div>
+      );
+    };
+    return (
+      <div className="fixed inset-0 z-40 mv-body overflow-hidden" style={{ background: `linear-gradient(#2A2F3E, ${C.bg} 75%)`, color: C.parch }}>
+        <div className="max-w-md mx-auto h-full flex flex-col">
+          <Scene loc={dayScene.loc} kind="quiet" height={120} />
+          <div className="px-6 pt-4 pb-10 flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+            <div className="mv-display" style={{ fontSize: 14, letterSpacing: 3, color: C.amber }}>DAY {s.dayNum} · THE {dayScene.loc.toUpperCase()}</div>
+            <p className="mt-4" style={{ fontSize: 14.5, color: "rgba(233,223,200,0.6)", lineHeight: 1.5 }}>{dayScene.open}</p>
+            {arriving && (
+              <div className="mt-4 flex flex-col gap-2">
+                {Object.entries(DAY_SEARCH_STYLES).map(([k, st]) => (
+                  <Btn key={k} full kind="amber" onClick={() => setDayScene({ ...dayScene, stage: "beats", styleLine: st.line(dayScene.loc), idx: 0 })}>{st.label}</Btn>
+                ))}
+              </div>
+            )}
+            {!arriving && (
+              <div className="mt-4">
+                <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{dayScene.styleLine}</p>
+                <div className="mt-3">
+                  {beats.slice(0, idx).map((e, i) => beatEl(e, i, false))}
+                  {beats.length > 0 && beatEl(beats[idx], idx, true)}
+                </div>
+                <div className="mt-6">
+                  {idx < beats.length - 1
+                    ? <Btn full kind="amber" onClick={() => setDayScene({ ...dayScene, idx: idx + 1 })}>Look on →</Btn>
+                    : <Btn full kind="amber" onClick={() => setDayScene(null)}>Back to the village →</Btn>}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="mt-6"><Btn full kind="amber" onClick={() => setDayScene(null)}>Back to the village →</Btn></div>
         </div>
       </div>
-    </div>
-  );
+    );
+  })();
 
   const nightWalkModal = modal === "nightwalk" && modalWrap("Search where tonight?", (
     <div>
@@ -7078,11 +7179,30 @@ function MonsterVillage() {
     );
   })();
 
+  /* A positive finding is not a result card: you are in the room with what
+     your neighbour has become. The interview opens right there, unasked and
+     free - the exam already cost the daylight. */
+  const runExamine = (id) => {
+    setModal(null); setProfile(null);
+    const wasKnown = (npcById(s, id) || {}).known;
+    const next = actLookOver(s, id);
+    const fresh = next.dayEvents.slice(s.dayEvents.length);
+    setS(next);
+    const npc2 = npcById(next, id);
+    if (npc2 && npc2.alive && npc2.turned && npc2.known && !wasKnown && !next.over) {
+      const opener = [...fresh.map((e) => e.t), pickFreshIdx("turnedFaced", TURNED_FACED)(npc2.name)];
+      const valid = next.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
+      setIv({ id, night: valid.length ? valid[valid.length - 1] : next.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })) });
+      return;
+    }
+    if (!next.over && fresh.length) setSheet(fresh);
+  };
+
   const examineModal = modal === "examine" && modalWrap("Have whom examined for the change?", (
     <div className="flex flex-col gap-2">
       <p style={{ color: C.dim, fontSize: 13 }}>Some horrors do not kill their victims. They <strong style={{ color: C.turn }}>change</strong> them: the body walks and talks and passes for itself, but it belongs to the thing now, and lies for it. Doctor Falk can feel the coldness of a changed soul's blood, and name one to you. Greta examines Falk himself, if it comes to that.</p>
       <p style={{ color: C.dim, fontSize: 12 }}>A clean result proves little. And if your examiner has already been changed, they will call their own kind clean, so a clearance you later find was false points straight at whoever gave it.</p>
-      {aliveNpcs(s).map((n) => villagerBtn(n, () => doAction((x) => actLookOver(x, n.id))))}
+      {aliveNpcs(s).map((n) => villagerBtn(n, () => runExamine(n.id)))}
     </div>
   ));
 

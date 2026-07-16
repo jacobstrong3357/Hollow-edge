@@ -67,6 +67,23 @@ must name both WHO and WHAT before the village runs out of people.
   "the ${loc}" phrasing. Beats are full paragraphs; morning dawn cards are
   capped at 5 (ranked by `pri`).
 
+## Daylight search & the exam
+
+- `actSearch` keeps its find odds (0.4 base; frost 0.55 / storm 0.22) —
+  never raise them. The *experience* around the roll is where richness
+  lives: an optional villager/gossip texture beat before the result, an
+  animal-carried presentation of a found sign (`ANIMAL_SIGN`, day-safe
+  subset only: bite/claw/tracks/flora/hex), and a rare subtle monster
+  trace afterward (`DAY_TRACES`: humming, a giggle, a small message —
+  never diagnostic, slightly likelier on its actual hunting ground).
+- The day search plays as a staged scene (`runSearchScene`/`daySceneModal`):
+  pick an approach (cosmetic — outcome already settled), then beats reveal
+  one at a time. Beats are `ev` objects so portraits ride along.
+- `runExamine` wraps `actLookOver`: a positive "changed" finding opens the
+  interview with the turned villager immediately (free — the exam already
+  cost the daylight), opened with a `TURNED_FACED` line; their answers are
+  the `TURNED_RAVING` pool.
+
 ## Player death / monster death
 
 - Player deaths append `DEATH_SCENES[monsterId](wearerName, where)` to the
