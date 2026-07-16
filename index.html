@@ -646,97 +646,83 @@ const MOB_ULTIMATUM = [
   (acc, tgt, reason) => `${acc} corners you before you have your bearings. "${reason}" A breath. "${tgt} hangs at dawn tomorrow unless you bring me the real one. You have tonight. Don't make me do it alone. Don't make me be wrong."`,
 ];
 
-/* The player's death is a scene, not a sentence. (name, where) => beats */
+/* The player's death is a scene, not a sentence - but a short one. Three
+   tight beats per horror, so a death reads in a breath, not a page. */
 const DEATH_SCENES = {
   werewolf: (nm, w) => [
-    `Breathing, first: close, ragged, enormous, timed to your own footsteps like something that has been pacing you for a hundred yards and finally tired of the game.`,
-    `You turn. The moon is generous. It shows you knees that bend the wrong way, shoulders too broad for any coat in the village, and in the ruin of the face, patient as a debt: ${nm}'s eyes.`,
-    `It takes you at the shoulder first, and the crunch arrives through your bones before it arrives through your ears, and the arm on that side stops being anything you own. Then you are down in the mud with the heat of its mouth working in the wound, and your own blood is in your throat now, and the screaming you can hear is coming out of you in bubbles.`,
-    `It does not stop at the kill. This is not animal hunger. It eats while you are still learning that you are dying, tugging with an almost sociable patience, like a man carving at his own table. There is a reason they carry you home in two sacks, and none of it fit for the children to watch pass.`,
+    `Breathing behind you, enormous and patient, timed to your own steps. It has been pacing you for a hundred yards, and it has tired of the game.`,
+    `You turn. The moon shows you shoulders too broad for any coat in the village, knees that bend the wrong way, and in the ruin of the face, patient as a debt: ${nm}'s eyes.`,
+    `It takes you at the shoulder first, and it does not stop at the kill. They will carry you home in two sacks, and none of it fit for the children to watch pass.`,
   ],
   vampire: (nm, w) => [
-    `Your name, said softly, from somewhere ahead on the path, in a voice that already sounds fond of you. No footsteps announced it. It has been standing there a while.`,
-    `${nm}'s face in the thin light, pale as candle-fat. "Out again," ${nm} says, warmth wrapped around the words like a blanket. "You do make it easy."`,
-    `The mouth opens too wide, and then its weight is on you, fast in a way nothing wearing a neighbour's face should be. Two clean punctures find your throat, and the pulling begins at once, steady as a man finishing a good bottle slowly on purpose.`,
-    `The cold spreads outward from the wound until it reaches your fingers, and the last thing you feel is the creature straightening your collar, tender as a parent. At dawn they find you laid out neat at the ${w}, drained past white, not a hair out of place.`,
+    `Your name, said softly from ahead on the path, in a voice that already sounds fond of you. It has been standing there a while.`,
+    `${nm}'s face in the thin light, pale as candle-fat. "Out again," ${nm} says, warm as a blanket. "You do make it easy."`,
+    `Two clean punctures find your throat, and the cold spreads to your fingers. At dawn they find you laid out neat at the ${w}, drained past white, not a hair out of place.`,
   ],
   wraith: (nm, w) => [
-    `The ${w} goes quiet in the wrong way: not silence, but the sound of every small living thing nearby deciding, all at once, to stop breathing.`,
-    `Your lantern gutters with no wind to gutter it, and something that is mostly absence stands where the path should be, wearing the shape of ${nm} the way fog wears a fence.`,
-    `You try to run and your breath does not come with you. A cold hand passes through your coat, through your ribs, and closes around the warmest thing inside you, and the last sound you make is a held note with no air left behind it.`,
-    `It does not gloat. It has no mouth to gloat with. It only takes what it came for and is gone before your knees find the ground. Your lantern burns beside the road until dawn, the only warm thing left at the ${w}, and by then the whole village knows what a lantern burning alone at that hour means.`,
+    `The ${w} goes quiet in the wrong way: every small living thing nearby stops breathing at once.`,
+    `Your lantern gutters with no wind to gutter it, and something that is mostly absence stands on the path, wearing ${nm}'s shape the way fog wears a fence.`,
+    `A cold hand passes through your ribs and closes on the warmest thing inside you. Your lantern burns beside the road until dawn, the only warm thing left at the ${w}.`,
   ],
   ghoul: (nm, w) => [
     `A wet, busy sound ahead at the ${w}: digging, or chewing, the sound of something with all night and no reason to rush.`,
-    `It looks up before you are close enough to have been heard, and under the grave-dirt caked to its face there is enough of ${nm} left to recognise, and a grin that goes back too far.`,
-    `It is on you before your knife clears your belt, stronger than a starved thing has any right to be, and its teeth close on your forearm first, worrying at it the way a dog works a joint loose.`,
-    `It does not wait for you to finish dying. It starts at the forearm it has opened, and you are alive for more of the meal than any mercy would allow, dragged hand over hand toward the soft ground, your heels cutting two long furrows you will share the grave with. The last thing you learn is why the graves nearby never stayed settled.`,
+    `It looks up before it could have heard you. Under the grave-dirt there is enough of ${nm} left to recognise, and a grin that goes back too far.`,
+    `It is on you before your knife clears your belt, and it does not wait for you to finish dying. The graves nearby never stayed settled. Now you know why.`,
   ],
   witch: (nm, w) => [
-    `A voice rides the wind ahead of you at the ${w}, reciting something soft and rhythmic in no language you know, and your feet stop obeying you exactly as the last syllable lands.`,
-    `${nm} steps out at a stroll, working a small knot of hair and thorn between finger and thumb. "There you are," ${nm} says, kindly. "Hold still. You already are."`,
-    `The knot draws tight, and somewhere behind your ribs something answers it, cinching closed like a purse-string around your own heartbeat, one slow pull at a time until the pulling has nowhere left to go.`,
-    `There is no blood, no mark, nothing for the wound-tally in the morning. You come apart the way a seam comes apart under a patient needle, and the last thread drawn loose is your name. They find you at the ${w} without a scratch on you, and Doctor Falk has no entry in his ledger for what killed you.`,
+    `A voice rides the wind at the ${w}, soft and rhythmic in no language you know, and your feet stop obeying you on the last syllable.`,
+    `${nm} steps out at a stroll, working a small knot of hair and thorn. "There you are," ${nm} says, kindly. "Hold still. You already are."`,
+    `The knot draws tight around your own heartbeat, one slow pull at a time. They find you at the ${w} without a scratch, and Doctor Falk has no entry in his ledger for what killed you.`,
   ],
   demon: (nm, w) => [
-    `Candles die in order across the village behind you as you walk, one, then the next, then the next, a countdown you can watch from the ${w} and cannot stop.`,
-    `Between one blink and the next, ${nm} is standing in front of you, and the smell of struck matches arrives a half-second late, hurrying to catch up.`,
-    `It does not touch your body. It reaches past it, into the place under your ribs where the wanting and the fearing live, and pulls, and what comes loose does not bleed, though you feel every inch of the taking, a cold hook drawn slowly the wrong way up your spine.`,
-    `"Walls," it says, in a voice with a second voice underneath it, "were never the issue." What walks home afterward wears your boots badly, answers to your name, and is found at your own table come morning, smiling in a way that unsettles everyone who loved you.`,
+    `Candles die in order across the village behind you, one, then the next: a countdown you can watch from the ${w} and cannot stop.`,
+    `Between one blink and the next, ${nm} is standing in front of you, the smell of struck matches arriving a half-second late.`,
+    `It reaches past your body and pulls something loose that does not bleed. What walks home afterward wears your boots badly, answers to your name, and smiles wrong at your own table come morning.`,
   ],
   shifter: (nm, w) => [
-    `Footsteps at the ${w} that match your own pace exactly, half a beat behind, as if something out there is learning your gait before it needs it.`,
-    `Someone is standing with their back to you, the shape unmistakably ${nm}'s, and then, without appearing to move at all, it is not.`,
-    `The claws are the only honest thing about it. Four of them open your side in one motion, with a sound like wet cloth tearing that you understand, too late, is you. It works with a tailor's economy, nothing personal in it at all, while its borrowed face keeps its borrowed calm.`,
-    `It studies your face while you die, professionally, the way a tailor studies cloth before the cut. Then it takes the face. You are almost past feeling when it starts, which is not the same as past feeling: the last thing to reach you is a careful tugging at the hairline. It will wear you to your own wake by morning, and grieve you in your own coat.`,
+    `Footsteps at the ${w} matching your pace exactly, half a beat behind, learning your gait before it needs it.`,
+    `Someone stands with their back to you, the shape unmistakably ${nm}'s, and then, without appearing to move at all, it is not.`,
+    `Four claws open your side with a tailor's economy, and it studies your face while you die. It will wear you to your own wake by morning, and grieve you in your own coat.`,
   ],
   banshee: (nm, w) => [
-    `The wail does not arrive from the ${w}. It arrives from inside your own skull, a grief that is not yours pouring in like water through a failed wall.`,
-    `Through streaming eyes you make out a thin shape trailing torn linen in the lane, and its face, when it lifts, is ${nm}'s, already mourning you.`,
-    `Blood comes warm and sudden at your ears, and underneath the wail you understand, too late, that the sound has always been a name, and the name is yours, said over and over the way it will be said at your own burying.`,
-    `Your heart hears its own dismissal and simply stops arguing: no wound, no mark, just a stillness where the beating was. They find you at the ${w} with your face fixed in an expression the village will call peaceful, and privately call something else.`,
+    `The wail does not arrive from the ${w}. It arrives from inside your own skull, a grief that is not yours pouring in.`,
+    `Through streaming eyes: a thin shape trailing torn linen, and its face, when it lifts, is ${nm}'s, already mourning you.`,
+    `The sound has always been a name, and the name is yours. Your heart simply stops arguing. They find you at the ${w} without a mark, wearing an expression nobody calls peaceful twice.`,
   ],
   hellhound: (nm, w) => [
-    `Sulfur first, thick on the night air, and then paws, heavier than any dog's, closing the ground between you and the ${w} in long, even strides.`,
-    `You run. Everyone runs. That has never once mattered, and it does not start mattering now: two coals swing level with your chest and keep coming.`,
-    `The weight of it lands across your back before you hear it leave the ground, and the jaw that closes on your shoulder does not let go. It worries the bite wider with every second you struggle, working toward the neck the way a dog works a knot from rope, and the smell of your own blood scorching on its breath is the last there is.`,
-    `Somewhere behind, footsteps arrive to watch the finish: ${nm}'s tread, easy, in no rush at all to see something that was never in doubt. What's left of you at the ${w} still smells of struck matches at dawn, and the dogs of the village will not go near the spot again.`,
+    `Sulfur first, thick on the night air. Then paws heavier than any dog's, closing the ground to the ${w} in long, even strides.`,
+    `You run. Everyone runs. It has never once mattered: two coals swing level with your chest and keep coming.`,
+    `Its weight lands before you hear it leave the ground, and the jaw does not let go. Behind it, ${nm}'s easy tread arrives to watch a finish that was never in doubt.`,
   ],
   revenant: (nm, w) => [
-    `Slow, dragging steps behind you on the ${w}, patient as a funeral march, and however fast you walk, the gap between you never changes.`,
-    `Hands close on your shoulders, grave-cold, unmistakably ${nm}'s hands, and beneath the cold a strength like the ground itself, patient because it cannot tire.`,
-    `It does not strike. It simply closes both hands and pulls, and something in your chest gives way slowly, evenly, the way old rope gives under a steady weight rather than a sudden one, until the giving-way is finished.`,
-    `It does not rage. It has an errand, and you are the errand, and it carries you toward the crossroads with a gentleness that is somehow worse than violence would have been. The ground there is already open and has been for nights, waiting, and by dawn it is closed again, and so are you.`,
+    `Slow, dragging steps behind you on the ${w}, patient as a funeral march, and however fast you walk, the gap never changes.`,
+    `Hands close on your shoulders, grave-cold, unmistakably ${nm}'s, with the strength of ground that cannot tire.`,
+    `It does not strike. It simply closes its hands, and carries you to the crossroads, where the earth has stood open for nights. By dawn it is closed again, and so are you.`,
   ],
   doppel: (nm, w) => [
-    `Someone is coming the other way down the lane, matching your stride exactly, hitch and habit and all, and there is not enough moon to see the face until suddenly there is.`,
-    `You are looking at your own face. It is looking back with ${nm}'s eyes, and it is very slightly, unbearably better at wearing your expression than you are.`,
-    `"Goodnight," it says, in your own voice, correcting your accent as it goes, and the knife goes in exactly where you would have flinched from it yourself, because it knows precisely where that is.`,
-    `It studies you while you fall, memorising the dying: the eyes, the mouth, the last thing your face does before it stops doing anything. By morning something wearing your face and knowing your habits a little too well is seen leaving the ${w}, and no one who greets it suspects a thing.`,
+    `Someone comes the other way down the lane, matching your stride exactly, hitch and habit and all, until there is enough moon to see the face.`,
+    `It is your own face, looking back with ${nm}'s eyes, and it is very slightly, unbearably better at wearing your expression than you are.`,
+    `"Goodnight," it says, in your own voice, and the knife goes in exactly where you would have flinched, because it knows. By morning, something wearing your face is seen leaving the ${w}, and no one who greets it suspects a thing.`,
   ],
   hag: (nm, w) => [
-    `Tiredness hits you all at once and wrong, like a dropped sack, and you are down on the ground at the ${w} without ever feeling yourself fall.`,
-    `A weight settles onto your chest, joint by joint, light as a bundle of sticks and heavier than a millstone, and ${nm}'s face lowers into yours, upside down, delighted.`,
-    `"There you are," it whispers, in a voice like a rusted hinge, and rides you down, its weight pressing the air out of you in shallower and shallower pulls until the last one does not come back in.`,
-    `The scream you die making never reaches your mouth. Your face keeps it, twisted mid-cry, and that is how they find you at the ${w} come morning: peaceful sheets, terrible face, and the first man there covering you quickly, before the children can see what fear looks like when it has nowhere left to go.`,
+    `Tiredness hits you all at once and wrong, like a dropped sack, and you are down at the ${w} without ever feeling yourself fall.`,
+    `A weight settles onto your chest, joint by joint, and ${nm}'s face lowers into yours, upside down, delighted.`,
+    `"There you are," it whispers, and rides you down, each breath shallower than the last, until the last one does not come back in. Your face keeps the scream your mouth never got to make.`,
   ],
   necromancer: (nm, w) => [
-    `Someone is standing in the road ahead at the ${w}, patient, familiar. You know the coat before you know the face. You helped carry that coat, and the man inside it, to the churchyard.`,
-    `You say the buried name, and it is ${nm}'s voice that answers, from somewhere behind you, pleased: "Good. You remember them. They all remember YOU. It makes the knocking so much easier."`,
-    `Hands take you then, grave-cold and more of them than one body should own, and the strength in them is borrowed from ground that does not tire. They hold you, considerately, the way the dead hold anything, while ${nm} takes all the time in the world walking over.`,
-    `What is done then is unhurried, and when it is finished you are not left where you fell. You are walked, on your own dead legs, back toward the village, to a door you knew in life. Somebody you love answers the knocking. That is the last errand you ever run.`,
+    `Someone waits in the road ahead at the ${w}. You know the coat before the face: you helped carry it, and the man in it, to the churchyard.`,
+    `You say the buried name, and it is ${nm}'s voice that answers, from behind you, pleased: "Good. You remember them. They all remember YOU."`,
+    `Grave-cold hands hold you, more of them than one body should own, while ${nm} takes its time. Afterward you are walked home on your own dead legs, to knock at a door you knew in life.`,
   ],
   mimic: (nm, w) => [
-    `You have studied every death in Hollow's Edge, matched sign to page, page to name. What comes at you out of the dark at the ${w} matches none of them, and then, horribly, several of them in turn.`,
-    `It moves like the wolf, and then like the cold, and then like nothing at all, as if it were leafing through ways to kill you and saving your eyes for the last page.`,
-    `${nm}'s face is the only fixed thing on it, worn crooked now, like a mask pushed up for comfort. "Which of them frightened you most?" it asks, trying several voices on the way through the sentence. "Be honest. I take requests."`,
-    `The searchers argue at dawn and for years after: the wounds say claws, the ground around you says frost, the fence post says teeth. Every one of them is right. That is the whole answer, and nobody at your graveside knows to hear it.`,
+    `You have matched every death in Hollow's Edge to a page. What comes out of the dark at the ${w} matches none of them, and then, horribly, several in turn.`,
+    `${nm}'s face is the only fixed thing on it, worn crooked, like a mask pushed up for comfort. "Which of them frightened you most?" it asks, trying several voices on the way through. "I take requests."`,
+    `At dawn the searchers argue: the wounds say claws, the ground says frost, the fence post says teeth. Every one of them is right, and nobody at your graveside knows to hear it.`,
   ],
   succubus: (nm, w) => [
-    `Somewhere between one step and the next, you stop wanting to go home. It is not a thought. It is a change in the weather of you, and the night is suddenly warmer in the direction of the ${w}.`,
-    `${nm} is waiting there, and looks glad to see you, gladder than anyone has looked at you in years, and some cold surviving corner of you notes that your feet are still walking and will not be argued with.`,
-    `"There you are," it says, and takes your face in both hands, kindly. What it takes then does not grow back, and it takes it slowly, and the horror is that you help.`,
-    `They find you at the ${w} at first light, sat peaceful against the stones, empty as a drained cup. The first searcher there puts a sheet over your face quickly. Nobody says the word "smiling". Everybody carries it home with them anyway.`,
+    `Between one step and the next, you stop wanting to go home. The night is suddenly warmer in the direction of the ${w}, and your feet will not be argued with.`,
+    `${nm} is waiting there, gladder to see you than anyone has looked in years, and takes your face in both hands, kindly.`,
+    `What it takes does not grow back, and the horror is that you help. They find you at first light, sat peaceful against the stones, empty as a drained cup. Nobody says the word "smiling".`,
   ],
 };
 
@@ -2044,6 +2030,9 @@ function descriptorFor(s) {
    pre-roll the outcome so the death (or the reprieve) can be LIVED on-screen
    instead of arriving as a surprise in the morning recap. */
 function outDeathChance(s, f, mods, approach) {
+  /* it found you hiding earlier tonight and chose to let you live: that
+     choice holds for the rest of the night, or the spare reads as a lie */
+  if (mods.hideSpared) return 0.05;
   const atEventCrowd = !!(f.huntsCrowd && f.evn && f.eventLoc === f.huntLoc);
   let p = (approach === "press" ? (s.enraged ? 0.7 : 0.5) : approach === "shadow" ? (s.enraged ? 0.5 : 0.22) : (s.enraged ? 0.6 : 0.35)) + (mods.soundChase ? 0.08 : 0);
   if (mods.hid === "still") p += 0.25;
@@ -2159,7 +2148,9 @@ function sampleNight(s, m, n) {
   const secretOut = {};
   const sc = s.searchCount || {};
   for (const npc of s.npcs) {
-    if (!npc.alive) continue;
+    /* the fled are gone from the village: they hold no place in the night's
+       roster, cannot be met in the lanes, and cannot be taken */
+    if (!npc.alive || npc.fled) continue;
     if (npc.id === s.monster.vid) {
       if (huntsCrowd) outMap[npc.id] = eventLoc;
       else if (active) {
@@ -2488,6 +2479,8 @@ function resolveNight(prev, planIn, preEvents) {
       s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fDest} and watched them stand facing away from the moon, hour on hour. ${fw.name} is changed.`);
       beats.push(helped
         ? `You step out and try to reach them: a hand at the shoulder, their name said twice, softly. ${fw.name} turns toward you with a face that almost remembers being glad to see you, and then does not. Whatever is left to reach is not close enough to the surface tonight. You let go before it decides to reach back.`
+        : mods.followAct === "on"
+        ? "You carried what you saw the rest of the night, and it made every shadow between there and home a little heavier."
         : "You slip away with what you know, and what you know follows you home.");
       dawn.push(ev(`What you watched ${fw.name} do in the night was not the act of a living neighbour. You are certain now: they are changed.${helped ? " You tried to reach them. Whatever answered was not quite them yet." : ""}`, fw.id));
     } else if (secretOut[fw.id]) {
@@ -2878,8 +2871,8 @@ function resolveNight(prev, planIn, preEvents) {
   /* --- the monster's attack --- */
   let victim = null, victimWhere = null, victimKind = null;
   if (active && !s.over) {
-    const cand = s.npcs.filter((x) => x.alive && !x.turned && x.id !== s.monster.vid);
-    let pool = m.reach === "home" ? cand : cand.filter((x) => outMap[x.id] !== "home");
+    const cand = s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid);
+    let pool = m.reach === "home" ? cand : cand.filter((x) => outMap[x.id] && outMap[x.id] !== "home");
     if (huntsCrowd) { const cp = pool.filter((x) => outMap[x.id] === eventLoc); if (cp.length) pool = cp; }
     if (pool.length) {
       victim = pick(pool);
@@ -3070,9 +3063,9 @@ function resolveNight(prev, planIn, preEvents) {
     }
   }
 
-  const hiddenTurned = s.npcs.filter((x) => x.alive && x.turned && !x.known && x.id !== s.lastRumor);
+  const hiddenTurned = s.npcs.filter((x) => x.alive && !x.fled && x.turned && !x.known && x.id !== s.lastRumor);
   if (chance(hiddenTurned.length ? 0.4 : 0.3) && (hiddenTurned.length || chance(0.3))) {
-    const rPool = hiddenTurned.length && chance(0.7) ? hiddenTurned : s.npcs.filter((x) => x.alive && !x.turned && x.id !== s.lastRumor);
+    const rPool = hiddenTurned.length && chance(0.7) ? hiddenTurned : s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.lastRumor);
     const target = rPool.length ? pick(rPool) : null;
     if (target) { s.lastRumor = target.id; dawn.push(ev(pickFreshIdx("rumorStrange", RUMOR_STRANGE)(target.name), target.id)); }
   }
@@ -4838,6 +4831,12 @@ const EXTRA_CSS = `
   background-image: repeating-conic-gradient(#000 0deg 1deg, transparent 1deg 2deg); background-size: 5px 5px; }
 .mvScorch { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(rgba(10,6,4,0.72), rgba(28,10,6,0.5)), radial-gradient(ellipse at 50% 100%, rgba(158,48,57,0.25), rgba(0,0,0,0) 65%); }
+.mvDangerPulse { background: radial-gradient(ellipse at 50% 100%, rgba(158,48,57,0.5), rgba(158,48,57,0.05) 72%); animation: mvdpulse 1.5s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes mvdpulse { from { opacity: 0.25; } to { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) { .mvDangerPulse { animation: none; opacity: 0.5; } }
+.mvLoom { animation: mvloom 6s ease forwards; transform-origin: 50% 100%; }
+@keyframes mvloom { from { opacity: 0; transform: scale(0.82) translateY(10px); filter: blur(4px); } to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
+@media (prefers-reduced-motion: reduce) { .mvLoom { animation: none; opacity: 1; } }
 .mvKillGround { position:absolute; left:15%; right:15%; bottom:4px; height:6px; border-radius:50%; background:#000; opacity:0.35; }
 .mvKillFlash { position:absolute; left:16%; top:6%; width:2.5px; height:72%; background:linear-gradient(#FFF6E0, rgba(233,223,200,0)); transform:rotate(26deg); opacity:0; animation: mvkflash 4s ease forwards; }
 @keyframes mvkflash { 0%,14% { opacity:0; } 18% { opacity:1; } 32% { opacity:0; } 100% { opacity:0; } }
@@ -5685,6 +5684,19 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
             <button onClick={toDawn} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
           </div>
+          {/* the night's ending, seen as well as read: the rite consuming the
+              thing on a won night, or the thing itself looming over your own
+              death. Ordinary nights stay art-free and let the words work. */}
+          {s.over && s.over.win && (
+            <div className="flex justify-center mt-3 shrink-0">
+              <MonsterDeath id={m.id} method={m.method} size={112} />
+            </div>
+          )}
+          {s.over && !s.over.win && s.over.reason === "slain" && (
+            <div className="flex justify-center mt-3 shrink-0 mvLoom">
+              <MonsterArt id={m.id} size={104} />
+            </div>
+          )}
           <div className="mt-6 flex-1 min-h-0 overflow-y-auto pr-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
             {beats.map((b, i) => (
               <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.45, animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s`, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{b}</p>
@@ -5740,6 +5752,9 @@ function MonsterVillage() {
         <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 min-h-screen flex flex-col">
           <div className="flex items-baseline justify-between">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, color: C.redBright, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>IT MAKES AN OFFER</span>
+          </div>
+          <div className="flex justify-center mt-3 mvLoom">
+            <MonsterArt id={monsterOf(s).id} size={104} />
           </div>
           <div className="mt-6 flex-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
             {offerBeats.map((b, i) => (
@@ -6073,7 +6088,7 @@ function MonsterVillage() {
       const t = pick(turnedThere);
       return `Across the light, ${t.name} stands apart from it all, touching nothing: not the cider, not a single hand offered in greeting.`;
     }
-    const absent = s.npcs.filter((x) => x.alive && x.id !== s.monster.vid && x.id !== excludeId && walk.facts.outMap[x.id] !== walk.facts.eventLoc);
+    const absent = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && x.id !== excludeId && walk.facts.outMap[x.id] !== walk.facts.eventLoc);
     if (absent.length && chance(0.5)) {
       const a = pick(absent);
       return `You notice, the way you notice everything now, who isn't here: ${a.name}, on a night when half the village turned out.`;
@@ -6139,6 +6154,27 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>NIGHT {s.nightNum + 1} · {isWatch ? "THE WATCH" : "THE LANES"}</span>
             <span style={{ fontSize: 12, color: C.dim }}>{walk.facts.wx ? { fog: "fog", storm: "storm coming", frost: "hard frost" }[walk.facts.wx] : "clear"}</span>
           </div>
+          {(() => {
+            /* the night, seen: a living view of the ground the current beat
+               plays out on, going red when something is close */
+            const tense = walk.stage === "fate" || walk.stage === "hide"
+              || (walk.stage === "approach" && danger)
+              || ((walk.stage === "chased" || walk.stage === "listened") && walk.facts.active)
+              || (walk.stage === "company" && walk.thrallId && !walk.thrallLooking)
+              || ((walk.stage === "followed" || walk.stage === "reveal") && walk.followScene && walk.followScene.kind === "monster");
+            const sceneLoc = (walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")) ? walk.followScene.dest
+              : isWatch ? (HOME_LOC[walk.targetId] || "Cottage") : walk.loc;
+            const label = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
+            return (
+              <div className="shrink-0 mt-4 rounded-lg overflow-hidden relative" style={{ border: `1px solid ${tense ? "rgba(158,48,57,0.65)" : C.line}`, boxShadow: "0 8px 24px rgba(0,0,0,0.45)" }}>
+                <Scene loc={sceneLoc} kind="quiet" height={90} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(rgba(8,10,18,0.12), rgba(8,10,18,0.55))" }} />
+                {(s.burned || []).includes(sceneLoc) && <div className="mvScorch" />}
+                {tense && <div className="mvDangerPulse" style={{ position: "absolute", inset: 0 }} />}
+                <span className="mv-display" style={{ position: "absolute", left: 10, bottom: 5, fontSize: 10.5, letterSpacing: 2, color: tense ? C.redBright : "rgba(233,223,200,0.75)", textShadow: "0 1px 6px #000" }}>{label}{tense ? " · SOMETHING IS CLOSE" : ""}</span>
+              </div>
+            );
+          })()}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 mt-6" style={{ WebkitOverflowScrolling: "touch" }}>
             {(walk.pre || []).map((t, i) => (
               <p key={`${walk.stage}:${i}`} className="mb-3 mvIn" style={{ animationDelay: `${i * 0.9}s`, fontSize: 14.5, lineHeight: 1.5, color: "rgba(233,223,200,0.75)", textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{t}</p>
@@ -6201,8 +6237,14 @@ function MonsterVillage() {
                     <Btn full kind="amber" onClick={() => startFate(TENSION_WATCH, null, "Hold, and remember everything →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "watch", loc: fsc.dest } }, "amber")}>Stay hidden. Watch it. Learn it</Btn>
                     <Btn full kind="red" onClick={() => startFate(TENSION_CONFRONT, null, armedGuess ? "Say the true name →" : "Say the name →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "confront", loc: fsc.dest } })}>{armedGuess ? "Step out. Name it. End it here" : "Step out and say the name"}</Btn>
                   </>)}
-                  {fsc.kind === "turned" && <Btn full kind="amber" onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Slip away with what you know</Btn>}
-                  {fsc.kind === "secret" && <Btn full kind="amber" onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Leave without being seen</Btn>}
+                  {fsc.kind === "turned" && (<>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You back away from what ${fw2.name} has become, one careful step at a time, and force your feet on toward the ${walk.loc}.`] })}>Carry it with you. On to the {walk.loc}</Btn>
+                    <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Slip away home with what you know</Btn>
+                  </>)}
+                  {fsc.kind === "secret" && (<>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`Some secrets are only secrets. You leave ${fw2.name} to theirs and keep to your own errand, toward the ${walk.loc}.`] })}>Leave them to it. On to the {walk.loc}</Btn>
+                    <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Enough for one night. Head home</Btn>
+                  </>)}
                   {fsc.kind === "plain" && (<>
                     <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, followSeen: fw2.id }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [sameDest ? `You leave ${fw2.name} to their business and turn to your own: the ${walk.loc} is not theirs to keep.` : `You leave ${fw2.name} to it and turn for the ${walk.loc}.`] })}>{sameDest ? "Leave them to it. See to your own search" : `Leave them to it. On to the ${walk.loc}`}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, followAct: "home", loc: fsc.dest })}>Enough for one night. Head home</Btn>
