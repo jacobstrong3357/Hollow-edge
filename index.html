@@ -1206,6 +1206,7 @@ const TURNED_FACED = [
   (nm) => `${nm} hears the verdict and does not argue with it. Something behind the eyes shifts its weight instead, unhurried, and looks out at you with a new frankness. The pretence is done with. You are in the room with what is left, and it is willing to talk.`,
   (nm) => `The word "changed" lands, and ${nm} - what wears ${nm} now - lets the shoulders drop, the way an actor lets a part go at the door. "Well," they say, mildly. "That took everyone so long." Ask what you will of it.`,
   (nm) => `${nm} does not weep, and does not protest, and that is the worst of it. They simply fold their hands and wait, patient as a held breath, while the doctor backs out of reach. Whatever you would ask, ask it now, while it is still amused enough to answer.`,
+  (nm) => `For one terrible moment it is still ${nm} who hears it: the eyes go wide, the mouth opens on a plea - and then something turns over behind the face, gently, like a hand smoothing a bedsheet, and the plea becomes a smile. What settles where your neighbour was is calm, and curious, and willing to chat.`,
 ];
 
 const WALK_SOUND_LINES = [
@@ -6862,7 +6863,7 @@ function MonsterVillage() {
     else if ((id === "greta" || id === "falk") && s2.wellFouled) opener.push(AFFLICTION_OPENER[id](npc.name));
     if (id === s2.monster.vid && s2.faceKnown === id && !s2.fled) opener.push(pickFreshIdx(`faceKnownOpener:${id}`, FACE_KNOWN_OPENERS)(npc.name));
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
-    setS(s2); setModal(null);
+    setS(s2); setModal(null); setIvOpenerOpen(false);
     const valid = s2.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
     setIv({ id, night: valid.length ? valid[valid.length - 1] : s2.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })) });
   };
@@ -7183,7 +7184,7 @@ function MonsterVillage() {
      your neighbour has become. The interview opens right there, unasked and
      free - the exam already cost the daylight. */
   const runExamine = (id) => {
-    setModal(null); setProfile(null);
+    setModal(null); setProfile(null); setIvOpenerOpen(false);
     const wasKnown = (npcById(s, id) || {}).known;
     const next = actLookOver(s, id);
     const fresh = next.dayEvents.slice(s.dayEvents.length);
