@@ -165,10 +165,20 @@ const Snd = {
     this.chime.triggerAttackRelease("A4", 0.7, t + 0.12);
   },
   /* -- a single unsettling swell for the "you hear something" sound beat:
-     a slow pitch glide up and back down, monster-agnostic. -- */
-  wail() {
+     a slow pitch glide up and back down, monster-agnostic. The "song"
+     variant is the same voice gone sweet: higher, consonant, patient -
+     nearer a melody than a grief. Kept subtle on purpose. -- */
+  wail(kind) {
     if (!this.built || !this.enabled) return;
     const t = Tone.now();
+    if (kind === "song") {
+      this.howl.triggerAttack("E4", t);
+      this.howl.frequency.rampTo("G4", 0.9, t + 0.1);
+      this.howl.frequency.rampTo("A4", 0.8, t + 1.1);
+      this.howl.frequency.rampTo("E4", 1.0, t + 2.0);
+      this.howl.triggerRelease(t + 3.1);
+      return;
+    }
     this.howl.triggerAttack("C3", t);
     this.howl.frequency.rampTo("G3", 1.2, t + 0.1);
     this.howl.frequency.rampTo("D3", 1.4, t + 1.3);
@@ -399,6 +409,17 @@ const HOME_LINES = [
   "You salt the sill, the way Greta says, feeling foolish, and doing it anyway.",
   "You sit in the dark on purpose. A lit window is an invitation, and you are done inviting.",
   "You wedge the settle against the door and sleep in your boots, if you sleep at all.",
+];
+/* A barred door is not a skipped night, only a quieter one: at most one of
+   these lands on a stay-home night, and none of them carry information.
+   Staying in stays safe and stays blind - that is the bargain. */
+const HOME_NIGHT_MOMENTS = [
+  "Sometime past midnight a moth beats itself against the inside of the shutter, over and over, desperate to get OUT. You spend a long while not thinking about what that might mean.",
+  "You wake once with the certainty that someone in the room has just stopped speaking. The room is empty. The certainty takes an hour to leave.",
+  "Rain, or fingers, at the window for a moment. Rain, you decide. You are still deciding it at dawn.",
+  "The fire pops and you are on your feet with the bread knife out before you know you moved. You stand a while feeling foolish, and do not put the knife down.",
+  "Under the door, for one breath, the draught carries a smell that does not belong to the lane: cold earth, or old iron. Then it is gone, and the night gives you nothing more.",
+  "You count the church bell's hours and lose the number twice. Somewhere between two and three, every dog in the village goes quiet at once, and you sit up until they start again.",
 ];
 const OUT_LINES = [
   (l) => `You go over the back wall like a thief in your own village, and the dark closes over you the whole road to the ${l}.`,
@@ -2107,8 +2128,11 @@ const buildPhrase = (pair) => `${pair[0]} of build, or ${pair[1]}; the dark woul
 
 /* ================= GAME SETUP ================= */
 
-function newGame() {
-  const type = pick(MONSTERS);
+function newGame(veteran) {
+  /* The first game a player ever sees teaches the system; the mimic exists
+     to break the system. Quietly keep it out of the very first draw - never
+     shown, never mentioned, and every draw after the first is the full deck. */
+  const type = pick(veteran ? MONSTERS : MONSTERS.filter((mm) => mm.id !== "mimic"));
   const vid = pick(NPC_DEFS).id;
   const s = {
     nightNum: 0, dayNum: 0, lastActive: -9, gameId: Math.random().toString(36).slice(2),
@@ -2131,7 +2155,7 @@ function newGame() {
        the start of the game, never shown to the player directly. Bond only
        ever accrues when this is true, so the whole mechanic stays fully
        inert and undetectable for the majority of games where it isn't. -- */
-    monsterFancies: Math.random() < 0.35, bond: 0, offerMade: false,
+    monsterFancies: Math.random() < 0.4, bond: 0, offerMade: false,
     coerceNote: null, monsterProtects: false, pendingOffer: null,
     offerBeats: [], noteExposedPending: false,
   };
@@ -2372,7 +2396,10 @@ function resolveNight(prev, planIn, preEvents) {
       if (evWander) beats.push(`${npcById(s, evWander).name} drifts off from the ${evn.name} alone, toward the trees, and no one thinks to call them back.`);
       if (evSweepFind) beats.push(`A shout goes up from the search: something found among the stones. ${evSweepSense} It is passed hand to hand in the torchlight, and nobody wants to hold it long.`);
     }
-    if (plan.kind === "home") beats.push(pickFreshIdx("homeLines", HOME_LINES));
+    if (plan.kind === "home") {
+      beats.push(pickFreshIdx("homeLines", HOME_LINES));
+      if (n > 1 && chance(0.35)) beats.push(pickFreshIdx("homeMoments", HOME_NIGHT_MOMENTS));
+    }
     else if (out) beats.push(pickFreshIdx("outLines", OUT_LINES)(plan.loc));
     else if (watching) beats.push(pickFreshIdx("watchLines", WATCH_LINES)(npcById(s, watching).name));
   } else {
@@ -3321,9 +3348,14 @@ function actLookOver(prev, targetId) {
   s.ap -= 1;
   const target = npcById(s, targetId);
   const falk = npcById(s, "falk");
-  const examiner = targetId === "falk" ? npcById(s, "greta") : falk;
+  const greta = npcById(s, "greta");
+  const avail = (x) => x && x.alive && !x.fled;
+  /* Falk reads the change best. If the village loses him, Greta's herb-lore
+     serves at worse odds - and she is the end of the line: lose them both
+     and no one left can tell the changed from the grieving. */
+  const examiner = targetId !== "falk" && avail(falk) ? falk : (targetId !== "greta" && avail(greta) ? greta : null);
   const exName = examiner ? examiner.name : "";
-  if (!examiner || !examiner.alive || examiner.fled) {
+  if (!examiner) {
     s.dayEvents.push(ev("There is no one left with the knowledge to make such an examination."));
     return s;
   }
@@ -3337,7 +3369,7 @@ function actLookOver(prev, targetId) {
     s.dayEvents.push(ev(`${exName} examines ${target.name} at length, listens, peers, hums. "Nothing amiss," ${exName} says, and something in the ease of it does not sit right. "Nothing amiss at all."`, examiner.id));
     return s;
   }
-  const rate = targetId === "falk" ? 0.45 : 0.65;
+  const rate = examiner.id === "falk" ? 0.65 : 0.45;
   if (target.turned && chance(rate)) {
     s.npcs = s.npcs.map((x) => (x.id === targetId ? { ...x, known: true } : x));
     s.clues.push(`Day ${s.dayNum}: ${exName} examined ${target.name} and went pale. ${target.name} is changed.`);
@@ -5088,8 +5120,9 @@ function investigateLabel(s, freshDeath) {
   if (!freshDeath) return "No one died last night. There is nothing to investigate.";
   return `Go to where ${freshDeath.name} fell`;
 }
-function examineLabel(canExamine) {
-  return canExamine ? "Have someone examined for the change" : "No physician remains to examine anyone";
+function examineLabel(canExamine, viaGreta) {
+  if (!canExamine) return "No one remains who can read the change in a body";
+  return viaGreta ? "Have Greta look someone over for the change" : "Have someone examined for the change";
 }
 function defendLabel(s, mobT) {
   if (s.defendedToday) return "You have already spoken for them in the square today";
@@ -5367,6 +5400,7 @@ function MonsterVillage() {
   const [lossIntroSeen, setLossIntroSeen] = useState(false);
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
+  const [savedRun, setSavedRun] = useState(null);
   const recordedRef = useRef(null);
   const walkStageRef = useRef(null);
 
@@ -5377,8 +5411,27 @@ function MonsterVillage() {
         const r = await window.storage.get("mv-black-book");
         setMeta(r && r.value ? { ...EMPTY_META, ...JSON.parse(r.value) } : { ...EMPTY_META });
       } catch (e) { setMeta({ ...EMPTY_META }); }
+      /* a night in progress survives a closed tab or a locked phone: the
+         whole game state is JSON-safe (resolveNight round-trips it every
+         night), so the last unfinished run waits at the gate. */
+      try {
+        const r2 = await window.storage.get("mv-run");
+        if (r2 && r2.value) {
+          const run = JSON.parse(r2.value);
+          if (run && run.monster && run.npcs && !run.over) setSavedRun(run);
+        }
+      } catch (e) { /* a save that will not parse is a save best forgotten */ }
     })();
   }, []);
+
+  /* -- persist the run after every change; a finished game clears it -- */
+  useEffect(() => {
+    if (!s) return;
+    try {
+      if (s.over) window.storage.delete("mv-run");
+      else window.storage.set("mv-run", JSON.stringify(s));
+    } catch (e) {}
+  }, [s]);
 
   const saveMeta = async (next) => {
     setMeta(next);
@@ -5469,7 +5522,10 @@ function MonsterVillage() {
     const stage = walk && walk.stage;
     if (stage !== walkStageRef.current) {
       if (stage === "hide") Snd.danger();
-      else if (stage === "sound") Snd.wail();
+      /* the succubus's night-sound is a song, not a grief: the audio keeps
+         faith with the text (its ambient lines already say "nearer a song")
+         and only on nights it is truly abroad. Everything else wails. */
+      else if (stage === "sound") Snd.wail(walk && walk.facts.active && s && s.monster.type === "succubus" ? "song" : undefined);
     }
     walkStageRef.current = stage;
   }, [walk && walk.stage]);
@@ -5484,7 +5540,9 @@ function MonsterVillage() {
   /* -- leaving the plan modal folds the inline location picker back up -- */
   useEffect(() => { if (modal !== "plan") setPlanSearchOpen(false); }, [modal]);
 
-  const start = () => { setS(newGame()); setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setPlanSearchOpen(false); setLossIntroSeen(false); setWatchIntroSeen(false); };
+  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setPlanSearchOpen(false); setLossIntroSeen(false); setWatchIntroSeen(false); };
+  const start = () => { setSavedRun(null); setS(newGame(!!(meta && meta.games > 0))); resetUi(); };
+  const resume = () => { const run = savedRun; setSavedRun(null); setS(run); resetUi(); };
 
   const doAction = (fn) => {
     setModal(null); setAccusePick(null); setAccuseType(null); setProfile(null);
@@ -5582,7 +5640,12 @@ function MonsterVillage() {
             </>
           )}
           <div className="mvIn mt-auto pb-6" style={{ animationDelay: "1.5s" }}>
-            <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>ENTER HOLLOW'S EDGE</span></Btn>
+            {savedRun && (
+              <div className="mb-2">
+                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 2 }}>RETURN TO {savedRun.phase === "day" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`} · UNFINISHED</span></Btn>
+              </div>
+            )}
+            <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>{savedRun ? "ABANDON IT · START ANEW" : "ENTER HOLLOW'S EDGE"}</span></Btn>
             <div className="flex justify-between mt-2">
               <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
                 {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
@@ -5725,7 +5788,9 @@ function MonsterVillage() {
   const freshDeath = s.deaths.find((d) => d.night === s.nightNum && d.kind === "slain");
   const knownChanged = s.npcs.some((x) => x.alive && x.turned && x.known);
   const examinerN = npcById(s, "falk");
-  const canExamine = examinerN && examinerN.alive && !examinerN.fled;
+  const falkCanExamine = examinerN && examinerN.alive && !examinerN.fled;
+  const gretaN = npcById(s, "greta");
+  const canExamine = falkCanExamine || (gretaN && gretaN.alive && !gretaN.fled);
   const compatM = (mm) => s.playerSigns.every((sg) => mm.signs.includes(sg));
   const reckoned = MONSTERS.filter((mm) => !s.struck.includes(mm.id) && compatM(mm));
   const remainCount = reckoned.length;
@@ -6685,7 +6750,7 @@ function MonsterVillage() {
         {tab === "nights" && (
           <div>
             <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>The pattern of nights</div>
-            <p style={{ fontSize: 13, color: C.inkDim }} className="mt-1">Some things keep a rhythm. Count the gaps.</p>
+            <p style={{ fontSize: 13, color: C.inkDim }} className="mt-1">Some things keep a rhythm. Count the gaps. And mind where the dead were taken: behind their own bolts, or out under the sky. Not everything can pass a barred door.</p>
             <div className="mt-3">
               {s.nightLogs.map((log) => {
                 const slain = s.deaths.find((x) => x.night === log.night && x.kind === "slain");
@@ -7532,7 +7597,7 @@ function MonsterVillage() {
             </Btn>
             <Btn small disabled={s.ap < 1} onClick={() => setModal("search")}>Search a location in daylight</Btn>
             <Btn small disabled={s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length} onClick={() => setModal("question")}>Hold an interview</Btn>
-            <Btn small disabled={s.ap < 1 || !canExamine} onClick={() => setModal("examine")}>{examineLabel(canExamine)}</Btn>
+            <Btn small disabled={s.ap < 1 || !canExamine} onClick={() => setModal("examine")}>{examineLabel(canExamine, !falkCanExamine)}</Btn>
             {s.mob && mobT && mobT.alive && (
               <Btn small disabled={s.ap < 1 || s.defendedToday} onClick={() => doAction((x) => actDefend(x))}>
                 {defendLabel(s, mobT)}
@@ -7542,6 +7607,21 @@ function MonsterVillage() {
               <Btn small disabled={s.ap < 1} onClick={() => setModal("unbind")}>Attempt the Rite of Unbinding</Btn>
             )}
           </div>
+          {armedGuess && !s.fled && (() => {
+            /* the journal has been worked down to a single possible creature:
+               the player now walks the nights armed, and deserves to know it */
+            const wil = npcById(s, "wilhelm");
+            const wilOk = wil && wil.alive && !wil.fled;
+            return (
+              <div className="mt-3 rounded-lg p-2.5" style={{ background: "rgba(217,164,65,0.07)", border: `1px solid ${C.amber}` }}>
+                <p style={{ fontSize: 12.5, color: C.amber, lineHeight: 1.45 }}>
+                  {wilOk
+                    ? `Your journal holds one name now: the ${armedGuess.name}. Wilhelm heard, and was waiting at your door with the ${METHODS[armedGuess.method]}. "Walk the nights with it," he says. "Catch the thing at its business, and end it where it stands. But if the book is wrong, so are you."`
+                    : `Your journal holds one name now: the ${armedGuess.name}. The old rites name its remedy - the ${METHODS[armedGuess.method]} - and from tonight you carry it into the dark. Catch the thing at its business and you can end it where it stands. If the book is wrong, so are you.`}
+                </p>
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 gap-2 mt-3">
             <Btn kind="red" disabled={s.fled} onClick={() => setModal("accuse")}>{s.fled ? "It is unmasked" : "Accuse"}</Btn>
             <Btn kind="amber" onClick={() => setModal("plan")}>Nightfall →</Btn>

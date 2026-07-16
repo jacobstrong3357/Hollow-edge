@@ -11,7 +11,11 @@ must name both WHO and WHAT before the village runs out of people.
   browser) + Tailwind CDN + Tone.js (synthesized audio), all loaded from CDNs
   on first page load. Deploy = serve/open the file.
 - `window.storage` shim at the top backs the persistent "Black Book" meta
-  (achievements, bestiary, secrets) with localStorage.
+  (achievements, bestiary, secrets) with localStorage. The in-progress run
+  is persisted too (`mv-run`, saved on every state change, cleared when
+  `s.over` lands) and offered back at the gate as "RETURN TO ... UNFINISHED".
+- `netlify.toml` 404s `/CLAUDE.md` on the published site; the deploy is
+  wired to pushes on `main` (site `hollowsedge` on Netlify).
 
 ## How the file is organized (top to bottom)
 
@@ -83,6 +87,24 @@ must name both WHO and WHAT before the village runs out of people.
   interview with the turned villager immediately (free — the exam already
   cost the daylight), opened with a `TURNED_FACED` line; their answers are
   the `TURNED_RAVING` pool.
+- Exams are Falk's (0.65); if he is dead/fled, Greta serves at 0.45, and
+  she is the end of the line — lose both and the exam action goes dark.
+
+## Tuning choices (deliberate — don't "fix")
+
+- The mimic is silently excluded from a player's very first game
+  (`newGame(veteran)`); every later draw is the full 15. Never surface this.
+- `monsterFancies` (the hidden offer/bond system) is 0.40 per game.
+- Deduction hints stay whispers: the journal nudges the player to count
+  night-gaps and note home-vs-open deaths, but never does the math for
+  them. No auto-computed "fits/doesn't fit" indicators.
+- Stay-home nights get at most one `HOME_NIGHT_MOMENTS` flavor beat (35%);
+  they must never yield information — safe and blind is the bargain.
+- When the journal narrows to exactly one creature (`armedGuess`), the day
+  screen shows the Wilhelm "you walk armed now" banner; the kill itself
+  happens in `applyFollowConsequence` (confront while armed).
+- `Snd.wail("song")` is the succubus's sweeter night-sound, played only on
+  its active nights; everything else gets the grief glide.
 
 ## Player death / monster death
 
