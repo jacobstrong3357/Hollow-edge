@@ -216,7 +216,7 @@ const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Taver
 
 const SIGNS = {
   claw: "Claw Marks", tracks: "Beast Tracks", bite: "Bite Marks",
-  reflect: "Fogged Mirrors", cold: "Cold Aura", flora: "Withered Flora",
+  cold: "Cold Aura", flora: "Withered Flora",
   hex: "Hex Marks", graves: "Grave Dirt", wail: "Unearthly Wailing",
 };
 
@@ -238,11 +238,6 @@ const SIGN_SENSE = {
     "The wound is a bite, unmistakably, and the jaw that made it did not belong to anything you have skinned or eaten.",
     "Teeth marks, paired, punched clean through in a way no dog's jaw could manage.",
     "No animal worried at this. One bite, deep and deliberate, and the jaw that made it knew exactly what it was doing.",
-  ],
-  reflect: [
-    "The glass has gone strange, filmed over, dull, giving back a face a half-second late, as if it had to think first.",
-    "You catch your reflection and for a moment it is not quite keeping time with you.",
-    "Every mirror in the room has fogged from the inside, though nothing in the room is warm enough to fog anything.",
   ],
   cold: [
     "The cold here is wrong. Your breath clouds though the night is mild.",
@@ -300,9 +295,6 @@ const SIGN_SENSE_BODY = {
   flora: [
     "The plants nearest the body have gone grey and brittle to the root, curled in on themselves days before their season, as if the dying spread outward from the corpse.",
   ],
-  reflect: [
-    "There is a mirror in the room, and it has fogged from the inside though nothing here is warm, and it gives your own face back to you a half-second late.",
-  ],
 };
 const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg}`, SIGN_SENSE_BODY[sg]) : senseFor(sg));
 
@@ -310,7 +302,7 @@ const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg
    "anything strange" question, and by corrupted mouths inventing trails
    (a thrall or the thing itself, asked its craft, points you at marks the
    creature does not leave - spoken only, never shown, never journal-marked). */
-const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", reflect: "the mirrors in this village have all gone dull, have you noticed", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled" };
+const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled" };
 
 const METHODS = {
   silver: "Silver Blade", stake: "Wooden Stake", salt: "Ring of Salt",
@@ -318,6 +310,7 @@ const METHODS = {
   iron: "Cold Iron", mirror: "Silver Mirror", holy: "Holy Water", crossroads: "Burial at the Crossroads",
   backname: "Its Name Said Backwards", hawthorn: "Hawthorn Charm",
   rest: "Rite of Eternal Rest", quicksilver: "Draught of Quicksilver", bell: "Consecrated Bell",
+  effigy: "Burning of Its Effigy",
 };
 
 const METHOD_KILL_LINES = {
@@ -336,31 +329,35 @@ const METHOD_KILL_LINES = {
   rest: "The Rite of Eternal Rest is read over the open graves, and every servant it raised lies down where it stands. The ground takes the necromancer last, and slowest.",
   quicksilver: "The quicksilver goes down its throat mid-change, and every shape it ever borrowed tries to happen at once. What is left when they run out is small, and grey, and still.",
   bell: "The consecrated bell rings once, clear, and the charm cracks off it like ice off a bough. The second note stops the starved thing underneath in mid-reach.",
+  effigy: "Its effigy takes the flame, straw arms curling, and out past the light something impossibly tall bends with it, mirroring the burning limb for limb. It talks the whole time it burns. No one who heard the vocabulary will repeat it.",
 };
 
 const MONSTERS = [
   { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Village Square"], lore: "Bound to the moon. It hunts on exact, ritual nights, every third, and cannot break the pattern. Takes only those caught outdoors, and takes them apart. The books prescribe the silver blade." },
-  { id: "vampire", name: "Vampire", signs: ["bite", "reflect", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], lore: "Its first feeding is always too deep: one body, torn, to open the account. After that it feeds when the thirst takes it, never two nights running, and slips through any door. From then on its victims do not die. They change, and they hide it. Only the stake ends it." },
-  { id: "wraith", name: "Wraith", signs: ["reflect", "cold", "flora"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], lore: "Stalks almost every night, but takes only those who wander after dark. Bar your door and it passes by. It is unmade inside a ring of salt." },
+  { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], lore: "Its first feeding is always too deep: one body, torn by tooth and talon, to open the account. After that it feeds when the thirst takes it, never two nights running, and slips through any door. It beds down by day in ground it has no right to, and from then on its victims do not die. They change, and they hide it. Only the stake ends it." },
+  { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], lore: "Stalks almost every night, but takes only those who wander after dark. Its grief carries on the wind, its cold clings to the ground, and its prints stop mid-stride, as if it forgot to keep touching the earth. Bar your door and it passes by. It is unmade inside a ring of salt." },
   { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger. It dens among the graves and prowls from there, but takes anyone caught outdoors, wherever it finds them. Too craven to enter a home. Consecrated fire, and nothing less." },
   { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Some it curses dead, without a mark of struggle; others it bends into servants who walk on and lie for it, so a body one night and none the next are both its work. Burn the grimoire and the witch burns with it." },
   { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens its work with one soul taken violently, as a signature. After that it claims souls as it pleases: some it hollows out and leaves walking, passing for themselves; some it simply tears apart for the joy of it. Walls mean nothing to it, and it keeps no pattern you can trust. Only the rite of exorcism casts it out." },
-  { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "reflect"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
+  { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
   { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door. Victims are found without a wound. It cannot bear its own face in a silver mirror." },
   { id: "hellhound", name: "Hellhound", signs: ["tracks", "claw", "graves"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves the tracks of a hound too heavy to be a hound, claws its prey apart, and roots in the graveyard earth between kills. Holy water, and a steady hand to throw it." },
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
-  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["reflect", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, and leaves the ruin for the village to find. After that it does not kill. It replaces. Its victims walk and talk and pass for themselves, and only the fogged mirrors and the marks it scratches in quiet places say otherwise. No door stops something you would invite in. It is undone only by its true name said backwards, if anyone can learn it." },
+  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["claw", "bite", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, and leaves the ruin for the village to find, torn by tooth and nail. After that it does not kill. It replaces. Its victims walk and talk and pass for themselves, and the only other trace of it is a weeping heard on its nights that comes from no throat: the taken, grieving themselves. No door stops something you would invite in. It is undone only by its true name said backwards, if anyone can learn it." },
   { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers when the mood takes her, resting between, and wails AS she rides, not before. Walls mean nothing. Her dead have no wound, only a face frozen mid-scream. A hawthorn charm, pressed to her while she feeds." },
   { id: "necromancer", name: "Necromancer", signs: ["graves", "hex", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "rest", hunts: ["Graveyard", "Old Church"], lore: "It kills once with its own hands, to seed the ground. After that it sends the village's own dead: they rise, walk to doors they knew in life, and are let in gladly, by name. Every kill swells its congregation. Read the Rite of Eternal Rest over the graves and the dead lie down mid-stride, and drag their master under with them." },
-  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "reflect", "cold", "flora", "hex", "graves", "wail"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two of its nights agree. It kills a new way each time, wearing manners of murder the way other things wear faces, and it strews signs behind it: real ones, all of them, and all of them true of nothing. When the evidence will not add up to any one creature, it has already added up to this one. Quicksilver, forced down mid-change." },
-  { id: "succubus", name: "Succubus", signs: ["hex", "reflect", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It does not break in, and it does not need to catch you outdoors. It calls, and the called rise from their own beds, unbar their own doors, and walk out smiling to wherever it waits. Its dead are found at its chosen ground, never at home, barely marked. What is heard on its nights is not grief: it is nearer a song. One clear note of the consecrated bell breaks the charm, and the thing with it." },
+  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two of its nights agree. It kills a new way each time, wearing manners of murder the way other things wear faces, and it strews signs behind it: real ones, all of them, and all of them true of nothing. When the evidence will not add up to any one creature, it has already added up to this one. Quicksilver, forced down mid-change." },
+  { id: "succubus", name: "Succubus", signs: ["flora", "hex", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It does not break in, and it does not need to catch you outdoors. It calls, and the called rise from their own beds, unbar their own doors, and walk out smiling to wherever it waits. Its dead are found at its chosen ground, never at home, barely marked, and the green things around them wither where the song has been. Its workings are scratched where it sings, and what is heard on its nights is not grief: it is nearer a music. One clear note of the consecrated bell breaks the charm, and the thing with it." },
+  /* -- The sixteenth. Locked behind the whole Black Book: it can only be
+     drawn once every other horror has been ended at least once. It talks. -- */
+  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "bite"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Taller than the doorways it declines to use, thin as a hanged man's shadow, and where a face should be there is only a courteous smoothness. The trees sicken where it stands among them, and what it does to the caught is not feeding but composition: unhurried, elaborate, signed. Worst of all, it talks - fondly, endlessly, in words this valley never taught anyone - and it remembers every conversation. Burn its effigy while it watches: vanity is the one organ it grew." },
 ];
 
 const SIGN_CATS = {
   wounds: ["claw", "bite"],
   ground: ["tracks", "graves"],
   air: ["cold"],
-  surroundings: ["reflect", "flora", "hex"],
+  surroundings: ["flora", "hex"],
 };
 /* The "none" lines must never read as "there is nothing here" - there is
    always a body, and it is always bad. They read as "there is plenty here,
@@ -380,11 +377,11 @@ const AMBIENT_SOUNDS = [
   { m: ["werewolf", "hellhound", "banshee", "hag", "wraith", "ghoul", "mimic"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. A wolf, some will say. The rest say nothing at all." },
   { m: ["ghoul", "revenant", "witch", "hellhound", "werewolf", "shifter", "necromancer", "mimic"], t: "From out in the dark, a patient working sound. Digging, or chewing. Or both, taking turns." },
   { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon", "necromancer"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
-  { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire", "necromancer", "succubus"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
+  { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire", "necromancer", "succubus", "hollowed"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
   { m: ["vampire", "demon", "banshee", "wraith", "witch", "hag", "succubus"], t: "Something passed over the rooftops: a cloak in the wind, or wings, or both. The dogs did not bark, which is worse." },
   { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon", "necromancer", "succubus"], t: "Every sound in the village stopped together, mid-note. No dog, no owl, no wind. The whole village holding one breath, and something walking through it." },
-  { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith", "succubus", "mimic"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
-  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon", "mimic"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
+  { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith", "succubus", "mimic", "hollowed"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
+  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon", "mimic", "hollowed"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
 ];
 const soundFor = (mid) => pickFreshIdx(`ambient:${mid}`, AMBIENT_SOUNDS.filter((a) => a.m.includes(mid))).t;
 
@@ -789,6 +786,11 @@ const DEATH_SCENES = {
     `${nm} is waiting there, gladder to see you than anyone has looked in years, and takes your face in both hands, kindly.`,
     `What it takes does not grow back, and the horror is that you help. They find you at first light, sat peaceful against the stones, empty as a drained cup. Nobody says the word "smiling".`,
   ],
+  hollowed: (nm, w) => [
+    `"There you are." The voice arrives from directly above, conversational, delighted, far too high off the ground, and something unfolds out of the dark of the ${w} like a doorway learning to walk.`,
+    `"I have so looked forward to this colloquy," it says, in ${nm}'s voice worn like a borrowed glove, and where the face should be there is only a courteous smoothness, inclining to listen. "You will forgive the exuberance of what follows. I am an aesthete, and you have been such an attentive audience."`,
+    `What it does then is unhurried, ornate, and narrated throughout, in vocabulary no one in this valley was ever taught. The searchers find the composition at dawn, arranged with terrible care, and the man who describes it uses the only word that survives the telling: signed.`,
+  ],
 };
 
 /* Two wrong names is one too many: on the second, the thing stops feeding on
@@ -798,7 +800,7 @@ function monsterKillsAccuser(s, beats, intro, where) {
   const m = monsterOf(s);
   const mn = npcById(s, s.monster.vid);
   if (intro) beats.push(intro);
-  beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "your own door"));
+  s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "your own door");
   s.over = { win: false, reason: "slain", text: `Twice you named it wrong, and the second time was one too many. It stopped feeding on the village and came for you the same night, and the neighbours whose trust you had spent did not come when you called.` };
 }
 
@@ -882,6 +884,11 @@ const OFFER_SCENES = {
     `The call is already in you, and your feet already answered it, and now it stands close enough to finish what the calling started, and does not.`,
     `"Everyone comes when I call," it says, ${nm}'s face tilted, genuinely curious. "You are the first to come ANGRY. Do you know how long it has been since anything surprised me?"`,
     `"Walk with me willingly, eyes open, knowing what I am, and I will never once sing at you. It would be the first honest company I have kept in three hundred years. Refuse, and the song finishes, and you will smile like all the others did."`,
+  ],
+  hollowed: (nm) => [
+    `It has you by the collar, one long hand, effortless, your boots clear of the ground, and it does not begin. It holds you up to where a face should be, the way a reader holds a page to the light.`,
+    `"Every soul in this parish converses in bread and weather," it says, aggrieved, erudite, wearing ${nm}'s voice like a signet ring. "You alone ask INTERESTING questions. Do you know what a famine that is, for a creature of my conversation?"`,
+    `"Walk with me, and talk with me, and I shall compose nothing further in this valley: you have my word, and my word is older than the alphabet it is given in. Refuse, and our little colloquy concludes the way all my compositions do. Signed."`,
   ],
 };
 const COERCE_NOTE_BOND_MIN = 1;
@@ -1136,7 +1143,6 @@ const ANIMAL_SIGN = {
   graves: ["A dead crow lies half-buried in fresh-turned earth by the churchyard wall, in ground nothing living had cause to open tonight.", "Something has been at a dog's grave by the path, dug up and left half out, the old earth loose again as if it is still being used."],
   cold: ["A dog lies dead in the open, its coat rimed white with a frost that has touched nothing else around it, and the cold off the small body has nothing to do with the weather.", "A dead cat on the wall is frozen stiff through, though the night is mild, and your breath clouds when you lean close and nowhere else."],
   flora: ["A cat lies dead in a ring of grass gone grey and brittle from the root up, days before its season, as though the ground beneath it stopped feeding anything.", "A dead bird in the hedgerow, and the leaves around it have curled and blackened in a neat circle, out of all season."],
-  reflect: ["A dead cat lies below a cottage window, and the glass above it has fogged from the inside, though the house is dark and cold, and gives your lantern back to you a beat too slow.", "A dog lies dead by the horse-trough, and the still black water beside it will not hold your reflection right: your face arrives in it late, and wrong."],
   hex: ["A cat lies dead at the centre of marks scratched into the flagstones around it, a pattern that means nothing and unsettles anyway, cut with intent.", "A dead crow is laid at the heart of lines scored deliberately into the earth, a working of some kind, and you find you cannot look at the shapes for long."],
 };
 const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pickFreshIdx(`animalSign:${sg}`, ANIMAL_SIGN[sg]) : null);
@@ -1771,7 +1777,7 @@ const SUSPECT_REASONS = [
 ];
 
 const FOLK_HINTS = [
-  { m: ["vampire", "wraith"], t: `"The bloodless kinds fog a mirror just by passing it. A wolf never touched a mirror in its life."` },
+  { m: ["vampire", "ghoul", "revenant"], t: `"Old grave-earth turning up fresh where nobody's been burying - that is a thing that sleeps in ground it has no right to, or eats there, or crawled up out of it. The churchyard kinds. Look to them."` },
   { m: ["witch", "banshee"], t: `"If the dead have no wound on them, look to what kills from a distance. Grief, or a hex. Nothing with teeth."` },
   { m: ["werewolf", "banshee"], t: `"My grandmother said the ritual-bound ones cannot help their nights. Count the gaps between the dead and you have half your answer."` },
   { m: ["ghoul", "wraith"], t: `"Some things hunger every single night. If the bell tolls daily, strike out everything patient."` },
@@ -2058,6 +2064,12 @@ const chance = (p) => Math.random() < p;
    same state (e.g. a villager's mood line on their profile card). */
 const stableIdx = (str, len) => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return len ? h % len : 0; };
 const monsterOf = (s) => MONSTERS.find((m) => m.id === s.monster.type);
+/* The bestiary as THIS game knows it: The Hollowed exists in the books only
+   once it exists in the world (s.hollowedIn, set at newGame). Until then it
+   is absent from the journal, the reckoning, the rites and the folk lore,
+   so no player can narrow their arithmetic onto a creature that cannot be
+   the answer. The Black Book on the title screen always shows all sixteen. */
+const gameMonsters = (s) => MONSTERS.filter((mm) => mm.id !== "hollowed" || (s && s.hollowedIn));
 const npcById = (s, id) => s.npcs.find((n) => n.id === id);
 const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s.monster.vid);
 const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
@@ -2155,16 +2167,19 @@ const buildPhrase = (pair) => `${pair[0]} of build, or ${pair[1]}; the dark woul
 
 /* ================= GAME SETUP ================= */
 
-function newGame(veteran) {
+function newGame(veteran, hollowedUnlocked) {
   /* The first game a player ever sees teaches the system; the mimic exists
      to break the system. Quietly keep it out of the very first draw - never
-     shown, never mentioned, and every draw after the first is the full deck. */
-  const type = pick(veteran ? MONSTERS : MONSTERS.filter((mm) => mm.id !== "mimic"));
+     shown, never mentioned, and every draw after the first is the full deck.
+     The Hollowed sits outside even that: it enters the draw only after every
+     other horror in the Black Book has been ended at least once. */
+  const type = pick(MONSTERS.filter((mm) => (veteran || mm.id !== "mimic") && (hollowedUnlocked || mm.id !== "hollowed")));
+  const hollowedIn = !!hollowedUnlocked;
   const vid = pick(NPC_DEFS).id;
   const s = {
     nightNum: 0, dayNum: 0, lastActive: -9, gameId: Math.random().toString(36).slice(2),
     planted: [], searchCount: {}, burned: [],
-    monster: { type: type.id, vid },
+    monster: { type: type.id, vid }, hollowedIn,
     npcs: NPC_DEFS.map((n) => ({ ...n, alive: true, turned: false, known: false, fled: false, sawYouWatching: null, offendedExam: null, secretKnown: false, disp: [-2, -1, 0, 1, 2][Math.floor(Math.random() * 5)] })),
     patience: Object.fromEntries(NPC_DEFS.map((n) => [n.id, PERSONA[n.id].patience])),
     askedLog: {}, monsterClaims: {}, grudges: {},
@@ -2288,6 +2303,7 @@ function sampleNight(s, m, n) {
 
 function resolveNight(prev, planIn, preEvents) {
   const s = JSON.parse(JSON.stringify(prev));
+  s.deathBeats = null;
   const m = monsterOf(s);
   const prevFaceKnown = prev.faceKnown;
   const n = s.nightNum + 1;
@@ -2503,7 +2519,7 @@ function resolveNight(prev, planIn, preEvents) {
          in the dark, before it can take another soul. Name it wrong, and
          what is in your hands is so much tin. -- */
       if (act === "confront") {
-        const reckoning = MONSTERS.filter((mm) => !s.struck.includes(mm.id) && (s.playerSigns || []).every((sg) => mm.signs.includes(sg)));
+        const reckoning = gameMonsters(s).filter((mm) => !s.struck.includes(mm.id) && (s.playerSigns || []).every((sg) => mm.signs.includes(sg)));
         if (reckoning.length === 1) {
           const guess = reckoning[0];
           if (guess.id === s.monster.type) {
@@ -2517,14 +2533,14 @@ function resolveNight(prev, planIn, preEvents) {
               return true;
             }
             beats.push(`You step out with the ${METHODS[guess.method]} in your hands and the right name in your mouth, and you are half a heartbeat too slow with both.`);
-            beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest));
+            s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
             s.over = { win: false, reason: "slain", text: `You named it truly at the ${fDest}. It was faster than the truth.` };
             return true;
           }
           /* the wrong name, carried into the dark */
           if (chance(0.7)) {
             beats.push(`You step out with the ${METHODS[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
-            beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest));
+            s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
             s.over = { win: false, reason: "slain", text: `You confronted it at the ${fDest} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
             return true;
           }
@@ -2551,7 +2567,7 @@ function resolveNight(prev, planIn, preEvents) {
           return "offer";
         }
         beats.push(act === "confront" ? `You step out of the shadow and say ${fw.name}'s name. It is very glad you did.` : "You move. And it is already facing you. It was always already facing you.");
-        beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest));
+        s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
         s.over = { win: false, reason: "slain", text: `You followed ${fw.name} out past the last house. Only one of you came back, and it was not you.` };
         return true;
       }
@@ -2696,7 +2712,7 @@ function resolveNight(prev, planIn, preEvents) {
           s.phase = "offer";
           return s;
         }
-        beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(monsterNpc.name, plan.loc));
+        s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(monsterNpc.name, plan.loc);
         s.over = { win: false, reason: "slain", text: `Something found you at the ${plan.loc}. Your lantern was discovered at dawn, still burning beside what remained.` };
         return finish();
       }
@@ -2760,7 +2776,7 @@ function resolveNight(prev, planIn, preEvents) {
         s.phase = "offer";
         return s;
       }
-      beats.push(...DEATH_SCENES.wraith(monsterNpc.name, "road home"));
+      s.deathBeats = DEATH_SCENES.wraith(monsterNpc.name, "road home");
       s.over = { win: false, reason: "slain", text: "A cold you had never known closed around you on the road home. The Wraith takes those who wander." };
       return finish();
     }
@@ -2889,7 +2905,7 @@ function resolveNight(prev, planIn, preEvents) {
                 s.phase = "offer";
                 return s;
               }
-              beats.push(...(DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(target.name, "lanes"));
+              s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(target.name, "lanes");
               s.over = { win: false, reason: "slain", text: `You followed ${target.name} out past the last house. Only one of you came back, and it was not you.` };
               return finish();
             }
@@ -2974,6 +2990,9 @@ function resolveNight(prev, planIn, preEvents) {
     const cand = s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid);
     let pool = m.reach === "home" ? cand : cand.filter((x) => outMap[x.id] && outMap[x.id] !== "home");
     if (huntsCrowd) { const cp = pool.filter((x) => outMap[x.id] === eventLoc); if (cp.length) pool = cp; }
+    /* the bodies and the ground should tell one story more often than not:
+       an outdoor hunter leans toward prey caught on its own hunting ground */
+    else if (m.reach !== "home" && huntLoc) { const hp = pool.filter((x) => outMap[x.id] === huntLoc); if (hp.length && chance(0.65)) pool = hp; }
     if (pool.length) {
       victim = pick(pool);
       victimWhere = outMap[victim.id];
@@ -3133,6 +3152,9 @@ function resolveNight(prev, planIn, preEvents) {
       if (spentNightOnAccused && victim && victimKind === "kill" && watching === tgt.id && !s.hardCleared.includes(tgt.id)) s.hardCleared.push(tgt.id);
       s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, disp: clampDisp((x.disp || 0) + 2) } : x));
       dawn.push(ev(`${tgt.name} keeps their neck this morning because you spent the night earning it. The village saw who stood between them and the rope.`, tgt.id, 2));
+      /* a neck publicly saved is not offered up again the very next day:
+         the shame of the dropped rope buys them a few mornings' peace */
+      s.mobSpared = { id: tgt.id, until: n + 4 };
       s.mob = null;
     } else if (tgt && tgt.alive) {
       beats.push(`First light. ${acc && acc.alive ? acc.name : "The mob"} keeps the promise made in the square: torches and rope at ${tgt.name}'s door, and no one moves to stop it. Not even you.`);
@@ -3177,7 +3199,10 @@ function resolveNight(prev, planIn, preEvents) {
   }
 
   const hiddenTurned = s.npcs.filter((x) => x.alive && !x.fled && x.turned && !x.known && x.id !== s.lastRumor);
-  if (chance(hiddenTurned.length ? 0.4 : 0.3) && (hiddenTurned.length || chance(0.3))) {
+  /* pointed rumors about a named neighbour hold off until the village has
+     had a few nights to fray: a day-one whisper reads as a handed-out clue
+     and invites a coin-flip accusation before any evidence exists */
+  if (n >= 3 && chance(hiddenTurned.length ? 0.4 : 0.3) && (hiddenTurned.length || chance(0.3))) {
     const rPool = hiddenTurned.length && chance(0.7) ? hiddenTurned : s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.lastRumor);
     const target = rPool.length ? pick(rPool) : null;
     if (target) { s.lastRumor = target.id; dawn.push(ev(pickFreshIdx("rumorStrange", RUMOR_STRANGE)(target.name), target.id)); }
@@ -3319,6 +3344,8 @@ function resolveNight(prev, planIn, preEvents) {
     let tgtPool = [];
     for (const x of accCand) { if (x.id === accuser.id) continue; tgtPool.push(x); if (x.id === "rosa") tgtPool.push(x); }
     if (accuser.id === s.monster.vid || accuser.turned) tgtPool = tgtPool.filter((x) => x.id !== s.monster.vid && !x.turned);
+    /* a neck the village just failed to hang is off the table for a while */
+    if (s.mobSpared && n < s.mobSpared.until) tgtPool = tgtPool.filter((x) => x.id !== s.mobSpared.id);
     const target = pick(tgtPool);
     if (target) {
       const mobReason = pickFreshIdx("mobReasons", MOB_REASONS)(target.name);
@@ -3508,6 +3535,7 @@ function actDefend(prev) {
       ? `You stand in the square and give your evidence: you watched ${tgt.name}'s door yourself on a night of killing, and it never opened. ${acc.name} stares a long time, then throws the coil of rope in the mud and walks away. The mob goes with the rope.`
       : `You speak for ${tgt.name} in the square: loudly, carefully, naming what is known and what is only fear. It is enough, barely. ${acc.name} backs down, hating you a little for it.`, tgt.id));
     s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, disp: clampDisp((x.disp || 0) + 2) } : x));
+    s.mobSpared = { id: tgt.id, until: s.nightNum + 4 };
     s.mob = null;
   } else {
     s.patience[acc.id] = Math.max(0, (s.patience[acc.id] || 3) - 1);
@@ -3576,7 +3604,7 @@ function actUnbind(prev, id) {
 
 function craftAnswer(s, id) {
   const m = monsterOf(s);
-  const remaining = MONSTERS.filter((mm) => !s.struck.includes(mm.id));
+  const remaining = gameMonsters(s).filter((mm) => !s.struck.includes(mm.id));
   const mentions = [];
   let quote = "", foundSign = null, clue = null;
   const speakerDisp = (npcById(s, id) || {}).disp || 0;
@@ -3597,7 +3625,7 @@ function craftAnswer(s, id) {
     }
   } else if (id === "greta") {
     const hints = [...FOLK_HINTS, COLLECTOR_HINT].filter((h) => h.m.some((mm) => remaining.find((r) => r.id === mm)));
-    quote = hints.length ? pickFreshIdx("folkHints", hints).t : `"I have told you what the old stories hold. The rest is in the ground and the mirrors and the dead, not in my jars."`;
+    quote = hints.length ? pickFreshIdx("folkHints", hints).t : `"I have told you what the old stories hold. The rest is in the ground and the dead, not in my jars."`;
   } else if (id === "tobias") {
     const gy = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg));
     if (gy.length && dispChance(0.6, speakerDisp)) { foundSign = pick(gy); quote = `"Come and see, then." He shows you, out among the stones. "${senseFor(foundSign)} Been that way three days. The ground don't lie, whatever else does."`; }
@@ -3609,8 +3637,8 @@ function craftAnswer(s, id) {
       ? `"The ledger, then. Deaths on ${kills.map((k) => `night ${k}`).join(", ")}.${wails.length ? ` Wailing heard on ${wails.map((w) => `night ${w}`).join(", ")}.` : ""} The old books say the ritual-bound kinds cannot break their count. Do the arithmetic I have been too afraid to do."`
       : `"The ledger holds births and burials. Pray the second column stays short."`;
   } else if (id === "wilhelm") {
-    const first = pick(MONSTERS);
-    const two = [first, pick(MONSTERS.filter((mm) => mm.id !== first.id))];
+    const first = pick(gameMonsters(s));
+    const two = [first, pick(gameMonsters(s).filter((mm) => mm.id !== first.id))];
     quote = `"My grandfather kept the old rites behind the anvil. ${two[0].name}: ${METHODS[two[0].method]}. ${two[1].name}: ${METHODS[two[1].method]}. Name the thing rightly and we will see to the rest. Name it wrong and we are all dead men holding the wrong tool."`;
   } else if (id === "liesel") {
     const logs = s.nightLogs.filter((l) => Object.values(l.outMap).some((v) => v !== "home"));
@@ -4609,7 +4637,7 @@ function Portrait({ id, size = 56, dead, turnedKnown }) {
   );
 }
 
-function MonsterArt({ id, size = 64 }) {
+function MonsterArt({ id, size = 64, light }) {
   /* eyes glow out of the dark instead of sitting flat on it */
   const eye = (x, y, c = C.amber) => (
     <g>
@@ -4770,8 +4798,22 @@ function MonsterArt({ id, size = 64 }) {
       <path d="M26,32 q2,-7 9,-7 M94,28 q-2,-7 -9,-7" stroke={C.pale} strokeWidth="1.4" fill="none" opacity="0.5" />
       {eye(56, 27, C.redBright)}{eye(64, 27, C.redBright)}
     </g>),
+    hollowed: (<g>
+      {/* far too tall and far too thin, stooping to fit the frame at all;
+          where a face should be, a courteous smoothness. No eyes. On purpose. */}
+      <path d="M14,104 C16,86 12,78 18,64 M15,88 l-7,-6 M16,76 l7,-5 M17,70 l-6,-6" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.65" />
+      <path d="M104,104 C102,88 108,80 102,66 M103,90 l7,-6 M103,78 l-7,-5" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.65" />
+      <path d="M53,30 C51,52 52,76 55,101 L59,101 L60,62 L61,101 L65,101 C68,76 69,52 67,30 Z" fill={C.sil} />
+      <path d="M54,32 C45,48 41,68 38,90 M38,90 l-7,7 M38,90 l-2,11 M38,90 l4,10 M38,90 l8,6" stroke={C.sil} strokeWidth="2.3" fill="none" strokeLinecap="round" />
+      <path d="M66,32 C75,48 79,68 82,90 M82,90 l7,7 M82,90 l2,11 M82,90 l-4,10 M82,90 l-8,6" stroke={C.sil} strokeWidth="2.3" fill="none" strokeLinecap="round" />
+      <path d="M53,31 C53,26 56,23 60,23 C64,23 67,26 67,31 Z" fill={C.sil} />
+      <ellipse cx="60" cy="15" rx="7.5" ry="9.5" fill={C.pale} />
+      <ellipse cx="57" cy="13" rx="1.6" ry="2.2" fill="#000" opacity="0.07" />
+      <ellipse cx="63" cy="13" rx="1.6" ry="2.2" fill="#000" opacity="0.07" />
+      <path d="M60,101 L60,106 M56,106 L64,106" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
+    </g>),
   }[id];
-  const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14 }[id] || 1;
+  const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14, hollowed: 16 }[id] || 1;
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} style={{ display: "block" }}>
       <defs>
@@ -4786,6 +4828,8 @@ function MonsterArt({ id, size = 64 }) {
         </radialGradient>
       </defs>
       <circle cx="60" cy="62" r="54" fill="url(#mvHalo)" />
+      {light && <circle cx="60" cy="60" r="52" fill="#AEB4CC" opacity="0.3" />}
+      {light && <circle cx="60" cy="58" r="38" fill="#C9CBD8" opacity="0.22" />}
       <ellipse cx="60" cy="106" rx="34" ry="5" fill="#000" opacity="0.35" />
       <g filter={`url(#mvR${seed})`}>{art}</g>
     </svg>
@@ -4797,19 +4841,19 @@ function MonsterArt({ id, size = 64 }) {
    burning, and the crossroads as the ground closing over it. */
 const METHOD_FX = {
   silver: "pierce", stake: "pierce", iron: "pierce",
-  fire: "burn", grimoire: "burn", holy: "burn",
+  fire: "burn", grimoire: "burn", holy: "burn", effigy: "burn",
   mirror: "shatter", bell: "shatter", backname: "shatter",
   salt: "dissolve", exorcism: "dissolve",
   crossroads: "sink", rest: "sink",
   hawthorn: "shrink", quicksilver: "shrink",
 };
-function MonsterDeath({ id, method, size = 120 }) {
+function MonsterDeath({ id, method, size = 120, light }) {
   const fx = METHOD_FX[method] || "dissolve";
   return (
     <div style={{ position: "relative", width: size, height: size }}>
       <div className="mvKillGround" />
       <div className={`mvKill-${fx}`} style={{ width: size, height: size }}>
-        <MonsterArt id={id} size={size} />
+        <MonsterArt id={id} size={size} light={light} />
       </div>
       {fx === "burn" && [0.15, 0.38, 0.6, 0.8].map((fr, i) => (
         <span key={i} className="mvEmber" style={{ left: `${fr * 100}%`, bottom: 10, animationDelay: `${0.6 + i * 0.5}s` }} />
@@ -5170,6 +5214,7 @@ function DawnCarousel({ items, s, onOpen, onDone }) {
 
 function demeanorLine(s, id) {
   if (id === s.monster.vid && s.monster.type === "vampire" && chance(0.22)) return "They keep to the doorway the whole time, weight on the outer step. However the conversation turns, they never quite come inside.";
+  if (id === s.monster.vid && s.monster.type === "hollowed" && chance(0.25)) return "They are delighted to see you. They say 'delighted', twice, and 'colloquy' once, and a dozen other words nobody in this valley was taught, and the hour is the most erudite and the least human conversation you have had all week.";
   const npc = npcById(s, id);
   if (id === s.monster.vid) return chance(0.3) ? pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal);
   if (npc.turned) return chance(0.5) ? pickFreshIdx("demeanorTurnedTell", DEMEANOR.turnedTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal);
@@ -5469,6 +5514,7 @@ function MonsterVillage() {
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
   const [savedRun, setSavedRun] = useState(null);
+  const [deathShown, setDeathShown] = useState(false);
   const recordedRef = useRef(null);
   const walkStageRef = useRef(null);
 
@@ -5486,7 +5532,17 @@ function MonsterVillage() {
         const r2 = await window.storage.get("mv-run");
         if (r2 && r2.value) {
           const run = JSON.parse(r2.value);
-          if (run && run.monster && run.npcs && !run.over) setSavedRun(run);
+          if (run && run.monster && run.npcs && !run.over && MONSTERS.some((mm) => mm.id === run.monster.type)) {
+            /* saves from older builds may carry signs that no longer exist
+               (e.g. the retired fogged mirrors): scrub them so the journal
+               and the reckoning stay consistent */
+            const valid = Object.keys(SIGNS);
+            run.playerSigns = (run.playerSigns || []).filter((sg) => valid.includes(sg));
+            run.foundSigns = (run.foundSigns || []).filter((sg) => valid.includes(sg));
+            Object.keys(run.locEvidence || {}).forEach((l) => { run.locEvidence[l] = (run.locEvidence[l] || []).filter((sg) => valid.includes(sg)); });
+            run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
+            setSavedRun(run);
+          }
         }
       } catch (e) { /* a save that will not parse is a save best forgotten */ }
     })();
@@ -5604,12 +5660,18 @@ function MonsterVillage() {
 
   /* -- night beats re-hide themselves each time a fresh night arrives -- */
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
+  useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);
 
   /* -- leaving the plan modal folds the inline location picker back up -- */
   useEffect(() => { if (modal !== "plan") setPlanSearchOpen(false); }, [modal]);
 
   const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setPlanSearchOpen(false); setLossIntroSeen(false); setWatchIntroSeen(false); };
-  const start = () => { setSavedRun(null); setS(newGame(!!(meta && meta.games > 0))); resetUi(); };
+  const start = () => {
+    setSavedRun(null);
+    const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
+    setS(newGame(!!(meta && meta.games > 0), hollowedUnlocked));
+    resetUi();
+  };
   const resume = () => { const run = savedRun; setSavedRun(null); setS(run); resetUi(); };
 
   const doAction = (fn) => {
@@ -5671,13 +5733,13 @@ function MonsterVillage() {
                   <span className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>THE BLACK BOOK</span>
                   <span style={{ fontSize: 12, color: C.dim }}>{defeatedCount} of {MONSTERS.length} horrors ended</span>
                 </div>
-                <div className="grid grid-cols-5 gap-1 mt-2 items-start">
+                <div className="grid grid-cols-4 gap-1 mt-2 items-start">
                   {MONSTERS.map((mm) => {
                     const done = !!meta.defeated[mm.id];
                     return (
                       <div key={mm.id} className="flex flex-col items-center w-full" title={mm.name}
-                        style={{ opacity: done ? 1 : 0.18, filter: done ? "none" : "grayscale(1)" }}>
-                        <MonsterArt id={mm.id} size={38} />
+                        style={{ opacity: done ? 1 : 0.3, filter: done ? "none" : "grayscale(1)" }}>
+                        <MonsterArt id={mm.id} size={44} light />
                         <span style={{ fontSize: 8.5, lineHeight: 1.1, color: done ? C.parch : C.dim, textAlign: "center", width: "100%", overflowWrap: "break-word", wordBreak: "break-word" }}>{done ? mm.name : "?"}</span>
                       </div>
                     );
@@ -5860,7 +5922,7 @@ function MonsterVillage() {
   const gretaN = npcById(s, "greta");
   const canExamine = falkCanExamine || (gretaN && gretaN.alive && !gretaN.fled);
   const compatM = (mm) => s.playerSigns.every((sg) => mm.signs.includes(sg));
-  const reckoned = MONSTERS.filter((mm) => !s.struck.includes(mm.id) && compatM(mm));
+  const reckoned = gameMonsters(s).filter((mm) => !s.struck.includes(mm.id) && compatM(mm));
   const remainCount = reckoned.length;
   /* the journal worked down to a single name means the player walks armed:
      confrontation becomes an attempted kill (see applyFollowConsequence) */
@@ -5874,6 +5936,31 @@ function MonsterVillage() {
     const beats = s.nightBeats || [];
     const total = 1.2 + beats.length * 1.4;
     const toDawn = () => { setS({ ...s, phase: "day" }); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
+    /* the player's own death is its own screen, never one more paragraph
+       tacked to the night: the record ends mid-sentence, and then THIS. */
+    const dying = !!(s.over && !s.over.win && s.deathBeats && s.deathBeats.length);
+    const advance = dying && !deathShown ? () => { setDeathShown(true); setBeatsRevealed(false); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); } : toDawn;
+    if (dying && deathShown) {
+      const dTotal = 1.0 + s.deathBeats.length * 1.6;
+      return (
+        <div className="h-screen mv-body relative overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 28%, #2E1016, #0A070C 72%)", color: C.parch }}>
+          <style>{CSS_ALL}</style>
+          <div className="mvGrainF" />
+          <div className="relative max-w-md mx-auto px-6 pt-12 pb-8 h-full flex flex-col">
+            <div className="mv-display shrink-0 text-center mvIn" style={{ fontSize: 15, letterSpacing: 5, color: C.redBright, textShadow: "0 0 18px rgba(158,48,57,0.6)" }}>YOU DO NOT SEE THE DAWN</div>
+            <div className="flex justify-center mt-4 shrink-0 mvLoom"><MonsterArt id={m.id} size={116} light /></div>
+            <div className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
+              {s.deathBeats.map((b, i) => (
+                <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.5, animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 1px 8px rgba(0,0,0,0.7)" }}>{b}</p>
+              ))}
+            </div>
+            <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
+              <Btn full kind="red" center onClick={toDawn}><span className="mv-display" style={{ letterSpacing: 2 }}>IT IS OVER</span></Btn>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="h-screen mv-body relative overflow-hidden" style={{ background: "linear-gradient(#3E3450, #B4623E 72%, #6E2530)", color: C.parch }}>
         <style>{CSS_ALL}</style>
@@ -5883,19 +5970,14 @@ function MonsterVillage() {
         <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 h-full flex flex-col">
           <div className="flex items-baseline justify-between shrink-0">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
-            <button onClick={toDawn} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
+            <button onClick={advance} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
           </div>
           {/* the night's ending, seen as well as read: the rite consuming the
               thing on a won night, or the thing itself looming over your own
               death. Ordinary nights stay art-free and let the words work. */}
           {s.over && s.over.win && (
             <div className="flex justify-center mt-3 shrink-0">
-              <MonsterDeath id={m.id} method={m.method} size={112} />
-            </div>
-          )}
-          {s.over && !s.over.win && s.over.reason === "slain" && (
-            <div className="flex justify-center mt-3 shrink-0 mvLoom">
-              <MonsterArt id={m.id} size={104} />
+              <MonsterDeath id={m.id} method={m.method} size={112} light />
             </div>
           )}
           <div className="mt-6 flex-1 min-h-0 overflow-y-auto pr-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
@@ -5904,7 +5986,7 @@ function MonsterVillage() {
             ))}
           </div>
           <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
-            <Btn full kind="amber" onClick={toDawn}>{s.over ? "Onward →" : "Onward →"}</Btn>
+            <Btn full kind={dying ? "red" : "amber"} onClick={advance}>Onward →</Btn>
           </div>
         </div>
       </div>
@@ -5934,12 +6016,12 @@ function MonsterVillage() {
     const refuseIt = () => {
       const po = s.pendingOffer || {};
       const mm = monsterOf(s);
-      const deathBeats = (DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "the dark");
       setS({
         ...s,
         pendingOffer: null,
         diedRefusingOffer: true,
-        nightBeats: ["It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting.", ...deathBeats],
+        nightBeats: ["It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting."],
+        deathBeats: (DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "the dark"),
         beatTitle: `NIGHT ${s.nightNum} · REFUSED`,
         phase: "night",
         over: { win: false, reason: "slain", text: po.overText || "Something found you in the dark, and this time it did not ask twice." },
@@ -5955,7 +6037,7 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, color: C.redBright, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>IT MAKES AN OFFER</span>
           </div>
           <div className="flex justify-center mt-3 mvLoom">
-            <MonsterArt id={monsterOf(s).id} size={104} />
+            <MonsterArt id={monsterOf(s).id} size={104} light />
           </div>
           <div className="mt-6 flex-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
             {offerBeats.map((b, i) => (
@@ -5994,13 +6076,13 @@ function MonsterVillage() {
           {s.over.win && (
             <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.panel, border: `1px solid ${C.line}` }}>
               <div className="mv-display" style={{ color: C.redBright, fontSize: 12, letterSpacing: 2 }}>HOW IT ENDED</div>
-              <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} /></div>
+              <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} light /></div>
               <p className="mt-1 text-center" style={{ fontSize: 13.5, color: C.parch }}>{METHOD_KILL_LINES[m.method]}</p>
             </div>
           )}
 
           <div className="mvIn mt-4 rounded-lg p-3 flex gap-3 items-center" style={{ animationDelay: "0.9s", background: C.panel, border: `1px solid ${C.line}` }}>
-            <MonsterArt id={m.id} size={72} />
+            <MonsterArt id={m.id} size={72} light />
             <div>
               <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>THE TRUTH</div>
               <p className="mt-1" style={{ color: C.parch, fontSize: 14 }}>
@@ -6017,7 +6099,7 @@ function MonsterVillage() {
               {s.nightLogs.map((log) => {
                 const d = s.deaths.find((x) => x.night === log.night && x.kind === "slain");
                 const t = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
-                const itTxt = log.active ? (log.huntLoc ? `it hunted the ${log.huntLoc}` : "it walked in the open") : "it kept perfectly still";
+                const itTxt = log.active ? (log.huntLoc ? `it hunted from the ${log.huntLoc}` : "it walked in the open") : "it kept perfectly still";
                 const youTxt = !log.you ? "the village stood siege"
                   : log.you.kind === "out" ? `you searched the ${log.you.loc}`
                   : log.you.kind === "watch" ? `you watched ${(npcById(s, log.you.id) || {}).name}'s door`
@@ -6722,7 +6804,7 @@ function MonsterVillage() {
           <div>
             <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Signs · tick what you believe</div>
             <div className="grid grid-cols-2 gap-x-4 mt-2">
-              {Object.entries(SIGNS).filter(([k]) => k !== "wail").map(([k, label]) => {
+              {Object.entries(SIGNS).map(([k, label]) => {
                 const ticked = s.playerSigns.includes(k);
                 const witnessed = s.foundSigns.includes(k);
                 return (
@@ -6735,23 +6817,10 @@ function MonsterVillage() {
                 );
               })}
             </div>
-            {(() => {
-              const ticked = s.playerSigns.includes("wail");
-              const witnessed = s.foundSigns.includes("wail");
-              return (
-                <button onClick={() => setS({ ...s, playerSigns: ticked ? s.playerSigns.filter((x) => x !== "wail") : [...s.playerSigns, "wail"] })}
-                  className="flex items-center gap-2 py-0.5 mt-1 w-full" style={{ background: "transparent", border: "none", borderTop: `1px solid ${C.parchLine}`, cursor: "pointer", padding: "4px 0 0", textAlign: "left", color: C.ink, opacity: ticked ? 1 : 0.55 }}>
-                  <span style={{ width: 14, textAlign: "center", color: ticked ? C.red : C.inkDim }}>{ticked ? "☒" : "☐"}</span>
-                  <span style={{ fontWeight: ticked ? 700 : 400 }}>{SIGNS.wail}</span>
-                  {witnessed && !ticked && <span title="you have witnessed this" style={{ fontSize: 10, color: C.red, fontStyle: "italic", opacity: 0.8 }}>seen</span>}
-                  <span className="ml-auto" style={{ fontSize: 12, color: C.inkDim, fontStyle: "italic" }}>heard on the wind, never found on the ground</span>
-                </button>
-              );
-            })()}
             <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights have shown you. The book dims what cannot be. A "seen" mark means the sign was witnessed, by you or a truthful mouth: it still waits on your own tick, because marks can be planted and mouths can be borrowed.</p>
             <div className="mv-display mt-4" style={{ fontSize: 16, letterSpacing: 1 }}>Your reckoning</div>
             <div className="flex flex-wrap gap-3 mt-2">
-              {MONSTERS.map((mm) => {
+              {gameMonsters(s).map((mm) => {
                 const struckM = s.struck.includes(mm.id);
                 const ok = !struckM && compatM(mm);
                 return (
@@ -6775,7 +6844,7 @@ function MonsterVillage() {
         {tab === "bestiary" && (
           <div>
             <p style={{ fontSize: 12, color: C.inkDim }} className="mb-1">Strike out what you no longer fear.</p>
-            {MONSTERS.map((mm) => {
+            {gameMonsters(s).map((mm) => {
               const struckM = s.struck.includes(mm.id);
               const ok = !struckM && compatM(mm);
               return (
@@ -7367,7 +7436,7 @@ function MonsterVillage() {
   const riteModal = modal === "rite" && modalWrap("Circle the creature. The rite follows the name.", (
     <div>
       <div className="grid grid-cols-5 gap-2">
-        {MONSTERS.map((mm) => {
+        {gameMonsters(s).map((mm) => {
           const struckM = s.struck.includes(mm.id);
           const dim = struckM || !compatM(mm);
           const sel = accuseType === mm.id;
@@ -7414,7 +7483,7 @@ function MonsterVillage() {
           <p style={{ fontSize: 13, color: C.dim }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
         </div>
       <div className="grid grid-cols-5 gap-2">
-        {MONSTERS.map((mm) => {
+        {gameMonsters(s).map((mm) => {
           const struckM = s.struck.includes(mm.id);
           const dim = struckM || !compatM(mm);
           const sel = accuseType === mm.id;
@@ -7707,7 +7776,7 @@ function MonsterVillage() {
       <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length); }}
         className="mv-display fixed bottom-0 left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-t-lg"
         style={{ background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none" }}>
-        ☰ JOURNAL {remainCount < MONSTERS.length ? `· ${remainCount} remain` : ""}
+        ☰ JOURNAL {remainCount < gameMonsters(s).length ? `· ${remainCount} remain` : ""}
         {s.clues.length > clueSeen && <span style={{ position: "absolute", top: 6, right: 8, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
       </button>
     </div>

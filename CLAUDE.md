@@ -21,9 +21,15 @@ must name both WHO and WHAT before the village runs out of people.
 
 1. **Boot shim + failure surface** (`#boot`, `__bootFail`).
 2. **`Snd`** — all audio, built once in `init()`, never constructed lazily.
-3. **DATA** — `LOCS`, `SIGNS`, `SIGN_SENSE(_BODY)`, `METHODS`,
-   `METHOD_KILL_LINES`, `MONSTERS` (15 defs: signs, rhythm, attack, reach,
-   method, hunts, lore), then dozens of text pools (dusk/home/out lines,
+3. **DATA** — `LOCS`, `SIGNS` (8 signs; "reflect"/Fogged Mirrors was retired
+   — each sign belongs to 5-6 of the 15 base monsters, wail included),
+   `SIGN_SENSE(_BODY)`, `METHODS`, `METHOD_KILL_LINES`, `MONSTERS` (16 defs:
+   signs, rhythm, attack, reach, method, hunts, lore — the 16th, The
+   Hollowed, only enters the draw once all other 15 are in the Black Book;
+   `gameMonsters(s)` gates every in-run list by `s.hollowedIn` so it can
+   never appear as a suspect in a game it cannot be the answer to; the
+   title-screen Black Book always shows all 16 in a 4×4 grid), then dozens
+   of text pools (dusk/home/out lines,
    screams, gossip, afflictions, mob, `DEATH_SCENES`, `OFFER_SCENES`,
    night-one bespoke scene, walk pools: HIDE_*, TENSION_*, FOLLOW_*, HAIL_*,
    VIGIL_, QUIET_WATCH_, etc.).
@@ -118,12 +124,21 @@ must name both WHO and WHAT before the village runs out of people.
 - The `mvKill-*` rite animations must end on a VISIBLE dimmed corpse
   (opacity ~0.4-0.55), never fade to nothing: players screenshot/arrive
   after the animation ends.
+- A neck saved from the mob (`s.mobSpared`, ~3 dawns) cannot be re-marked
+  immediately; named strange-rumor dawn cards hold off until night 3 so a
+  day-one whisper never invites a lucky coin-flip accusation.
+- Outdoor hunters' kills lean 65% toward victims on their own hunting
+  ground, so bodies and ground evidence tell one story.
 
 ## Player death / monster death
 
-- Player deaths append `DEATH_SCENES[monsterId](wearerName, where)` to the
-  night beats — kept to **three tight beats** on purpose (they used to be 4
-  long ones and read 25+ lines; don't let them bloat again).
+- Player deaths go to `s.deathBeats` (NOT the night beats): the night
+  cinematic ends on its cliffhanger line and a separate blood-dark death
+  screen ("YOU DO NOT SEE THE DAWN", looming art) plays the three
+  `DEATH_SCENES` beats. Never append death scenes to `nightBeats`.
+- `MonsterArt`/`MonsterDeath` take a `light` prop (pale backdrop discs) for
+  dark-on-dark contexts: home Black Book grid, epilogue, death/offer/win
+  screens. The journal/bestiary render on parchment and must NOT use it.
 - The night cinematic shows `MonsterDeath` art on a win and a looming
   `MonsterArt` (`.mvLoom`) on a player death; the walk overlay has a live
   `Scene` panel that pulses red (`.mvDangerPulse`) during dangerous stages.
