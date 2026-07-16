@@ -105,6 +105,19 @@ must name both WHO and WHAT before the village runs out of people.
   happens in `applyFollowConsequence` (confront while armed).
 - `Snd.wail("song")` is the succubus's sweeter night-sound, played only on
   its active nights; everything else gets the grief glide.
+- **Tell noise is load-bearing**: the monster's person-question tells
+  (talk/howare/past) fire only ~45% — otherwise it answers from the borrowed
+  villager's own human pools (a fine actor). Innocents give scared/rude
+  off-notes ~15% (TALK_OFF/HOWARE_OFF/PAST_OFF). A corrupted mouth (monster
+  or thrall) never yields honest craft evidence: it deflects or invents a
+  false trail via SIGN_TALK, spoken only, never journal-marked. So an
+  answer that "sits wrong" is never proof, and neither is a helpful one.
+- Interview-witnessed signs are marked "seen" in the evidence page but
+  never auto-ticked: ticks are the player's theory, and both planted marks
+  and borrowed mouths can lie.
+- The `mvKill-*` rite animations must end on a VISIBLE dimmed corpse
+  (opacity ~0.4-0.55), never fade to nothing: players screenshot/arrive
+  after the animation ends.
 
 ## Player death / monster death
 

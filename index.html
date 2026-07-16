@@ -217,7 +217,7 @@ const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Taver
 const SIGNS = {
   claw: "Claw Marks", tracks: "Beast Tracks", bite: "Bite Marks",
   reflect: "Fogged Mirrors", cold: "Cold Aura", flora: "Withered Flora",
-  hex: "Hex Marks", graves: "Disturbed Graves", wail: "Unearthly Wailing",
+  hex: "Hex Marks", graves: "Grave Dirt", wail: "Unearthly Wailing",
 };
 
 /* What the signs FEEL like, told without ever naming themselves. Live
@@ -305,6 +305,12 @@ const SIGN_SENSE_BODY = {
   ],
 };
 const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg}`, SIGN_SENSE_BODY[sg]) : senseFor(sg));
+
+/* How a sign is spoken of secondhand, in a villager's own words: used by the
+   "anything strange" question, and by corrupted mouths inventing trails
+   (a thrall or the thing itself, asked its craft, points you at marks the
+   creature does not leave - spoken only, never shown, never journal-marked). */
+const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", reflect: "the mirrors in this village have all gone dull, have you noticed", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled" };
 
 const METHODS = {
   silver: "Silver Blade", stake: "Wooden Stake", salt: "Ring of Salt",
@@ -1511,11 +1517,13 @@ const WATCH_RESTLESS = [
 /* One roll for what a stay-home watch turns up, so the live walk and the
    morning recap always agree: it is computed once and carried on the shared
    night facts. Never fires on the monster (never a giveaway). */
-function rollHomeWatch(s, id) {
+function rollHomeWatch(s, id, outMap) {
   const target = npcById(s, id);
   if (!target || id === s.monster.vid) return { kind: "quiet" };
   const roll = Math.random();
-  const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id && x.id !== s.monster.vid);
+  /* the midnight visitor must be someone the night's own ledger has abroad:
+     a "visitor" the testimony later places at home is a contradiction */
+  const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id && x.id !== s.monster.vid && (!outMap || (outMap[x.id] && outMap[x.id] !== "home")));
   if (secretOf(s, id) && !target.secretKnown && roll < 0.3) return { kind: "secret", short: secretOf(s, id).short };
   if (others.length && roll < 0.52) return { kind: "visitor", visitorId: pick(others).id };
   if (roll < 0.7) return { kind: "restless", ri: freshIndex(`watchRestless:${id}`, WATCH_RESTLESS.length) };
@@ -1771,9 +1779,9 @@ const FOLK_HINTS = [
   { m: ["shifter"], t: `"A face-thief kills the pattern along with the person. If nothing about the nights makes sense, that is itself the answer."` },
   { m: ["werewolf", "hellhound"], t: `"Two things leave claw and track both. The moon-cursed bites. The hound stinks of brimstone. Find the third mark and you have it."` },
   { m: ["shifter"], t: `"A face-thief leaves claw marks like the moon-cursed does, but no honest track to go with them. Whatever it becomes to kill, it never quite touches the ground like a beast should."` },
-  { m: ["revenant", "ghoul"], t: `"Disturbed graves can be hunger or homecoming. The hungry one bites what it takes. The one that came home leaves its dead cold as the stone it slept under."` },
+  { m: ["revenant", "ghoul"], t: `"Grave dirt where no one's been burying can mean hunger or homecoming. The hungry one bites what it takes. The one that came home leaves its dead cold as the stone it slept under."` },
   { m: ["hag", "banshee", "succubus"], t: `"Three things cry in the night, girl, and you'd best learn which is which. The grieving one wails the night BEFORE it takes you. The hag wails while she rides. And if what you hear is nearer a song, and you catch your own hand on your own bolt, wedge the door and stop your ears."` },
-  { m: ["necromancer", "revenant", "ghoul"], t: `"Disturbed graves are three different stories. The hungry one digs DOWN, for meat. The homesick one digs up, once, and walks. And if the ground is opening in twos and threes, from below, then somebody is calling them up, and you should be counting your buried."` },
+  { m: ["necromancer", "revenant", "ghoul"], t: `"Old earth thrown up fresh is three different stories. The hungry one digs DOWN, for meat. The homesick one digs up, once, and walks. And if the ground is opening in twos and threes, from below, then somebody is calling them up, and you should be counting your buried."` },
   { m: ["mimic"], t: `"My grandmother knew a village where the signs never matched twice: claw one night, frost the next, hexes on a third. They hunted six different devils and hanged four neighbours. It was one thing. It wears murders the way you'd wear coats."` },
   { m: ["succubus", "vampire", "necromancer"], t: `"When the dead are found away from their own beds and the door shows no forcing, stop asking what got IN. Ask what they got up and opened the door FOR."` },
 ];
@@ -1919,6 +1927,25 @@ const TALK_MONSTER = [
   `They are good company. That is the thing you will remember afterward, lying awake: how easy the hour was, how well they listened, how the stories fit together like dovetailed joints. Polished. Practiced. As if the whole warm evening had been rehearsed in front of a mirror that no longer works.`,
   `They laugh in all the right places, every one, warm and easy and exactly on the beat. Most people miss a few. It is a lovely evening, and it sits in your stomach like a stone, and you cannot, walking home, say for certain why.`,
   `An hour of easy talk, and afterward you realize they asked everything and answered nothing. You know no more about them than when you knocked. They know a great deal more about you.`,
+];
+/* Fear and grief make ordinary people strange. These land, now and then,
+   from perfectly innocent mouths, so an answer that sits wrong with you is
+   never, on its own, proof of anything. The monster, for its part, is a
+   fine actor more often than not (see the good-actor rolls below): the
+   uncanny answers above are its slips, not its habit. */
+const TALK_OFF = [
+  `They talk too fast and laugh too loud, and their eyes go to the window on every third sentence. It is not company. It is a person gripping the table until the flood goes by.`,
+  `Half the hour passes in silence, and they seem grateful for you and entirely unable to say so. You leave feeling you have visited a house where someone is already being mourned.`,
+  `They are short with you, and rude by the end, and set the kettle down hard enough to slop it. Fear has to go somewhere. Tonight it went at you.`,
+];
+const HOWARE_OFF = [
+  `"How am I?" The laugh has no floor under it. "Alive. Ask me again tomorrow, if we're both here for the asking." They end the conversation by walking away from it.`,
+  `"Don't." A raised hand, not quite steady. "Kind of you. Truly. But if I start answering that honestly I won't have the shutters barred by dark."`,
+  `"Fine." Flat as a shut door, and about as inviting. Some people armour themselves in courtesy. This one has run out.`,
+];
+const PAST_OFF = [
+  `"Before?" They look at you as if you had asked after a country that sank. "What use is before." They will not be drawn, and it is not mystery. It is grief, guarding what it has left.`,
+  `They start the story twice and lose it twice, and wave a hand: "Ask someone else. I can't. Not tonight." Fear has been at their memories like moths at wool.`,
 ];
 /* "How are you holding up?" - one honest, human answer each. */
 const HOWARE_LINES = {
@@ -2443,7 +2470,7 @@ function resolveNight(prev, planIn, preEvents) {
       if (chance(0.5)) dawn.push(ev("Folk by the well swear something was heard out past the houses in the night, singing. A counting rhyme, said some. Names, said others. Nobody agrees on the words, and nobody slept.", undefined, 0));
     }
     if (!plan.facts && n > 1 && chance(0.18)) {
-      if (chance(0.25)) beats.push(pickFreshIdx("gossipNamed", GOSSIP_NAMED)(pick(s.npcs.filter((x) => x.alive)).name));
+      if (chance(0.25)) beats.push(pickFreshIdx("gossipNamed", GOSSIP_NAMED)(pick(s.npcs.filter((x) => x.alive && !x.fled)).name));
       else beats.push(pickFreshIdx("gossip", GOSSIP));
     }
   };
@@ -2917,7 +2944,7 @@ function resolveNight(prev, planIn, preEvents) {
          The outcome was rolled once (interactive: carried on plan.facts and
          already lived in the walk; non-interactive: rolled fresh here) so the
          morning journal always matches what the night showed. */
-      const hw = (plan.facts && plan.facts.homeWatch) ? plan.facts.homeWatch : rollHomeWatch(s, watching);
+      const hw = (plan.facts && plan.facts.homeWatch) ? plan.facts.homeWatch : rollHomeWatch(s, watching, outMap);
       if (hw.kind === "secret") {
         s.npcs = s.npcs.map((x) => (x.id === watching ? { ...x, secretKnown: true } : x));
         s.clues.push(`Night ${n}: watching ${target.name}'s house, you learned the human truth of their nights: ${hw.short}. It explains their lies, and it is not the thing you are hunting.`);
@@ -2983,7 +3010,20 @@ function resolveNight(prev, planIn, preEvents) {
            TONIGHT, the recap must say so plainly, not let the connection
            vanish into a generic scream. -- */
         const crossedPaths = [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, watching, ...(mods.company || [])].filter(Boolean).includes(victim.id);
-        if (crossedPaths && n > 1) {
+        /* the watched-and-taken case is its own story: the player held that
+           very door under watch and saw nothing. The recap must own that
+           plainly (the kill came AFTER the watcher went home to bed), not
+           pretend they were out together in the lanes. */
+        const watchedHome = watching === victim.id && outMap[victim.id] === "home";
+        if (watchedHome && n > 1) {
+          beats.push(victimWhere === "home"
+            ? `You left ${victim.name}'s door still barred, the candle long out, nothing moving. Between your leaving and first light, something was inside that house without ever opening it. ${victim.name} is found behind their own bolt.`
+            : `You left ${victim.name}'s door barred and dark. Sometime after, that bolt was drawn back from the inside, and ${victim.name} walked out into the night of their own accord, toward whatever asked them to.`);
+          s.clues.push(victimWhere === "home"
+            ? `Night ${n}: you watched ${victim.name}'s door most of the night. It never opened, and they were dead behind it by dawn. Whatever took them passes barred doors, or was already inside.`
+            : `Night ${n}: ${victim.name}'s door stayed barred the whole time you watched it, and they were found at the ${victimWhere}. They rose and walked out AFTER you left, of their own accord. Nothing forced that door. Something called them through it.`);
+          dawn.push(ev(`You watched ${victim.name}'s door that same night, and the night waited you out. What you know that the village does not: the door was never forced.`, victim.id, 2));
+        } else if (crossedPaths && n > 1) {
           beats.push(`${victim.name}. You were with ${victim.name} in the dark not an hour ago, and left them living. Whatever found them found them almost the moment your back was turned.`);
           s.clues.push(`Night ${n}: ${victim.name} was alive when you left them at ${victimWhere === "home" ? "their own door" : "the " + victimWhere}. It was close behind you both. It chose them.`);
           dawn.push(ev(`You may have been the last to see ${victim.name} alive. The village does not know that. You do.`, victim.id, 2));
@@ -3143,7 +3183,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (target) { s.lastRumor = target.id; dawn.push(ev(pickFreshIdx("rumorStrange", RUMOR_STRANGE)(target.name), target.id)); }
   }
 
-  if (watchStayedHome) {
+  if (watchStayedHome && (!victim || victim.id !== watchStayedHome)) {
     const target = npcById(s, watchStayedHome);
     if (victim && victimKind === "kill") {
       s.clues.push(`Night ${n}: ${target.name} never left their door, and yet ${victim.name} was taken. It was not ${target.name} that night.`);
@@ -3416,7 +3456,7 @@ function actSearch(prev, loc) {
   /* --- the village is awake around you while you work: one social beat,
      sometimes, before the ground gives its answer. Texture only - none of
      this touches the find odds below. --- */
-  const folk = s.npcs.filter((x) => x.alive && !x.fled);
+  const folk = s.npcs.filter((x) => x.alive && !x.fled && !(x.turned && x.known));
   if (folk.length && chance(0.4)) {
     const w = pick(folk);
     s.dayEvents.push(ev(pickFreshIdx("daySearchFolk", DAY_SEARCH_FOLK)(w.name, loc), w.id, 0));
@@ -3921,7 +3961,6 @@ function computeAnswer(s, id, night, q, targetId) {
   }
 
   if (q === "strange") {
-    const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", reflect: "the mirrors in this village have all gone dull, have you noticed", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled" };
     if (npc.turned && night >= (tn || 0)) {
       /* the changed serve it now: they name signs the thing does NOT carry */
       const falseSigns = Object.keys(SIGN_TALK).filter((sg) => !m.signs.includes(sg));
@@ -4012,8 +4051,22 @@ function computeAnswer(s, id, night, q, targetId) {
       const gt = pick(gateTargets);
       s.sideQuest = { giver: id, target: gt.id, night: s.nightNum, done: false, reported: false, gated: true };
       quote = pickFreshIdx("gateLines", GATE_LINES)(gt.name);
-    } else if (lying && !isMonster && chance(0.5)) {
-      quote = `"Not today. My head aches. Everything aches, since." They do not say since what.`;
+    } else if (isMonster || (npc.turned && tn !== null && night >= (tn || 0))) {
+      /* a corrupted mouth never hands over its own trade's honest evidence,
+         on any night: it deflects, or it invents a trail pointing anywhere
+         but home. Spoken only - nothing shown, nothing marked in the journal. */
+      if (chance(0.5)) {
+        quote = isMonster
+          ? pickFreshIdx("craftDodgeMonster", [
+              `"Another day. The work will keep, and so will my answer."`,
+              `"You would not thank me for guesses, and guesses are all my trade has this morning."`,
+            ])
+          : `"Not today. My head aches. Everything aches, since." They do not say since what.`;
+      } else {
+        const falseSigns = Object.keys(SIGN_TALK).filter((sg) => !m.signs.includes(sg));
+        const fs = pickFreshIdx(`craftFalse:${id}`, falseSigns);
+        quote = `"Since you ask my trade: ${SIGN_TALK[fs]}. I'd give that a look before anything else."`;
+      }
     } else {
       const c = craftAnswer(s, id);
       quote = c.quote; foundSign = c.foundSign || foundSign; clue = c.clue;
@@ -4025,9 +4078,15 @@ function computeAnswer(s, id, night, q, targetId) {
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
     if (isMonster) {
-      quote = pickFreshIdx("talkMonster", TALK_MONSTER);
+      /* more often than not it is simply a fine actor: it gives you the
+         borrowed face's own warm hour, note-perfect, and you learn nothing */
+      quote = chance(0.45)
+        ? pickFreshIdx("talkMonster", TALK_MONSTER)
+        : pickFreshIdx(`talkLines:${id}`, TALK_LINES[id] || [`They talk, and you listen, and for an hour the village is only a village again.`]);
     } else if (npc.turned) {
       quote = pickFreshIdx(`talkTurned:${id}`, TALK_TURNED);
+    } else if (chance(0.15)) {
+      quote = pickFreshIdx("talkOff", TALK_OFF);
     } else {
       quote = pickFreshIdx(`talkLines:${id}`, TALK_LINES[id] || [`They talk, and you listen, and for an hour the village is only a village again.`]);
       const lastActive = [...s.nightLogs].reverse().find((lg) => lg.active && lg.huntLoc);
@@ -4040,28 +4099,36 @@ function computeAnswer(s, id, night, q, targetId) {
 
   if (q === "howare") {
     if (isMonster) {
-      quote = pickFreshIdx("howareMonster", [
-        `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
-        `"One day at a time, like everyone." The words are right, and the warmth almost reaches the eyes. "You look tired, though. You should rest. The village leans on you too hard." It is kindly meant. You spend a while, later, deciding whether you believe that.`,
-      ]);
+      quote = chance(0.45)
+        ? pickFreshIdx("howareMonster", [
+            `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
+            `"One day at a time, like everyone." The words are right, and the warmth almost reaches the eyes. "You look tired, though. You should rest. The village leans on you too hard." It is kindly meant. You spend a while, later, deciding whether you believe that.`,
+          ])
+        : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
     } else if (npc.turned) {
       quote = pickFreshIdx(`howareTurned:${id}`, [
         `"I am well," they say, and stop, as if the sentence has run out of the things it was given to say. "I am well," they say again, softer, checking the fit of it.`,
         `A long pause. "It is quieter now," they say at last. "Inside." They seem to believe that answers the question. Perhaps, somewhere, it does.`,
       ]);
     } else {
-      quote = pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
+      quote = chance(0.15)
+        ? pickFreshIdx("howareOff", HOWARE_OFF)
+        : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
       if (chance(0.5)) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     }
   }
 
   if (q === "past") {
     if (isMonster) {
-      quote = `They tell it well. Dates, names, the dead and the living, the bad winters, all of it in the right order, all of it word-perfect. It is only on the walk home that you place what was missing: not one detail you hadn't already heard from somebody else. A life, recited. Not one thing remembered.`;
+      quote = chance(0.45)
+        ? `They tell it well. Dates, names, the dead and the living, the bad winters, all of it in the right order, all of it word-perfect. It is only on the walk home that you place what was missing: not one detail you hadn't already heard from somebody else. A life, recited. Not one thing remembered.`
+        : pick(PAST_LINES[id] || [`They talk about before, haltingly, and before was ordinary, and the ordinariness of it is the saddest sound in Hollow's Edge tonight.`]);
     } else if (npc.turned) {
       quote = `They begin the story warmly enough, and lose their way somewhere in the middle of it, and finish with "it was a long time ago" - about their own wedding day, or their own children, or their own name. Then they look at you, politely, to see if that was sufficient.`;
     } else {
-      quote = pick(PAST_LINES[id] || [`They talk about before, haltingly, and before was ordinary, and the ordinariness of it is the saddest sound in Hollow's Edge tonight.`]);
+      quote = chance(0.15)
+        ? pickFreshIdx("pastOff", PAST_OFF)
+        : pick(PAST_LINES[id] || [`They talk about before, haltingly, and before was ordinary, and the ordinariness of it is the saddest sound in Hollow's Edge tonight.`]);
     }
   }
 
@@ -4388,11 +4455,9 @@ function actAccuse(prev, id, typeId) {
   s.wrongGuesses += 1;
   s.embolden = s.nightNum + 1;
   for (const pid of Object.keys(s.patience)) s.patience[pid] = Math.max(0, s.patience[pid] - 1);
-  beats.push(`${npc.name} protests. To the end, ${npc.name} protests.`);
   if (npc.turned) beats.push(`As the rite begins, their eyes flash with something that was never theirs. Changed. They were changed.`);
-  beats.push(`The ${METHODS[declared.method]} is put to them, and it does nothing that it would not do to you or me: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, the rite has just shown the whole square it is not a ${declared.name}.`);
-  beats.push(`It should end there. It does not. The village has come too far and brought too much rope. They hang ${npc.name} from the beam by the church door on your word, still protesting, and every soul watching helps by not stopping it.`);
-  beats.push(`The village does not have a dead monster. It has a hanged neighbour, and everyone's silence. They go home in the dark, and no one meets your eye.`);
+  beats.push(`${npc.name} protests to the end, and the ${METHODS[declared.method]} does nothing it would not do to you or me: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, it is no ${declared.name}.`);
+  beats.push(`It should end there. It does not: the village has brought too much rope to go home unused. ${npc.name} hangs from the beam by the church door, on your word, and afterward no one meets your eye.`);
   s.calmHope = npc.name;
   /* -- Pass G2: the grim bargain pays off, quietly, without ever announcing
      itself as a reward -- */
@@ -4403,7 +4468,7 @@ function actAccuse(prev, id, typeId) {
   if (s.wrongGuesses >= 2) {
     monsterKillsAccuser(s, beats, "Out beyond the torchlight, something that has watched you spend the village's trust decides it has seen enough. Tonight it does not go looking for a neighbour.");
   } else {
-    beats.push("And out beyond the torchlight, something that watched the whole thing turns away satisfied. Tonight it will feed without fear. An innocent hanged is a village half-beaten.");
+    beats.push("Out past the torchlight, something turns away satisfied. An innocent hanged is a village half-beaten.");
     s.dayEvents.push(ev(`${npc.name} is dead on your word. Name the thing wrong once more and it stops taking neighbours and comes for you.`, id));
   }
   s.ap = 0;
@@ -4940,19 +5005,22 @@ const EXTRA_CSS = `
 .mvKillGround { position:absolute; left:15%; right:15%; bottom:4px; height:6px; border-radius:50%; background:#000; opacity:0.35; }
 .mvKillFlash { position:absolute; left:16%; top:6%; width:2.5px; height:72%; background:linear-gradient(#FFF6E0, rgba(233,223,200,0)); transform:rotate(26deg); opacity:0; animation: mvkflash 4s ease forwards; }
 @keyframes mvkflash { 0%,14% { opacity:0; } 18% { opacity:1; } 32% { opacity:0; } 100% { opacity:0; } }
+/* Every rite ends on a corpse, not an empty patch: the art dies on screen
+   and STAYS, dimmed and slumped, so the moment reads even if you look up
+   after the animation has finished. */
 .mvKill-burn { animation: mvkburn 4.5s ease-in forwards; }
-@keyframes mvkburn { 0% { filter:none; opacity:1; } 45% { filter: sepia(1) saturate(3) hue-rotate(-28deg) brightness(1.35); } 100% { filter: sepia(1) saturate(4) hue-rotate(-38deg) brightness(2.1) blur(3px); opacity:0; transform: translateY(-16px) scale(0.96); } }
+@keyframes mvkburn { 0% { filter:none; opacity:1; } 45% { filter: sepia(1) saturate(3) hue-rotate(-28deg) brightness(1.35); } 100% { filter: grayscale(1) brightness(0.35) blur(1px); opacity: 0.55; transform: translateY(8px) scale(0.94) scaleY(0.85); } }
 .mvKill-pierce { transform-origin: 50% 100%; animation: mvkpierce 4s ease-in forwards; }
-@keyframes mvkpierce { 0% { opacity:1; } 20% { transform:none; filter:none; } 26% { transform: translateX(4px); filter: brightness(1.8); } 34% { transform: translateX(-2px); } 100% { transform: translateY(12px) scaleY(0.7); filter: grayscale(1) brightness(0.55); opacity: 0.3; } }
+@keyframes mvkpierce { 0% { opacity:1; } 20% { transform:none; filter:none; } 26% { transform: translateX(4px); filter: brightness(1.8); } 34% { transform: translateX(-2px); } 100% { transform: translateY(12px) scaleY(0.7); filter: grayscale(1) brightness(0.55); opacity: 0.5; } }
 .mvKill-shatter { animation: mvkshatter 4s ease-in forwards; }
-@keyframes mvkshatter { 0% { opacity:1; } 35% { filter: brightness(1.7); transform:none; } 45% { transform: rotate(2.5deg); } 55% { transform: rotate(-3deg) scale(1.05); } 100% { transform: scale(1.12); filter: blur(5px) brightness(1.4); opacity: 0; } }
+@keyframes mvkshatter { 0% { opacity:1; } 35% { filter: brightness(1.7); transform:none; } 45% { transform: rotate(2.5deg); } 55% { transform: rotate(-3deg) scale(1.05); } 100% { transform: rotate(-4deg) translateY(10px) scaleY(0.8); filter: blur(1.5px) grayscale(1) brightness(0.6); opacity: 0.45; } }
 .mvKill-sink { transform-origin: 50% 100%; animation: mvksink 4.5s ease-in forwards; }
-@keyframes mvksink { 0%, 30% { transform:none; opacity:1; } 100% { transform: translateY(24px) scaleY(0.5); opacity: 0; filter: brightness(0.35); } }
+@keyframes mvksink { 0%, 30% { transform:none; opacity:1; } 100% { transform: translateY(26px) scaleY(0.42); opacity: 0.55; filter: brightness(0.3) grayscale(0.8); } }
 .mvKill-shrink { animation: mvkshrink 4.5s ease-in forwards; }
-@keyframes mvkshrink { 0%, 30% { transform:none; opacity:1; } 100% { transform: scale(0.12) rotate(10deg); opacity: 0; } }
+@keyframes mvkshrink { 0%, 30% { transform:none; opacity:1; } 100% { transform: scale(0.3) rotate(10deg) translateY(30px); opacity: 0.55; filter: grayscale(1) brightness(0.5); } }
 .mvKill-dissolve { animation: mvkdissolve 4.5s ease-in forwards; }
-@keyframes mvkdissolve { 0% { opacity:1; } 50% { filter: blur(1px); opacity: 0.8; } 100% { filter: blur(6px); opacity: 0; transform: translateY(-8px); } }
-@media (prefers-reduced-motion: reduce) { .mvKill-burn, .mvKill-pierce, .mvKill-shatter, .mvKill-sink, .mvKill-shrink, .mvKill-dissolve, .mvKillFlash { animation: none; opacity: 0.3; filter: grayscale(1); } }
+@keyframes mvkdissolve { 0% { opacity:1; } 50% { filter: blur(1px); opacity: 0.8; } 100% { filter: blur(2.5px) grayscale(1) brightness(0.5); opacity: 0.4; transform: translateY(6px) scaleY(0.88); } }
+@media (prefers-reduced-motion: reduce) { .mvKill-burn, .mvKill-pierce, .mvKill-shatter, .mvKill-sink, .mvKill-shrink, .mvKill-dissolve, .mvKillFlash { animation: none; opacity: 0.45; filter: grayscale(1) brightness(0.5); } }
 `;
 const CSS_ALL = fontStyles + EXTRA_CSS;
 const DAY_TINTS = [
@@ -5811,7 +5879,7 @@ function MonsterVillage() {
         <style>{CSS_ALL}</style>
         <div className="absolute inset-0 mvNightFade" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})` }} />
         <div className="mvSun absolute" style={{ left: "16%", top: "34%", width: 46, height: 46, borderRadius: "50%", background: "#E8B04B", boxShadow: "0 0 60px 22px rgba(232,176,75,0.35)" }} />
-        <div className="mvMoon absolute" style={{ right: "14%", top: "10%", width: 34, height: 34, borderRadius: "50%", background: C.parch, boxShadow: "0 0 40px 12px rgba(233,223,200,0.15)" }} />
+        <div className="mvMoon absolute" style={{ right: "12%", top: "17%", width: 34, height: 34, borderRadius: "50%", background: C.parch, boxShadow: "0 0 40px 12px rgba(233,223,200,0.15)" }} />
         <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 h-full flex flex-col">
           <div className="flex items-baseline justify-between shrink-0">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
@@ -5925,7 +5993,7 @@ function MonsterVillage() {
 
           {s.over.win && (
             <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.panel, border: `1px solid ${C.line}` }}>
-              <div className="mv-display" style={{ color: C.redBright, fontSize: 12, letterSpacing: 2 }}>THE RITE, DONE RIGHT</div>
+              <div className="mv-display" style={{ color: C.redBright, fontSize: 12, letterSpacing: 2 }}>HOW IT ENDED</div>
               <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} /></div>
               <p className="mt-1 text-center" style={{ fontSize: 13.5, color: C.parch }}>{METHOD_KILL_LINES[m.method]}</p>
             </div>
@@ -6171,7 +6239,7 @@ function MonsterVillage() {
     const leaves = !!(tLoc && tLoc !== "home");
     /* Roll the stay-home outcome once, onto the shared facts, so the live walk
        (below) and the morning recap (resolveNight) tell the same story. */
-    if (!leaves) facts.homeWatch = rollHomeWatch(s, id);
+    if (!leaves) facts.homeWatch = rollHomeWatch(s, id, facts.outMap);
     setModal(null);
     const openLine = pickFreshIdx("watchLines", WATCH_LINES)(npcById(s, id).name);
     let afflictionBeat = null;
@@ -6537,7 +6605,7 @@ function MonsterVillage() {
               return (
                 <div className="flex flex-col gap-2">
                   {beat(text)}
-                  <Btn full kind="amber" onClick={() => goReturn({})}>On, toward the {walk.loc} →</Btn>
+                  <Btn full kind="amber" onClick={() => goReturn({})}>Leave them to the night →</Btn>
                 </div>
               );
             })()}
@@ -6602,7 +6670,7 @@ function MonsterVillage() {
               const vis = hw && hw.kind === "visitor" ? npcById(s, hw.visitorId) : null;
               const quietText =
                 hw && hw.kind === "secret"
-                  ? `Through a gap in the shutter, you finally see what ${t.name} has been lying about: ${hw.short}. Human, and sadder than you had let yourself expect. You have their secret now, and it is not the thing you hunt.`
+                  ? `${t.name} never leaves. But they never sleep, either, and through the shutter-crack you watch a secret being tended instead of taken out: something fetched from hiding, handled gently, wrapped and hidden again, lips moving over it the whole while. By the small hours you have read it right: ${hw.short}. Human, and sadder than you had let yourself expect, and not the thing you hunt.`
                   : hw && hw.kind === "visitor" && vis
                   ? `${t.name} never leaves. But past midnight a second figure crosses the lane to their door, is let in without a knock, and is gone before the bell. You know that gait. It is ${vis.name}.`
                   : hw && hw.kind === "restless"
@@ -6662,7 +6730,7 @@ function MonsterVillage() {
                     className="flex items-center gap-2 py-0.5" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: C.ink, opacity: ticked ? 1 : 0.55 }}>
                     <span style={{ width: 14, textAlign: "center", color: ticked ? C.red : C.inkDim }}>{ticked ? "☒" : "☐"}</span>
                     <span style={{ fontWeight: ticked ? 700 : 400 }}>{label}</span>
-                    {witnessed && !ticked && <span title="you have sensed this in the dark" style={{ width: 5, height: 5, borderRadius: "50%", background: C.inkDim, display: "inline-block" }} />}
+                    {witnessed && !ticked && <span title="you have witnessed this" style={{ fontSize: 10, color: C.red, fontStyle: "italic", opacity: 0.8 }}>seen</span>}
                   </button>
                 );
               })}
@@ -6675,12 +6743,12 @@ function MonsterVillage() {
                   className="flex items-center gap-2 py-0.5 mt-1 w-full" style={{ background: "transparent", border: "none", borderTop: `1px solid ${C.parchLine}`, cursor: "pointer", padding: "4px 0 0", textAlign: "left", color: C.ink, opacity: ticked ? 1 : 0.55 }}>
                   <span style={{ width: 14, textAlign: "center", color: ticked ? C.red : C.inkDim }}>{ticked ? "☒" : "☐"}</span>
                   <span style={{ fontWeight: ticked ? 700 : 400 }}>{SIGNS.wail}</span>
-                  {witnessed && !ticked && <span title="you have sensed this in the dark" style={{ width: 5, height: 5, borderRadius: "50%", background: C.inkDim, display: "inline-block" }} />}
+                  {witnessed && !ticked && <span title="you have witnessed this" style={{ fontSize: 10, color: C.red, fontStyle: "italic", opacity: 0.8 }}>seen</span>}
                   <span className="ml-auto" style={{ fontSize: 12, color: C.inkDim, fontStyle: "italic" }}>heard on the wind, never found on the ground</span>
                 </button>
               );
             })()}
-            <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights have shown you. The book dims what cannot be.</p>
+            <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights have shown you. The book dims what cannot be. A "seen" mark means the sign was witnessed, by you or a truthful mouth: it still waits on your own tick, because marks can be planted and mouths can be borrowed.</p>
             <div className="mv-display mt-4" style={{ fontSize: 16, letterSpacing: 1 }}>Your reckoning</div>
             <div className="flex flex-wrap gap-3 mt-2">
               {MONSTERS.map((mm) => {
@@ -6921,6 +6989,11 @@ function MonsterVillage() {
     const opener = [demeanorLine(s2, id), pickFreshIdx(`dispLine:${dispTier(npc.disp)}`, DISP_LINES[dispTier(npc.disp)])];
     if (npc.sawYouWatching) opener.push(`Before you can speak: "I saw you. The other night, in the lane, watching my door. So am I a suspect, then? Say it to my face."`);
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
+    /* the deepest cut of all: the player took their one secret and spent it */
+    if (s2.secretSpread && s2.secretSpread[id] && s2.secretSpread[id].reached) opener.push(pickFreshIdx(`spreadOpener:${id}`, [
+      `They do not offer a greeting. "The whole village has my secret now, and only one soul had it to give away." A silence you are meant to sit in. "Ask your questions. It is not as if you could take anything more from me."`,
+      `"You know what they call me now, since it got out." A flat look. "I trusted you with the one thing I had, and you spent it like market coin. Ask what you came to ask, and then leave."`,
+    ]));
     /* a lasting affliction re-colours the room this person receives you in */
     if (id === "marta" && s2.breadRiot) opener.push(AFFLICTION_OPENER.marta(npc.name));
     else if (id === "liesel" && s2.tavernShut) opener.push(AFFLICTION_OPENER.liesel(npc.name));
@@ -7063,7 +7136,7 @@ function MonsterVillage() {
                         {isLast ? <SpokenText text={t.a} /> : t.a}
                       </p>
                       {t.flag && <p style={{ fontSize: 13, color: C.redBright, fontWeight: 700 }}>✕ {t.flag}</p>}
-                      {t.sign && <p style={{ fontSize: 13, color: C.amber }}>{senseFor(t.sign, 0)}</p>}
+                      {t.sign && <p style={{ fontSize: 13, color: C.amber }}>{senseFor(t.sign, 0)} <span style={{ color: C.dim }}>· {SIGNS[t.sign]}, marked seen in your journal. Tick it if you believe it.</span></p>}
                     </div>
                   );
                 })}
