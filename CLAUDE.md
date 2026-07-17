@@ -55,6 +55,13 @@ must name both WHO and WHAT before the village runs out of people.
 - **"Nothing is ever proof."** No single line of narration may uniquely
   identify the monster; signs/sounds/demeanor always overlap several types.
   Every sign a monster leaves is real; decoys are tracked in `s.planted`.
+  **Honest villagers and village events (Tobias's craft clue, the torch-
+  search `sweep`) only ever surface signs the *real* monster leaves
+  (`m.signs.includes(sg)`), never a planted decoy — plants are found and
+  exposed by the player's own searching, never handed over as gospel by an
+  innocent.** SIGNS labels: claw/tracks/bite/cold/flora("Blighted Plants")/
+  hex/graves("Grave Taint")/wail. Sensory prose may still say "grave dirt"
+  descriptively — that's fine, prose need not match the label.
 - **Facts are sampled once.** `sampleNight()` decides everything (who is out,
   weather, whether/where it hunts, afflictions) BEFORE the walk begins;
   the walk UI only *reveals* facts and records choices in `mods.*`. The walk
