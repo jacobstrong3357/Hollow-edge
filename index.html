@@ -215,7 +215,7 @@ const Snd = {
 const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Tavern"];
 
 const SIGNS = {
-  claw: "Claw Marks", tracks: "Beast Tracks", bite: "Bite Marks",
+  claw: "Claw Marks", tracks: "Strange Tracks", bite: "Bite Marks",
   cold: "Cold Aura", flora: "Blighted Plants",
   hex: "Hex Marks", graves: "Grave Taint", wail: "Unearthly Wailing",
 };
@@ -354,10 +354,10 @@ const MONSTERS = [
   { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], lore: "Its first feeding is always too deep: one body, torn by tooth and talon, to open the account. After that it feeds when the thirst takes it, never two nights running, and slips through any door. It beds down by day in ground it has no right to, and from then on its victims do not die. They change, and they hide it. Only the stake ends it." },
   { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], lore: "Stalks almost every night, but takes only those who wander after dark. Its grief carries on the wind, its cold clings to the ground, and its prints stop mid-stride, as if it forgot to keep touching the earth. Bar your door and it passes by. It is unmade inside a ring of salt." },
   { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger. It dens among the graves and prowls from there, but takes anyone caught outdoors, wherever it finds them. Too craven to enter a home. Consecrated fire, and nothing less." },
-  { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Some it curses dead, without a mark of struggle; others it bends into servants who walk on and lie for it, so a body one night and none the next are both its work. Burn the grimoire and the witch burns with it." },
+  { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it, and its workings want grave earth, dug fresh from ground it has no right to open. Some it curses dead, without a mark of struggle; others it bends into servants who walk on and lie for it, so a body one night and none the next are both its work. Burn the grimoire and the witch burns with it." },
   { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens its work with one soul taken violently, as a signature. After that it claims souls as it pleases: some it hollows out and leaves walking, passing for themselves; some it simply tears apart for the joy of it. Walls mean nothing to it, and it keeps no pattern you can trust. Only the rite of exorcism casts it out." },
   { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
-  { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door. Victims are found without a wound. It cannot bear its own face in a silver mirror." },
+  { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door, and the green things brown and curl wherever it has poured. Victims are found without a wound. It cannot bear its own face in a silver mirror." },
   { id: "hellhound", name: "Hellhound", signs: ["tracks", "claw", "graves"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves the tracks of a hound too heavy to be a hound, claws its prey apart, and roots in the graveyard earth between kills. Holy water, and a steady hand to throw it." },
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
   { id: "doppel", name: "Doppelg\u00e4nger", signs: ["claw", "bite", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, and leaves the ruin for the village to find, torn by tooth and nail. After that it does not kill. It replaces. Its victims walk and talk and pass for themselves, and the only other trace of it is a weeping heard on its nights that comes from no throat: the taken, grieving themselves. No door stops something you would invite in. It is undone only by its true name said backwards, if anyone can learn it." },
@@ -367,7 +367,7 @@ const MONSTERS = [
   { id: "succubus", name: "Succubus", signs: ["flora", "hex", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It does not break in, and it does not need to catch you outdoors. It calls, and the called rise from their own beds, unbar their own doors, and walk out smiling to wherever it waits. Its dead are found at its chosen ground, never at home, barely marked, and the green things around them wither where the song has been. Its workings are scratched where it sings, and what is heard on its nights is not grief: it is nearer a music. One clear note of the consecrated bell breaks the charm, and the thing with it." },
   /* -- The sixteenth. Locked behind the whole Black Book: it can only be
      drawn once every other horror has been ended at least once. It talks. -- */
-  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "bite"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Taller than the doorways it declines to use, thin as a hanged man's shadow, and where a face should be there is only a courteous smoothness. The trees sicken where it stands among them, and what it does to the caught is not feeding but composition: unhurried, elaborate, signed. Worst of all, it talks - fondly, endlessly, in words this valley never taught anyone - and it remembers every conversation. Burn its effigy while it watches: vanity is the one organ it grew." },
+  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "tracks"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Taller than the doorways it declines to use, thin as a hanged man's shadow, and where a face should be there is only a courteous smoothness. The trees sicken where it stands among them, its stride leaves prints spaced as no walking thing should manage, and what it does to the caught is not feeding but composition: unhurried, elaborate, signed. Worst of all, it talks - fondly, endlessly, in words this valley never taught anyone - and it remembers every conversation. Burn its effigy while it watches: vanity is the one organ it grew." },
 ];
 
 const SIGN_CATS = {
@@ -1011,22 +1011,25 @@ function NIGHT_ONE_SCENE(v, where) {
   ];
 }
 
+/* These halves are dealt as ONE dawn card (bell + place, concatenated), so
+   each half stays short: the merged card must read in three or four lines,
+   tense and swimmable, not a paragraph. */
 const N1_BELL = [
-  (v) => `The church bell starts ringing while it is still dark, not the hour, not a service, just ringing. It means a death. ${v.name} ${v.role} is dead.`,
-  (v) => `The bell will not stop before dawn, until someone takes the rope from the ringer's shaking hands. By then everyone knows: ${v.name} ${v.role} is dead.`,
-  (v) => `No bell. Just a name carried door to door before dawn: ${v.name}. ${v.name}. By sunrise the whole village stands in the square, saying it.`,
-  (v) => `First light shows a silent crowd in the lane, all facing one door. You do not need to ask whose. ${v.name} ${v.role} is dead.`,
-  (v) => `It is ${v.name}'s own door that gives it away: standing open at first light, when it was barred fast at dusk. ${v.name} ${v.role} is dead behind it.`,
+  (v) => `The church bell starts while it is still dark. Not the hour. A death. ${v.name} ${v.role} is dead.`,
+  (v) => `The bell will not stop before dawn. By the time someone stills it, everyone knows: ${v.name} ${v.role} is dead.`,
+  (v) => `No bell. Just a name carried door to door before sunrise: ${v.name}. ${v.name} ${v.role} is dead.`,
+  (v) => `First light shows a silent crowd, all facing one door. You do not need to ask whose. ${v.name} ${v.role} is dead.`,
+  (v) => `${v.name}'s own door gives it away: open at first light, barred fast at dusk. ${v.name} ${v.role} is dead behind it.`,
 ];
 const N1_PLACE_HOME = [
   "Barred from the inside. It did not matter.",
-  "Every window latched, the door bolted. Whatever came in used no opening the house knew it had.",
-  "No forcing at all, which is worse than wreckage. Wreckage the village would know how to fear.",
+  "Every window latched, the door bolted. It needed neither.",
+  "Nothing forced, which is worse than wreckage.",
 ];
 const N1_PLACE_OUT = [
   (w) => `Found at the ${w}, past anywhere a sensible soul walks after dark.`,
-  (w) => `Found at the ${w}, far past any errand, the ground between telling a story nobody reads aloud.`,
-  (w) => `What is left is found at the ${w}, carried back the long way to avoid the family's window.`,
+  (w) => `Found at the ${w}, far past any errand.`,
+  (w) => `What is left is found at the ${w}.`,
 ];
 const N1_WITNESS = [
   "One says claws, another teeth, a third no mark at all. They cannot all be right, the first thing the village learns about what walks among it.",
@@ -1533,7 +1536,7 @@ const WATCH_RESTLESS = [
   (nm) => `Twice in the night ${nm} cracked the shutter and stood looking out at nothing, or at everything, and twice drew it shut as though they had heard you think.`,
   (nm) => `${nm}'s house was too quiet: no fire banked, no tread, no cough. Just a stillness held on purpose, the way you hold a breath, all the way to dawn.`,
   (nm) => `Long after every honest candle died, ${nm}'s stayed lit, and something moved behind it that did not move the way sleep moves.`,
-  (nm) => `Once, in the worst hour, ${nm} opened their door. Just opened it, and stood in the gap looking out at the dark for a long count, and shut it again, and shot the bolt. People do strange things now. That was stranger than most.`,
+  (nm) => `Once, in the worst hour, ${nm} opened their door and stood in the gap, looking out at the dark for a long count. Then shut it, and shot the bolt. That was stranger than most things people do now.`,
   (nm) => `A sound came from ${nm}'s house in the small hours that you have been trying to name ever since: weeping, or laughing, or someone doing the one to smother the other.`,
   (nm) => `${nm}'s dog was put out at midnight and scratched at the door until dawn. It was not let back in. It would not leave the step, either.`,
 ];

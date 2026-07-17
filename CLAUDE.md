@@ -59,9 +59,13 @@ must name both WHO and WHAT before the village runs out of people.
   search `sweep`) only ever surface signs the *real* monster leaves
   (`m.signs.includes(sg)`), never a planted decoy — plants are found and
   exposed by the player's own searching, never handed over as gospel by an
-  innocent.** SIGNS labels: claw/tracks/bite/cold/flora("Blighted Plants")/
-  hex/graves("Grave Taint")/wail. Sensory prose may still say "grave dirt"
-  descriptively — that's fine, prose need not match the label.
+  innocent.** SIGNS labels: claw/tracks("Strange Tracks" — deliberately NOT
+  "Beast Tracks", because the wraith, revenant and Hollowed leave uncanny
+  prints, and the sense prose has always covered both)/bite/cold/
+  flora("Blighted Plants")/hex/graves("Grave Taint")/wail. Sensory prose may
+  still say "grave dirt" descriptively — that's fine, prose need not match
+  the label. Every monster's three signs are justified in its own lore
+  (the Hollowed strides, it does not bite — it has no face).
 - **Facts are sampled once.** `sampleNight()` decides everything (who is out,
   weather, whether/where it hunts, afflictions) BEFORE the walk begins;
   the walk UI only *reveals* facts and records choices in `mods.*`. The walk
