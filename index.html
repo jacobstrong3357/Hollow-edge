@@ -216,8 +216,8 @@ const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Taver
 
 const SIGNS = {
   claw: "Claw Marks", tracks: "Beast Tracks", bite: "Bite Marks",
-  cold: "Cold Aura", flora: "Withered Flora",
-  hex: "Hex Marks", graves: "Grave Dirt", wail: "Unearthly Wailing",
+  cold: "Cold Aura", flora: "Blighted Plants",
+  hex: "Hex Marks", graves: "Grave Taint", wail: "Unearthly Wailing",
 };
 
 /* What the signs FEEL like, told without ever naming themselves. Live
@@ -2411,7 +2411,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (attendees.length >= 2 && chance(0.2)) { const a = pick(attendees); const b = pick(attendees.filter((x) => x.id !== a.id)); evFight = [a.id, b.id]; s.grudges[a.id] = { other: b.id, until: n + 3 }; s.grudges[b.id] = { other: a.id, until: n + 3 }; }
     if (attendees.length >= 2 && chance(0.25)) { const cand2 = attendees.filter((x) => !evFight || !evFight.includes(x.id)); if (cand2.length >= 2) { const a = pick(cand2); const b = pick(cand2.filter((x) => x.id !== a.id)); evPair = [a.id, b.id]; } }
     if (attendees.length && chance(0.15)) { const w = pick(attendees.filter((x) => x.id !== s.monster.vid && x.id !== mods.follow && x.id !== mods.hailed)); if (w) { evWander = w.id; outMap[w.id] = "Dark Forest"; } }
-    if (evn.id === "sweep") { const unfound = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg)); if (unfound.length && chance(0.35)) { evSweepFind = pick(unfound); evSweepSense = senseFor(evSweepFind); s.foundSigns.push(evSweepFind); } }
+    if (evn.id === "sweep") { const unfound = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg)); if (unfound.length && chance(0.35)) { evSweepFind = pick(unfound); evSweepSense = senseFor(evSweepFind); s.foundSigns.push(evSweepFind); } }
   }
 
   if (n === 1) {
@@ -3627,7 +3627,10 @@ function craftAnswer(s, id) {
     const hints = [...FOLK_HINTS, COLLECTOR_HINT].filter((h) => h.m.some((mm) => remaining.find((r) => r.id === mm)));
     quote = hints.length ? pickFreshIdx("folkHints", hints).t : `"I have told you what the old stories hold. The rest is in the ground and the dead, not in my jars."`;
   } else if (id === "tobias") {
-    const gy = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg));
+    /* An honest gravedigger only ever shows you what is genuinely there of
+       the real thing: never a planted decoy (those you must find, and expose,
+       yourself). "The ground don't lie" has to actually be true of him. */
+    const gy = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg));
     if (gy.length && dispChance(0.6, speakerDisp)) { foundSign = pick(gy); quote = `"Come and see, then." He shows you, out among the stones. "${senseFor(foundSign)} Been that way three days. The ground don't lie, whatever else does."`; }
     else quote = pickFreshIdx("craftFallback:tobias", [`"The ground's unhappy. Won't settle over the new graves like it should. Beyond that it's keeping its own counsel, same as me."`, `"Nothing new among the stones. Old bones lying quiet. It's the quiet above ground I'd worry at."`]);
   } else if (id === "ansel") {
