@@ -115,7 +115,16 @@ must name both WHO and WHAT before the village runs out of people.
   they must never yield information — safe and blind is the bargain.
 - When the journal narrows to exactly one creature (`armedGuess`), the day
   screen shows the Wilhelm "you walk armed now" banner; the kill itself
-  happens in `applyFollowConsequence` (confront while armed).
+  happens in `applyFollowConsequence` (confront while armed). **Armed +
+  right name always wins** — the banner promises "if you are right, this
+  ends tonight" and the code keeps that promise (a 25% roll swaps in a
+  near-death scare beat, never a loss). Wrong name stays lethal (0.7).
+- Secrets are a payoff, not a nightly harvest: a stay-home watch decodes
+  one at 0.12 (`rollHomeWatch`), and a crossed-paths "wait" vantage only
+  when the night's sampled `secretCatch[id]` allows (0.5, rolled once in
+  `sampleNight` so the live walk and recap agree). Deliberately following
+  someone on their errand stays a guaranteed reveal. Villagers go out and
+  lie about their nights at the same rate regardless (`outP` untouched).
 - `Snd.wail("song")` is the succubus's sweeter night-sound, played only on
   its active nights; everything else gets the grief glide.
 - **Tell noise is load-bearing**: the monster's person-question tells

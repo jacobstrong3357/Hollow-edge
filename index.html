@@ -313,6 +313,23 @@ const METHODS = {
   effigy: "Burning of Its Effigy",
 };
 
+/* METHODS names the rite; this names the thing actually in your hands when
+   the rite leaves the square and walks into the dark with you. Prose that
+   says "carrying the X" or "with the X raised" must use these, never the
+   rite titles ("waiting at your door with the Burn the Grimoire" is not a
+   sentence). Keyed identically to METHODS; articles included. */
+const METHOD_CARRY = {
+  silver: "the silver blade", stake: "the wooden stake", salt: "a pouch of blessed salt",
+  fire: "the consecrated fire, hooded in a lantern", grimoire: "oil and a striker for its grimoire",
+  exorcism: "the book and stole of the exorcism", iron: "the cold iron blade",
+  mirror: "the silver mirror", holy: "the flask of holy water",
+  crossroads: "the grave-spade and the binding cords",
+  backname: "its name, learned syllable by syllable for saying backwards",
+  hawthorn: "the hawthorn charm", rest: "the candles and psalter of the Rite of Eternal Rest",
+  quicksilver: "the draught of quicksilver", bell: "the consecrated bell",
+  effigy: "its effigy, bound and soaked for the fire",
+};
+
 const METHOD_KILL_LINES = {
   silver: "The silver blade goes in, and the flesh smokes around it.",
   stake: "The stake finds the heart, and a century leaves the body all at once.",
@@ -1019,9 +1036,11 @@ const N1_WITNESS = [
   "The children are kept back; the adults gratefully face away. What lay there stays in every mind that saw it.",
 ];
 function NIGHT_ONE_DAWN(victim, where) {
+  /* the door-gives-it-away opener only fits a death at home */
+  const bellPool = where === "home" ? N1_BELL : N1_BELL.slice(0, 4);
   const placeLine = where === "home" ? pickFreshIdx("n1placeH", N1_PLACE_HOME) : pickFreshIdx("n1placeO", N1_PLACE_OUT)(where);
   return [
-    pickFreshIdx("n1bell", N1_BELL)(victim),
+    pickFreshIdx("n1bell", bellPool)(victim),
     placeLine,
     pickFreshIdx("n1witness", N1_WITNESS),
   ];
@@ -1526,9 +1545,12 @@ function rollHomeWatch(s, id, outMap) {
   /* the midnight visitor must be someone the night's own ledger has abroad:
      a "visitor" the testimony later places at home is a contradiction */
   const others = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id && x.id !== s.monster.vid && (!outMap || (outMap[x.id] && outMap[x.id] !== "home")));
-  if (secretOf(s, id) && !target.secretKnown && roll < 0.3) return { kind: "secret", short: secretOf(s, id).short };
-  if (others.length && roll < 0.52) return { kind: "visitor", visitorId: pick(others).id };
-  if (roll < 0.7) return { kind: "restless", ri: freshIndex(`watchRestless:${id}`, WATCH_RESTLESS.length) };
+  /* a secret is a payoff, not a payout: one watched door should rarely hand
+     it over. The villager keeps their errands and their lies either way;
+     this only governs how often a single night's watching catches them out. */
+  if (secretOf(s, id) && !target.secretKnown && roll < 0.12) return { kind: "secret", short: secretOf(s, id).short };
+  if (others.length && roll < 0.4) return { kind: "visitor", visitorId: pick(others).id };
+  if (roll < 0.62) return { kind: "restless", ri: freshIndex(`watchRestless:${id}`, WATCH_RESTLESS.length) };
   return { kind: "quiet" };
 }
 
@@ -2293,7 +2315,13 @@ function sampleNight(s, m, n) {
     }
   }
   const huntLoc = active ? outMap[s.monster.vid] : null;
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, huntLoc, affliction };
+  /* whether tonight's vantage could actually DECODE a crossed-paths secret
+     errand (the "wait" watch), sampled here so the live walk and the recap
+     agree. Half the time you only see a neighbour abroad, not the why:
+     secrets should be a payoff, not a nightly harvest. */
+  const secretCatch = {};
+  for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.5);
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, huntLoc, affliction };
 }
 
 function resolveNight(prev, planIn, preEvents) {
@@ -2324,20 +2352,20 @@ function resolveNight(prev, planIn, preEvents) {
     const monsterNpc = npcById(s, s.monster.vid);
     if (plan.kind === "rite") {
       const declared = MONSTERS.find(x => x.id === plan.typeId);
-      beats.push(`At dusk, what is left of Hollow's Edge gathers in the square. ${ritePreparer(s)} prepares the rite for a ${declared.name}: the ${METHODS[declared.method]}.`);
+      beats.push(`At dusk, what is left of Hollow's Edge gathers in the square. ${ritePreparer(s)} prepares the rite for a ${declared.name}: ${METHODS[declared.method]}.`);
       beats.push("You do not have to summon it. It has been waiting for exactly this.");
       if (plan.typeId === s.monster.type) {
         beats.push(`It comes out of the dark straight for the circle, certain of its welcome, and understands too late that the rite laid out for it is its own undoing.`);
         beats.push(METHOD_KILL_LINES[declared.method]);
         beats.push(`What dies in the square wore ${monsterNpc.name}'s face for years. It will not wear anyone's again.`);
-        s.over = { win: true, reason: "won", text: `You named it truly at the last: a ${m.name}. The ${METHODS[m.method]} ended it in the square, in front of everyone it fed on.` };
+        s.over = { win: true, reason: "won", text: `You named it truly at the last: a ${m.name}. Its own rite ended it in the square, in front of everyone it fed on.` };
         s.nightBeats = beats; s.beatTitle = "THE LAST RITE"; s.phase = "night"; s.dawn = dawn;
         s.nightLogs.push({ night: n, active: true, huntLoc: "Village Square", outMap: {}, wail: false, weather: null, event: null });
         return s;
       }
       s.riteFails += 1;
       s.wrongGuesses += 1;
-      beats.push(`It comes out of the dark, walks to the very edge of the circle, and stops. The ${METHODS[declared.method]} means nothing to it.`);
+      beats.push(`It comes out of the dark, walks to the very edge of the circle, and stops. The rite means nothing to it.`);
       if (s.wrongGuesses >= 2) {
         monsterKillsAccuser(s, beats, "It does not take a neighbour this time. It steps across the dead circle, unhurried, straight to you, and the village that stood here on your word steps back and lets it.", "the square");
         s.nightBeats = beats; s.beatTitle = `NIGHT ${n} \u00b7 UNDER SIEGE`; s.phase = "night"; s.dawn = dawn;
@@ -2381,7 +2409,7 @@ function resolveNight(prev, planIn, preEvents) {
   const watching = plan.kind === "watch" ? plan.id : null;
   const exposed = out || !!watching;
   const f = plan.facts || sampleNight(s, m, n);
-  const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, huntLoc, affliction } = f;
+  const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch = {}, huntLoc, affliction } = f;
   if (active) s.lastActive = n;
   const dawn = [...(preEvents || [])];
   const beats = [...preBeats];
@@ -2518,33 +2546,36 @@ function resolveNight(prev, planIn, preEvents) {
         if (reckoning.length === 1) {
           const guess = reckoning[0];
           if (guess.id === s.monster.type) {
+            /* the armed banner promises it plainly: right name, and this ends
+               tonight. The promise is kept. Earning this moment took the whole
+               journal and a lucky night; a hidden coin flip on top of that
+               reads as theft, so the worst the dark can do here is a scare. */
             if (chance(0.75)) {
-              beats.push(`You step out of the shadow with the ${METHODS[guess.method]} already in your hands, and you say ${fw.name}'s name, and then the other one. The true one.`);
+              beats.push(`You step out of the shadow with ${METHOD_CARRY[guess.method]} already in your hands, and you say ${fw.name}'s name, and then the other one. The true one.`);
               beats.push(`It goes very still. For one long breath the two of you stand together in the dark it thought it owned, and it understands, before anyone else in the village does, that you have done the arithmetic.`);
-              beats.push(METHOD_KILL_LINES[guess.method]);
-              beats.push(`What dies at the ${fDest} wore ${fw.name}'s face for years. No torches. No square. No rope. Just you, and the dark, and the end of it, one full night before it would have fed again.`);
-              s.wonInDark = true;
-              s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fDest}: a ${guess.name}. The ${METHODS[guess.method]} ended it in the dark, before it could take one more soul.` };
-              return true;
+            } else {
+              beats.push(`You step out with ${METHOD_CARRY[guess.method]} in your hands and the right name in your mouth, and you are half a heartbeat too slow with both. Its rush takes you off your feet, and the night narrows to teeth.`);
+              beats.push(`But the true name is already out and in the air between you, and a named thing flinches. The half heartbeat comes back to you. It is enough.`);
             }
-            beats.push(`You step out with the ${METHODS[guess.method]} in your hands and the right name in your mouth, and you are half a heartbeat too slow with both.`);
-            s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
-            s.over = { win: false, reason: "slain", text: `You named it truly at the ${fDest}. It was faster than the truth.` };
+            beats.push(METHOD_KILL_LINES[guess.method]);
+            beats.push(`What dies at the ${fDest} wore ${fw.name}'s face for years. No torches. No square. No rope. Just you, and the dark, and the end of it, one full night before it would have fed again.`);
+            s.wonInDark = true;
+            s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fDest}: a ${guess.name}. Its own rite ended it in the dark, before it could take one more soul.` };
             return true;
           }
           /* the wrong name, carried into the dark */
           if (chance(0.7)) {
-            beats.push(`You step out with the ${METHODS[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
+            beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
             s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
             s.over = { win: false, reason: "slain", text: `You confronted it at the ${fDest} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
             return true;
           }
           if (!s.struck.includes(guess.id)) s.struck = [...s.struck, guess.id];
-          s.clues.push(`Night ${n}: you put the ${METHODS[guess.method]} to it and the thing only laughed. Whatever wears ${fw.name}'s face, it is NOT a ${guess.name}. Strike the name and start the arithmetic again.`);
+          s.clues.push(`Night ${n}: you put ${METHOD_CARRY[guess.method]} to it and the thing only laughed. Whatever wears ${fw.name}'s face, it is NOT a ${guess.name}. Strike the name and start the arithmetic again.`);
           s.faceKnown = fw.id;
           s.fled = true;
           s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, fled: true } : x));
-          beats.push(`You step out with the ${METHODS[guess.method]} raised, and it does not even flinch. It smiles with far too much of its face, drops the pretence like a coat, and is over the churchyard wall before your heart restarts. Wrong name. Right face. It has nothing left to hide now, and nothing left to lose.`);
+          beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised, and it does not even flinch. It smiles with far too much of its face, drops the pretence like a coat, and is over the churchyard wall before your heart restarts. Wrong name. Right face. It has nothing left to hide now, and nothing left to lose.`);
           dawn.push(ev(`The village knows the face now: ${fw.name}. And you know one thing more than they do: it is no ${guess.name}. Only its own rite ends this, and you will not get more than two tries.`, fw.id));
           return false;
         }
@@ -2830,7 +2861,7 @@ function resolveNight(prev, planIn, preEvents) {
             continue;
           }
           if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
-          if (mods.style === "wait" && secretOut[npc.id] && !npc.secretKnown) {
+          if (mods.style === "wait" && secretOut[npc.id] && secretCatch[npc.id] && !npc.secretKnown) {
             const sec = secretOf(s, npc.id);
             s.npcs = s.npcs.map((x) => (x.id === npc.id ? { ...x, secretKnown: true } : x));
             s.clues.push(`Night ${n}: ${npc.name}'s night errand, witnessed from your vantage: ${sec.short}. Human, and nothing worse.`);
@@ -2852,7 +2883,7 @@ function resolveNight(prev, planIn, preEvents) {
             s.playerSaw.push({ night: n, id: npc.id, loc: plan.loc });
             seenHere.push(npc.name);
             if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
-            if (mods.style === "wait" && secretOut[npc.id] && !npc.secretKnown) {
+            if (mods.style === "wait" && secretOut[npc.id] && secretCatch[npc.id] && !npc.secretKnown) {
               const sec = secretOf(s, npc.id);
               s.npcs = s.npcs.map((x) => (x.id === npc.id ? { ...x, secretKnown: true } : x));
               beats.push(`From your vantage, you watch long enough to understand. ${sec.walk(npc.name)}`);
@@ -2958,8 +2989,8 @@ function resolveNight(prev, planIn, preEvents) {
       const hw = (plan.facts && plan.facts.homeWatch) ? plan.facts.homeWatch : rollHomeWatch(s, watching, outMap);
       if (hw.kind === "secret") {
         s.npcs = s.npcs.map((x) => (x.id === watching ? { ...x, secretKnown: true } : x));
-        s.clues.push(`Night ${n}: watching ${target.name}'s house, you learned the human truth of their nights: ${hw.short}. It explains their lies, and it is not the thing you are hunting.`);
-        dawn.push(ev(`${target.name} never left, but you saw enough through the shutter to know their secret: ${hw.short}. Human, and sad, and not what stalks Hollow's Edge.`, watching));
+        s.clues.push(`Night ${n}: watching ${target.name}'s house, you shadowed them out the back way and learned the human truth of their nights: ${hw.short}. It explains their lies, and it is not the thing you are hunting.`);
+        dawn.push(ev(`${target.name} slipped out the back way past midnight, and you followed far enough to learn their secret: ${hw.short}. Human, and sad, and not what stalks Hollow's Edge.`, watching));
       } else if (hw.kind === "visitor") {
         const visitor = npcById(s, hw.visitorId);
         if (visitor) {
@@ -3046,11 +3077,12 @@ function resolveNight(prev, planIn, preEvents) {
            then AT MOST ONE flourish, so a kill reads in two or three cards,
            not four or five. */
         if (n === 1) {
+          /* who and where share one card: the first morning should not deal
+             a whole hand over a single body. The flourish is occasional and
+             pure atmosphere, so the five-card cap sheds it first. */
           const nd = NIGHT_ONE_DAWN(victim, victimWhere); // [bell (who), place (where), witness]
-          dawn.push(ev(nd[0], victim.id, 2));
-          dawn.push(ev(nd[1], victim.id, 2));
-          /* one flourish: the contradictory accounts, or a visceral detail */
-          dawn.push(ev(chance(0.5) ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
+          dawn.push(ev(`${nd[0]} ${nd[1]}`, victim.id, 2));
+          if (chance(0.55)) dawn.push(ev(chance(0.5) ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id, 0));
         } else {
           dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id, 2));
           /* one flourish only, in priority order: the sent-dead or the call
@@ -4443,13 +4475,13 @@ function actAccuse(prev, id, typeId) {
   const beats = [];
   if (s.mob) { s.mob = null; }
   beats.push(pick(RITE_OPEN)(npc.name, declared.name));
-  beats.push(`${ritePreparer(s, id)} readies what the old books prescribe: the ${METHODS[declared.method]}.`);
+  beats.push(`${ritePreparer(s, id)} readies what the old books prescribe: ${METHODS[declared.method]}.`);
 
   if (id === s.monster.vid && typeId === s.monster.type) {
     beats.push(`${npc.name} smiles. It is the last time anyone mistakes that smile for a neighbour's.`);
     beats.push(METHOD_KILL_LINES[declared.method]);
     beats.push(`What dies in front of the village is not ${npc.name}. It has not been ${npc.name} for a long time.`);
-    s.over = { win: true, reason: "won", text: `Right face, right name. ${npc.name} ${npc.role} was a ${m.name}, and the ${METHODS[m.method]} ended it in front of everyone it fed on.` };
+    s.over = { win: true, reason: "won", text: `Right face, right name. ${npc.name} ${npc.role} was a ${m.name}, and its own rite ended it in front of everyone it fed on.` };
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
     return s;
   }
@@ -4458,7 +4490,7 @@ function actAccuse(prev, id, typeId) {
     s.wrongGuesses += 1;
     if (s.wrongGuesses >= 2) {
       beats.push(`The rite is performed. The circle closes. Nothing happens.`);
-      beats.push(`${npc.name} looks at the ${METHODS[declared.method]}, then at you, and the last of the pretence falls away. Right face. Wrong name. Again. And this time it does not run.`);
+      beats.push(`${npc.name} looks at ${METHOD_CARRY[declared.method]}, then at you, and the last of the pretence falls away. Right face. Wrong name. Again. And this time it does not run.`);
       monsterKillsAccuser(s, beats, `It crosses the broken circle before anyone's legs will answer, and the village whose trust you have spent only watches.`);
       s.ap = 0;
       s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
@@ -4467,7 +4499,7 @@ function actAccuse(prev, id, typeId) {
     s.fled = true;
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, fled: true } : x));
     beats.push(`The rite is performed. The circle closes. Nothing happens.`);
-    beats.push(`${npc.name} looks at the ${METHODS[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
+    beats.push(`${npc.name} looks at ${METHOD_CARRY[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
     beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Name it wrong once more and it comes for you, not them.");
     s.dayEvents.push(ev(`The village knows the face now, but not the name, and only the cure it answers to ends this. Study the signs and be sure: you have one wrong name left before it stops taking neighbours and takes you.`, id));
     s.ap = 0;
@@ -4482,7 +4514,7 @@ function actAccuse(prev, id, typeId) {
   s.embolden = s.nightNum + 1;
   for (const pid of Object.keys(s.patience)) s.patience[pid] = Math.max(0, s.patience[pid] - 1);
   if (npc.turned) beats.push(`As the rite begins, their eyes flash with something that was never theirs. Changed. They were changed.`);
-  beats.push(`${npc.name} protests to the end, and the ${METHODS[declared.method]} does nothing: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, it is no ${declared.name}.`);
+  beats.push(`${npc.name} protests to the end, and the rite does nothing: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, it is no ${declared.name}.`);
   beats.push(`It should end there. It does not. ${npc.name} hangs from the beam by the church door, on your word, and afterward no one meets your eye.`);
   s.calmHope = npc.name;
   /* -- Pass G2: the grim bargain pays off, quietly, without ever announcing
@@ -6539,7 +6571,7 @@ function MonsterVillage() {
                 <div className="flex flex-col gap-2">
                   {beat(fsc.text, fsc.kind === "monster" ? C.redBright : undefined)}
                   {fsc.kind === "monster" && (<>
-                    {armedGuess && <p style={{ fontSize: 13, color: C.amber, fontStyle: "italic" }}>Your journal holds one name now: the {armedGuess.name}. The {METHODS[armedGuess.method]} is under your coat. If you are right, this ends tonight, before it takes another soul. If you are wrong, so do you.</p>}
+                    {armedGuess && <p style={{ fontSize: 13, color: C.amber, fontStyle: "italic" }}>Your journal holds one name now: the {armedGuess.name}. You carry {METHOD_CARRY[armedGuess.method]} tonight. If you are right, this ends tonight, before it takes another soul. If you are wrong, so do you.</p>}
                     <Btn full onClick={() => startFate(TENSION_FLEE, null, "Away, while it is busy →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "flee", loc: fsc.dest } }, "amber")}>Flee, quietly, while it is busy</Btn>
                     <Btn full kind="amber" onClick={() => startFate(TENSION_WATCH, null, "Hold, and remember everything →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "watch", loc: fsc.dest } }, "amber")}>Stay hidden. Watch it. Learn it</Btn>
                     <Btn full kind="red" onClick={() => startFate(TENSION_CONFRONT, null, armedGuess ? "Say the true name →" : "Say the name →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "confront", loc: fsc.dest } })}>{armedGuess ? "Step out. Name it. End it here" : "Step out and say the name"}</Btn>
@@ -6702,7 +6734,7 @@ function MonsterVillage() {
                  about their own business. resolveNight reports only these. */
               const ids = walk.mods.company || walk.company || [];
               const names = ids.map((id) => npcById(s, id).name);
-              const secretId = walk.mods.style === "wait" ? ids.find((id) => walk.facts.secretOut[id] && !npcById(s, id).secretKnown) : null;
+              const secretId = walk.mods.style === "wait" ? ids.find((id) => walk.facts.secretOut[id] && (walk.facts.secretCatch || {})[id] && !npcById(s, id).secretKnown) : null;
               const text = secretId
                 ? secretOf(s, secretId).walk(npcById(s, secretId).name)
                 : names.length === 1
@@ -6756,7 +6788,7 @@ function MonsterVillage() {
                 <div className="flex flex-col gap-2">
                   {beat(fsc.text, fsc.kind === "monster" ? C.redBright : undefined)}
                   {fsc.kind === "monster" && (<>
-                    {armedGuess && <p style={{ fontSize: 13, color: C.amber, fontStyle: "italic" }}>Your journal holds one name now: the {armedGuess.name}. The {METHODS[armedGuess.method]} is under your coat. If you are right, this ends tonight, before it takes another soul. If you are wrong, so do you.</p>}
+                    {armedGuess && <p style={{ fontSize: 13, color: C.amber, fontStyle: "italic" }}>Your journal holds one name now: the {armedGuess.name}. You carry {METHOD_CARRY[armedGuess.method]} tonight. If you are right, this ends tonight, before it takes another soul. If you are wrong, so do you.</p>}
                     <Btn full onClick={() => startFate(TENSION_FLEE, null, "Away, while it is busy →", { type: "commitWatch", extra: { follow: walk.targetId, followAct: "flee" } }, "amber")}>Flee, quietly, while it is busy</Btn>
                     <Btn full kind="amber" onClick={() => startFate(TENSION_WATCH, null, "Hold, and remember everything →", { type: "commitWatch", extra: { follow: walk.targetId, followAct: "watch" } }, "amber")}>Stay hidden. Watch it. Learn it</Btn>
                     <Btn full kind="red" onClick={() => startFate(TENSION_CONFRONT, null, armedGuess ? "Say the true name →" : "Say the name →", { type: "commitWatch", extra: { follow: walk.targetId, followAct: "confront" } })}>{armedGuess ? "Step out. Name it. End it here" : "Step out and say the name"}</Btn>
@@ -6776,7 +6808,7 @@ function MonsterVillage() {
               const vis = hw && hw.kind === "visitor" ? npcById(s, hw.visitorId) : null;
               const quietText =
                 hw && hw.kind === "secret"
-                  ? `${t.name} never leaves. But they never sleep, either, and through the shutter-crack you watch a secret being tended instead of taken out: something fetched from hiding, handled gently, wrapped and hidden again, lips moving over it the whole while. By the small hours you have read it right: ${hw.short}. Human, and sadder than you had let yourself expect, and not the thing you hunt.`
+                  ? `Past midnight, ${t.name}'s back door eases open. You shadow them just far enough to read the truth of their nights: ${hw.short}. Human, and sadder than you expected, and not the thing you hunt. They are home again before the bell.`
                   : hw && hw.kind === "visitor" && vis
                   ? `${t.name} never leaves. But past midnight a second figure crosses the lane to their door, is let in without a knock, and is gone before the bell. You know that gait. It is ${vis.name}.`
                   : hw && hw.kind === "restless"
@@ -7476,7 +7508,7 @@ function MonsterVillage() {
       </div>
       {accuseType && (
         <p className="mt-3" style={{ fontSize: 14, color: C.parch }}>
-          The books prescribe the <strong>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong> for a {MONSTERS.find((x) => x.id === accuseType).name}. Every wrong rite costs a life, and the village has faith left for two attempts. No more.
+          The books prescribe one rite for a {MONSTERS.find((x) => x.id === accuseType).name}: <strong>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>. Every wrong rite costs a life, and the village has faith left for two attempts. No more.
         </p>
       )}
       <div className="grid grid-cols-2 gap-2 mt-3">
@@ -7523,7 +7555,7 @@ function MonsterVillage() {
       </div>
         {accuseType && (
           <p className="mt-3" style={{ fontSize: 14, color: C.parch }}>
-            Put <strong>{npcById(s, accusePick).name}</strong> to the rite of the <strong>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: the <strong>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>, by {ritePreparer(s, accusePick)}'s hand.
+            Put <strong>{npcById(s, accusePick).name}</strong> to the rite of the <strong>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>, by {ritePreparer(s, accusePick)}'s hand.
           </p>
         )}
         <div className="grid grid-cols-2 gap-2 mt-3">
@@ -7783,8 +7815,8 @@ function MonsterVillage() {
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "rgba(217,164,65,0.07)", border: `1px solid ${C.amber}` }}>
                 <p style={{ fontSize: 12.5, color: C.amber, lineHeight: 1.45 }}>
                   {wilOk
-                    ? `Your journal holds one name now: the ${armedGuess.name}. Wilhelm heard, and was waiting at your door with the ${METHODS[armedGuess.method]}. "Walk the nights with it," he says. "Catch the thing at its business, and end it where it stands. But if the book is wrong, so are you."`
-                    : `Your journal holds one name now: the ${armedGuess.name}. The old rites name its remedy - the ${METHODS[armedGuess.method]} - and from tonight you carry it into the dark. Catch the thing at its business and you can end it where it stands. If the book is wrong, so are you.`}
+                    ? `Your journal holds one name now: the ${armedGuess.name}. Wilhelm heard, and was waiting at your door with ${METHOD_CARRY[armedGuess.method]}. "Walk the nights with it," he says. "Catch the thing at its business, and end it where it stands. But if the book is wrong, so are you."`
+                    : `Your journal holds one name now: the ${armedGuess.name}. The old rites name its remedy, and from tonight you carry ${METHOD_CARRY[armedGuess.method]} into the dark. Catch the thing at its business and you can end it where it stands. If the book is wrong, so are you.`}
                 </p>
               </div>
             );
