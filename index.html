@@ -2625,7 +2625,7 @@ function resolveNight(prev, planIn, preEvents) {
         ? "You carried what you saw the rest of the night, and it made every shadow between there and home a little heavier."
         : "You slip away with what you know, and what you know follows you home.");
       dawn.push(ev(`What you watched ${fw.name} do in the night was not the act of a living neighbour. You are certain now: they are changed.${helped ? " You tried to reach them. Whatever answered was not quite them yet." : ""}`, fw.id));
-    } else if (secretOut[fw.id]) {
+    } else if (secretOut[fw.id] && secretCatch[fw.id]) {
       const sec = secretOf(s, fw.id);
       s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, secretKnown: true } : x));
       beats.push("You leave without being seen. Some secrets are only secrets.");
@@ -6399,7 +6399,10 @@ function MonsterVillage() {
     const dest = walk.facts.outMap[wid] || walk.loc;
     if (wid === s.monster.vid && walk.facts.active) return { kind: "monster", dest, text: pickFreshIdx("followMonster", FOLLOW_MONSTER_SCENES)(w.name, dest) };
     if (w.turned) return { kind: "turned", dest, text: pickFreshIdx("followTurned", FOLLOW_TURNED_SCENES)(w.name, dest) };
-    if (walk.facts.secretOut[wid]) return { kind: "secret", dest, text: secretOf(s, wid).walk(w.name) };
+    /* a secret errand is only READABLE when the night's sampled catch roll
+       allows: otherwise the tail sees an ordinary errand and nothing more,
+       so a follow is a good bet, never a harvest */
+    if (walk.facts.secretOut[wid] && (walk.facts.secretCatch || {})[wid]) return { kind: "secret", dest, text: secretOf(s, wid).walk(w.name) };
     return { kind: "plain", dest, text: pickFreshIdx("followPlain", FOLLOW_PLAIN_SCENES)(w.name, dest) };
   };
 

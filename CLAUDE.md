@@ -120,11 +120,12 @@ must name both WHO and WHAT before the village runs out of people.
   ends tonight" and the code keeps that promise (a 25% roll swaps in a
   near-death scare beat, never a loss). Wrong name stays lethal (0.7).
 - Secrets are a payoff, not a nightly harvest: a stay-home watch decodes
-  one at 0.12 (`rollHomeWatch`), and a crossed-paths "wait" vantage only
-  when the night's sampled `secretCatch[id]` allows (0.5, rolled once in
-  `sampleNight` so the live walk and recap agree). Deliberately following
-  someone on their errand stays a guaranteed reveal. Villagers go out and
-  lie about their nights at the same rate regardless (`outP` untouched).
+  one at 0.12 (`rollHomeWatch`); a crossed-paths "wait" vantage and a
+  deliberate follow both decode one only when the night's sampled
+  `secretCatch[id]` allows (0.5, rolled once in `sampleNight` so the live
+  walk and recap agree — a failed catch reads as an ordinary errand, so a
+  tail is a good bet, never a harvest). Villagers go out and lie about
+  their nights at the same rate regardless (`outP` untouched).
 - `Snd.wail("song")` is the succubus's sweeter night-sound, played only on
   its active nights; everything else gets the grief glide.
 - **Tell noise is load-bearing**: the monster's person-question tells
