@@ -119,6 +119,10 @@ must name both WHO and WHAT before the village runs out of people.
   right name always wins** — the banner promises "if you are right, this
   ends tonight" and the code keeps that promise (a 25% roll swaps in a
   near-death scare beat, never a loss). Wrong name stays lethal (0.7).
+- A night out never certifies the rhythm: quiet nights can queue a rare
+  phantom hide beat (0.12), and two `SOUND_CHASE_MUNDANE` resolutions stay
+  deliberately ambiguous, so neither hiding nor running a sound to earth
+  proves whether the horror hunts tonight. Only meeting it does.
 - Secrets are a payoff, not a nightly harvest: a stay-home watch decodes
   one at 0.12 (`rollHomeWatch`); a crossed-paths "wait" vantage and a
   deliberate follow both decode one only when the night's sampled

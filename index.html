@@ -1288,6 +1288,8 @@ const SOUND_CHASE_MUNDANE = [
   "You track it to the mill leat: a branch, jammed and knocking with the current. You pull it free. On the walk back, you take no comfort at all in having been right to check.",
   "You run the sound to earth at somebody's woodpile: a marten, spitting fury, gone over the logs in a flash of pale throat. The night snaps back to its ordinary size.",
   "It turns out to be the miller's tarpaulin, torn loose at one corner, filling and slapping with each gust. You lash it down with fingers you cannot fully feel, and take the long way home.",
+  "You follow the sound three lanes over and it simply stops, mid-note, the way nothing natural stops. Nothing shows itself. Nothing explains itself. The dark offers you a choice of things to believe, and not one of them helps.",
+  "The sound keeps exactly one corner ahead of you, and then there are no more corners, and no more sound. A dog, you tell yourself, all the way home. A dog that stopped to listen every time you stopped.",
   "The sound is a gate-chain, swinging and striking, swinging and striking. You still it with one hand. In the quiet that follows, you would swear the night has started listening to you instead.",
   "Behind the hedge you find a ewe on her back in the ditch, kicking, absurd, alive. You right her, swearing softly, and she blunders off. If anything watched the rescue, it kept its opinions to itself.",
 ];
@@ -5318,14 +5320,17 @@ const ACH = [
   { id: "defiant", name: "Over My Dead Body", desc: "Refuse what it offered you.", test: (s) => !!s.diedRefusingOffer },
   { id: "joined_it", name: "If You Can't Beat Them", desc: "Take its hand, and walk on.", test: (s) => !s.over.win && s.over.reason === "joined" },
   { id: "longdark", name: "Seven Nights at Hollow's", desc: "Survive seven nights.", test: (s) => s.nightNum >= 7 },
-  { id: "half", name: "Whoa, We're Halfway There", desc: "End eight different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 8 },
-  { id: "book", name: "Gotta Catch 'Em All", desc: "End all fifteen horrors.", test: (s, meta) => MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]) },
+  { id: "half", name: "Whoa, We're Halfway There", desc: "End eight different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 8,
+    prog: (meta) => [Math.min(Object.keys(meta.defeated).length, 8), 8] },
+  { id: "book", name: "Gotta Catch 'Em All", desc: "End all fifteen horrors.", test: (s, meta) => MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]),
+    prog: (meta) => [MONSTERS.filter((mm) => mm.id !== "hollowed" && meta.defeated[mm.id]).length, 15] },
   /* the sixteenth horror's deed keeps its name behind ?????? until it is
      done; the sealed row at the bottom of the list is its own whisper */
   { id: "go_hollow", name: "Don't You Dare Go Hollow", desc: "End the Hollowed.", hidden: true, test: (s) => s.over.win && monsterOf(s).id === "hollowed" },
   /* judged in a second pass after each dawn's deeds are counted, so a run
      that lands the last two together still closes the book */
-  { id: "alldeeds", name: "I Never Thought I'd Get This Far", desc: "Complete every deed in Hollow's Edge.", test: () => false },
+  { id: "alldeeds", name: "I Never Thought I'd Get This Far", desc: "Complete every deed in Hollow's Edge.", test: () => false,
+    prog: (meta) => [meta.ach.filter((id) => id !== "alldeeds").length, ACH.length - 1] },
 ];
 
 /* The village falls: brutal, specific, permanent. Every surviving soul gets
@@ -5541,6 +5546,7 @@ function MonsterVillage() {
   const [showBestiaryHome, setShowBestiaryHome] = useState(false);
   const [showStatsHome, setShowStatsHome] = useState(false);
   const [showSecretsHome, setShowSecretsHome] = useState(false);
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [snd, setSndOn] = useState(false);
   const [dawnDone, setDawnDone] = useState(false);
   const [dayEventsExpanded, setDayEventsExpanded] = useState(false);
@@ -5701,7 +5707,7 @@ function MonsterVillage() {
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
   useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);
 
-  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setWatchIntroSeen(false); };
+  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); };
   const start = () => {
     setSavedRun(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
@@ -5831,7 +5837,18 @@ function MonsterVillage() {
                 <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 2 }}>RETURN TO {savedRun.phase === "day" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`} · UNFINISHED</span></Btn>
               </div>
             )}
-            <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>{savedRun ? "ABANDON IT · START ANEW" : "ENTER HOLLOW'S EDGE"}</span></Btn>
+            {/* one mistap must not cost an unfinished run: abandoning asks twice */}
+            {savedRun && confirmAbandon ? (
+              <>
+                <p className="text-center mb-2" style={{ fontSize: 13, color: C.redBright, fontStyle: "italic" }}>The unfinished run will be lost. There is no getting it back.</p>
+                <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>ABANDON IT TRULY</span></Btn>
+                <div className="mt-2">
+                  <Btn full center onClick={() => setConfirmAbandon(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>KEEP THE RUN</span></Btn>
+                </div>
+              </>
+            ) : (
+              <Btn kind="red" full center onClick={savedRun ? () => setConfirmAbandon(true) : start}><span className="mv-display" style={{ letterSpacing: 2 }}>{savedRun ? "ABANDON IT · START ANEW" : "ENTER HOLLOW'S EDGE"}</span></Btn>
+            )}
             <div className="flex justify-center mt-2">
               <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
                 {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
@@ -5958,7 +5975,10 @@ function MonsterVillage() {
                     <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.red : C.inkDim }}>{got ? "✠" : sealed ? "🔒" : "·"}</span>
                     <div className="min-w-0">
                       <div style={{ fontWeight: 700, letterSpacing: sealed ? 1.5 : 0 }}>{sealed ? "??????" : a.name}</div>
-                      <div style={{ fontSize: 13, color: C.inkDim, lineHeight: 1.35, fontStyle: sealed ? "italic" : "normal" }}>{sealed ? "Sealed. The Black Book knows the shape of this deed, and is not telling." : a.desc}</div>
+                      <div style={{ fontSize: 13, color: C.inkDim, lineHeight: 1.35, fontStyle: sealed ? "italic" : "normal" }}>
+                        {sealed ? "Sealed. The Black Book knows the shape of this deed, and is not telling." : a.desc}
+                        {!sealed && !got && a.prog && meta && (() => { const [cur, max] = a.prog(meta); return <span style={{ color: C.red, fontWeight: 700 }}> · {cur} of {max}</span>; })()}
+                      </div>
                     </div>
                   </div>
                 );
@@ -6246,9 +6266,12 @@ function MonsterVillage() {
     /* Whether this hide beat is really the horror (huntLoc === loc) or an
        ambiguous phantom (the flat 25% roll, which might be nothing at all)
        is decided here, once, and carried on the walk: it gates whether the
-       rare "spared" resolution can ever fire. */
+       rare "spared" resolution can ever fire. Quiet nights get their own
+       rare phantom too, so having to hide never certifies an active night:
+       the tread in the lane proves nothing, same as everything else. */
     let hideIsMonster = false;
     if (facts.active && (facts.huntLoc === loc || chance(0.25))) { queue.push("hide"); hideIsMonster = facts.huntLoc === loc; }
+    else if (!facts.active && chance(0.12)) queue.push("hide");
     queue.push("approach");
     /* "company": every OTHER living villager (besides the monster, and
        besides whoever the "lane" node already covered) whose sampled
