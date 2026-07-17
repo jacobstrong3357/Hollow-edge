@@ -1189,10 +1189,6 @@ const THRALL_SOUND = [
   (l) => `Near the ${l}, a voice is counting in the dark. Not to any end: it reaches some number, loses its place, and begins again, tireless, in a tone you know from somewhere and cannot yet place.`,
   (l) => `A slow scraping reaches you from the dark short of the ${l}: stone on stone, patient, purposeful, and beneath it someone humming last Sunday's hymn with every third note missing.`,
 ];
-const THRALL_RETREAT = [
-  (nm) => `You do not look closer. Whatever is feeding in that dark, you back away from it one slow step at a time, and it never stops, and you never learn for certain whose face it wore. Only that someone out here tonight is no longer a living neighbour.`,
-  (nm) => `Every animal part of you says do not look, and for once you listen. You retreat the way you came, and the sound follows you a little way, and then loses interest, and that is somehow the worst of all. Someone is changed. You could not stay to see who.`,
-];
 const THRALL_SIGHTS = [
   (nm) => `${nm} is crouched over something small in the dark, and the wet, methodical sounds that reach you are not sounds a person makes over their supper. When ${nm} lifts a face gone slack and wrong and looks straight through you, you understand: ${nm} is changed.`,
   (nm) => `${nm} stands facing a blank wall, reciting the same few words over and over under the breath, a child's counting rhyme with the sense worn out of it, in a voice with a second, lower voice threaded underneath. ${nm} is not ${nm} anymore.`,
@@ -2074,7 +2070,6 @@ const npcById = (s, id) => s.npcs.find((n) => n.id === id);
 const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s.monster.vid);
 const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
 const aliveNpcs = (s) => s.npcs.filter((n) => n.alive && !n.fled);
-const possibleMonsters = (ticked) => MONSTERS.filter((m) => ticked.every((sg) => m.signs.includes(sg)));
 /* pri ranks a dawn card for the five-card cap: 2 = must-keep (deaths, a
    villager marked for the rope, the note), 1 = normal (your own night's
    findings), 0 = atmosphere, dropped first. */
@@ -3157,7 +3152,7 @@ function resolveNight(prev, planIn, preEvents) {
       s.mobSpared = { id: tgt.id, until: n + 4 };
       s.mob = null;
     } else if (tgt && tgt.alive) {
-      beats.push(`First light. ${acc && acc.alive ? acc.name : "The mob"} keeps the promise made in the square: torches and rope at ${tgt.name}'s door, and no one moves to stop it. Not even you.`);
+      beats.push(`First light. ${acc && acc.alive ? acc.name : "The mob"} keeps the promise: torches and rope at ${tgt.name}'s door, and no one moves to stop it. Not even you.`);
       if (tgt.id === s.monster.vid) {
         beats.push(`The rope goes over the beam. ${tgt.name} does not struggle. ${tgt.name} smiles, and keeps smiling while the knot is tied, and it is the smiling that empties the front row.`);
         beats.push(`The rope snaps like thread. What stands up out of the dust is not ${tgt.name}, and never was. "Clever," it says into the silence, in a voice like something enjoying a new mouth. "Clever, clever ${acc && acc.alive ? acc.name : "little village"}. You counted right." It looks around the square, taking all the time in the world. "Nobody else did."`);
@@ -3176,8 +3171,8 @@ function resolveNight(prev, planIn, preEvents) {
         s.deaths.push({ night: n, id: tgt.id, name: tgt.name, kind: "mobbed" });
         if (acc && acc.alive && !tgt.turned) s.ropeStain = acc.id;
         if (!tgt.turned) { s.calmHope = tgt.name; s.calmHopeNight = n; }
-        if (tgt.turned) beats.push(`As the rope draws tight, ${tgt.name}'s eyes flash with something that was never theirs. A moan goes through the crowd. Changed. And hanged too late for it to matter.`);
-        else beats.push(`${tgt.name} calls your name at the end. Not the mob's. Yours. Because you could have found the truth in time, and did not.`);
+        if (tgt.turned) beats.push(`As the rope draws tight, ${tgt.name}'s eyes flash with something that was never theirs. Changed, and hanged too late for it to matter.`);
+        else beats.push(`${tgt.name} calls your name at the end. Not the mob's. Yours. You could have found the truth in time.`);
         s.mob = null;
       }
     } else { s.mob = null; }
@@ -4487,14 +4482,14 @@ function actAccuse(prev, id, typeId) {
   s.embolden = s.nightNum + 1;
   for (const pid of Object.keys(s.patience)) s.patience[pid] = Math.max(0, s.patience[pid] - 1);
   if (npc.turned) beats.push(`As the rite begins, their eyes flash with something that was never theirs. Changed. They were changed.`);
-  beats.push(`${npc.name} protests to the end, and the ${METHODS[declared.method]} does nothing it would not do to you or me: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, it is no ${declared.name}.`);
-  beats.push(`It should end there. It does not: the village has brought too much rope to go home unused. ${npc.name} hangs from the beam by the church door, on your word, and afterward no one meets your eye.`);
+  beats.push(`${npc.name} protests to the end, and the ${METHODS[declared.method]} does nothing: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, it is no ${declared.name}.`);
+  beats.push(`It should end there. It does not. ${npc.name} hangs from the beam by the church door, on your word, and afterward no one meets your eye.`);
   s.calmHope = npc.name;
   /* -- Pass G2: the grim bargain pays off, quietly, without ever announcing
      itself as a reward -- */
   if (s.coerceNote && s.coerceNote.target === id) {
     s.monsterProtects = true;
-    beats.push("Somewhere beyond the torchlight, something that once left you a note reads the outcome in the crowd's own grief, and is, for the first time in this whole affair, satisfied.");
+    beats.push("Somewhere beyond the torchlight, something that once left you a note reads the outcome in the crowd's grief, and is, for once, satisfied.");
   }
   if (s.wrongGuesses >= 2) {
     monsterKillsAccuser(s, beats, "Out beyond the torchlight, something that has watched you spend the village's trust decides it has seen enough. Tonight it does not go looking for a neighbour.");
@@ -5262,20 +5257,20 @@ const HOW_TO_PLAY = [
 ];
 
 const ACH = [
-  { id: "first", name: "First Dawn", desc: "End a horror for the first time.", test: (s) => s.over.win },
+  { id: "first", name: "Hello Darkness, My Old Friend", desc: "End a horror for the first time.", test: (s) => s.over.win },
   { id: "interview_vampire", name: "Interview with a Vampire", desc: "Sit down for an interview with a Vampire.", test: (s) => monsterOf(s).id === "vampire" && (s.askedLog[s.monster.vid] || []).length > 0 },
-  { id: "confessor", name: "Confessor", desc: "Draw a neighbour's innocent secret into the light.", test: (s) => s.npcs.some((x) => x.secretKnown) },
-  { id: "twice", name: "Looked Twice", desc: "Settle its build from two uncertain sightings.", test: (s) => !!s.knownBuild && (s.buildClues || []).length >= 2 },
-  { id: "spared", name: "Not Tonight", desc: "Be found, and be let go.", test: (s) => !!s.wasSpared },
-  { id: "gravedigger", name: "Dug It Up Yourself", desc: "Find the reopened grave with your own two hands.", test: (s) => !!s.necroGraveFound },
-  { id: "saltcraft", name: "Salted Trail", desc: "Expose a mark the thing planted for you.", test: (s) => (s.planted || []).some((p) => p.exposed) },
-  { id: "trusted", name: "Earned It", desc: "Prove your word is worth something to someone who doubted you.", test: (s) => !!s.gatedTrustEarned },
-  { id: "norope", name: "No Rope", desc: "Win without an innocent hanged.", test: (s) => s.over.win && !s.deaths.some((d) => d.kind === "executed" || d.kind === "mobbed") },
-  { id: "firstlight", name: "First Light", desc: "Win by the third dawn.", test: (s) => s.over.win && s.nightNum <= 3 },
-  { id: "shepherd", name: "Shepherd", desc: "Win with six or more souls still living.", test: (s) => s.over.win && s.npcs.filter((x) => x.alive && !x.fled && !x.turned).length >= 6 },
-  { id: "scholar", name: "Scholar of Signs", desc: "Win with all three of its signs surfaced.", test: (s) => s.over.win && (monsterOf(s).id === "mimic" ? s.foundSigns.filter((sg) => sg !== "wail").length >= 3 : monsterOf(s).signs.every((sg) => s.foundSigns.includes(sg))) },
-  { id: "unmasker", name: "Right Face, Wrong Name", desc: "Win after a failed rite.", test: (s) => s.over.win && s.riteFails > 0 },
-  { id: "marked", name: "It Knew Your Face", desc: "Win after it has seen you hunting it.", test: (s) => s.over.win && s.monsterSawYou },
+  { id: "confessor", name: "Spill the Tea", desc: "Draw a neighbour's innocent secret into the light.", test: (s) => s.npcs.some((x) => x.secretKnown) },
+  { id: "twice", name: "I Want to Believe", desc: "Settle its build from two uncertain sightings.", test: (s) => !!s.knownBuild && (s.buildClues || []).length >= 2 },
+  { id: "spared", name: "Catch and Release", desc: "Be found, and be let go.", test: (s) => !!s.wasSpared },
+  { id: "gravedigger", name: "Diggy Diggy Hole", desc: "Find the reopened grave with your own two hands.", test: (s) => !!s.necroGraveFound },
+  { id: "saltcraft", name: "It's a Trap!", desc: "Expose a mark the thing planted for you.", test: (s) => (s.planted || []).some((p) => p.exposed) },
+  { id: "trusted", name: "You Have My Sword", desc: "Prove your word is worth something to someone who doubted you.", test: (s) => !!s.gatedTrustEarned },
+  { id: "norope", name: "Pacifist Run", desc: "Win without an innocent hanged.", test: (s) => s.over.win && !s.deaths.some((d) => d.kind === "executed" || d.kind === "mobbed") },
+  { id: "firstlight", name: "Any% Speedrun", desc: "Win by the third dawn.", test: (s) => s.over.win && s.nightNum <= 3 },
+  { id: "shepherd", name: "Everybody Lives", desc: "Win with six or more souls still living.", test: (s) => s.over.win && s.npcs.filter((x) => x.alive && !x.fled && !x.turned).length >= 6 },
+  { id: "scholar", name: "Elementary, My Dear Watson", desc: "Win with all three of its signs surfaced.", test: (s) => s.over.win && (monsterOf(s).id === "mimic" ? s.foundSigns.filter((sg) => sg !== "wail").length >= 3 : monsterOf(s).signs.every((sg) => s.foundSigns.includes(sg))) },
+  { id: "unmasker", name: "Task Failed Successfully", desc: "Win after a failed rite.", test: (s) => s.over.win && s.riteFails > 0 },
+  { id: "marked", name: "He's Right Behind Me, Isn't He?", desc: "Win after it has seen you hunting it.", test: (s) => s.over.win && s.monsterSawYou },
   { id: "eat_cake", name: "Let Them Eat Cake", desc: "End the horror after the bread riot.", test: (s) => s.over.win && !!s.breadRiot },
   { id: "last_orders", name: "Last Orders", desc: "End the horror after the tavern goes dark for good.", test: (s) => s.over.win && !!s.tavernShut },
   { id: "ashes", name: "Ashes to Ashes", desc: "End the horror after the church burns.", test: (s) => s.over.win && (s.burned || []).includes("Old Church") },
@@ -5283,16 +5278,22 @@ const ACH = [
   { id: "baskervilles", name: "Hound of the Baskervilles", desc: "End a Hellhound.", test: (s) => s.over.win && monsterOf(s).id === "hellhound" },
   { id: "not_today_satan", name: "Not Today, Satan", desc: "End a Demon.", test: (s) => s.over.win && monsterOf(s).id === "demon" },
   { id: "newblood", name: "New Blood", desc: "End the Necromancer, the Mimic, or the Succubus.", test: (s) => s.over.win && ["necromancer", "mimic", "succubus"].includes(monsterOf(s).id) },
-  { id: "brought_back", name: "Brought Back", desc: "Free someone from what changed them.", test: (s) => s.npcs.some((x) => x.cured) },
-  { id: "keptfaith", name: "Kept Faith", desc: "Win having learned a secret, and never once let it slip.", test: (s) => s.over.win && s.npcs.some((x) => x.secretKnown) && !Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
+  { id: "brought_back", name: "Snap Out of It!", desc: "Free someone from what changed them.", test: (s) => s.npcs.some((x) => x.cured) },
+  { id: "keptfaith", name: "Secret Keeper", desc: "Win having learned a secret, and never once let it slip.", test: (s) => s.over.win && s.npcs.some((x) => x.secretKnown) && !Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
   { id: "looselips", name: "Loose Lips", desc: "A secret you shared reached the one it was about.", test: (s) => Object.values(s.secretSpread || {}).some((r) => r && r.reached) },
-  { id: "darkend", name: "In The Dark, Alone", desc: "End it yourself, before dawn, with no rite and no crowd.", test: (s) => s.over.win && s.wonInDark },
+  { id: "darkend", name: "I Am the Night", desc: "End it yourself, before dawn, with no rite and no crowd.", test: (s) => s.over.win && s.wonInDark },
   { id: "asked", name: "It Asked Nicely", desc: "Receive the monster's offer.", test: (s) => s.offerMade },
-  { id: "defiant", name: "Defiant to the End", desc: "Refuse what it offered you.", test: (s) => !!s.diedRefusingOffer },
-  { id: "joined_it", name: "One Of Its Own", desc: "Take its hand, and walk on.", test: (s) => !s.over.win && s.over.reason === "joined" },
-  { id: "longdark", name: "The Long Dark", desc: "Survive seven nights.", test: (s) => s.nightNum >= 7 },
-  { id: "half", name: "Half the Black Book", desc: "End eight different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 8 },
-  { id: "book", name: "The Whole Black Book", desc: "End all fifteen horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= MONSTERS.length },
+  { id: "defiant", name: "Over My Dead Body", desc: "Refuse what it offered you.", test: (s) => !!s.diedRefusingOffer },
+  { id: "joined_it", name: "If You Can't Beat Them", desc: "Take its hand, and walk on.", test: (s) => !s.over.win && s.over.reason === "joined" },
+  { id: "longdark", name: "Seven Nights at Hollow's", desc: "Survive seven nights.", test: (s) => s.nightNum >= 7 },
+  { id: "half", name: "Whoa, We're Halfway There", desc: "End eight different horrors.", test: (s, meta) => Object.keys(meta.defeated).length >= 8 },
+  { id: "book", name: "Gotta Catch 'Em All", desc: "End all fifteen horrors.", test: (s, meta) => MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]) },
+  /* the sixteenth horror's deed keeps its name behind ?????? until it is
+     done; the sealed row at the bottom of the list is its own whisper */
+  { id: "go_hollow", name: "Don't You Dare Go Hollow", desc: "End the Hollowed.", hidden: true, test: (s) => s.over.win && monsterOf(s).id === "hollowed" },
+  /* judged in a second pass after each dawn's deeds are counted, so a run
+     that lands the last two together still closes the book */
+  { id: "alldeeds", name: "I Never Thought I'd Get This Far", desc: "Complete every deed in Hollow's Edge.", test: () => false },
 ];
 
 /* The village falls: brutal, specific, permanent. Every surviving soul gets
@@ -5512,8 +5513,6 @@ function MonsterVillage() {
   const [dawnDone, setDawnDone] = useState(false);
   const [dayEventsExpanded, setDayEventsExpanded] = useState(false);
   const [beatsRevealed, setBeatsRevealed] = useState(false);
-  const [planSearchOpen, setPlanSearchOpen] = useState(false);
-  const [lossIntroSeen, setLossIntroSeen] = useState(false);
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
   const [savedRun, setSavedRun] = useState(null);
@@ -5615,6 +5614,11 @@ function MonsterVillage() {
     };
     const earned = ACH.filter((a) => !next.ach.includes(a.id) && a.test(s, next)).map((a) => a.id);
     next.ach.push(...earned);
+    /* the closing deed is judged last, against a book that already counts
+       everything this dawn earned */
+    if (!next.ach.includes("alldeeds") && ACH.every((a) => a.id === "alldeeds" || next.ach.includes(a.id))) {
+      next.ach.push("alldeeds"); earned.push("alldeeds");
+    }
     setNewAch(earned);
     saveMeta(next);
     if (won) Snd.dawn(); else { Snd.sting(); try { if (navigator.vibrate) navigator.vibrate([70, 50, 70]); } catch (e2) {} }
@@ -5665,10 +5669,7 @@ function MonsterVillage() {
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
   useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);
 
-  /* -- leaving the plan modal folds the inline location picker back up -- */
-  useEffect(() => { if (modal !== "plan") setPlanSearchOpen(false); }, [modal]);
-
-  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setPlanSearchOpen(false); setLossIntroSeen(false); setWatchIntroSeen(false); };
+  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setWatchIntroSeen(false); };
   const start = () => {
     setSavedRun(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
@@ -5689,6 +5690,7 @@ function MonsterVillage() {
   if (!s) {
     const veteran = meta && meta.games > 0;
     const defeatedCount = veteran ? Object.keys(meta.defeated).length : 0;
+    const hollowedLocked = !veteran || !MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]);
     return (
       <div className="h-screen mv-body relative overflow-hidden" style={{ background: "#05060C", color: C.text }}>
         <style>{CSS_ALL}</style>
@@ -5739,33 +5741,51 @@ function MonsterVillage() {
                 <div className="grid grid-cols-4 gap-1 mt-2 items-start">
                   {MONSTERS.map((mm) => {
                     const done = !!meta.defeated[mm.id];
+                    const locked = mm.id === "hollowed" && !done && hollowedLocked;
                     return (
-                      <div key={mm.id} className="flex flex-col items-center w-full" title={mm.name}
+                      <div key={mm.id} className="flex flex-col items-center w-full" title={locked ? "defeat the other 15 to unlock this" : mm.name}
                         style={{ opacity: done ? 1 : 0.3, filter: done ? "none" : "grayscale(1)" }}>
-                        <MonsterArt id={mm.id} size={44} light />
-                        <span style={{ fontSize: 8.5, lineHeight: 1.1, color: done ? C.parch : C.dim, textAlign: "center", width: "100%", overflowWrap: "break-word", wordBreak: "break-word" }}>{done ? mm.name : "?"}</span>
+                        <div className="relative">
+                          <MonsterArt id={mm.id} size={44} light />
+                          {locked && (
+                            <svg width="15" height="15" viewBox="0 0 24 24" className="absolute" style={{ right: -2, bottom: 4 }} aria-label="locked">
+                              <path d="M8 11 V7.5 a4 4 0 0 1 8 0 V11" stroke={C.parch} strokeWidth="2.6" fill="none" />
+                              <rect x="5" y="10.5" width="14" height="10.5" rx="2" fill={C.parch} />
+                            </svg>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 8.5, lineHeight: 1.1, color: done ? C.parch : C.dim, textAlign: "center", width: "100%", overflowWrap: "break-word", wordBreak: "break-word" }}>{locked ? "defeat the other 15 to unlock this" : done ? mm.name : "?"}</span>
                       </div>
                     );
                   })}
                 </div>
                 <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>tap to open the bestiary →</div>
               </button>
-              <button className="mvIn mt-2 flex justify-between w-full text-left rounded-lg p-2" style={{ animationDelay: "1.1s", fontSize: 12, color: C.dim, background: "transparent", border: `1px solid ${C.line}`, cursor: "pointer" }}
+              <button className="mvIn mt-2 grid grid-cols-3 w-full rounded-lg py-2.5 px-1" style={{ animationDelay: "1.1s", background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}`, cursor: "pointer" }}
                 onClick={() => setShowStatsHome(true)}>
-                <span><span style={{ color: C.parch }}>{meta.wins}</span>-{meta.losses} dawns</span>
-                <span>streak <span style={{ color: C.parch }}>{meta.streak}</span> · best {meta.bestStreak}</span>
-                <span>{meta.fastestWin ? <>fastest: night <span style={{ color: C.parch }}>{meta.fastestWin}</span></> : `${meta.nights} nights walked`}</span>
+                <span className="flex flex-col items-center gap-1">
+                  <span className="mv-display" style={{ fontSize: 17, lineHeight: 1, color: C.parch }}>{meta.wins}–{meta.losses}</span>
+                  <span className="mv-display" style={{ fontSize: 9, letterSpacing: 2, color: C.dim }}>DAWNS</span>
+                </span>
+                <span className="flex flex-col items-center gap-1" style={{ borderLeft: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}` }}>
+                  <span className="mv-display" style={{ fontSize: 17, lineHeight: 1, color: C.parch }}>{meta.streak} · {meta.bestStreak}</span>
+                  <span className="mv-display" style={{ fontSize: 9, letterSpacing: 2, color: C.dim }}>STREAK · BEST</span>
+                </span>
+                <span className="flex flex-col items-center gap-1">
+                  <span className="mv-display" style={{ fontSize: 17, lineHeight: 1, color: C.parch }}>{meta.fastestWin ? `night ${meta.fastestWin}` : meta.nights}</span>
+                  <span className="mv-display" style={{ fontSize: 9, letterSpacing: 2, color: C.dim }}>{meta.fastestWin ? "FASTEST WIN" : "NIGHTS WALKED"}</span>
+                </span>
               </button>
-              <div className="mvIn mt-2 flex gap-4 flex-wrap" style={{ animationDelay: "1.3s" }}>
-                <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
+              <div className="mvIn mt-2 grid grid-cols-3 rounded-lg overflow-hidden" style={{ animationDelay: "1.3s", border: `1px solid ${C.line}` }}>
+                <button className="mv-body text-center" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12.5, cursor: "pointer", padding: "8px 0" }}
                   onClick={() => setShowAch(true)}>
-                  ✠ Deeds {meta.ach.length}/{ACH.length}
+                  ✠ Deeds <span style={{ color: C.parch }}>{meta.ach.length}</span>/{ACH.length}
                 </button>
-                <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
+                <button className="mv-body text-center" style={{ background: "transparent", border: "none", borderLeft: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}`, color: C.dim, fontSize: 12.5, cursor: "pointer", padding: "8px 0" }}
                   onClick={() => setShowSecretsHome(true)}>
-                  ✒ Secrets {Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)}/{Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)}
+                  ✒ Secrets <span style={{ color: C.parch }}>{Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)}</span>/{Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)}
                 </button>
-                <button className="mv-body text-left" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}
+                <button className="mv-body text-center" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12.5, cursor: "pointer", padding: "8px 0" }}
                   onClick={() => setShowHowTo(true)}>
                   How to Play
                 </button>
@@ -5779,11 +5799,10 @@ function MonsterVillage() {
               </div>
             )}
             <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>{savedRun ? "ABANDON IT · START ANEW" : "ENTER HOLLOW'S EDGE"}</span></Btn>
-            <div className="flex justify-between mt-2">
+            <div className="flex justify-center mt-2">
               <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
                 {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
               </button>
-              <span style={{ fontSize: 12, color: C.dim }}>{veteran ? "a new horror is drawn each night" : ""}</span>
             </div>
           </div>
         </div>
@@ -5821,7 +5840,7 @@ function MonsterVillage() {
                         <span className="mv-display" style={{ fontSize: 17 }}>{done ? mm.name : "?????"}</span>
                         {done && <span style={{ fontSize: 12, color: C.red }}>ended {meta.defeated[mm.id]}×</span>}
                       </div>
-                      <p style={{ fontSize: 13.5 }} className="mt-1">{done ? mm.lore : "Defeat this horror once to reveal what it is and how it kills."}</p>
+                      <p style={{ fontSize: 13.5 }} className="mt-1">{done ? mm.lore : mm.id === "hollowed" && hollowedLocked ? "Locked. Defeat the other fifteen horrors, and this one enters the draw." : "Defeat this horror once to reveal what it is and how it kills."}</p>
                     </div>
                   </div>
                 );
@@ -5900,12 +5919,13 @@ function MonsterVillage() {
               </div>
               {ACH.map((a) => {
                 const got = meta && meta.ach.includes(a.id);
+                const sealed = a.hidden && !got;
                 return (
                   <div key={a.id} className="flex gap-2.5 items-baseline py-2" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: got ? 1 : 0.5 }}>
-                    <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.red : C.inkDim }}>{got ? "✠" : "·"}</span>
+                    <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.red : C.inkDim }}>{got ? "✠" : sealed ? "🔒" : "·"}</span>
                     <div className="min-w-0">
-                      <div style={{ fontWeight: 700 }}>{a.name}</div>
-                      <div style={{ fontSize: 13, color: C.inkDim, lineHeight: 1.35 }}>{a.desc}</div>
+                      <div style={{ fontWeight: 700, letterSpacing: sealed ? 1.5 : 0 }}>{sealed ? "??????" : a.name}</div>
+                      <div style={{ fontSize: 13, color: C.inkDim, lineHeight: 1.35, fontStyle: sealed ? "italic" : "normal" }}>{sealed ? "Sealed. The Black Book knows the shape of this deed, and is not telling." : a.desc}</div>
                     </div>
                   </div>
                 );
@@ -6822,15 +6842,16 @@ function MonsterVillage() {
             </div>
             <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights have shown you. The book dims what cannot be. A "seen" mark means the sign was witnessed, by you or a truthful mouth: it still waits on your own tick, because marks can be planted and mouths can be borrowed.</p>
             <div className="mv-display mt-4" style={{ fontSize: 16, letterSpacing: 1 }}>Your reckoning</div>
-            <div className="flex flex-wrap gap-3 mt-2">
+            {/* 15 creatures sit 5x3; the year The Hollowed walks, 16 sit 4x4 */}
+            <div className="mt-2" style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "10px 6px" }}>
               {gameMonsters(s).map((mm) => {
                 const struckM = s.struck.includes(mm.id);
                 const ok = !struckM && compatM(mm);
                 return (
                   <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
-                    className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: 64, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                    className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
                     <MonsterArt id={mm.id} size={48} />
-                    <span style={{ fontSize: 11, color: C.ink, textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
+                    <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
                   </button>
                 );
               })}
