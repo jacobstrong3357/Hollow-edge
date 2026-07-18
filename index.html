@@ -217,7 +217,7 @@ const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Taver
 const SIGNS = {
   claw: "Claw Marks", tracks: "Strange Tracks", bite: "Bite Marks",
   cold: "Cold Aura", flora: "Blighted Plants",
-  hex: "Hex Marks", graves: "Grave Dirt", sulfur: "Brimstone", wail: "Unearthly Wailing",
+  hex: "Hex Marks", graves: "Grave Dirt", wail: "Unearthly Wailing",
 };
 
 /* What the signs FEEL like, told without ever naming themselves. Live
@@ -259,11 +259,6 @@ const SIGN_SENSE = {
     "The earth is disturbed in a place nothing living had cause to dig.",
     "Something has been in and out of this ground more than once, and did not bother to hide that it had.",
   ],
-  sulfur: [
-    "The air here has a burnt edge, like struck matches, that no hearth in the village can account for.",
-    "A smell sits low over this spot: sulfur, faint and wrong, and it does not move with the wind.",
-    "You catch it on the back of your throat before your nose can name it: brimstone. Nothing here has burned.",
-  ],
   /* wail is a tickable sign, but it is never found on the ground: it is
      surfaced only through senseFor("wail") on a wailing night (see
      wailTonight), so it stays out of SIGN_CATS and the search/plant paths */
@@ -303,9 +298,6 @@ const SIGN_SENSE_BODY = {
   flora: [
     "The plants nearest the body have gone grey and brittle to the root, curled in on themselves days before their season, as if the dying spread outward from the corpse.",
   ],
-  sulfur: [
-    "The smell is on the body and will not leave it: brimstone, faint and patient, as if something burnt stood close a long while and never once touched the skin.",
-  ],
 };
 const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg}`, SIGN_SENSE_BODY[sg]) : senseFor(sg));
 
@@ -313,7 +305,7 @@ const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg
    "anything strange" question, and by corrupted mouths inventing trails
    (a thrall or the thing itself, asked its craft, points you at marks the
    creature does not leave - spoken only, never shown, never journal-marked). */
-const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled", sulfur: "the smith swears the burnt smell in the lanes is no forge of his" };
+const SIGN_TALK = { bite: "the marks on the miller's gatepost look like teeth, if you stare", claw: "something has been sharpening itself on the churchyard yew", tracks: "there are prints by the well that belong to no farm animal", cold: "no fire seems to warm a room past midnight anymore", flora: "the herb beds are dying from the north end inward", hex: "someone has been scratching signs on the lych-gate", graves: "the ground in the churchyard will not stay settled" };
 
 const METHODS = {
   silver: "Silver Blade", stake: "Wooden Stake", salt: "Ring of Salt",
@@ -366,15 +358,15 @@ const MONSTERS = [
   { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], lore: "Stalks almost every night, but takes only those who wander after dark. Its grief carries on the wind, its cold clings to the ground, and its prints stop mid-stride, as if it forgot to keep touching the earth. Bar your door and it passes. A ring of salt unmakes it." },
   { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger. It dens among the graves and prowls from there, but takes anyone caught outdoors, wherever it finds them. Too craven to enter a home. Consecrated fire, and nothing less." },
   { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Its workings want blighted herbs and fresh-dug grave earth. Some it curses dead without a mark; others it bends into servants who walk on and lie for it. Burn the grimoire, and the witch burns with it." },
-  { id: "demon", name: "Demon", signs: ["cold", "flora", "sulfur"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens with one soul taken violently, as a signature, then claims as it pleases: some hollowed and left walking, some torn apart for joy. Walls mean nothing and no pattern holds. It leaves cold rooms, blighted ground, a breath of brimstone. Only exorcism casts it out." },
+  { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens with one soul taken violently, as a signature, then claims as it pleases: some hollowed and left walking, some torn apart for joy. Walls mean nothing and no pattern holds. It leaves cold rooms, scorched workings, blighted ground. Only exorcism casts it out." },
   { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
   { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door, and the green browns and curls where it pours. Its dead bear no wound. It cannot bear its own face in a silver mirror." },
-  { id: "hellhound", name: "Hellhound", signs: ["tracks", "claw", "sulfur"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves hound tracks too heavy for any hound, claws its prey apart, and the air keeps a burnt sulfur edge where it ran. Holy water, and a steady hand to throw it." },
+  { id: "hellhound", name: "Hellhound", signs: ["tracks", "claw", "graves"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves hound tracks too heavy for any hound, claws its prey apart, and roots in graveyard earth between kills. Holy water, and a steady hand to throw it." },
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
-  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["bite", "wail", "sulfur"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, torn at the throat. After that it replaces rather than kills; the taken pass for themselves. It sheds spent faces in a reek of struck matches, and a weeping carries from no throat: the taken, grieving. Its name, said backwards, undoes it." },
+  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["claw", "bite", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, torn by tooth and nail. After that it replaces rather than kills; the taken pass for themselves. Its one other trace is a weeping that carries from no throat: the taken, grieving. Its name, said backwards, undoes it." },
   { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers when the mood takes her, resting between, and wails AS she rides, not before. Walls mean nothing. Her dead have no wound: a face frozen mid-scream, a room gone cold, her workings scratched into the bedstead. A hawthorn charm, pressed to her while she feeds." },
   { id: "necromancer", name: "Necromancer", signs: ["graves", "hex", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "rest", hunts: ["Graveyard", "Old Church"], lore: "It kills once with its own hands, to seed the ground. Then it sends the village's own dead: they rise, walk to doors they knew in life, and are let in by name. Every kill swells the congregation. The Rite of Eternal Rest lays them down mid-stride, and drags their master under." },
-  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail", "sulfur"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two of its nights agree. It kills a new way each time and strews signs behind it: real ones, all of them, and all of them true of nothing. When the evidence will not add up to any one creature, it has already added up to this one. Quicksilver, forced down mid-change." },
+  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two of its nights agree. It kills a new way each time and strews signs behind it: real ones, all of them, and all of them true of nothing. When the evidence will not add up to any one creature, it has already added up to this one. Quicksilver, forced down mid-change." },
   { id: "succubus", name: "Succubus", signs: ["flora", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It does not break in: it calls, and the called unbar their own doors and walk out smiling. Its dead lie at its chosen ground, bitten neat at the throat, workings scratched and green withered where it sang. Its night sound is nearer song than grief. One note of the consecrated bell breaks it." },
   /* -- The sixteenth. Locked behind the whole Black Book: it can only be
      drawn once every other horror has been ended at least once. It talks. -- */
@@ -384,7 +376,7 @@ const MONSTERS = [
 const SIGN_CATS = {
   wounds: ["claw", "bite"],
   ground: ["tracks", "graves"],
-  air: ["cold", "sulfur"],
+  air: ["cold"],
   surroundings: ["flora", "hex"],
 };
 /* The "none" lines must never read as "there is nothing here" - there is
@@ -945,8 +937,8 @@ const SIEGE_KILLS = [
    The whole first night is told close over the shoulder of the villager who
    dies, from the evening's last chore to the moment the dark takes them. It
    is assembled once the victim is known (NIGHT_ONE_SCENE), and every beat is
-   deliberately monster-agnostic: no wound, no cold, no sulfur, nothing that
-   would narrow the field. The village learns who died at dawn. */
+   deliberately monster-agnostic: no wound, no cold, no grave-dirt, nothing
+   that would narrow the field. The village learns who died at dawn. */
 /* the victim's last ordinary act, by trade, with the night-falls framing
    folded in. Kept short: the whole scene is five tight beats. */
 const N1_OPEN = {
@@ -1817,7 +1809,7 @@ const FOLK_HINTS = [
   { m: ["ghoul", "wraith"], t: `"Some things hunger every single night. If the bell tolls daily, strike out everything patient."` },
   { m: ["vampire", "demon"], t: `"The worst ones don't leave bodies. They leave neighbours. Watch for the living who have gone quiet inside."` },
   { m: ["shifter"], t: `"A face-thief kills the pattern along with the person. If nothing about the nights makes sense, that is itself the answer."` },
-  { m: ["werewolf", "hellhound"], t: `"Two things leave claw and track both. The moon-cursed bites. The hound stinks of brimstone. Find the third mark and you have it."` },
+  { m: ["werewolf", "hellhound"], t: `"Two things leave claw and track both. The moon-cursed bites its kill; the hound roots in the graves between them. Find the third mark and you have it."` },
   { m: ["shifter"], t: `"A face-thief leaves claw marks like the moon-cursed does, but no honest track to go with them. Whatever it becomes to kill, it never quite touches the ground like a beast should."` },
   { m: ["revenant", "ghoul"], t: `"Grave dirt where no one's been burying can mean hunger or homecoming. The hungry one bites what it takes. The one that came home leaves its dead cold as the stone it slept under."` },
   { m: ["hag", "banshee", "succubus"], t: `"Three things cry in the night, girl, and you'd best learn which is which. The grieving one wails the night BEFORE it takes you. The hag wails while she rides. And if what you hear is nearer a song, and you catch your own hand on your own bolt, wedge the door and stop your ears."` },
