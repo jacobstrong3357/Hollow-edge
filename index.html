@@ -3014,8 +3014,10 @@ function resolveNight(prev, planIn, preEvents) {
   }
 
   /* -- home again: an interactive night's recap picks up from your own
-     door, not from a second telling of dusk -- */
-  if (plan.facts && !s.over) beats.push(pickFreshIdx("afterWalk", AFTER_WALK_LINES));
+     door, not from a second telling of dusk. On a quiet, uneventful night
+     the QUIET_NIGHT beat below already carries "you got home to nothing", so
+     skip this second home-recap then; only bridge to a death/wail report. -- */
+  if (plan.facts && !s.over && (active || wailTonight)) beats.push(pickFreshIdx("afterWalk", AFTER_WALK_LINES));
   nightSounds();
 
   /* --- the monster's attack --- */
