@@ -250,9 +250,9 @@ const SIGN_SENSE = {
     "The leaves are the wrong colour for the time of year, and none of them fell naturally.",
   ],
   hex: [
-    "Marks are scratched into the wood in a pattern that means nothing and unsettles anyway.",
-    "Someone, or something, has scored lines here with intent. Not decoration, not damage. A working.",
-    "The shapes cut into the stone repeat themselves, and you find you cannot look at them for long.",
+    "A sigil is cut deep into the wood here, its angles wrong in a way your eye keeps trying to correct and cannot. Hold on it too long and your teeth begin to ache.",
+    "Something has scored a working into the stone: not letters, not any charm the priest would bless, and the air an inch above it will not quite hold still.",
+    "Marks laid in a ring, scratched raw and rubbed dark with something that dried the colour of old blood. They mean nothing you know and everything you do not, and the cold sits heaviest at their centre.",
   ],
   graves: [
     "The ground here has not settled the way it should, months on. It sits loose, like it is still being used.",
@@ -293,7 +293,7 @@ const SIGN_SENSE_BODY = {
     "Grave dirt. It is under their nails, ground into the wounds, scattered around the body - old earth, from ground nothing living had cause to open.",
   ],
   hex: [
-    "Scratched into the floor beneath the body, half-hidden by it, a working: lines scored with intent, meaning nothing and unsettling anyway.",
+    "Scratched into the floor beneath the body, half-hidden by it: a sigil, its angles wrong, rubbed dark with something that dried like old blood. The cold pools at its centre, where the body lay.",
   ],
   flora: [
     "The plants nearest the body have gone grey and brittle to the root, curled in on themselves days before their season, as if the dying spread outward from the corpse.",
@@ -1697,7 +1697,7 @@ const SECRET_POOL = {
       hail: (nm) => `${nm} does not startle. Old men are past startling. "Evening," he says, spade over his shoulder, offering nothing else, and walks on toward the stones.`,
       confess: `He looks at his own hands a long time. "I dig them early. Before they're needed. The ground goes soft where it knows, and it's known all month. Folk would call it unlucky. Folk would be right. But someone has to be ready."` },
     { loc: "Village Square", outP: 0.3, short: "he leaves a certain neighbour's gate unlatched at night, half-hoping the thing finds that door first",
-      walk: (nm) => `${nm} stops at a gate that is not his, lifts the latch with great care, and leaves it hanging open. It is the gate of the man he has blamed, forty years, for the fever that took his first wife. He does not hope out loud. He just leaves the gate, and walks on.`,
+      walk: (nm) => `${nm} stops at a gate that is not his and works the latch open with great care, then stands a moment looking into the dark beyond it, as if willing something out of the night to notice the way in. It is the gate of the man he has blamed forty years for the fever that took his first wife. If the horror wants a door on this lane, he has left it this one. He walks on without looking back.`,
       hail: (nm) => `${nm} lets the latch fall shut again, slow about it, caught and not much caring. "Gate was open. I closed it. Or opened it. Old hands, boy. Go home."`,
       confess: `"There's a man in this village I've hated longer than you've been alive. When the killing started I found myself leaving his gate open, on the nights. Telling myself the thing would choose, and if it chose him, well. I'm old and I'll answer for it soon enough. But I'll not stand here and pretend I didn't."` },
     { loc: "Graveyard", outP: 0.3, short: "he opens fresh graves by night to take back the keepsakes the grieving buried with their dead",
@@ -3119,11 +3119,20 @@ function resolveNight(prev, planIn, preEvents) {
         }
         /* some nights it kills past need, for the pleasure of it */
         if (n >= 2 && chance(0.4)) dawn.push(ev(pickFreshIdx("crueltyDawn", CRUELTY_DAWN)));
-        if (n > 1 && chance(0.12)) {
+        /* the succubus calls its victims out to their own quiet deaths: there
+           is no assailant for them to gasp a description of, so this beat is
+           skipped for it entirely. */
+        if (n > 1 && chance(0.12) && m.id !== "succubus") {
           const closeSign = m.id === "mimic" ? pick(m.signs.filter((sg) => sg !== "wail")) : m.signs[2];
           if (chance(0.5) && !s.foundSigns.includes(closeSign)) {
             s.foundSigns.push(closeSign);
             dawn.push(ev(`${victim.name} did not die at once. The searchers found them still breathing, and everyone kneeling there noticed the same thing before the end came. ${senseFor(closeSign)}`, victim.id));
+          } else if (m.id === "necromancer" && necroDead) {
+            /* past the seeding kill the necromancer sends the buried: the
+               dying name a killer the village already put in the ground, never
+               "a man" - the risen wore a face everyone knew. */
+            s.clues.push(`Night ${n}: ${victim.name} lived long enough to name their killer, and it was a name this village had already buried. Whatever hunts here wears the dead.`);
+            dawn.push(ev(`${victim.name} did not die at once, and what they said before the end emptied the churchyard of any comfort: they named their killer, plainly, twice, and it was someone already in the ground these many nights. Then they were gone.`, victim.id));
           } else {
             const d = descriptorFor(s);
             const spoken = d.descr.replace("you knew", "I knew").replace("you could not", "I could not");
@@ -4264,7 +4273,9 @@ function computeAnswer(s, id, night, q, targetId) {
       } else if (lastLog && lastLog.event && (lastLog.event.fight || lastLog.event.pair)) {
         const pair2 = lastLog.event.fight || lastLog.event.pair;
         const a = npcById(s, pair2[0]), b = npcById(s, pair2[1]);
-        if (a && b) {
+        /* a speaker never relays gossip about their OWN quarrel or pairing as
+           though it were someone else's - that reads as talking about oneself */
+        if (a && b && !pair2.includes(id)) {
           mentions.push({ id: a.id, kind: "gossip" }, { id: b.id, kind: "gossip" });
           quote = lastLog.event.fight ? pickFreshIdx("gossipFight", GOSSIP_EVENT_FIGHT)(a.name, b.name) : pickFreshIdx("gossipPair", GOSSIP_EVENT_PAIR)(a.name, b.name);
         }
@@ -5509,7 +5520,9 @@ function epilogueLine(s, x) {
     ? `${x.name} came back from what took them, and is never quite the same for it. Wakes screaming some nights, but wakes. That is more than this village once thought possible.`
     : `${x.name} came back from what took them, one of the only mercies bought before the end. Wakes screaming some nights, in a village that may not survive to hear it.`;
   if (x.turned) return win
-    ? `${x.name} woke at dawn as if from a long fever, remembering nothing. Their hands are still cold. Their hands will always be cold.`
+    ? (x.known
+        ? `${x.name} woke at dawn as if from a long fever, remembering nothing. Their hands are still cold. Their hands will always be cold.`
+        : `${x.name} was quieter in the weeks after, and colder to the touch than seemed right, and once or twice looked at you as though trying to place where they had seen you in the dark. Whether the thing had reached them and you simply never saw, or whether it is only your own suspicion talking now, no one will ever be able to say.`)
     : joined ? joinedFate(s, x) : lossFate(s, x, "enslaved");
   if (!win) return joined ? joinedFate(s, x) : lossFate(s, x, m.attack === "turn" ? "enslaved" : "dead");
   /* secretKnown only ever means the PLAYER learned it. Whether it stayed
@@ -5545,6 +5558,7 @@ function MonsterVillage() {
   const [walk, setWalk] = useState(null);
   const [factPage, setFactPage] = useState(-1);
   const [clueSeen, setClueSeen] = useState(0);
+  const [armedDetail, setArmedDetail] = useState(true);
   const [meta, setMeta] = useState(null);
   const [newAch, setNewAch] = useState([]);
   const [showAch, setShowAch] = useState(false);
@@ -6559,7 +6573,10 @@ function MonsterVillage() {
               <div className="flex flex-col gap-2">
                 {beat(walk.openLine)}
                 {walk.facts.wx && <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
-                <Btn full kind="amber" onClick={() => { const extra = []; if (walk.facts.wx) extra.push(WEATHER_WALK[walk.facts.wx]); if (chance(0.55)) extra.push(pick(WALK_ODD_SIGHTS)(walk.loc)); setWalk({ ...walk, stage: nextStage(walk, "depart"), pre: extra }); }}>Into the dark →</Btn>
+                {/* weather is already shown above at depart; carry only a
+                    single atmospheric lead-in into the next stage so the walk
+                    never opens on a wall of greyed text */}
+                <Btn full kind="amber" onClick={() => { const extra = chance(0.55) ? [pick(WALK_ODD_SIGHTS)(walk.loc)] : []; setWalk({ ...walk, stage: nextStage(walk, "depart"), pre: extra }); }}>Into the dark →</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "affliction" && (
@@ -6900,12 +6917,12 @@ function MonsterVillage() {
                     className="flex items-center gap-2 py-0.5" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: C.ink, opacity: ticked ? 1 : 0.55 }}>
                     <span style={{ width: 14, textAlign: "center", color: ticked ? C.red : C.inkDim }}>{ticked ? "☒" : "☐"}</span>
                     <span style={{ fontWeight: ticked ? 700 : 400 }}>{label}</span>
-                    {witnessed && !ticked && <span title="you have witnessed this" style={{ fontSize: 10, color: C.red, fontStyle: "italic", opacity: 0.8 }}>seen</span>}
+                    {witnessed && !ticked && <span title="you have witnessed this" style={{ width: 7, height: 7, borderRadius: 4, background: C.red, opacity: 0.85, display: "inline-block", flexShrink: 0 }} />}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights have shown you. The book dims what cannot be. A "seen" mark means the sign was witnessed, by you or a truthful mouth: it still waits on your own tick, because marks can be planted and mouths can be borrowed.</p>
+            <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights have shown you. The book dims what cannot be. A red dot means the sign was witnessed, by you or a truthful mouth: it still waits on your own tick, because marks can be planted and mouths can be borrowed.</p>
             <div className="mv-display mt-4" style={{ fontSize: 16, letterSpacing: 1 }}>Your reckoning</div>
             {/* 15 creatures sit 5x3; the year The Hollowed walks, 16 sit 4x4 */}
             <div className="mt-2" style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "10px 6px" }}>
@@ -7840,16 +7857,23 @@ function MonsterVillage() {
           </div>
           {armedGuess && !s.fled && (() => {
             /* the journal has been worked down to a single possible creature:
-               the player now walks the nights armed, and deserves to know it */
+               the player now walks armed. The full charge shows once; after
+               that it collapses to a single line the player can re-open. */
             const wil = npcById(s, "wilhelm");
             const wilOk = wil && wil.alive && !wil.fled;
             return (
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "rgba(217,164,65,0.07)", border: `1px solid ${C.amber}` }}>
-                <p style={{ fontSize: 12.5, color: C.amber, lineHeight: 1.45 }}>
-                  {wilOk
-                    ? `Your journal holds one name now: the ${armedGuess.name}. Wilhelm heard, and was waiting at your door with ${METHOD_CARRY[armedGuess.method]}. "Walk the nights with it," he says. "Catch the thing at its business, and end it where it stands. But if the book is wrong, so are you."`
-                    : `Your journal holds one name now: the ${armedGuess.name}. The old rites name its remedy, and from tonight you carry ${METHOD_CARRY[armedGuess.method]} into the dark. Catch the thing at its business and you can end it where it stands. If the book is wrong, so are you.`}
-                </p>
+                <button onClick={() => setArmedDetail(!armedDetail)} className="flex items-center gap-2 w-full text-left" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: C.amber }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>⚔ You walk armed against the {armedGuess.name}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 11, opacity: 0.7 }}>{armedDetail ? "▾" : "▸"}</span>
+                </button>
+                {armedDetail && (
+                  <p style={{ fontSize: 12.5, color: C.amber, lineHeight: 1.45, marginTop: 6, opacity: 0.92 }}>
+                    {wilOk
+                      ? `Wilhelm was at your door with ${METHOD_CARRY[armedGuess.method]}. "Catch the thing at its business and end it where it stands. But if the book is wrong, so are you."`
+                      : `You carry ${METHOD_CARRY[armedGuess.method]} into the dark now. Catch it at its business and end it where it stands. If the book is wrong, so are you.`}
+                  </p>
+                )}
               </div>
             );
           })()}
@@ -7862,11 +7886,12 @@ function MonsterVillage() {
 
       <div className="mvVignette" />
       <div className="mvGrainF" />
-      <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length); }}
+      <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
         className="mv-display fixed bottom-0 left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-t-lg"
         style={{ background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none" }}>
-        ☰ JOURNAL {remainCount < gameMonsters(s).length ? `· ${remainCount} remain` : ""}
-        {s.clues.length > clueSeen && <span style={{ position: "absolute", top: 6, right: 8, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
+        ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ whiteSpace: "nowrap" }}> · {remainCount} remain</span> : ""}
+        {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
+        {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 6, right: 8, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
       </button>
     </div>
   );
