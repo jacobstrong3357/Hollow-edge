@@ -2322,13 +2322,28 @@ function sampleNight(s, m, n) {
       outMap[forced.id] = pick(m.hunts);
     }
   }
+  /* a villager's whispered warning does not fall on dead ground: for a few
+     nights after "keep away from the X", that place is made to LIVE - half
+     the time the horror really does hunt there (if it can), and otherwise a
+     neighbour is drawn there on some human errand of their own, so a player
+     who heeds or defies the warning finds either danger or a secret waiting,
+     never nothing. */
+  if (s.warnedLoc && n <= s.warnedLoc.until && !huntsCrowd) {
+    const L = s.warnedLoc.loc;
+    if (active && m.reach !== "home" && m.hunts.includes(L) && chance(0.5)) {
+      outMap[s.monster.vid] = L;
+    } else {
+      const keeper = s.npcs.find((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && x.id !== s.warnedLoc.by && secretOf(s, x.id) && !x.secretKnown && (!outMap[x.id] || outMap[x.id] === "home"));
+      if (keeper) { outMap[keeper.id] = L; secretOut[keeper.id] = true; }
+    }
+  }
   const huntLoc = active ? outMap[s.monster.vid] : null;
   /* whether tonight's vantage could actually DECODE a crossed-paths secret
      errand (the "wait" watch), sampled here so the live walk and the recap
      agree. Half the time you only see a neighbour abroad, not the why:
      secrets should be a payoff, not a nightly harvest. */
   const secretCatch = {};
-  for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.5);
+  for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.35);
   return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, huntLoc, affliction };
 }
 
@@ -3909,7 +3924,11 @@ function computeAnswer(s, id, night, q, targetId) {
   if (q === "about" && targetId) {
     const t = npcById(s, targetId);
     const tLoc = log ? log.outMap[targetId] : undefined;
-    if (!t.alive && !tLoc) {
+    if (targetId === id) {
+      /* no one gossips about themselves in the third person - the UI already
+         excludes self-targets, this is the belt-and-suspenders */
+      quote = `"You're asking me about myself? I was where I said I was. Ask about someone who isn't standing in front of you."`;
+    } else if (!t.alive && !tLoc) {
       quote = `"${t.name}? ${t.name} was already in the ground by then. Have some respect."`;
     } else if (lying || (isMonster && log && log.active)) {
       if (targetId === s.monster.vid && lying && !isMonster) {
@@ -4170,6 +4189,10 @@ function computeAnswer(s, id, night, q, targetId) {
       if (lastActive && dispChance(0.3, (npc.disp || 0) + 1)) {
         quote += ` Then, at the door, quieter: "Keep away from the ${lastActive.huntLoc} after dark. Don't ask me how I know. Just keep away."`;
         clue = `Day ${s.dayNum}: ${npc.name}, warmed by an hour's company, let one thing slip at the door: keep away from the ${lastActive.huntLoc} after dark.`;
+        /* the warning marks that ground live for a few nights (see sampleNight):
+           heed it or defy it, something waits there now - the horror, or a
+           neighbour with a secret of their own to keep. */
+        s.warnedLoc = { loc: lastActive.huntLoc, until: s.nightNum + 3, by: id };
       }
     }
   }
