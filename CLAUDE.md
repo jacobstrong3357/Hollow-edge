@@ -59,13 +59,22 @@ must name both WHO and WHAT before the village runs out of people.
   search `sweep`) only ever surface signs the *real* monster leaves
   (`m.signs.includes(sg)`), never a planted decoy — plants are found and
   exposed by the player's own searching, never handed over as gospel by an
-  innocent.** SIGNS labels: claw/tracks("Strange Tracks" — deliberately NOT
-  "Beast Tracks", because the wraith, revenant and Hollowed leave uncanny
-  prints, and the sense prose has always covered both)/bite/cold/
-  flora("Blighted Plants")/hex/graves("Grave Taint")/wail. Sensory prose may
-  still say "grave dirt" descriptively — that's fine, prose need not match
-  the label. Every monster's three signs are justified in its own lore
-  (the Hollowed strides, it does not bite — it has no face).
+  innocent.** There are **9 signs**, each borne by 3-6 of the 15 base
+  monsters (never fewer than 3, so a found sign always leaves ≥4 suspects
+  once the mimic is counted). Labels: claw/tracks("Strange Tracks" —
+  deliberately NOT "Beast Tracks", because the wraith, revenant and Hollowed
+  leave uncanny prints, and the sense prose covers both)/bite/cold/
+  flora("Blighted Plants")/hex/graves("Grave Dirt")/wail("Unearthly
+  Wailing")/sulfur("Brimstone"). **wail and sulfur are the two rarest tells
+  (4 and 3 carriers)**; sulfur is the infernal signature (demon, hellhound,
+  doppelgänger). **wail is tickable but is never found on the ground** — it
+  has no `SIGN_CATS` entry and is surfaced only through the `wailTonight`
+  path, so it stays out of the search/plant/animal machinery (hence the
+  `sg !== "wail"` filters — do not remove them). Sulfur behaves like a
+  normal air-category sign (found by search, like cold). Sensory prose may
+  say "grave dirt" descriptively — fine, prose need not match the label.
+  Every monster's signs are justified in its own lore (the Hollowed strides,
+  it does not bite — it has no face; the succubus bites the throat).
 - **Facts are sampled once.** `sampleNight()` decides everything (who is out,
   weather, whether/where it hunts, afflictions) BEFORE the walk begins;
   the walk UI only *reveals* facts and records choices in `mods.*`. The walk
