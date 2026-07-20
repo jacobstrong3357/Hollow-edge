@@ -1435,6 +1435,15 @@ const VIGIL_LINES = [
   (l) => `On the far side of the ${l}, a shadow has spent the last hundred heartbeats being a stump. You could swear stumps do not breathe. Hold your vantage, or shift for a better look?`,
   (l) => `The dark across the ${l} folds and unfolds once, like a coat being settled onto shoulders. Hold your vantage, or shift for a better look?`,
 ];
+/* When a held vantage resolves to nothing - the watched shape was a trick of
+   the dark, and no one came - the walk must not fall through to the generic
+   "walked home" closure, which reads as if the vigil never happened. These
+   own the anticlimax instead. */
+const VIGIL_EMPTY = [
+  (l) => `You hold your vantage until your legs go dead under you, and the shape across the ${l} never resolves into anything at all. A trick of the dark, or something with the patience to outwait you. Either way, it wins the night. You give up the watch and take the lanes home.`,
+  (l) => `Whatever you thought you saw across the ${l} does not come again. You wait long past sense for it, and the ${l} keeps its own counsel, and no one comes. In the end it is the cold, not the courage, that sends you home.`,
+  (l) => `Nothing crosses the ${l} while you watch it, though you could swear something watched back. You hold still until holding still stops feeling like caution and starts feeling like bait, and then you slip away home, learning nothing but that.`,
+];
 /* The follow-reveal is the night walk's biggest beat: it must not read the
    same twice. Monster texts stay monster-agnostic. */
 const FOLLOW_MONSTER_SCENES = [
@@ -6355,7 +6364,12 @@ function MonsterVillage() {
       setWalk({ ...w, mods: { ...newMods, company: companyIds }, pre: preLines, stage: "company", thrallLooking: false, ...thrallBits });
       return;
     }
-    setWalk({ ...w, mods: newMods, pre: preLines, stage: "return", closureLine: w.closureLine || pickFreshIdx("walkClosures", WALK_CLOSURES)(w.loc) });
+    /* a held vantage (wait/circle) that turned up no one and nothing gets a
+       closure that owns the anticlimax, not the generic "walked home" line,
+       so the choice to watch never reads as if it did nothing */
+    const heldVantage = (newMods.style === "wait" || newMods.style === "circle") && newMods.vigil !== "shift" && newMods.approach !== "back" && !(newMods.searchRoll && newMods.searchRoll.found) && !companyIds.length && !newMods.circleFigure && !newMods.circleSaw;
+    const closureLine = w.closureLine || (heldVantage ? pickFreshIdx("vigilEmpty", VIGIL_EMPTY)(w.loc) : pickFreshIdx("walkClosures", WALK_CLOSURES)(w.loc));
+    setWalk({ ...w, mods: newMods, pre: preLines, stage: "return", closureLine });
   };
 
   const goReturn = (extraMods) => {
@@ -6404,8 +6418,10 @@ function MonsterVillage() {
             extraLog.push(scene);
           } else {
             newMods.searchRoll = { found: null, sense: null };
+            /* the "hold" empty case is owned by the VIGIL_EMPTY closure in
+               advanceAfterSearch, so it is not doubled with a beat here; only
+               the "shift" case gets its own distinct discovery beat */
             if (newMods.vigil === "shift") extraLog.push(`You shift for the better look, and the figure is gone by the time you have the angle: only scuffed ground where something stood, and the feeling of the ${walk.loc} being one heartbeat emptier than it should be. Someone real was here. Or something.`);
-            else if (newMods.vigil === "hold") extraLog.push("You hold your vantage until your knees lock. The figure does not come again. Whatever it was, it waits better than you do.");
           }
         }
       }
