@@ -163,10 +163,11 @@ must name both WHO and WHAT before the village runs out of people.
 
 ## Player death / monster death
 
-- Player deaths go to `s.deathBeats` (NOT the night beats): the night
-  cinematic ends on its cliffhanger line and a separate blood-dark death
-  screen ("YOU DO NOT SEE THE DAWN", looming art) plays the three
-  `DEATH_SCENES` beats. Never append death scenes to `nightBeats`.
+- Player deaths go to `s.deathBeats` (NOT the night beats): the moment a
+  run ends against the player, the blood-dark death screen ("YOU DO NOT
+  SEE THE DAWN", looming art) plays the `DEATH_SCENES` beats immediately.
+  The live walk already delivered the encounter, so no night cinematic
+  plays in between. Never append death scenes to `nightBeats`.
 - `MonsterArt`/`MonsterDeath` take a `light` prop (pale backdrop discs) for
   dark-on-dark contexts: home Black Book grid, epilogue, death/offer/win
   screens. The journal/bestiary render on parchment and must NOT use it.

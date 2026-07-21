@@ -5539,7 +5539,6 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                     <div className="absolute top-2 left-2.5 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.6)", border: "1px solid rgba(217,164,65,0.25)" }}>
                       DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
                     </div>
-                    <button onClick={endInterview} aria-label="End the interview" className="absolute top-1.5 right-2 mv-btn rounded-full" style={{ width: 26, height: 26, background: "rgba(8,10,18,0.6)", border: `1px solid ${C.line}`, color: C.dim, cursor: "pointer", fontSize: 12, lineHeight: "23px" }}>✕</button>
                   </>
                 )}
             </div>
@@ -5559,7 +5558,6 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                       <span style={{ fontSize: 10.5, color: C.dim }}>{mood.word}</span>
                     </div>
                   </div>
-                  <button onClick={endInterview} aria-label="End the interview" className="mv-btn rounded-full ml-auto" style={{ flexShrink: 0, width: 26, height: 26, background: "transparent", border: `1px solid ${C.line}`, color: C.dim, cursor: "pointer", fontSize: 12, lineHeight: "23px" }}>✕</button>
                 </div>
               )
               : (
@@ -6810,11 +6808,11 @@ function MonsterVillage() {
     const beats = s.nightBeats || [];
     const total = 1.2 + beats.length * 1.4;
     const toDawn = () => { setS({ ...s, phase: "day" }); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
-    /* the player's own death is its own screen, never one more paragraph
-       tacked to the night: the record ends mid-sentence, and then THIS. */
+    /* the player's own death is its own screen, and the only screen: the
+       walk already played the encounter live, so the night ends HERE, with
+       no cinematic recap between the moment and the dark. */
     const dying = !!(s.over && !s.over.win && s.deathBeats && s.deathBeats.length);
-    const advance = dying && !deathShown ? () => { setDeathShown(true); setBeatsRevealed(false); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); } : toDawn;
-    if (dying && deathShown) {
+    if (dying) {
       const dTotal = 1.0 + s.deathBeats.length * 1.6;
       return (
         <div className="h-screen mv-body relative overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 28%, #2E1016, #0A070C 72%)", color: C.parch }}>
@@ -6844,7 +6842,7 @@ function MonsterVillage() {
         <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 h-full flex flex-col">
           <div className="flex items-baseline justify-between shrink-0">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
-            <button onClick={advance} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
+            <button onClick={toDawn} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
           </div>
           {/* the night's ending, seen as well as read: the rite consuming the
               thing on a won night, or the thing itself looming over your own
@@ -6860,7 +6858,7 @@ function MonsterVillage() {
             ))}
           </div>
           <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
-            <Btn full kind={dying ? "red" : "amber"} onClick={advance}>Onward →</Btn>
+            <Btn full kind="amber" onClick={toDawn}>Onward →</Btn>
           </div>
         </div>
       </div>
@@ -6890,16 +6888,22 @@ function MonsterVillage() {
     const refuseIt = () => {
       const po = s.pendingOffer || {};
       const mm = monsterOf(s);
+      /* a refusal IS the ending: the held breath and what follows both live
+         on the death screen, with no half-empty night cinematic between */
       setS({
         ...s,
         pendingOffer: null,
         diedRefusingOffer: true,
-        nightBeats: ["It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting."],
-        deathBeats: (DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "the dark"),
+        nightBeats: [],
+        deathBeats: [
+          "It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting.",
+          ...(DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "the dark"),
+        ],
         beatTitle: `NIGHT ${s.nightNum} · REFUSED`,
         phase: "night",
         over: { win: false, reason: "slain", text: po.overText || "Something found you in the dark, and this time it did not ask twice." },
       });
+      setDeathShown(true); setBeatsRevealed(false);
     };
     return (
       <div className="min-h-screen mv-body relative overflow-hidden" style={{ background: "linear-gradient(#3E3450, #B4623E 72%, #6E2530)", color: C.parch }}>
