@@ -5472,6 +5472,10 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const openers = iv.transcript.filter((t) => !t.q);
   const qa = iv.transcript.filter((t) => t.q);
   const mood = n.turned && n.known ? { word: "no longer themselves", color: C.turn } : IV_MOOD[dispTier(n.disp)];
+  /* arrival first, questions second: the room and the reception get the
+     screen to themselves until the player chooses to begin */
+  const begun = iv.begun || asked;
+  const ivAff = (n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled);
 
   /* Keep the newest exchange in view while its words are still landing,
      chat-fashion, but never fight a reader who has scrolled back up. */
@@ -5517,43 +5521,73 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
     <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
 
-        {/* ---- the room card ---- */}
+        {/* ---- the room card: the full painting on arrival, a sliver
+             once the questions begin and the words need the space ---- */}
         <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
           <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
             <div className="relative">
-              <InterviewScene id={n.id} height={92} afflicted={(n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled)} />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(20,24,41,0) 52%, rgba(20,24,41,0.88))" }} />
-              <div className="absolute top-2 left-2.5 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.6)", border: "1px solid rgba(217,164,65,0.25)" }}>
-                DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
-              </div>
-              <button onClick={endInterview} aria-label="End the interview" className="absolute top-1.5 right-2 mv-btn rounded-full" style={{ width: 26, height: 26, background: "rgba(8,10,18,0.6)", border: `1px solid ${C.line}`, color: C.dim, cursor: "pointer", fontSize: 12, lineHeight: "23px" }}>✕</button>
-            </div>
-            <div className="px-3.5 pb-3" style={{ marginTop: 10 }}>
-              <div className="flex items-end gap-3">
-                <div style={{ flexShrink: 0, borderRadius: 11, overflow: "hidden", border: `2px solid ${mood.color}`, boxShadow: "0 4px 12px rgba(0,0,0,0.55)" }}>
-                  <Portrait id={n.id} size={58} turnedKnown={n.turned && n.known} />
-                </div>
-                <div className="pb-0.5" style={{ minWidth: 0 }}>
-                  <div style={{ lineHeight: 1.1 }}>
-                    <span className="mv-display" style={{ fontSize: 20, color: C.parch }}>{n.name}</span>{" "}
-                    <span style={{ fontSize: 14.5, fontStyle: "italic", color: C.amber }}>{n.role}</span>
+              <InterviewScene id={n.id} height={begun ? 30 : 92} afflicted={ivAff} />
+              <div className="absolute inset-0" style={{ background: begun ? "linear-gradient(rgba(20,24,41,0.25), rgba(20,24,41,0.72))" : "linear-gradient(rgba(20,24,41,0) 52%, rgba(20,24,41,0.88))" }} />
+              {begun
+                ? (
+                  <div className="absolute mv-display" style={{ top: 7, left: 12, fontSize: 9.5, letterSpacing: 2.5, color: C.amber, textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>
+                    DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
                   </div>
-                  <div className="flex items-center gap-1.5" style={{ marginTop: 3 }}>
-                    <span className="inline-block rounded-full" style={{ width: 6, height: 6, background: mood.color }} />
-                    <span style={{ fontSize: 11, color: C.dim }}>{mood.word}</span>
-                  </div>
-                </div>
-              </div>
-              {/* once the talk begins the card slims down: the walls and the
-                  face made their impression, and the words need the room */}
-              {!asked && <p className="mt-1.5" style={{ fontSize: 12.5, fontStyle: "italic", color: C.dim, lineHeight: 1.45 }}>{NPC_LORE[n.id].body}</p>}
+                )
+                : (
+                  <>
+                    <div className="absolute top-2 left-2.5 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.6)", border: "1px solid rgba(217,164,65,0.25)" }}>
+                      DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
+                    </div>
+                    <button onClick={endInterview} aria-label="End the interview" className="absolute top-1.5 right-2 mv-btn rounded-full" style={{ width: 26, height: 26, background: "rgba(8,10,18,0.6)", border: `1px solid ${C.line}`, color: C.dim, cursor: "pointer", fontSize: 12, lineHeight: "23px" }}>✕</button>
+                  </>
+                )}
             </div>
+            {begun
+              ? (
+                <div className="px-3 py-2 flex items-center gap-2.5">
+                  <div style={{ flexShrink: 0, borderRadius: 9, overflow: "hidden", border: `2px solid ${mood.color}` }}>
+                    <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <span className="mv-display" style={{ fontSize: 15.5, color: C.parch }}>{n.name}</span>{" "}
+                      <span style={{ fontSize: 12, fontStyle: "italic", color: C.amber }}>{n.role}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5" style={{ marginTop: 2 }}>
+                      <span className="inline-block rounded-full" style={{ width: 5, height: 5, background: mood.color }} />
+                      <span style={{ fontSize: 10.5, color: C.dim }}>{mood.word}</span>
+                    </div>
+                  </div>
+                  <button onClick={endInterview} aria-label="End the interview" className="mv-btn rounded-full ml-auto" style={{ flexShrink: 0, width: 26, height: 26, background: "transparent", border: `1px solid ${C.line}`, color: C.dim, cursor: "pointer", fontSize: 12, lineHeight: "23px" }}>✕</button>
+                </div>
+              )
+              : (
+                <div className="px-3.5 pb-3" style={{ marginTop: 10 }}>
+                  <div className="flex items-end gap-3">
+                    <div style={{ flexShrink: 0, borderRadius: 11, overflow: "hidden", border: `2px solid ${mood.color}`, boxShadow: "0 4px 12px rgba(0,0,0,0.55)" }}>
+                      <Portrait id={n.id} size={58} turnedKnown={n.turned && n.known} />
+                    </div>
+                    <div className="pb-0.5" style={{ minWidth: 0 }}>
+                      <div style={{ lineHeight: 1.1 }}>
+                        <span className="mv-display" style={{ fontSize: 20, color: C.parch }}>{n.name}</span>{" "}
+                        <span style={{ fontSize: 14.5, fontStyle: "italic", color: C.amber }}>{n.role}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5" style={{ marginTop: 3 }}>
+                        <span className="inline-block rounded-full" style={{ width: 6, height: 6, background: mood.color }} />
+                        <span style={{ fontSize: 11, color: C.dim }}>{mood.word}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-1.5" style={{ fontSize: 12.5, fontStyle: "italic", color: C.dim, lineHeight: 1.45 }}>{NPC_LORE[n.id].body}</p>
+                </div>
+              )}
           </div>
         </div>
 
         {/* ---- the talk ---- */}
         <div ref={scroller} className="flex-1 overflow-y-auto px-4 pt-2 pb-4" style={{ minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
-          {!asked
+          {!begun
             ? openerBlock
             : (
               <div className="mt-1">
@@ -5563,7 +5597,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                 {openerOpen && openerBlock}
               </div>
             )}
-          {!asked && !done && (
+          {begun && !asked && !done && (
             <p className="mv-display text-center mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· CHOOSE A LINE OF QUESTIONING ·</p>
           )}
           {qa.map((t, i) => {
@@ -5615,7 +5649,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
 
         {/* ---- the tray ---- */}
         <div className="mvIvDock px-4 pt-3" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom), 14px)", maxHeight: "46vh", overflowY: "auto" }}>
-          {!done && (
+          {begun && !done && (
             <div className="flex items-center gap-2 flex-wrap mb-2.5">
               {nights.length > 0 && <span className="mv-display" style={{ fontSize: 10, letterSpacing: 2, color: C.dim }}>ASKING ABOUT</span>}
               {nights.map((nn) => (
@@ -5630,11 +5664,11 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </span>
             </div>
           )}
-          {!done && s.nightNum <= 2 && nights.length > 0 && !asked && (
+          {begun && !done && s.nightNum <= 2 && nights.length > 0 && !asked && (
             <p className="mb-2" style={{ fontSize: 11, color: C.dim, marginTop: -6 }}>Pick which night you're asking about.</p>
           )}
 
-          {!done && !ivSub && (
+          {begun && !done && !ivSub && (
             <>
               <div className="grid grid-cols-2 gap-2">
                 {IV_CATS.map((c) => (
@@ -5663,7 +5697,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               )}
             </>
           )}
-          {!done && ivSub === "catN" && (
+          {begun && !done && ivSub === "catN" && (
             <div>
               {subHead("THE NIGHTS")}
               <div className="grid grid-cols-2 gap-2">
@@ -5675,7 +5709,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {!done && ivSub === "catP" && (
+          {begun && !done && ivSub === "catP" && (
             <div>
               {subHead("PRESS THEM")}
               <div className="grid grid-cols-1 gap-2">
@@ -5687,7 +5721,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {!done && ivSub === "catV" && (
+          {begun && !done && ivSub === "catV" && (
             <div>
               {subHead("THE VILLAGE")}
               <div className="grid grid-cols-1 gap-2">
@@ -5698,7 +5732,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {!done && ivSub === "catH" && (
+          {begun && !done && ivSub === "catH" && (
             <div>
               {subHead("THE PERSON")}
               <div className="grid grid-cols-1 gap-2">
@@ -5708,19 +5742,19 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {!done && ivSub === "person" && (
+          {begun && !done && ivSub === "person" && (
             <div>
               {subHead("ABOUT WHOM?", "catN")}
               {faceGrid(pickTargets, (x) => setIvSub({ pid: x.id }))}
             </div>
           )}
-          {!done && ivSub === "share" && (
+          {begun && !done && ivSub === "share" && (
             <div>
               {subHead("TELL THEM ABOUT WHOM?", "catV")}
               {faceGrid(shareCandidates, (x) => askQ("share", x.id))}
             </div>
           )}
-          {!done && ivSub && ivSub.pid && (() => {
+          {begun && !done && ivSub && ivSub.pid && (() => {
             const t = npcById(s, ivSub.pid);
             return (
               <div>
@@ -5733,13 +5767,21 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
             );
           })()}
 
-          {done
+          {begun && (done
             ? <Btn full center kind="amber" onClick={endInterview}>End the interview</Btn>
             : (
               <div className="mt-2.5 text-center">
                 <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12.5, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>End the interview</button>
               </div>
-            )}
+            ))}
+          {!begun && (
+            <>
+              <Btn full center kind="amber" onClick={() => setIv({ ...iv, begun: true })}><span className="mv-display" style={{ letterSpacing: 2 }}>BEGIN THE INTERVIEW</span></Btn>
+              <div className="mt-2 text-center">
+                <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>Take your leave instead</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
