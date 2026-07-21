@@ -820,6 +820,12 @@ function monsterKillsAccuser(s, beats, intro, where) {
   const m = monsterOf(s);
   const mn = npcById(s, s.monster.vid);
   if (intro) beats.push(intro);
+  /* an accusation gone fatally wrong has a cinematic of its own to play
+     first — the rite doing nothing, the name wrong again, the thing crossing
+     the broken circle — before the death screen. Unlike a night-walk kill
+     (whose encounter was already lived in the lanes), this one is NOT shown
+     immediately; the JUDGMENT beats run, then the dark. */
+  s.deathAfterBeats = true;
   s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "your own door");
   s.over = { win: false, reason: "slain", text: `Twice you named it wrong, and the second time was one too many. It stopped feeding on the village and came for you the same night, and the neighbours whose trust you had spent did not come when you called.` };
 }
@@ -2359,6 +2365,7 @@ function sampleNight(s, m, n) {
 function resolveNight(prev, planIn, preEvents) {
   const s = JSON.parse(JSON.stringify(prev));
   s.deathBeats = null;
+  s.deathAfterBeats = false;
   const m = monsterOf(s);
   const prevFaceKnown = prev.faceKnown;
   const n = s.nightNum + 1;
@@ -3588,6 +3595,9 @@ function actSearch(prev, loc) {
     s.dayEvents.push(ev(dayAnimal
       ? `Your search of the ${loc} finds its answer in a small dead thing. ${animalSignScene(sg)}`
       : `Searching the ${loc} in daylight, you find it. ${senseFor(sg)} ${lastWx === "frost" ? "The frost held it for you overnight, sharp as the moment it was made." : "Fainter than it would have been by night, but real."}`));
+    /* the day log clears at dusk, so the find is written into the lasting
+       record too, place and all, where the journal keeps it */
+    s.clues.push(`Day ${s.dayNum}: you searched the ${loc} and found ${senseFor(sg, 0)}`);
   } else if (lastWx === "storm") {
     s.dayEvents.push(ev(`The storm did the ${loc} no favours: mud over everything, the ground churned and rinsed, every mark scoured down to guesses. If it knew the rain was coming, it chose its night well.`));
   } else {
@@ -7109,11 +7119,16 @@ function MonsterVillage() {
     const beats = s.nightBeats || [];
     const total = 1.2 + beats.length * 1.4;
     const toDawn = () => { setS({ ...s, phase: "day" }); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
-    /* the player's own death is its own screen, and the only screen: the
-       walk already played the encounter live, so the night ends HERE, with
-       no cinematic recap between the moment and the dark. */
+    /* A night-walk kill was already lived in the lanes, so its death screen is
+       the only screen. But an accusation gone wrong (deathAfterBeats) plays
+       its JUDGMENT cinematic first — the rite, the wrong name, the thing
+       crossing the circle — and only then advances to the death screen. */
     const dying = !!(s.over && !s.over.win && s.deathBeats && s.deathBeats.length);
-    if (dying) {
+    const beatsFirst = dying && s.deathAfterBeats && !deathShown;
+    const advance = beatsFirst
+      ? () => { setDeathShown(true); setBeatsRevealed(false); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); }
+      : toDawn;
+    if (dying && !beatsFirst) {
       const dTotal = 1.0 + s.deathBeats.length * 1.6;
       return (
         <div className="h-screen mv-body relative overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 28%, #2E1016, #0A070C 72%)", color: C.parch }}>
@@ -7143,7 +7158,7 @@ function MonsterVillage() {
         <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 h-full flex flex-col">
           <div className="flex items-baseline justify-between shrink-0">
             <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
-            <button onClick={toDawn} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
+            <button onClick={advance} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
           </div>
           {/* the night's ending, seen as well as read: the rite consuming the
               thing on a won night, or the thing itself looming over your own
@@ -7159,7 +7174,7 @@ function MonsterVillage() {
             ))}
           </div>
           <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
-            <Btn full kind="amber" onClick={toDawn}>Onward →</Btn>
+            <Btn full kind={beatsFirst ? "red" : "amber"} onClick={advance}>{beatsFirst ? "And then →" : "Onward →"}</Btn>
           </div>
         </div>
       </div>
@@ -8091,12 +8106,17 @@ function MonsterVillage() {
                 const mobd = s.deaths.find((x) => x.night === log.night && x.kind === "mobbed");
                 const showTurned = turned && npcById(s, turned.id) && npcById(s, turned.id).known;
                 return (
-                  <div key={log.night} className="flex gap-3 py-1" style={{ fontSize: 14, borderBottom: `1px solid ${C.parchLine}` }}>
-                    <span className="mv-display" style={{ width: 60 }}>Night {log.night}</span>
-                    <span style={{ color: slain ? C.red : showTurned ? C.turn : C.inkDim }}>
-                      {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
-                      {mobd ? ` · ${mobd.name} hanged by the mob` : ""}{log.wail ? " · wailing heard" : ""}{log.weather ? ` · ${log.weather}` : ""}{log.event ? ` · ${log.event.name}` : ""}
-                    </span>
+                  <div key={log.night} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
+                    <div className="flex gap-3" style={{ fontSize: 14 }}>
+                      <span className="mv-display" style={{ width: 60, flexShrink: 0 }}>Night {log.night}</span>
+                      <span style={{ color: slain ? C.red : showTurned ? C.turn : C.inkDim }}>
+                        {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
+                        {mobd ? ` · ${mobd.name} hanged by the mob` : ""}{log.wail ? " · wailing heard" : ""}{log.weather ? ` · ${log.weather}` : ""}{log.event ? ` · ${log.event.name}` : ""}
+                      </span>
+                    </div>
+                    {slain && slain.examined && slain.found && slain.found.length > 0 && (
+                      <p style={{ fontSize: 12.5, color: C.inkDim, marginLeft: 72, marginTop: 2 }}>the scene held: {slain.found.map((f) => senseFor(f, 0)).join(" ")}</p>
+                    )}
                   </div>
                 );
               })}
@@ -8549,7 +8569,7 @@ function MonsterVillage() {
       ? `Executed on your accusation, Day ${death.night}.${n.turned && n.known ? " Their eyes betrayed the change as they died." : ""}`
       : death.kind === "mobbed"
         ? `Hanged by the mob, Night ${death.night}.${n.turned && n.known ? " The rope revealed the change in them, too late to matter." : " You did not find the truth in time to stop it."}`
-        : `Slain, Night ${death.night}. ${death.examined ? (death.found && death.found.length ? `The scene yielded this much: ${death.found.map((f) => senseFor(f, 0)).join(" ")}` : "The scene yielded nothing conclusive.") : "The death was never investigated."}`;
+        : `Slain, Night ${death.night}${death.where ? (death.where === "home" ? ", behind their own bolted door" : `, found at the ${death.where}`) : ""}. ${death.examined ? (death.found && death.found.length ? `The scene yielded this much: ${death.found.map((f) => senseFor(f, 0)).join(" ")}` : "The scene yielded nothing conclusive.") : "The death was never investigated."}`;
     else if (n.cured) status = `Unbound, Day ${n.unbindDay || s.dayNum}. The rite drew what held them out into the open air, and it is gone. They are not unmarked by it.`;
     else if (turnRec && n.known) status = `Changed, Night ${turnRec.night}. They are no longer wholly themselves. Their word serves the thing that took them.`;
     return modalWrap(`${n.name} ${n.role}`, (
@@ -8703,15 +8723,15 @@ function MonsterVillage() {
       })()}
 
       <div className="max-w-md mx-auto px-4 pb-40">
-        <div className="mt-3">
-          {s.dawn.length > 0 && (
-            <button onClick={() => setDawnDone(false)} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12.5, cursor: "pointer", padding: 0, textAlign: "left" }}>
-              ▾ what the dawn brought · {s.dawn.length} {s.dawn.length === 1 ? "thing" : "things"}
-            </button>
-          )}
-          {s.enraged && <p className="mt-1.5" style={{ color: C.redBright, fontSize: 13, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
-          {s.wrongGuesses === 1 && <p className="mt-1.5" style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
-        </div>
+        {/* The night's recap belongs to the dawn reveal (once) and the journal's
+            Nights log (summarised, in the Journal). The day homepage keeps only
+            the active-danger warnings, never the full recap. */}
+        {(s.enraged || s.wrongGuesses === 1) && (
+          <div className="mt-3">
+            {s.enraged && <p style={{ color: C.redBright, fontSize: 13, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+            {s.wrongGuesses === 1 && <p className={s.enraged ? "mt-1.5" : ""} style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
+          </div>
+        )}
 
         {s.dayEvents.length > 0 && (
           <div className="mt-2 rounded-lg p-3 pt-1.5" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
