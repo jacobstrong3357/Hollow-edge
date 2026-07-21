@@ -384,10 +384,10 @@ const SIGN_CATS = {
    and none of it narrows what did it": too destroyed, too fed-on, too
    fouled by the crowd to name a single cause. */
 const INVEST_ACTS = [
-  { key: "wounds", label: "Examine the wounds", none: ["There is too much wound and too little body to read any single cause in it. Whatever did this did not leave you one clean mark to name it by.", "The damage is beyond telling apart: you cannot say where one wound ends and the next begins, let alone what shape of thing made them.", "The crows and the cold got here before you did. What is left could have been opened by teeth, or claws, or nothing with hands at all. It will not say which."] },
-  { key: "ground", label: "Search the ground nearby", none: ["Mud, frost, and the tracks of half the frightened village, laid over each other. Whatever the ground knew, it has been trampled out of it.", "So much was dragged through here, and so much soaked into it, that no single print survives to be read."] },
-  { key: "air", label: "Feel the air, the chill of it", none: ["The air here is only cold the way any dawn is cold. Whatever else the night left, it did not leave its own chill hanging for you to find.", "You stand still and let the air tell you what it will, and it tells you only that it is morning, and that something died here, and nothing of what."] },
-  { key: "surroundings", label: "Study the surroundings", none: ["The place kept nothing back for you. Whatever stood here did its work and took its nature with it when it left.", "You turn a slow circle over the ruin of it. If the ground remembers what came, it is keeping the memory to itself."] },
+  { key: "wounds", label: "Examine the wounds", none: ["Too much wound and too little body to read one clean mark in it.", "The damage runs together: no telling where one wound ends and the next begins.", "The crows got here first. Teeth, claws, or nothing with hands at all: it will not say."] },
+  { key: "ground", label: "Search the ground nearby", none: ["Mud, frost, and half the village's tracks over each other. Nothing left to read.", "So much was dragged through here that no single print survives."] },
+  { key: "air", label: "Feel the air, the chill of it", none: ["Only cold the way any dawn is cold. It left no chill of its own to find.", "The air says only that it is morning, and that something died here. Nothing of what."] },
+  { key: "surroundings", label: "Study the surroundings", none: ["Whatever stood here took its nature with it. The place kept nothing back.", "You turn a slow circle over the ruin. If the ground remembers, it keeps it to itself."] },
 ];
 
 /* Night sounds are deliberately ambiguous: every line fits five or six of
@@ -3466,17 +3466,21 @@ function investLook(prev, catKey) {
   const act = INVEST_ACTS.find((a) => a.key === catKey);
   const dRec = s.deaths.find((d) => d.night === s.nightNum && d.kind === "slain");
   const candidates = m.signs.filter((sg) => sg !== "wail" && SIGN_CATS[catKey].includes(sg) && !s.foundSigns.includes(sg));
-  let line;
+  let line, found = false;
   if (candidates.length && chance(0.75)) {
     const sg = pick(candidates);
     s.foundSigns.push(sg);
     if (dRec) dRec.found.push(sg);
     line = senseForBody(sg);
+    found = true;
   } else {
     line = pickFreshIdx(`investNone:${catKey}`, act.none);
   }
   if (dRec) dRec.examined = true;
-  s.dayEvents.push(ev(`${act.label}: ${line}`));
+  /* a real finding speaks for itself and needs no "Examine the wounds:"
+     preamble eating a line; only an empty result names the approach that
+     came up short, so the log stays compact after you find things */
+  s.dayEvents.push(ev(found ? line : `${act.label}: ${line}`));
   return { s, line };
 }
 
@@ -7929,8 +7933,8 @@ function MonsterVillage() {
       <div className="mvGrainF" />
       <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
         className="mv-display fixed bottom-0 left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-t-lg"
-        style={{ background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none" }}>
-        ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ whiteSpace: "nowrap" }}> · {remainCount} remain</span> : ""}
+        style={{ background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none", whiteSpace: "nowrap" }}>
+        ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ fontSize: 11, letterSpacing: 1, opacity: 0.75 }}> · {remainCount} remain</span> : ""}
         {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
         {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 6, right: 8, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
       </button>
