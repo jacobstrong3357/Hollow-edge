@@ -4951,7 +4951,7 @@ function MonsterDeath({ id, method, size = 120, light }) {
 
 /* The room you are received in: each villager's own walls and tools behind
    the talk, in the same woodcut-silhouette style as the location scenes. */
-function InterviewScene({ id, height = 92 }) {
+function InterviewScene({ id, height = 92, afflicted }) {
   /* Every room is its own painting: a full-scene ambient wash in the room's
      own colour, a handful of large shapes, one blazing light source, and a
      few things barely seen at the edge of the gloom. All movement is CSS
@@ -5076,12 +5076,17 @@ function InterviewScene({ id, height = 92 }) {
       <rect x="192" y="66" width="9" height="46" fill="#10101E" />
       <rect x="226" y="60" width="9" height="52" fill="#10101E" />
       <circle cx="196.5" cy="108" r="2.2" fill="#C8A050" opacity="0.8" /><circle cx="230.5" cy="108" r="2.2" fill="#C8A050" opacity="0.8" />
-      {/* the cross, the open book, the candle keeping them */}
+      {/* the cross on the wall: grand, not looming, and first thing seen */}
       {pool(322, 108, 95, 22, 0.2, 0.95)}
-      <path d="M330,34 v70 M306,56 h48" stroke="#0E0E1A" strokeWidth="10" strokeLinecap="round" />
-      <path d="M266,104 q16,-8 30,0 q14,-8 30,0 l0,9 q-15,-6 -30,0 q-15,-6 -30,0 Z" fill="#D8CFB8" />
-      <path d="M296,100 v10" stroke="#8A7E62" strokeWidth="1.2" />
-      {candle(366, 66, 38, 1.6, 0.2)}
+      <ellipse cx="330" cy="46" rx="36" ry="30" fill="url(#ivsGlow)" opacity="0.35" className="mvGlowPulse" style={{ animationDelay: "1.1s" }} />
+      <path d="M330,20 v58 M309,41 h42" stroke="#0C0C18" strokeWidth="7" strokeLinecap="round" />
+      <path d="M330,20 v58 M309,41 h42" stroke="#3E3560" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+      {/* the altar beneath it, the ledger open upon it */}
+      <rect x="288" y="88" width="84" height="6" fill="#10101E" />
+      <rect x="294" y="94" width="6" height="18" fill="#10101E" /><rect x="360" y="94" width="6" height="18" fill="#10101E" />
+      <path d="M300,86 q13,-7 26,0 q13,-7 26,0 l0,8 q-13,-5 -26,0 q-13,-5 -26,0 Z" fill="#D8CFB8" />
+      <path d="M326,82 v9" stroke="#8A7E62" strokeWidth="1.2" />
+      {candle(366, 60, 28, 1.5, 0.2)}
     </g>),
     /* -------- THE STILLROOM: green murk, glass, and a blade -------- */
     greta: (<g>
@@ -5242,6 +5247,120 @@ function InterviewScene({ id, height = 92 }) {
       {motes(300, 56, 1.1)}
     </g>),
   };
+  /* The rooms as the events leave them: the bakery after the riot, the
+     taproom boarded shut, the vestry after the fire, and the sick season
+     in the stillroom and the surgery. Same walls, harder hour. */
+  const roomsHurt = {
+    marta: (<g>
+      <rect width="400" height="120" fill="url(#ivsBgFalk)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.3" />
+      {/* the rack stripped bare */}
+      <rect x="252" y="26" width="132" height="5" fill="#161A24" />
+      {/* the oven gone cold, one thread of smoke off the dead fire */}
+      <path d="M18,112 C18,34 148,34 148,112 Z" fill="#1E222E" />
+      <rect x="72" y="4" width="20" height="40" fill="#161A24" />
+      <path d="M46,112 C46,68 120,68 120,112 Z" fill="#0C0E16" />
+      <ellipse cx="83" cy="106" rx="26" ry="8" fill="#23262E" />
+      <circle cx="76" cy="104" r="1.5" fill="#D85F2E" opacity="0.5" className="mvEmberBed" />
+      <path d="M83,96 q5,-10 -2,-20" stroke={C.pale} strokeWidth="1.3" fill="none" className="mvSmokeWisp" />
+      {/* flour where flour should never be */}
+      <ellipse cx="192" cy="110" rx="46" ry="6" fill="#C8C2B0" opacity="0.32" />
+      <ellipse cx="254" cy="112" rx="30" ry="5" fill="#C8C2B0" opacity="0.22" />
+      <path d="M158,112 q-2,-16 10,-18 l14,4 q6,10 2,14 Z" fill="#6E5C3C" />
+      <path d="M172,100 q16,5 26,10" stroke="#C8C2B0" strokeWidth="5" strokeLinecap="round" opacity="0.45" />
+      {/* the table on its side, a loaf trodden into the boards */}
+      <rect x="296" y="58" width="8" height="54" fill="#2A3038" />
+      <rect x="304" y="66" width="26" height="6" fill="#222834" />
+      <rect x="304" y="92" width="26" height="6" fill="#222834" />
+      <path d="M232,108 a10,7 0 0 1 10,-7 l-2,7 Z" fill="#6E583A" />
+      <path d="M252,110 a9,6 0 0 1 9,-6 l-1,6 Z" fill="#6E583A" />
+      {/* the stool on its back, the shawl trodden flat */}
+      <g transform="rotate(112 210 104)"><rect x="196" y="92" width="30" height="5" fill="#242A34" /><rect x="200" y="97" width="5" height="14" fill="#1C222C" /><rect x="217" y="97" width="5" height="14" fill="#1C222C" /></g>
+      <path d="M318,108 q14,-6 30,-2 l-3,6 q-13,-3 -27,0 Z" fill="#54222C" />
+      {/* one candle she keeps lit anyway */}
+      {pool(366, 104, 46, 12, 0.5, 0.6)}
+      <rect x="356" y="96" width="20" height="16" fill="#20262E" />
+      {candle(366, 84, 12, 1.2, 0.5)}
+    </g>),
+    liesel: (<g>
+      <rect width="400" height="120" fill="url(#ivsBgTobias)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.3" />
+      {/* the shelf boarded over, nails and all */}
+      <rect x="24" y="30" width="120" height="5" fill="#10131C" />
+      <g transform="rotate(-9 84 26)"><rect x="30" y="21" width="108" height="9" fill="#3A2A18" /><circle cx="38" cy="25" r="1.2" fill="#0C0E14" /><circle cx="130" cy="27" r="1.2" fill="#0C0E14" /></g>
+      <g transform="rotate(7 84 34)"><rect x="30" y="30" width="108" height="9" fill="#332414" /><circle cx="38" cy="35" r="1.2" fill="#0C0E14" /><circle cx="130" cy="33" r="1.2" fill="#0C0E14" /></g>
+      {/* the lamp hangs dark; the hooks hang empty */}
+      <path d="M226,0 v34" stroke="#0A0C12" strokeWidth="2.5" />
+      <path d="M210,52 L242,52 L233,34 L219,34 Z" fill="#10131A" />
+      {[168, 194].map((x) => <path key={x} d={`M${x},30 v6 q3,3 5,1`} stroke="#10131C" strokeWidth="2" fill="none" />)}
+      {/* the bar: a spilled tankard, a stool legs-up, glass underfoot */}
+      <rect x="24" y="84" width="230" height="8" fill="#232834" /><rect x="24" y="84" width="230" height="2" fill="#3A4254" opacity="0.7" />
+      <rect x="34" y="92" width="7" height="20" fill="#161A24" /><rect x="240" y="92" width="7" height="20" fill="#161A24" />
+      <g transform="rotate(84 128 80)"><rect x="118" y="62" width="19" height="22" rx="3" fill="#3E3524" /></g>
+      <ellipse cx="152" cy="86" rx="20" ry="2.5" fill="#151009" opacity="0.8" />
+      <g transform="rotate(180 200 76)"><rect x="186" y="70" width="28" height="5" fill="#242A36" /><rect x="190" y="75" width="4" height="12" fill="#1C222E" /><rect x="206" y="75" width="4" height="12" fill="#1C222E" /></g>
+      <path d="M282,108 l7,-12 4,12 Z" fill="#2E4A38" opacity="0.85" />
+      <path d="M296,110 l5,-7 3,7 Z" fill="#2E4A38" opacity="0.7" />
+      {/* the barrel chalked dry */}
+      <circle cx="322" cy="80" r="32" fill="#232834" />
+      <circle cx="322" cy="80" r="32" fill="none" stroke="#161A24" strokeWidth="4" />
+      <path d="M308,66 l28,28 M336,66 l-28,28" stroke={C.pale} strokeWidth="2.5" opacity="0.45" />
+      <path d="M296,112 l8,-8 M348,112 l-8,-8" stroke="#161A24" strokeWidth="5" strokeLinecap="round" />
+      {/* one candle burning for whoever is left upstairs */}
+      {pool(70, 98, 50, 14, 0.4, 0.6)}
+      {candle(70, 70, 14, 1.2, 0.4)}
+    </g>),
+    ansel: (<g>
+      <rect width="400" height="120" fill="url(#ivsBgAsh)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.3" />
+      {/* the window holds its arch; the glass did not */}
+      <path d="M40,112 v-56 a34,34 0 0 1 68,0 v56 Z" fill="#0C0B14" />
+      <path d="M48,112 v-54 a26,26 0 0 1 52,0 v54 Z" fill="#1A1C2C" />
+      <polygon points="52,70 74,56 68,84 90,72 80,102 56,98" fill="url(#ivsGlass)" opacity="0.7" />
+      <circle cx="70" cy="72" r="7" fill="#C8CEE0" opacity="0.8" />
+      <path d="M74,32 v80 M48,74 h52" stroke="#0C0B14" strokeWidth="5" />
+      {/* the fallen beam, still remembering the fire */}
+      <g transform="rotate(32 210 60)">
+        <rect x="140" y="54" width="150" height="11" fill="#100C0A" />
+        <path d="M148,60 h58" stroke="#D85F2E" strokeWidth="1.6" opacity="0.5" className="mvEmberBed" />
+      </g>
+      <path d="M186,52 q4,-10 -2,-18" stroke="#8A8FA0" strokeWidth="1.2" fill="none" className="mvSmokeWisp" style={{ animationDelay: "0.8s" }} />
+      <path d="M254,86 q5,-10 -1,-18" stroke="#8A8FA0" strokeWidth="1.2" fill="none" className="mvSmokeWisp" style={{ animationDelay: "2.2s" }} />
+      {/* ash where the pews were */}
+      <ellipse cx="196" cy="110" rx="34" ry="6" fill="#3A3640" />
+      <ellipse cx="248" cy="112" rx="24" ry="4.5" fill="#322E3A" />
+      {/* the cross keeps the wall, scorched and standing */}
+      <ellipse cx="330" cy="46" rx="34" ry="30" fill="url(#ivsGlow)" opacity="0.22" className="mvGlowPulse" style={{ animationDelay: "1.1s" }} />
+      <g transform="rotate(4 330 48)">
+        <path d="M330,20 v58 M309,41 h42" stroke="#0A0806" strokeWidth="7" strokeLinecap="round" />
+        <path d="M330,24 v20" stroke="#D85F2E" strokeWidth="1.4" opacity="0.35" className="mvEmberBed" />
+      </g>
+      {/* the altar down on one knee, the ledger half-ash */}
+      <g transform="rotate(-9 330 92)"><rect x="288" y="88" width="84" height="6" fill="#0C0B14" /><rect x="294" y="94" width="6" height="18" fill="#0C0B14" /></g>
+      <path d="M310,106 q12,-6 22,0 l-2,7 q-9,-4 -18,0 Z" fill="#B8AE96" />
+      <path d="M328,104 q8,-4 14,0 l-2,6 q-5,-2 -10,0 Z" fill="#28242E" />
+      {/* one candle, kept burning anyway */}
+      {pool(368, 102, 50, 14, 0.2, 0.7)}
+      {candle(372, 80, 24, 1.4, 0.2)}
+      {motes(210, 50, 0.6, "#8A8FA0")}
+    </g>),
+    greta: (<g>
+      {rooms.greta}
+      {/* the sick season: the fire never goes out now */}
+      <path d="M196,112 q0,-14 12,-14 q12,0 12,14 Z" fill="#1A2014" />
+      <path d="M208,96 q5,-9 -1,-16" stroke={C.pale} strokeWidth="1.3" fill="none" className="mvSmokeWisp" style={{ animationDelay: "1.2s" }} />
+      {[352, 366].map((x, i) => <rect key={x} x={x} y={96 - i * 4} width="16" height="4" rx="1" fill="#B8B2A0" opacity="0.75" />)}
+      {candle(110, 82, 22, 1.3, 1.4)}
+    </g>),
+    falk: (<g>
+      {rooms.falk}
+      {/* the well-sickness: basins, cloths, no time to sleep */}
+      <path d="M108,104 q15,8 30,0 l-2,8 h-26 Z" fill="#8A93A8" opacity="0.8" />
+      <rect x="146" y="106" width="18" height="4" rx="1" fill="#B8B2A0" opacity="0.85" />
+      <rect x="146" y="101" width="18" height="4" rx="1" fill="#C8C2B0" opacity="0.7" />
+      {candle(96, 92, 20, 1.2, 1.6)}
+    </g>),
+  };
   return (
     <svg viewBox="0 0 400 120" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
       <defs>
@@ -5267,6 +5386,9 @@ function InterviewScene({ id, height = 92 }) {
         <linearGradient id="ivsBgAnsel" x1="0" y1="0" x2="0.7" y2="1">
           <stop offset="0%" stopColor="#3A4668" /><stop offset="55%" stopColor="#232A44" /><stop offset="100%" stopColor="#131120" />
         </linearGradient>
+        <linearGradient id="ivsBgAsh" x1="0.2" y1="0" x2="0.5" y2="1">
+          <stop offset="0%" stopColor="#2E2A38" /><stop offset="55%" stopColor="#1C1824" /><stop offset="100%" stopColor="#14101A" />
+        </linearGradient>
         <radialGradient id="ivsBgGreta" cx="42%" cy="55%" r="85%">
           <stop offset="0%" stopColor="#2E3C26" /><stop offset="55%" stopColor="#1C2617" /><stop offset="100%" stopColor="#0F140D" />
         </radialGradient>
@@ -5288,7 +5410,7 @@ function InterviewScene({ id, height = 92 }) {
           <stop offset="100%" stopColor="#5A1F1A" stopOpacity="0" />
         </radialGradient>
       </defs>
-      {rooms[id] || <rect width="400" height="120" fill="#131628" />}
+      {(afflicted && roomsHurt[id]) || rooms[id] || <rect width="400" height="120" fill="#131628" />}
     </svg>
   );
 }
@@ -5399,7 +5521,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
         <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
           <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
             <div className="relative">
-              <InterviewScene id={n.id} height={92} />
+              <InterviewScene id={n.id} height={92} afflicted={(n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled)} />
               <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(20,24,41,0) 52%, rgba(20,24,41,0.88))" }} />
               <div className="absolute top-2 left-2.5 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.6)", border: "1px solid rgba(217,164,65,0.25)" }}>
                 DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
