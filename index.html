@@ -5729,6 +5729,11 @@ function MvIcon({ k }) {
     search: <g><circle cx="10.4" cy="10.4" r="6" /><path d="M15,15 L20.5,20.5" strokeWidth="2.4" /></g>,
     talk: <g><path d="M4,6.5 h16 v10 h-9 l-4.5,4 v-4 h-2.5 Z" /></g>,
     exam: <g><path d="M2.8,12 q9.2,-10.5 18.4,0 q-9.2,10.5 -18.4,0 Z" /><circle cx="12" cy="12" r="3" /></g>,
+    /* the ways of working a place, or a body */
+    ground: <g><path d="M3,17 h18 M6,13 l3,4 M12,11 l2,6 M17,13 l1,4" /></g>,
+    walls: <g><path d="M12,12 a8,8 0 1 1 0,-0.01 M12,2 v3 M12,19 v3 M2,12 h3 M19,12 h3" /></g>,
+    air: <g><path d="M3,9 h11 a3,3 0 1 0 -3,-3 M3,14 h15 a3,3 0 1 1 -3,3" /></g>,
+    wounds: <g><path d="M12,3 C9,9 5,11 5,15 a7,7 0 0 0 14,0 C19,11 15,9 12,3 Z" /><path d="M12,9 v8" /></g>,
   }[k];
   return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" style={{ display: "block" }}>{b}</svg>;
 }
@@ -8198,50 +8203,75 @@ function MonsterVillage() {
   ));
 
   const daySceneModal = dayScene && (() => {
-    /* the daylight search, staged: choose how to work the place, then live
-       the morning's findings one beat at a time. The choice is texture -
-       everything the search will yield was already settled in actSearch -
-       but the morning is lived, not read off a card. */
+    /* the daylight search, staged in the interview/dawn language: a painted
+       morning of the place up top, choose how to work it, then live the
+       findings one beat at a time. The choice is texture - everything the
+       search yields was already settled in actSearch. */
     const beats = dayScene.beats || [];
     const arriving = dayScene.stage !== "beats";
     const idx = Math.min(dayScene.idx || 0, Math.max(0, beats.length - 1));
+    const styleIcon = { ground: "ground", walls: "walls", listen: "air" };
     const beatEl = (e, i, spoken) => {
       const npc = e.pid ? npcById(s, e.pid) : null;
       return (
-        <div key={i} className="mt-3 first:mt-0 flex gap-3 items-start">
-          {npc && <div className="shrink-0 mt-0.5"><Portrait id={npc.id} size={40} dead={!npc.alive} turnedKnown={npc.turned && npc.known} /></div>}
-          <p style={{ fontSize: 16, lineHeight: 1.5 }}>{spoken ? <SpokenText text={e.t} speed={35} /> : e.t}</p>
+        <div key={i} className="mt-3 first:mt-0 flex gap-2.5 items-start">
+          {npc && <div className="shrink-0"><Portrait id={npc.id} size={34} dead={!npc.alive} turnedKnown={npc.turned && npc.known} disp={npc.disp} /></div>}
+          <div className="rounded-xl px-3 py-2" style={{ background: C.panel2, border: `1px solid ${C.line}`, flex: 1 }}>
+            <p style={{ fontSize: 15, lineHeight: 1.5 }}>{spoken ? <SpokenText text={e.t} speed={35} /> : e.t}</p>
+          </div>
         </div>
       );
     };
     return (
-      <div className="fixed inset-0 z-40 mv-body overflow-hidden" style={{ background: `linear-gradient(#2A2F3E, ${C.bg} 75%)`, color: C.parch }}>
-        <div className="max-w-md mx-auto h-full flex flex-col">
-          <Scene loc={dayScene.loc} kind="quiet" height={120} />
-          <div className="px-6 pt-4 pb-10 flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-            <div className="mv-display" style={{ fontSize: 14, letterSpacing: 3, color: C.amber }}>DAY {s.dayNum} · THE {dayScene.loc.toUpperCase()}</div>
-            <p className="mt-4" style={{ fontSize: 14.5, color: "rgba(233,223,200,0.6)", lineHeight: 1.5 }}>{dayScene.open}</p>
-            {arriving && (
-              <div className="mt-4 flex flex-col gap-2">
-                {Object.entries(DAY_SEARCH_STYLES).map(([k, st]) => (
-                  <Btn key={k} full kind="amber" onClick={() => setDayScene({ ...dayScene, stage: "beats", styleLine: st.line(dayScene.loc), idx: 0 })}>{st.label}</Btn>
-                ))}
+      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg,#1A1F36,#141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <div className="relative">
+                <DawnScene loc={dayScene.loc} s={s} height={arriving ? 150 : 70} />
+                <div className="absolute inset-0" style={{ background: arriving ? "linear-gradient(rgba(20,24,41,0) 55%, rgba(20,24,41,0.9))" : "linear-gradient(rgba(20,24,41,0.3), rgba(20,24,41,0.82))", pointerEvents: "none" }} />
+                {arriving ? (
+                  <>
+                    <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#F5D9A0", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(245,217,160,0.3)" }}>DAY {s.dayNum} · SEARCH BY DAYLIGHT</div>
+                    <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>THE {dayScene.loc.toUpperCase()}</div>
+                  </>
+                ) : (
+                  <div className="absolute mv-display" style={{ top: 7, left: 12, fontSize: 9.5, letterSpacing: 2.5, color: "#F5D9A0", textShadow: "0 1px 4px #000" }}>DAY {s.dayNum} · THE {dayScene.loc.toUpperCase()}</div>
+                )}
               </div>
-            )}
-            {!arriving && (
-              <div className="mt-4">
-                <p style={{ fontSize: 14, color: C.dim, fontStyle: "italic" }}>{dayScene.styleLine}</p>
-                <div className="mt-3">
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pt-3.5" style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+            {arriving ? (
+              <>
+                <p style={{ fontSize: 14.5, color: "rgba(233,223,200,0.62)", lineHeight: 1.5 }}>{dayScene.open}</p>
+                <p className="mv-display text-center mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· CHOOSE HOW TO WORK THE PLACE ·</p>
+                <div className="grid grid-cols-1 gap-2 mt-3">
+                  {Object.entries(DAY_SEARCH_STYLES).map(([k, st]) => (
+                    <button key={k} onClick={() => setDayScene({ ...dayScene, stage: "beats", styleLine: st.line(dayScene.loc), idx: 0 })}
+                      className="mvIvChip rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left" style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: "pointer" }}>
+                      <span style={{ color: C.amber, flexShrink: 0 }}><MvIcon k={styleIcon[k]} /></span>
+                      <span className="mv-display" style={{ fontSize: 13.5, color: C.parch }}>{st.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>{dayScene.styleLine}</p>
+                <div className="mt-2">
                   {beats.slice(0, idx).map((e, i) => beatEl(e, i, false))}
                   {beats.length > 0 && beatEl(beats[idx], idx, true)}
                 </div>
-                <div className="mt-6">
-                  {idx < beats.length - 1
-                    ? <Btn full kind="amber" onClick={() => setDayScene({ ...dayScene, idx: idx + 1 })}>Look on →</Btn>
-                    : <Btn full kind="amber" onClick={() => setDayScene(null)}>Back to the village →</Btn>}
-                </div>
-              </div>
+              </>
             )}
+          </div>
+          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+            {arriving
+              ? <Btn full center onClick={() => setDayScene(null)}>Leave it for now</Btn>
+              : idx < beats.length - 1
+                ? <Btn full center kind="amber" onClick={() => setDayScene({ ...dayScene, idx: idx + 1 })}><span className="mv-display" style={{ letterSpacing: 2 }}>LOOK ON →</span></Btn>
+                : <Btn full center kind="amber" onClick={() => setDayScene(null)}><span className="mv-display" style={{ letterSpacing: 2 }}>BACK TO THE VILLAGE →</span></Btn>}
           </div>
         </div>
       </div>
@@ -8363,32 +8393,59 @@ function MonsterVillage() {
   };
   const investModal = invest && freshDeath && (() => {
     const loc = freshDeath.where === "home" ? (HOME_LOC[freshDeath.id] || "Cottage") : freshDeath.where;
+    const investIcon = { wounds: "wounds", ground: "ground", air: "air", surroundings: "walls" };
+    const tb = npcById(s, "tobias");
     return (
-      <div className="fixed inset-0 z-30 mv-body overflow-hidden" style={{ background: `linear-gradient(#181017, ${C.bg} 65%)`, color: C.text }}>
-        <div className="max-w-md mx-auto h-full flex flex-col">
-          <Scene loc={loc} kind="body" height={110} />
-          <div className="px-5 pt-3 pb-8 flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
-            <div className="mv-display" style={{ color: C.redBright, fontSize: 14, letterSpacing: 2 }}>WHERE {freshDeath.name.toUpperCase()} FELL</div>
-            <p style={{ fontSize: 13, color: C.dim }} className="mt-1">Choose carefully where to look. You have time for {invest.left} more before the village takes the body away.</p>
+      <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1520, ${C.bg} 70%)`, color: C.text }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg,#1F1622,#160F1A)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <div className="relative">
+                <DawnScene loc={loc} s={s} height={128} />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(40,12,16,0.35), rgba(20,10,14,0.92))", pointerEvents: "none" }} />
+                {/* a shrouded shape low on the right, clear of the title */}
+                <div className="absolute" style={{ right: 14, bottom: 6, pointerEvents: "none" }}>
+                  <svg width="58" height="20" viewBox="0 0 58 20"><path d="M5,18 C7,8 16,5 29,5 C42,5 51,8 53,18 Z" fill="#C8BFA8" opacity="0.45" /><path d="M5,18 L53,18" stroke="#2A0A06" strokeWidth="1.1" /></svg>
+                </div>
+                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#E8A0A8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.35)" }}>DAY {s.dayNum} · THE DEATH SCENE</div>
+                <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 2.5, color: C.redBright, textShadow: "0 1px 8px #000" }}>WHERE {freshDeath.name.toUpperCase()} FELL</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pt-3" style={{ minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+            <p style={{ fontSize: 13, color: C.dim }}>Look carefully before the village takes the body away.</p>
             {invest.findings.map((f, i) => (
-              <div key={i} className="mt-3">
-                <p style={{ fontSize: 13, color: C.amber }}>{f.label}</p>
-                <p style={{ fontSize: 15.5, lineHeight: 1.5 }}>{i === invest.findings.length - 1 ? <SpokenText text={f.line} speed={35} /> : f.line}</p>
+              <div key={i} className="mt-3 rounded-lg px-3 py-2" style={{ background: "rgba(158,48,57,0.08)", borderLeft: `3px solid ${C.redBright}` }}>
+                <div className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2, color: C.redBright }}>{f.label.toUpperCase()}</div>
+                <p style={{ fontSize: 15, lineHeight: 1.5 }}>{i === invest.findings.length - 1 ? <SpokenText text={f.line} speed={35} /> : f.line}</p>
               </div>
             ))}
             {invest.left > 0 && (
-              <div className="grid grid-cols-1 gap-2 mt-3">
-                {INVEST_ACTS.filter((a) => !invest.used.includes(a.key)).map((a) => (
-                  <Btn key={a.key} small onClick={() => {
-                    const { s: ns, line } = investLook(s, a.key);
-                    setS(ns);
-                    setInvest({ left: invest.left - 1, used: [...invest.used, a.key], findings: [...invest.findings, { label: a.label, line }] });
-                  }}>{a.label}</Btn>
-                ))}
-              </div>
+              <>
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>LOOK CLOSER</span>
+                  <span className="inline-flex gap-1.5">
+                    {[0, 1].map((i) => <span key={i} className="inline-block rounded-full" style={{ width: 8, height: 8, background: i < invest.left ? C.amber : "transparent", border: `1.5px solid ${i < invest.left ? C.amber : C.line}`, boxShadow: i < invest.left ? "0 0 6px rgba(217,164,65,0.45)" : "none" }} />)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 mt-2.5">
+                  {INVEST_ACTS.filter((a) => !invest.used.includes(a.key)).map((a) => (
+                    <button key={a.key} onClick={() => {
+                      const { s: ns, line } = investLook(s, a.key);
+                      setS(ns);
+                      setInvest({ left: invest.left - 1, used: [...invest.used, a.key], findings: [...invest.findings, { label: a.label, line }] });
+                    }} className="mvIvChip rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left" style={{ background: C.panel2, border: "1px solid rgba(194,68,80,0.35)", cursor: "pointer" }}>
+                      <span style={{ color: C.redBright, flexShrink: 0 }}><MvIcon k={investIcon[a.key]} /></span>
+                      <span className="mv-display" style={{ fontSize: 13.5, color: C.parch }}>{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
-            {invest.left <= 0 && <p className="mt-3" style={{ fontSize: 13, color: C.dim }}>{(() => { const tb = npcById(s, "tobias"); return tb && tb.alive && !tb.fled ? "Old Tobias is waiting with the cart. There is no more time." : "The burial detail is waiting with the cart. There is no more time."; })()}</p>}
-            <div className="mt-4"><Btn full kind="amber" onClick={() => setInvest(null)}>Step away from the body</Btn></div>
+            {invest.left <= 0 && <p className="mt-3" style={{ fontSize: 13, color: C.dim, fontStyle: "italic" }}>{tb && tb.alive && !tb.fled ? "Old Tobias is waiting with the cart. There is no more time." : "The burial detail is waiting with the cart. There is no more time."}</p>}
+          </div>
+          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+            <Btn full center kind="amber" onClick={() => setInvest(null)}><span className="mv-display" style={{ letterSpacing: 2 }}>STEP AWAY FROM THE BODY</span></Btn>
           </div>
         </div>
       </div>
@@ -8414,13 +8471,47 @@ function MonsterVillage() {
     if (!next.over && fresh.length) setSheet(fresh);
   };
 
-  const examineModal = modal === "examine" && modalWrap("Have whom examined for the change?", (
-    <div className="flex flex-col gap-2">
-      <p style={{ color: C.dim, fontSize: 13 }}>Some horrors do not kill their victims. They <strong style={{ color: C.turn }}>change</strong> them: the body walks and talks and passes for itself, but it belongs to the thing now, and lies for it. Doctor Falk can feel the coldness of a changed soul's blood, and name one to you. Greta examines Falk himself, if it comes to that.</p>
-      <p style={{ color: C.dim, fontSize: 12 }}>A clean result proves little. And if your examiner has already been changed, they will call their own kind clean, so a clearance you later find was false points straight at whoever gave it.</p>
-      {aliveNpcs(s).map((n) => villagerBtn(n, () => runExamine(n.id)))}
-    </div>
-  ));
+  const examineModal = modal === "examine" && (() => {
+    /* the examination, in the interview language: the reader who feels the
+       cold in a changed soul's blood (Falk, or Greta if he is gone), then
+       the grid of who to look over. Mechanics unchanged - runExamine. */
+    const exId = falkCanExamine ? "falk" : "greta";
+    const exN = npcById(s, exId);
+    return (
+      <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <div className="relative flex items-center gap-3 p-3.5" style={{ background: "linear-gradient(120deg,#241B33,#161226)" }}>
+                <div style={{ flexShrink: 0, borderRadius: 12, overflow: "hidden", border: `2px solid ${C.turn}` }}><Portrait id={exId} size={58} turnedKnown={exN.turned && exN.known} disp={exN.disp} /></div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.turn }}>THE EXAMINATION</div>
+                  <div className="mv-display" style={{ fontSize: 18, color: C.parch, lineHeight: 1.1, marginTop: 2 }}>{exN.name} reads the blood</div>
+                  <div style={{ fontSize: 11.5, color: C.dim, marginTop: 2 }}>{exId === "falk" ? "He can feel the coldness of a changed soul." : "With the doctor gone, the reading falls to her."}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pt-3" style={{ minHeight: 0 }}>
+            <p style={{ fontSize: 13.5, color: C.dim, lineHeight: 1.5 }}>Some horrors do not kill. They <span style={{ color: C.turn }}>change</span> their victims: the body walks and talks and passes for itself, but it belongs to the thing now, and lies for it.</p>
+            <p style={{ fontSize: 12, color: C.dim, lineHeight: 1.5 }} className="mt-2">A clean result proves little. And a changed examiner calls their own kind clean, so a clearance you later find was false points straight at whoever gave it.</p>
+            <div className="mv-display mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER? ·</div>
+            <div className="grid grid-cols-4 gap-2 mt-3">
+              {aliveNpcs(s).map((n) => (
+                <button key={n.id} onClick={() => runExamine(n.id)} className="mvIvChip flex flex-col items-center gap-1 rounded-lg px-1 py-2" style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: "pointer" }}>
+                  <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
+                  <span style={{ fontSize: 10, color: C.text, lineHeight: 1.15, textAlign: "center" }}>{n.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+            <Btn full center onClick={() => setModal(null)}>Not today</Btn>
+          </div>
+        </div>
+      </div>
+    );
+  })();
 
   const planModal = modal === "plan" && modalWrap("Night falls. Where will you be?", (
     s.fled ? (
