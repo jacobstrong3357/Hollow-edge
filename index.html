@@ -4977,24 +4977,31 @@ function MonsterArt({ id, size = 64, light }) {
     </g>),
   }[id];
   const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14, hollowed: 16 }[id] || 1;
+  /* each horror keeps its own night-colour: a radial aura fading to black,
+     the same card the bestiary mock wore, so the art reads on parchment and
+     on the dark screens alike without the old red halo or pale discs. */
+  const aura = { werewolf: "#8A5A2A", vampire: "#8A2432", wraith: "#4A5E8A", ghoul: "#5A5030", witch: "#3E6A38", demon: "#8A2A18", shifter: "#5A4A6A", banshee: "#3E6E82", hellhound: "#8A3818", revenant: "#4A5040", doppel: "#585062", hag: "#3A4A5A", necromancer: "#3E5A48", mimic: "#5A3A5A", succubus: "#7A3050", hollowed: "#4A5E38" }[id] || "#3A3550";
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} style={{ display: "block" }}>
       <defs>
-        <filter id={`mvR${seed}`} x="-15%" y="-15%" width="130%" height="130%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.085" numOctaves="3" seed={seed} result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="6" />
+        {/* a light roughen only: enough for an organic edge, never enough to
+            eat a face the way the old scale-6 pass did */}
+        <filter id={`mvR${seed}`} x="-12%" y="-12%" width="124%" height="124%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.075" numOctaves="2" seed={seed} result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8" />
         </filter>
-        <radialGradient id="mvHalo" cx="50%" cy="55%" r="55%">
-          <stop offset="0%" stopColor="rgba(158,48,57,0.16)" />
-          <stop offset="60%" stopColor="rgba(158,48,57,0.06)" />
-          <stop offset="100%" stopColor="rgba(158,48,57,0)" />
+        <radialGradient id={`mvAura${seed}`} cx="50%" cy="30%" r="92%">
+          <stop offset="0%" stopColor={aura} stopOpacity="0.36" />
+          <stop offset="55%" stopColor="#12152A" />
+          <stop offset="100%" stopColor="#05070F" />
         </radialGradient>
+        <clipPath id={`mvClip${seed}`}><rect x="2" y="2" width="116" height="116" rx="16" /></clipPath>
       </defs>
-      <circle cx="60" cy="62" r="54" fill="url(#mvHalo)" />
-      {light && <circle cx="60" cy="60" r="52" fill="#AEB4CC" opacity="0.3" />}
-      {light && <circle cx="60" cy="58" r="38" fill="#C9CBD8" opacity="0.22" />}
-      <ellipse cx="60" cy="106" rx="34" ry="5" fill="#000" opacity="0.35" />
-      <g filter={`url(#mvR${seed})`}>{art}</g>
+      <rect x="2" y="2" width="116" height="116" rx="16" fill={`url(#mvAura${seed})`} />
+      <g clipPath={`url(#mvClip${seed})`}>
+        <ellipse cx="60" cy="110" rx="34" ry="5" fill="#000" opacity="0.3" />
+        <g filter={`url(#mvR${seed})`}>{art}</g>
+      </g>
     </svg>
   );
 }
