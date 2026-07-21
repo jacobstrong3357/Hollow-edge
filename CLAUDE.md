@@ -41,14 +41,24 @@ must name both WHO and WHAT before the village runs out of people.
    actions (`investLook`, `actSearch`, `actAccuse`, interview logic
    `computeAnswer`/`applyAnswer`).
 6. **SVG art components** — `Scene` (location silhouettes; unknown loc =
-   cottage fallback), `Portrait`, `MonsterArt`, `MonsterDeath` (rite-specific
-   kill animation via `METHOD_FX`/`mvKill-*` CSS), `InterviewScene`.
+   cottage fallback), `Portrait` (second-pass faces: profession marks,
+   per-villager tint, optional `disp` prop that adds a smile only at
+   disp >= 1 — hostility is rings/prose, never a scowl; `dead` renders
+   greyscale with a grey ✕ baked into the SVG), `MonsterArt`,
+   `MonsterDeath` (rite-specific kill animation via `METHOD_FX`/`mvKill-*`
+   CSS), `InterviewScene` (per-villager rooms + afflicted variants),
+   `DawnScene` (per-location morning scenes + burned/riot/shut/fouled
+   variants, chosen from existing state flags), `DayStrip`, `MvIcon`.
 7. **UI helpers** — `Btn`, `SpokenText` (word-by-word typing, click to skip),
    `TensionReveal` (staged suspense before life/death outcomes), `Carousel`,
    `DawnCarousel`, CSS in `EXTRA_CSS`.
 8. **`MonsterVillage`** — the single component: title screen, night cinematic
    (`phase === "night"` renders `s.nightBeats`), offer screen, epilogue,
-   the interactive night walk (see below), journal, day screen, modals.
+   the interactive night walk (see below), journal, the dawn screen (a
+   full-screen reveal gated on `dawnDone`; FACE THE DAY drops into the
+   day), day screen (morning strip header, action cards, fixed
+   ACCUSE/NIGHTFALL bar with the journal tab above it), modals. All of
+   this is presentation over the same actions and state as before.
 
 ## Core invariants (do not break)
 
@@ -163,10 +173,11 @@ must name both WHO and WHAT before the village runs out of people.
 
 ## Player death / monster death
 
-- Player deaths go to `s.deathBeats` (NOT the night beats): the night
-  cinematic ends on its cliffhanger line and a separate blood-dark death
-  screen ("YOU DO NOT SEE THE DAWN", looming art) plays the three
-  `DEATH_SCENES` beats. Never append death scenes to `nightBeats`.
+- Player deaths go to `s.deathBeats` (NOT the night beats): the moment a
+  run ends against the player, the blood-dark death screen ("YOU DO NOT
+  SEE THE DAWN", looming art) plays the `DEATH_SCENES` beats immediately.
+  The live walk already delivered the encounter, so no night cinematic
+  plays in between. Never append death scenes to `nightBeats`.
 - `MonsterArt`/`MonsterDeath` take a `light` prop (pale backdrop discs) for
   dark-on-dark contexts: home Black Book grid, epilogue, death/offer/win
   screens. The journal/bestiary render on parchment and must NOT use it.
