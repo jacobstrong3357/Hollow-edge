@@ -4670,59 +4670,83 @@ function Scene({ loc, kind, height = 150 }) {
   );
 }
 
-function Portrait({ id, size = 56, dead, turnedKnown }) {
-  /* -- Pass H: a slightly deeper, more desaturated tone once a villager is
-     confirmed turned, for a touch more unease. The base (non-turned) face
-     is untouched. -- */
-  const face = turnedKnown ? "#C7CBDC" : C.parch;
-  const F = { stroke: C.ink, strokeWidth: 1.6, strokeLinecap: "round", fill: "none" };
-  const feat = {
-    marta: (<g><path d="M22,44 C18,16 62,16 58,44 L52,42 C54,24 26,24 28,42 Z" fill="#3A4060" /><polygon points="56,42 66,36 62,48" fill="#3A4060" /></g>),
-    tobias: (<g><ellipse cx="40" cy="22" rx="17" ry="5" fill={C.garment} /><rect x="27" y="14" width="26" height="8" rx="3" fill={C.garment} /><path d="M27,46 C25,66 55,66 53,46 L50,44 C48,55 32,55 30,44 Z" fill="#9BA0B5" /></g>),
-    ansel: (<g><rect x="27" y="12" width="26" height="10" rx="2" fill={C.garment} /><circle cx="40" cy="10" r="3" fill={C.garment} /><rect x="33" y="60" width="14" height="7" fill="#EDEAE0" /></g>),
-    greta: (<g><path d="M20,46 C16,14 64,14 60,46 L54,44 C56,22 24,22 26,44 Z" fill="#35503F" /><path d="M58,58 l6,-8 M61,55 l5,2 M60,53 l-4,-2" {...F} stroke="#5B7A52" /></g>),
-    wilhelm: (<g><path d="M28,38 l9,-2 M43,36 l9,2" {...F} strokeWidth="2.6" /><path d="M26,46 C24,68 56,68 54,46 L50,44 C48,58 32,58 30,44 Z" fill="#3A3630" /></g>),
-    liesel: (<g><circle cx="40" cy="13" r="6" fill="#4A3A2E" /><path d="M24,40 C22,20 58,20 56,40 L52,36 C52,26 28,26 28,36 Z" fill="#4A3A2E" /><circle cx="24" cy="48" r="1.6" fill={C.amber} /><circle cx="56" cy="48" r="1.6" fill={C.amber} /></g>),
-    falk: (<g><rect x="28" y="2" width="24" height="15" fill={C.garment} /><rect x="22" y="15" width="36" height="4" fill={C.garment} /><circle cx="33" cy="41" r="5.5" {...F} /><circle cx="47" cy="41" r="5.5" {...F} /><path d="M38.5,41 h3" {...F} /></g>),
-    rosa: (<g><path d="M25,34 C25,20 55,20 55,34" {...F} strokeWidth="6" stroke="#2E2A3E" /><path d="M25,34 C24,48 24,54 26,60 M55,34 C56,48 56,54 54,60" {...F} strokeWidth="4" stroke="#2E2A3E" /><circle cx="26" cy="61" r="2" fill={C.red} /><circle cx="54" cy="61" r="2" fill={C.red} /></g>),
-  }[id];
+function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
+  /* Second-pass faces: light from the candle side, profession worn plainly,
+     and nobody who sleeps well. The mouth and brows lift only when this
+     villager is genuinely warm toward the player (disp >= 1); hostility is
+     carried by rings and prose, never by a scowl. The dead are greyed and
+     crossed out wherever they appear. */
+  const TINT = { marta: "#3A3560", tobias: "#3A3348", ansel: "#2C2A44", greta: "#2E4230", wilhelm: "#46372E", liesel: "#4A3550", falk: "#2E3A48", rosa: "#42304A" }[id] || "#2A2F4A";
+  const skin = turnedKnown ? "#C9CDDC" : (id === "tobias" || id === "falk") ? "#DDD1B6" : "#E9DFC8";
+  const shadeC = turnedKnown ? "#9AA0B8" : "#C4AE8C";
+  const eyeCol = turnedKnown ? C.turn : { greta: "#3E5A34", rosa: "#38302A", liesel: "#4A3020" }[id] || "#33291E";
+  const mk = !turnedKnown && (disp || 0) >= 1 ? "smile" : "neutral";
+  const eye = (x, lid = 0, nar = 0) => (
+    <g key={`e${x}`}>
+      <ellipse cx={x} cy="41.6" rx="3.5" ry={2.6 - nar} fill={turnedKnown ? "#E8EAF2" : "#F8F3E6"} />
+      <circle cx={x} cy="41.6" r="1.75" fill={eyeCol} />
+      <circle cx={x} cy="41.7" r="0.85" fill="#141017" />
+      <circle cx={x - 0.6} cy="40.9" r="0.5" fill="#FFF" opacity="0.9" />
+      <path d={`M${x - 3.4},${39.9 + lid} q3.4,${-1.8 + lid} 6.8,0`} stroke={skin} strokeWidth={1.2 + lid} fill="none" />
+      <path d={`M${x - 3.5},${39.6 + lid} q3.5,-1.9 7,0`} stroke="#8A7458" strokeWidth="0.8" fill="none" opacity="0.7" />
+    </g>
+  );
+  const F = {
+    marta: { garment: <g><path d="M13,80 C13,61 67,61 67,80 Z" fill="#5E4A38" /><path d="M28,80 C28,66 52,66 52,80 Z" fill="#D8CBB2" opacity="0.9" /><path d="M30,68 q10,6 20,0" stroke="#B8A88C" strokeWidth="1" fill="none" /></g>,
+      over: <g><path d="M23,39 C19,17 61,17 57,39 L52,33 C53,23 27,23 28,33 Z" fill="#8A93B8" /><path d="M23,39 C21,28 26,20 34,18 L30,26 Z" fill="#9CA5C8" /><path d="M56,36 q7,-2 6,-8 q5,4 0,9 Z" fill="#8A93B8" /><path d="M27,37 q-2,4 -1,7" stroke="#6E5A42" strokeWidth="1.2" fill="none" /><circle cx="50" cy="47" r="1.4" fill="#F5EFE0" opacity="0.55" /><circle cx="31" cy="26.5" r="1.6" fill="#F5EFE0" opacity="0.4" /><circle cx="35.5" cy="23.5" r="1.1" fill="#F5EFE0" opacity="0.35" /></g>, e: [0.4, 0] },
+    tobias: { garment: <g><path d="M12,80 C12,60 68,60 68,80 Z" fill="#3E362C" /><path d="M26,64 q14,-8 28,0 l-2,6 q-12,-6 -24,0 Z" fill="#5E5040" /></g>,
+      over: <g><path d="M26,50 C22,74 58,74 54,50 L50,48 C50,64 30,64 30,48 Z" fill="#9C9280" stroke="#7E7462" strokeWidth="0.8" /><path d="M36,56 q-0.5,6 -1.5,10 M44,56 q0.5,6 1.5,10 M40,57 v11" stroke="#B8AE9C" strokeWidth="1" fill="none" /><path d="M25,34 q-2,5 -0.5,9 M55,34 q2,5 0.5,9" stroke="#B8AE9C" strokeWidth="2.6" fill="none" strokeLinecap="round" /><path d="M30,28 q10,-4 20,0 M32,24.5 q8,-3 16,0" stroke="#A08C6C" strokeWidth="1" fill="none" opacity="0.6" /><path d="M27,45.5 q2,2 1.6,3.6 M53,45.5 q-2,2 -1.6,3.6" stroke="#A08C6C" strokeWidth="0.9" fill="none" opacity="0.7" /><path d="M27,44 q2,-1 3.4,0.4 l-0.6,2 q-1.6,0.6 -2.8,-0.4 Z" fill="#5E5040" opacity="0.4" /><circle cx="49.5" cy="32.5" r="1.7" fill="#5E5040" opacity="0.35" /></g>, e: [1.1, 0.7] },
+    ansel: { garment: <g><path d="M14,80 C14,60 66,60 66,80 Z" fill="#26232E" /><rect x="34" y="61" width="12" height="6" rx="1.5" fill="#EDEAE0" /><path d="M40,69 v7 M37,71.8 h6" stroke="#8A8060" strokeWidth="1.3" /></g>,
+      over: <g><path d="M24,38 C23,22 57,22 56,38 L52,34 C51,26 29,26 28,34 Z" fill="#231F28" /><path d="M36,25 L40,31.5 L44,25 Z" fill="#231F28" /><path d="M27.5,46 q1.6,4 4.4,5.6 M52.5,46 q-1.6,4 -4.4,5.6" stroke="#B89A74" strokeWidth="1" fill="none" opacity="0.7" /></g>, e: [0.6, 0.3] },
+    greta: { garment: <g><path d="M13,80 C13,62 67,62 67,80 Z" fill="#3A4A36" /><path d="M24,72 q16,-8 32,0" stroke="#2C3A2A" strokeWidth="2" fill="none" /></g>,
+      over: <g><path d="M20,44 C15,14 65,14 60,44 L54,40 C56,22 24,22 26,40 Z" fill="#35503F" /><path d="M20,44 q-1,6 2,10 M60,44 q1,6 -2,10" stroke="#35503F" strokeWidth="5" fill="none" /><path d="M56,26 l5,-6 M59,29 l6,-1 M57,23 l-2,-4" stroke="#5B7A52" strokeWidth="1.4" strokeLinecap="round" /><circle cx="33" cy="47.5" r="0.7" fill="#B89A74" /><circle cx="36.5" cy="49" r="0.6" fill="#B89A74" /><circle cx="45" cy="47.5" r="0.7" fill="#B89A74" /></g>, e: [0.5, 0.7] },
+    wilhelm: { garment: <g><path d="M12,80 C12,60 68,60 68,80 Z" fill="#57493A" /><path d="M24,80 L44,60 L52,66 L36,80 Z" fill="#4A3626" /><circle cx="47" cy="64" r="1.5" fill="#B8A878" /></g>,
+      over: <g><path d="M25,34 C25,22 55,22 55,34 L52,30 C46,26 34,26 28,30 Z" fill="#3A3026" /><path d="M26,46 C24,70 56,70 54,46 L50,44 C48,60 32,60 30,44 Z" fill="#3A3026" /><path d="M35,53 q-0.5,7 -2,11 M45,53 q0.5,7 2,11 M40,54 v12" stroke="#57493A" strokeWidth="1.1" fill="none" /><path d="M30,30.5 q3,-1.4 5.4,-0.2 l-0.8,2.6 q-2.2,0.8 -4,-0.6 Z" fill="#3A3A3A" opacity="0.45" /><circle cx="51.5" cy="46" r="2" fill="#3A3A3A" opacity="0.3" /><path d="M44,28 q4,-1.6 7,0.4" stroke="#8A8276" strokeWidth="1.6" fill="none" opacity="0.5" /></g>, e: [0.7, 0.3] },
+    liesel: { garment: <g><path d="M13,80 C13,61 67,61 67,80 Z" fill="#5A3A44" /><path d="M33,64 L40,76 L47,64" stroke="#D8CBB2" strokeWidth="1.4" fill="none" /><circle cx="47" cy="66.5" r="1.7" fill="none" stroke="#B8A878" strokeWidth="1" /><path d="M47,68 v5.5 M47,73.5 l2.5,1.2" stroke="#B8A878" strokeWidth="1.1" strokeLinecap="round" /></g>,
+      over: <g><circle cx="40" cy="12.5" r="7" fill="#4A3A2E" /><path d="M33,13 q7,-5 14,0" stroke="#5E4A38" strokeWidth="1.2" fill="none" /><path d="M24,40 C22,20 58,20 56,40 L52,34 C52,26 28,26 28,34 Z" fill="#4A3A2E" /><circle cx="23.5" cy="48" r="1.8" fill={C.amber} /><circle cx="56.5" cy="48" r="1.8" fill={C.amber} /><circle cx="30.5" cy="48.5" r="2.6" fill="#C67A6A" opacity="0.15" /><circle cx="49.5" cy="48.5" r="2.6" fill="#C67A6A" opacity="0.15" /></g>, e: [0.3, 0.3] },
+    falk: { garment: <g><path d="M14,80 C14,61 66,61 66,80 Z" fill="#3A4152" /><path d="M28,66 q12,-7 24,0 l-3,6 q-9,-5 -18,0 Z" fill="#2E3442" /><path d="M36,62 q4,4 8,0 l-2,7 h-4 Z" fill="#D8CBB2" opacity="0.85" /></g>,
+      over: <g><path d="M25,38 q-3.5,2 -4.5,7 M55,38 q3.5,2 4.5,7" stroke="#D8D2C4" strokeWidth="4" fill="none" strokeLinecap="round" /><path d="M27,46 q1.6,3.6 4,5 M53,46 q-1.6,3.6 -4,5" stroke="#B89A74" strokeWidth="1" fill="none" opacity="0.7" /><circle cx="33.5" cy="41.5" r="5.6" fill="#2A2F42" opacity="0.88" /><circle cx="46.5" cy="41.5" r="5.6" fill="#2A2F42" opacity="0.88" /><circle cx="33.5" cy="41.5" r="5.6" fill="none" stroke="#B8A878" strokeWidth="1.1" /><circle cx="46.5" cy="41.5" r="5.6" fill="none" stroke="#B8A878" strokeWidth="1.1" /><path d="M38.6,41.5 h2.8" stroke="#B8A878" strokeWidth="1.1" /><path d="M27.9,41 L23,39.4 M52.1,41 L57,39.4" stroke="#B8A878" strokeWidth="1" /><path d="M30.5,38.5 l4,4 M43.5,38.5 l4,4" stroke="#FFF" strokeWidth="0.9" opacity="0.35" /></g>, e: [0, 0] },
+    rosa: { garment: <g><path d="M14,80 C14,61 66,61 66,80 Z" fill="#3E3550" /><path d="M40,62 v18" stroke="#2E2740" strokeWidth="1.2" />{[66, 70, 74].map((y) => <circle key={y} cx="40" cy={y} r="0.9" fill="#D8CBB2" opacity="0.8" />)}<path d="M28,63 q6,9 5.5,17" stroke="#C8BFA6" strokeWidth="2.4" fill="none" opacity="0.8" /><path d="M29.2,67 l1.7,-0.4 M30.8,71 l1.7,-0.3 M31.9,75 l1.7,-0.2" stroke="#6B5F44" strokeWidth="0.8" /><path d="M50,64 l5,3 M55,67 l-1.6,1.6" stroke="#C8CEDA" strokeWidth="1.1" strokeLinecap="round" /></g>,
+      over: <g><path d="M24,42 C22,20 58,20 56,42 L52,37 C52,27 28,27 28,37 Z" fill="#2E2A3E" /><path d="M40,22.5 v6" stroke="#1E1B2C" strokeWidth="1.2" /><path d="M24,40 q-2,10 1,20 M56,40 q2,10 -1,20" stroke="#2E2A3E" strokeWidth="5" fill="none" /><circle cx="24.5" cy="61.5" r="2" fill="#6E2A34" /><circle cx="55.5" cy="61.5" r="2" fill="#6E2A34" /></g>, e: [0.2, -0.3] },
+  }[id] || { garment: <path d="M14,80 C14,62 66,62 66,80 Z" fill={C.garment} />, over: null, e: [0, 0] };
+  const MOUTH = mk === "smile" ? "q5.5,2.4 11,0" : "h11";
+  const MPOS = { tobias: [53, "#5E584C"], wilhelm: [52, "#8A7458"], liesel: [52.5, "#8A5A50"], ansel: [53.5], falk: [54] }[id] || [53];
+  const BCFG = { tobias: ["#9C9282", 2.2, 0], ansel: ["#231F28", 1.6, 0], greta: ["#2A4032", 1.5, 0], wilhelm: ["#3A3026", 2.8, 0], liesel: ["#4A3A2E", 1.5, 0], falk: ["#B8B0A0", 1.7, -1.6], rosa: ["#2E2A3E", 1.4, 0] }[id] || ["#6E5A42", 1.4, 0];
+  const BROWS = mk === "smile"
+    ? "M29.5,36.4 q3.5,-2.4 6.6,-1.2 M43.9,35.2 q3.5,-1.2 6.6,1.2"
+    : "M29.5,37.4 q3.5,-1.6 6.6,-0.4 M43.9,37 q3.5,-1.2 6.6,0.4";
   return (
-    <svg viewBox="0 0 80 80" width={size} height={size} style={{ display: "block", filter: dead ? "grayscale(1)" : "none", opacity: dead ? 0.5 : 1 }}>
+    <svg viewBox="0 0 80 80" width={size} height={size} style={{ display: "block", filter: dead ? "grayscale(1)" : "none", opacity: dead ? 0.55 : 1 }}>
       <defs>
-        <radialGradient id="mvPBg" cx="50%" cy="26%" r="85%">
-          <stop offset="0%" stopColor="#242B4A" /><stop offset="62%" stopColor={C.panel2} /><stop offset="100%" stopColor="#06080F" />
-        </radialGradient>
-        <radialGradient id="mvPVig" cx="50%" cy="45%" r="72%">
-          <stop offset="0%" stopColor="rgba(0,0,0,0)" /><stop offset="74%" stopColor="rgba(0,0,0,0)" /><stop offset="100%" stopColor="rgba(0,0,0,0.55)" />
+        <radialGradient id={`mvP2bg-${id}`} cx="50%" cy="22%" r="92%">
+          <stop offset="0%" stopColor={TINT} /><stop offset="68%" stopColor="#1A1E32" /><stop offset="100%" stopColor="#07090F" />
         </radialGradient>
         <filter id="mvPRough" x="-8%" y="-8%" width="116%" height="116%">
           <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="4" result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="1.3" />
         </filter>
       </defs>
-      <rect width="80" height="80" rx="10" fill="url(#mvPBg)" />
+      <rect width="80" height="80" rx="10" fill={`url(#mvP2bg-${id})`} />
+      <ellipse cx="16" cy="46" rx="18" ry="32" fill="#D9A441" opacity="0.1" />
       <g filter="url(#mvPRough)">
-        <path d="M14,80 C14,62 66,62 66,80 Z" fill={C.garment} />
-        <path d="M40,62 C54,62 66,68 66,80 L40,80 Z" fill="#000" opacity="0.22" />
-        <ellipse cx="40" cy="41" rx="17" ry="20" fill={face} />
-        <path d="M40,21 C50,21 57,30 57,41 C57,52 50,61 40,61 C48,55 51,49 51,41 C51,33 48,27 40,21 Z" fill="#000" opacity="0.14" />
-        <ellipse cx="33.5" cy="42" rx="4.4" ry="3.6" fill="#000" opacity={turnedKnown ? 0.27 : 0.17} />
-        <ellipse cx="46.5" cy="42" rx="4.4" ry="3.6" fill="#000" opacity={turnedKnown ? 0.27 : 0.17} />
-        <circle cx="33.5" cy="41" r="1.9" fill={turnedKnown ? C.turn : C.ink} />
-        <circle cx="46.5" cy="41" r="1.9" fill={turnedKnown ? C.turn : C.ink} />
-        <path d="M29.5,36.8 q4,-2.4 7.5,-0.8 M43,36 q4,-1.6 7.5,0.8" stroke={C.ink} strokeWidth="1.1" fill="none" opacity="0.6" />
-        <path d="M30.5,49.5 q2,2.4 4.5,2.8 M45,52.3 q2.5,-0.4 4.5,-2.8" stroke="#000" strokeWidth="0.9" fill="none" opacity="0.28" />
-        <path d="M35,53.5 h10" stroke={C.ink} strokeWidth="1.4" strokeLinecap="round" />
-        {turnedKnown && <g><path d="M30,46 q3,3 7,3" stroke={C.turn} strokeWidth="1" fill="none" /><path d="M43,49 q4,0 7,-3" stroke={C.turn} strokeWidth="1" fill="none" /></g>}
-        {feat}
+        {F.garment}
+        <path d="M34,58 h12 l-1,6 h-10 Z" fill={skin} />
+        <ellipse cx="40" cy="41" rx="16.5" ry="19.5" fill={skin} />
+        <path d="M40,21.5 C50,21.5 56.5,30 56.5,41 C56.5,52 50,60.5 40,60.5 C47,54.5 50,48.5 50,41 C50,33.5 47,27.5 40,21.5 Z" fill={shadeC} opacity="0.5" />
+        <path d="M26,33 C27.5,27 32,23.5 38,22.6" stroke="#FFF6E0" strokeWidth="1.3" opacity="0.35" fill="none" strokeLinecap="round" />
+        {eye(33.5, F.e[0], F.e[1])}{eye(46.5, F.e[0], F.e[1])}
+        <ellipse cx="33.5" cy="44.6" rx="3" ry="1.3" fill="#8A7458" opacity="0.28" />
+        <ellipse cx="46.5" cy="44.6" rx="3" ry="1.3" fill="#8A7458" opacity="0.28" />
+        <path d="M28.5,46.5 q1.4,3 3.6,4.2 M51.5,46.5 q-1.4,3 -3.6,4.2" stroke="#B89A74" strokeWidth="0.9" fill="none" opacity="0.5" />
+        <path d="M40,42 q1.6,4.4 -0.6,6.4 q-1.2,0.8 -2.2,0.2" stroke="#B89A74" strokeWidth="1.1" fill="none" opacity="0.8" />
+        {F.over}
+        <path d={`M34.5,${MPOS[0]} ${MOUTH}`} stroke={MPOS[1] || "#8A6A50"} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+        <g transform={`translate(0,${BCFG[2]})`}><path d={BROWS} stroke={BCFG[0]} strokeWidth={BCFG[1]} fill="none" strokeLinecap="round" /></g>
       </g>
-      <rect width="80" height="80" rx="10" fill="url(#mvPVig)" />
-      <rect x="0.5" y="0.5" width="79" height="79" rx="10" fill="none" stroke="#000" strokeOpacity="0.4" />
-      {dead && <path d="M18,18 L62,62 M62,18 L18,62" stroke={C.red} strokeWidth="4" strokeLinecap="round" opacity="0.85" />}
+      {dead && <path d="M24,26 L56,58 M56,26 L24,58" stroke="#AEB4CC" strokeWidth="4.5" strokeLinecap="round" opacity="0.8" />}
     </svg>
   );
 }
-
 function MonsterArt({ id, size = 64, light }) {
   /* eyes glow out of the dark instead of sitting flat on it */
   const eye = (x, y, c = C.amber) => (
@@ -5422,6 +5446,223 @@ const IV_ROOM_NAME = {
   falk: "THE SURGERY", rosa: "THE SEWING ROOM",
 };
 
+/* ---------- Dawn, painted per place ----------
+   The morning the village wakes to: one scene per place a death can be
+   found, with afflicted variants when the village's lasting wounds are on
+   that ground. Chosen from state the night already decided; nothing here
+   rolls anything. */
+function DawnScene({ loc, s, height = 190 }) {
+  const key =
+    loc === "Graveyard" ? "graveyard" :
+    loc === "Dark Forest" ? "forest" :
+    loc === "Old Church" ? ((s.burned || []).includes("Old Church") ? "church_burned" : "church") :
+    loc === "Village Square" ? (s.wellFouled ? "well_fouled" : s.breadRiot ? "square_riot" : "square") :
+    loc === "Tavern" ? (s.tavernShut ? "tavern_shut" : "tavern") : "cottage";
+  const pine = (x, sc = 1, col = "#372C4A") => (
+    <g key={`pn${x}`} transform={`translate(${x},0) scale(${sc})`}>
+      <polygon points="0,164 -24,164 -12,112" fill={col} /><polygon points="0,138 -21,138 -10,94" fill={col} />
+      <polygon points="-2,116 -19,116 -10,82" fill={col} /><rect x="-14" y="160" width="5" height="8" fill={col} />
+    </g>
+  );
+  const SKIES = {
+    cottage: ["#2E3452", "#6E5372", "#BE7E62", "#E8B87A", 322, 128, 70],
+    graveyard: ["#2A2C48", "#5E4A6E", "#A86A6A", "#D9A08A", 86, 130, 70],
+    forest: ["#26324A", "#4E5A62", "#8A825A", "#C8B072", 334, 116, 60],
+    church: ["#302E52", "#6A4E74", "#B0766A", "#E0A878", 66, 118, 70],
+    church_burned: ["#2E2A38", "#4A4050", "#7A5A54", "#A88468", 66, 118, 55],
+    square: ["#2E3450", "#66557A", "#C08668", "#EEC084", 200, 140, 80],
+    square_riot: ["#2E2C44", "#585068", "#9A7460", "#C89A74", 200, 142, 62],
+    well_fouled: ["#2A3240", "#48564E", "#6E8062", "#9AA070", 200, 140, 50],
+    tavern: ["#2C3050", "#684E68", "#B47062", "#E2A578", 344, 126, 70],
+    tavern_shut: ["#282C46", "#4E4658", "#7E6058", "#A88468", 344, 130, 50],
+  }[key];
+  const MIST = { graveyard: 0.26, forest: 0.3, square: 0.22, well_fouled: 0.24, church_burned: 0.12, tavern_shut: 0.12, square_riot: 0.15 }[key] || 0.18;
+  const houses = [[26, 96, 62, 58], [318, 96, 60, 56]].map(([x, y, w, h]) => (
+    <g key={x}><rect x={x} y={y} width={w} height={h} fill="#1E1934" /><polygon points={`${x - 6},${y} ${x + w + 6},${y} ${x + w / 2},${y - 26}`} fill="#181430" /><rect x={x + w / 2 - 6} y={y + 14} width="12" height="14" fill="#0E0B18" /></g>
+  ));
+  const well = (<g>
+    <ellipse cx="200" cy="160" rx="30" ry="8" fill="#1E1934" />
+    <rect x="176" y="128" width="48" height="30" rx="4" fill="#1E1934" />
+    <rect x="196" y="100" width="8" height="28" fill="#131022" />
+    <path d="M176,104 h48" stroke="#131022" strokeWidth="4" />
+    <polygon points="170,104 230,104 200,86" fill="#181430" />
+  </g>);
+  const els = {
+    cottage: (<g>
+      {pine(30, 0.8)}
+      <ellipse cx="316" cy="166" rx="95" ry="6" fill="#E8B87A" opacity="0.28" />
+      <rect x="150" y="92" width="100" height="70" fill="#1E1930" />
+      <polygon points="142,92 258,92 200,56" fill="#171326" />
+      <rect x="232" y="64" width="11" height="28" fill="#171326" />
+      <path d="M237,62 q4,-8 -1,-13" stroke="#D8CBB2" strokeWidth="2" fill="none" opacity="0.5" className="mvSmokeWisp" />
+      <rect x="186" y="116" width="24" height="46" fill="#0B0814" />
+      <rect x="160" y="112" width="14" height="16" fill="#0E0B18" />
+      <rect x="226" y="112" width="14" height="16" fill="#0E0B18" />
+      <rect x="270" y="132" width="3" height="30" fill="#131022" />
+      <rect x="266" y="120" width="11" height="14" rx="2" fill="#131022" />
+      <ellipse cx="271.5" cy="127" rx="2.2" ry="3.4" fill={C.amber} className="mvFlick" />
+      <g transform="rotate(-14 129 156)"><path d="M118,162 q1,-10 11,-10 q10,0 11,10 Z" fill="#131022" /><path d="M120,150 q9,-8 18,0" stroke="#131022" strokeWidth="2" fill="none" /></g>
+      {[86, 100, 288, 302, 316].map((x) => <rect key={x} x={x} y="146" width="4" height="18" fill="#131022" />)}
+    </g>),
+    graveyard: (<g>
+      <path d="M330,162 L330,84 M330,104 L306,80 M330,122 L356,96 M330,92 L344,70 M306,80 L296,66" stroke="#1C1730" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M340,72 q4,-4 8,0" stroke="#131022" strokeWidth="2" fill="none" />
+      <ellipse cx="298" cy="63" rx="4.5" ry="3" fill="#131022" /><path d="M302,63 l6,-2" stroke="#131022" strokeWidth="1.5" />
+      {[[60, 128, 24, 34], [108, 138, 20, 26], [206, 132, 22, 30], [370, 136, 20, 28]].map(([x, y, w, h]) => (
+        <rect key={x} x={x} y={y} width={w} height={h} rx={w / 2.2} fill="#1C1730" />
+      ))}
+      <path d="M158,120 v34 M148,130 h20" stroke="#1C1730" strokeWidth="6" strokeLinecap="round" />
+      <ellipse cx="262" cy="164" rx="30" ry="7" fill="#161022" />
+      <ellipse cx="262" cy="162" rx="20" ry="4" fill="#2E2216" />
+    </g>),
+    forest: (<g>
+      <polygon points="334,116 260,190 306,190" fill="#EED8B0" opacity="0.08" />
+      <polygon points="334,116 350,190 396,190" fill="#EED8B0" opacity="0.06" />
+      {pine(20, 0.55, "#2E3852")}{pine(86, 0.5, "#2E3852")}{pine(150, 0.6, "#2E3852")}{pine(222, 0.5, "#2E3852")}{pine(288, 0.55, "#2E3852")}{pine(354, 0.5, "#2E3852")}
+      {pine(48, 1.1, "#1E2434")}{pine(118, 0.85, "#232B3E")}{pine(180, 1.2, "#1E2434")}{pine(258, 0.9, "#232B3E")}{pine(330, 0.75, "#232B3E")}{pine(388, 1.05, "#1E2434")}
+      <ellipse cx="300" cy="168" rx="14" ry="5" fill="#1E2434" />
+      <rect x="292" y="156" width="16" height="12" fill="#1E2434" />
+      <path d="M212,120 q5,8 -1,16" stroke="#6E2A34" strokeWidth="3" fill="none" className="mvSway" />
+    </g>),
+    church: (<g>
+      <rect x="196" y="100" width="128" height="62" fill="#1B1630" />
+      <rect x="150" y="52" width="52" height="110" fill="#1B1630" />
+      <polygon points="144,52 208,52 176,10" fill="#161228" />
+      <rect x="173" y="0" width="5" height="12" fill="#161228" /><rect x="167" y="3" width="17" height="4" fill="#161228" />
+      <path d="M168,76 a8,8 0 0 1 16,0 v14 h-16 Z" fill="#E8A85A" opacity="0.75" className="mvFlick" />
+      {[236, 268, 300].map((x) => <path key={x} d={`M${x},118 a7,7 0 0 1 14,0 v12 h-14 Z`} fill="#E8A85A" opacity="0.65" className="mvFlick" />)}
+      <path d="M348,60 q4,-4 8,0 M362,50 q4,-4 8,0" stroke="#1B1630" strokeWidth="2" fill="none" />
+      {[36, 52, 68, 84].map((x) => <rect key={x} x={x} y="148" width="4" height="16" fill="#1B1630" />)}
+      <rect x="30" y="144" width="62" height="4" fill="#1B1630" />
+    </g>),
+    church_burned: (<g>
+      <rect x="196" y="112" width="128" height="50" fill="#171225" />
+      <path d="M196,112 L214,98 L230,112 L252,94 L270,112 L292,100 L324,112 Z" fill="#171225" />
+      <path d="M214,98 l-5,-15 M252,94 l4,-17 M292,100 l-3,-15" stroke="#100C18" strokeWidth="4" strokeLinecap="round" />
+      <rect x="150" y="52" width="52" height="110" fill="#1B1630" />
+      <polygon points="144,52 208,52 176,10" fill="#161228" />
+      <rect x="173" y="0" width="5" height="12" fill="#161228" /><rect x="167" y="3" width="17" height="4" fill="#161228" />
+      <path d="M168,76 a8,8 0 0 1 16,0 v14 h-16 Z" fill="#0B0814" />
+      <ellipse cx="258" cy="152" rx="42" ry="8" fill="#0E0A16" />
+      <ellipse cx="258" cy="150" rx="24" ry="4" fill="#D85F2E" opacity="0.45" className="mvEmberBed" />
+      <path d="M238,96 q6,-16 -2,-30" stroke="#8A8FA0" strokeWidth="2" fill="none" className="mvSmokeWisp" />
+      <path d="M282,100 q5,-14 -1,-26" stroke="#8A8FA0" strokeWidth="1.6" fill="none" className="mvSmokeWisp" style={{ animationDelay: "1.6s" }} />
+      <path d="M348,58 q4,-4 8,0 M334,48 q4,-4 8,0" stroke="#1B1630" strokeWidth="2" fill="none" />
+    </g>),
+    square: (<g>
+      {houses}
+      <g className="mvSway"><path d="M88,96 h16" stroke="#131022" strokeWidth="2" /><rect x="90" y="98" width="12" height="10" rx="1.5" fill="#131022" /></g>
+      {well}
+      <g transform="rotate(104 254 160)"><path d="M248,152 h12 v10 q-6,3 -12,0 Z" fill="#131022" /></g>
+      <ellipse cx="262" cy="166" rx="12" ry="2.5" fill="#131022" opacity="0.7" />
+    </g>),
+    square_riot: (<g>
+      {houses}
+      {well}
+      <g transform="rotate(-9 148 152)"><rect x="118" y="146" width="60" height="5" fill="#131022" /><rect x="124" y="151" width="5" height="13" fill="#131022" /><rect x="166" y="151" width="5" height="13" fill="#131022" /></g>
+      <path d="M96,160 l16,-9 M108,164 l13,-5" stroke="#131022" strokeWidth="3" strokeLinecap="round" />
+      <ellipse cx="252" cy="164" rx="24" ry="4" fill="#C8C2B0" opacity="0.28" />
+      <path d="M242,160 a8,6 0 0 1 8,-6 l-1,6 Z" fill="#6E583A" />
+      <path d="M262,162 a7,5 0 0 1 7,-5 l-1,5 Z" fill="#6E583A" />
+      <path d="M282,152 q5,7 -1,14" stroke="#6E2A34" strokeWidth="3" fill="none" className="mvSway" />
+    </g>),
+    well_fouled: (<g>
+      {houses}
+      <ellipse cx="200" cy="164" rx="56" ry="9" fill="#22301F" opacity="0.8" />
+      <path d="M172,158 q-10,4 -18,3 M228,158 q10,4 18,3" stroke="#22301F" strokeWidth="3" fill="none" opacity="0.7" />
+      {well}
+      <path d="M200,104 v18" stroke="#131022" strokeWidth="1.5" />
+      <path d="M194,122 h12 l-2,9 h-8 Z" fill="#131022" />
+      <ellipse cx="150" cy="98" rx="4.5" ry="3" fill="#131022" /><path d="M154,98 l6,-2" stroke="#131022" strokeWidth="1.5" />
+      <path d="M262,84 q4,-4 8,0" stroke="#131022" strokeWidth="2" fill="none" />
+    </g>),
+    tavern: (<g>
+      <rect x="96" y="86" width="176" height="76" fill="#1E1830" />
+      <polygon points="86,86 282,86 184,48" fill="#181328" />
+      <rect x="130" y="60" width="10" height="24" fill="#181328" />
+      <path d="M135,58 q4,-7 -1,-12" stroke="#D8CBB2" strokeWidth="1.8" fill="none" opacity="0.5" className="mvSmokeWisp" />
+      <rect x="172" y="118" width="26" height="44" fill="#0B0814" />
+      <rect x="120" y="112" width="15" height="17" fill="#0E0B18" />
+      <rect x="236" y="112" width="15" height="17" fill="#0E0B18" />
+      <path d="M272,92 h30" stroke="#131022" strokeWidth="3" />
+      <g className="mvSway"><path d="M292,95 v7 M300,95 v7" stroke="#131022" strokeWidth="1.5" /><rect x="286" y="102" width="20" height="15" rx="2" fill="#131022" /><circle cx="296" cy="109" r="4" fill="none" stroke="#B4885A" strokeWidth="1.4" /></g>
+      <g transform="rotate(-80 152 164)"><rect x="146" y="156" width="12" height="14" rx="2" fill="#131022" /><path d="M158,159 q5,3 0,8" stroke="#131022" strokeWidth="2" fill="none" /></g>
+      <ellipse cx="290" cy="168" rx="14" ry="10" fill="#1E1830" />
+    </g>),
+    tavern_shut: (<g>
+      <rect x="96" y="86" width="176" height="76" fill="#1E1830" />
+      <polygon points="86,86 282,86 184,48" fill="#181328" />
+      <rect x="130" y="60" width="10" height="24" fill="#181328" />
+      <rect x="172" y="118" width="26" height="44" fill="#0B0814" />
+      <g transform="rotate(-14 185 136)"><rect x="164" y="132" width="42" height="7" fill="#3A2A18" /><circle cx="168" cy="135" r="1" fill="#0C0E14" /><circle cx="202" cy="137" r="1" fill="#0C0E14" /></g>
+      <g transform="rotate(11 185 148)"><rect x="164" y="144" width="42" height="7" fill="#332414" /><circle cx="168" cy="149" r="1" fill="#0C0E14" /><circle cx="202" cy="146" r="1" fill="#0C0E14" /></g>
+      <rect x="120" y="112" width="15" height="17" fill="#0E0B18" />
+      <g transform="rotate(-8 127 120)"><rect x="114" y="117" width="27" height="5" fill="#3A2A18" /></g>
+      <rect x="236" y="112" width="15" height="17" fill="#0E0B18" />
+      <g transform="rotate(7 243 120)"><rect x="230" y="117" width="27" height="5" fill="#3A2A18" /></g>
+      <path d="M272,92 h30" stroke="#131022" strokeWidth="3" />
+      <g transform="rotate(12 296 152)"><rect x="286" y="140" width="20" height="15" rx="2" fill="#131022" /><circle cx="296" cy="147" r="4" fill="none" stroke="#6E5A42" strokeWidth="1.4" /></g>
+    </g>),
+  }[key];
+  return (
+    <svg viewBox="0 0 400 190" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id={`dwS-${key}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={SKIES[0]} /><stop offset="42%" stopColor={SKIES[1]} />
+          <stop offset="72%" stopColor={SKIES[2]} /><stop offset="100%" stopColor={SKIES[3]} />
+        </linearGradient>
+        <radialGradient id={`dwSun-${key}`}>
+          <stop offset="0%" stopColor="#FFE9BC" /><stop offset="30%" stopColor="#F5C878" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#E8A85A" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="190" fill={`url(#dwS-${key})`} />
+      <circle cx={SKIES[4]} cy={SKIES[5]} r={SKIES[6]} fill={`url(#dwSun-${key})`} className="mvGlowPulse" />
+      <circle cx={SKIES[4]} cy={SKIES[5]} r="14" fill="#FFEFCB" />
+      <path d="M96,52 q4,-4 8,0 M112,60 q3,-3 6,0" stroke="#2A2438" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <rect y="160" width="400" height="30" fill="#262038" />
+      {els}
+      <ellipse className="mvFog" cx="140" cy="152" rx="130" ry="11" fill="#EED8B0" opacity={MIST} />
+      <ellipse className="mvFog2" cx="300" cy="162" rx="140" ry="9" fill="#EED8B0" opacity={MIST * 0.75} />
+    </svg>
+  );
+}
+
+/* A sliver of the village in morning light, behind the day header. */
+function DayStrip({ height = 64 }) {
+  return (
+    <svg viewBox="0 0 400 70" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="dwStrip" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#48507A" /><stop offset="70%" stopColor="#9A7A72" /><stop offset="100%" stopColor="#D0A878" />
+        </linearGradient>
+        <radialGradient id="dwStripSun">
+          <stop offset="0%" stopColor="#FFE9BC" stopOpacity="0.9" /><stop offset="100%" stopColor="#E8A85A" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="70" fill="url(#dwStrip)" />
+      <circle cx="330" cy="52" r="38" fill="url(#dwStripSun)" className="mvGlowPulse" />
+      <circle cx="330" cy="52" r="9" fill="#FFEFCB" />
+      {[[30, 40, 26], [82, 34, 32], [255, 38, 28], [368, 44, 24]].map(([x, w, h]) => (
+        <g key={x}><rect x={x} y={70 - h} width={w} height={h} fill="#221C34" /><polygon points={`${x - 4},${70 - h} ${x + w + 4},${70 - h} ${x + w / 2},${70 - h - 13}`} fill="#1C1730" /></g>
+      ))}
+      <path d="M150,70 q4,-16 12,-16 q8,0 12,16 Z" fill="#221C34" />
+      <ellipse className="mvFog" cx="200" cy="66" rx="150" ry="6" fill="#EED8B0" opacity="0.16" />
+    </svg>
+  );
+}
+
+/* Icons for the day's four errands. */
+function MvIcon({ k }) {
+  const b = {
+    invest: <g><path d="M8,19 C8,14 16,14 16,19" /><circle cx="12" cy="9.6" r="3.4" /><path d="M4.5,20.5 h15" strokeWidth="2.2" /></g>,
+    search: <g><circle cx="10.4" cy="10.4" r="6" /><path d="M15,15 L20.5,20.5" strokeWidth="2.4" /></g>,
+    talk: <g><path d="M4,6.5 h16 v10 h-9 l-4.5,4 v-4 h-2.5 Z" /></g>,
+    exam: <g><path d="M2.8,12 q9.2,-10.5 18.4,0 q-9.2,10.5 -18.4,0 Z" /><circle cx="12" cy="12" r="3" /></g>,
+  }[k];
+  return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" style={{ display: "block" }}>{b}</svg>;
+}
+
 /* How they stand with you, worn on the portrait: the ring and the word only
    restate what the reception prose already says out loud. */
 const IV_MOOD = {
@@ -5546,7 +5787,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               ? (
                 <div className="px-3 py-2 flex items-center gap-2.5">
                   <div style={{ flexShrink: 0, borderRadius: 9, overflow: "hidden", border: `2px solid ${mood.color}` }}>
-                    <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} />
+                    <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -5564,7 +5805,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                 <div className="px-3.5 pb-3" style={{ marginTop: 10 }}>
                   <div className="flex items-end gap-3">
                     <div style={{ flexShrink: 0, borderRadius: 11, overflow: "hidden", border: `2px solid ${mood.color}`, boxShadow: "0 4px 12px rgba(0,0,0,0.55)" }}>
-                      <Portrait id={n.id} size={58} turnedKnown={n.turned && n.known} />
+                      <Portrait id={n.id} size={58} turnedKnown={n.turned && n.known} disp={n.disp} />
                     </div>
                     <div className="pb-0.5" style={{ minWidth: 0 }}>
                       <div style={{ lineHeight: 1.1 }}>
@@ -5609,7 +5850,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                   </div>
                 </div>
                 <div className="flex items-end gap-2 mt-2">
-                  <div style={{ flexShrink: 0 }}><Portrait id={n.id} size={30} turnedKnown={n.turned && n.known} /></div>
+                  <div style={{ flexShrink: 0 }}><Portrait id={n.id} size={30} turnedKnown={n.turned && n.known} disp={n.disp} /></div>
                   <div className="rounded-xl px-3 py-2" style={{ maxWidth: "86%", background: C.panel2, border: `1px solid ${C.line}`, borderBottomLeftRadius: 4 }}>
                     <p style={{ fontSize: 15, fontStyle: "italic", color: C.text, lineHeight: 1.5 }}>
                       {isLast ? <SpokenText text={t.a} /> : t.a}
@@ -8254,7 +8495,7 @@ function MonsterVillage() {
     return modalWrap(`${n.name} ${n.role}`, (
       <div>
         <div className="flex gap-3 items-start">
-          <div className="shrink-0"><Portrait id={n.id} size={64} dead={!n.alive} turnedKnown={n.turned && n.known} /></div>
+          <div className="shrink-0"><Portrait id={n.id} size={64} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} /></div>
           <div>
             <p style={{ fontSize: 13, fontStyle: "italic", color: C.dim }}>{lore.body}</p>
             <p className="mt-1" style={{ fontSize: 12, color: C.dim }}>{n.build} of build{n.alive && s.knownBuild === n.build ? ": like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ": could be the shape in the dark" : ""}</p>
@@ -8305,22 +8546,71 @@ function MonsterVillage() {
     ));
   })();
 
+  /* ---------- The dawn, faced before the day ---------- */
+  const actCard = (icon, title, hint, onClick, disabled, accent) => (
+    <button onClick={onClick} disabled={disabled} className="mv-btn rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left"
+      style={{ background: C.panel2, border: `1px solid ${!disabled && accent ? accent : C.line}`, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
+      <span style={{ color: !disabled && accent ? accent : C.amber, flexShrink: 0 }}><MvIcon k={icon} /></span>
+      <span style={{ minWidth: 0 }}>
+        <span className="mv-display block" style={{ fontSize: 13.5, color: !disabled && accent ? accent : C.parch, lineHeight: 1.15 }}>{title}</span>
+        <span className="block" style={{ fontSize: 10.5, color: C.dim, lineHeight: 1.3 }}>{hint}</span>
+      </span>
+    </button>
+  );
+  if (s.dawn.length > 0 && !dawnDone) {
+    const dloc = (s.dawnScene && s.dawnScene.loc) || "Cottage";
+    return (
+      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
+        <style>{CSS_ALL}</style>
+        {profileModal}
+        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <div className="relative">
+                <DawnScene loc={dloc} s={s} height={180} />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(20,24,41,0) 62%, rgba(20,24,41,0.9))", pointerEvents: "none" }} />
+                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#F5D9A0", background: "rgba(8,10,18,0.5)", border: "1px solid rgba(245,217,160,0.3)" }}>
+                  THE NIGHT HAS PASSED · DAY {s.dayNum}
+                </div>
+                <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>AT DAWN · THE {dloc.toUpperCase()}</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4" style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+            {s.dawn.length > 1
+              ? <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={() => setDawnDone(true)} />
+              : s.dawn.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))}
+            {s.enraged && <p className="mt-3" style={{ color: C.redBright, fontSize: 13.5, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+            {s.wrongGuesses === 1 && <p className="mt-3" style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
+          </div>
+          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
+            <Btn full center kind="amber" onClick={() => setDawnDone(true)}><span className="mv-display" style={{ letterSpacing: 2 }}>FACE THE DAY</span></Btn>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ---------- Day screen ---------- */
   return (
     <div className="min-h-screen mv-body" style={{ background: C.bg, color: C.text }}>
       <style>{CSS_ALL}</style>
       {journal}{searchModal}{daySceneModal}{nightWalkModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{watchModal}{unbindModal}{accuseModal}{profileModal}{resultSheet}
 
-      <div className="sticky top-0 z-20 px-4 pt-2.5 pb-1.5" style={{ background: C.bg, borderBottom: `1px solid ${C.line}` }}>
-        <div className="max-w-md mx-auto">
-          <div className="flex items-baseline justify-between">
-            <span className="mv-display" style={{ fontSize: 19, color: C.parch }}>Day {s.dayNum}{s.fled ? " · under siege" : ""}</span>
-            <span style={{ fontSize: 12, color: C.dim }}>
-              <button onClick={toggleSound} className="mv-body mr-2" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12, cursor: "pointer", padding: 0 }}>{snd ? "♪" : "♪·off"}</button>
-              {aliveNpcs(s).length} living{knownChanged ? ", and some walk changed" : ""}
-            </span>
+      <div className="sticky top-0 z-20" style={{ borderBottom: `1px solid ${C.line}` }}>
+        <div className="relative">
+          <DayStrip height={66} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(16,19,33,0.2), rgba(16,19,33,0.9))" }} />
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-1.5">
+            <div className="max-w-md mx-auto flex items-baseline gap-3">
+              <span className="mv-display" style={{ fontSize: 23, color: C.parch, lineHeight: 1, textShadow: "0 1px 6px #000" }}>Day {s.dayNum}{s.fled ? " · under siege" : ""}</span>
+              <MoonStrip s={s} />
+              <span className="ml-auto" style={{ fontSize: 11.5, color: C.pale, textShadow: "0 1px 4px #000", whiteSpace: "nowrap" }}>
+                <button onClick={toggleSound} className="mv-body mr-2" style={{ background: "transparent", border: "none", color: C.pale, fontSize: 11.5, cursor: "pointer", padding: 0 }}>{snd ? "♪" : "♪·off"}</button>
+                {aliveNpcs(s).length} living{knownChanged ? ", some changed" : ""}
+              </span>
+            </div>
           </div>
-          <div className="mt-1"><MoonStrip s={s} /></div>
         </div>
       </div>
 
@@ -8352,30 +8642,15 @@ function MonsterVillage() {
         );
       })()}
 
-      <div className="max-w-md mx-auto px-4 pb-20">
-        <div className="mt-3 rounded-lg overflow-hidden" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
-          {s.dawnScene && (
-            <div style={{ position: "relative" }}>
-              <Scene loc={s.dawnScene.loc} kind={s.dawnScene.kind} height={s.dayNum <= 1 ? 130 : 84} />
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: DAY_TINTS[s.dayNum % DAY_TINTS.length] }} />
-            </div>
+      <div className="max-w-md mx-auto px-4 pb-40">
+        <div className="mt-3">
+          {s.dawn.length > 0 && (
+            <button onClick={() => setDawnDone(false)} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12.5, cursor: "pointer", padding: 0, textAlign: "left" }}>
+              ▾ what the dawn brought · {s.dawn.length} {s.dawn.length === 1 ? "thing" : "things"}
+            </button>
           )}
-          <div className="p-3 pt-2">
-            <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>AT DAWN{s.dawnScene ? `, ${s.dawnScene.loc.toUpperCase()}` : ""}</div>
-            {s.dawn.length > 1 ? (
-              dawnDone ? (
-                <button onClick={() => setDawnDone(false)} className="mv-body mt-2" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0, textAlign: "left" }}>
-                  {s.dawn.length} things happened in the night · read again ▾
-                </button>
-              ) : (
-                <div className="mt-2"><DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={() => setDawnDone(true)} /></div>
-              )
-            ) : (
-              s.dawn.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))
-            )}
-            {s.enraged && <p className="mt-2" style={{ color: C.redBright, fontSize: 13, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
-            {s.wrongGuesses === 1 && <p className="mt-2" style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
-          </div>
+          {s.enraged && <p className="mt-1.5" style={{ color: C.redBright, fontSize: 13, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+          {s.wrongGuesses === 1 && <p className="mt-1.5" style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
         </div>
 
         {s.dayEvents.length > 0 && (
@@ -8405,7 +8680,7 @@ function MonsterVillage() {
             return (
               <button key={n.id} onClick={() => setProfile(n.id)} className="flex flex-col items-center gap-0.5 mv-btn" style={{ width: 72, background: "transparent", border: "none", cursor: "pointer", padding: 0, opacity: struckP ? 0.5 : 1 }}>
                 <div style={{ borderRadius: 12, boxShadow: ring ? `0 0 0 2px ${ring}` : "none" }}>
-                  <Portrait id={n.id} size={44} dead={!n.alive} turnedKnown={n.turned && n.known} />
+                  <Portrait id={n.id} size={50} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} />
                 </div>
                 <div className="text-center" style={{ fontSize: 10.5, color: C.dim, lineHeight: "12px", textDecoration: struckP ? "line-through" : "none" }}>
                   {n.name}{n.fled ? <><br /><span style={{ color: C.redBright }}>in hiding</span></> : faceK === n.id && n.alive ? <><br /><span style={{ color: C.redBright }}>it wears this face</span></> : n.turned && n.known ? <><br /><span style={{ color: C.turn }}>changed</span></> : n.cured ? <><br /><span style={{ color: C.amber }}>unbound</span></> : s.mob && s.mob.target === n.id && n.alive ? <><br /><span style={{ color: C.redBright }}>marked</span></> : null}
@@ -8418,15 +8693,15 @@ function MonsterVillage() {
         <div className="mt-3">
           <div className="flex items-center justify-between">
             <span className="mv-display" style={{ fontSize: 13, letterSpacing: 2, color: C.dim }}>DAYLIGHT REMAINING</span>
-            <span>{[0, 1].map((i) => (<span key={i} className="inline-block rounded-full ml-1.5" style={{ width: 10, height: 10, background: i < s.ap ? C.amber : "transparent", border: `1.5px solid ${C.amber}` }} />))}</span>
+            <span>{[0, 1].map((i) => (<span key={i} className="inline-block rounded-full ml-1.5" style={{ width: 10, height: 10, background: i < s.ap ? C.amber : "transparent", border: `1.5px solid ${i < s.ap ? C.amber : C.line}`, boxShadow: i < s.ap ? "0 0 8px rgba(217,164,65,0.55)" : "none" }} />))}</span>
           </div>
-          <div className="grid grid-cols-1 gap-1.5 mt-1.5">
-            <Btn small disabled={s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum} onClick={openInvest}>
-              {investigateLabel(s, freshDeath)}
-            </Btn>
-            <Btn small disabled={s.ap < 1} onClick={() => setModal("search")}>Search a location in daylight</Btn>
-            <Btn small disabled={s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length} onClick={() => setModal("question")}>Hold an interview</Btn>
-            <Btn small disabled={s.ap < 1 || !canExamine} onClick={() => setModal("examine")}>{examineLabel(canExamine, !falkCanExamine)}</Btn>
+          <div className="grid grid-cols-2 gap-2 mt-1.5">
+            {actCard("invest", "Where They Fell", investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum, "#C24450")}
+            {actCard("search", "Search a Place", "Turn a place over by daylight", () => setModal("search"), s.ap < 1)}
+            {actCard("talk", "Hold an Interview", "Three questions, one visit", () => setModal("question"), s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length)}
+            {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => setModal("examine"), s.ap < 1 || !canExamine)}
+          </div>
+          <div className="grid grid-cols-1 gap-1.5 mt-2">
             {s.mob && mobT && mobT.alive && (
               <Btn small disabled={s.ap < 1 || s.defendedToday} onClick={() => doAction((x) => actDefend(x))}>
                 {defendLabel(s, mobT)}
@@ -8458,18 +8733,27 @@ function MonsterVillage() {
               </div>
             );
           })()}
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <Btn kind="red" disabled={s.fled} onClick={() => setModal("accuse")}>{s.fled ? "It is unmasked" : "Accuse"}</Btn>
-            <Btn kind="amber" onClick={() => setModal("plan")}>Nightfall →</Btn>
-          </div>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 inset-x-0 z-10 mvIvDock" style={{ background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}` }}>
+        <div className="max-w-md mx-auto px-4 pt-2.5 flex gap-2" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}>
+          <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" disabled={s.fled} onClick={() => setModal("accuse")}
+            style={{ flex: 1, background: s.fled ? "transparent" : C.red, border: `1px solid ${C.red}`, color: s.fled ? C.dim : "#F3E9E4", fontSize: 13, letterSpacing: 2, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
+            {s.fled ? "UNMASKED" : "ACCUSE"}
+          </button>
+          <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" onClick={() => setModal("plan")}
+            style={{ flex: 1.35, background: "transparent", border: `1px solid ${C.amber}`, color: C.amber, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>
+            NIGHTFALL →
+          </button>
         </div>
       </div>
 
       <div className="mvVignette" />
       <div className="mvGrainF" />
       <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
-        className="mv-display fixed bottom-0 left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-t-lg"
-        style={{ background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none" }}>
+        className="mv-display fixed left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-t-lg"
+        style={{ bottom: 62, background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none" }}>
         ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ whiteSpace: "nowrap" }}> · {remainCount} remain</span> : ""}
         {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
         {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 6, right: 8, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
