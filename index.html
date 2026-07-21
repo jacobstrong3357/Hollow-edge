@@ -4952,298 +4952,302 @@ function MonsterDeath({ id, method, size = 120, light }) {
 /* The room you are received in: each villager's own walls and tools behind
    the talk, in the same woodcut-silhouette style as the location scenes. */
 function InterviewScene({ id, height = 92 }) {
-  /* Shared bits: a candle whose flame truly gutters, pools of warm light
-     spilling across floor and wall, a cool counter-light where the night
-     gets in, embers that breathe, motes climbing through the glow. All of
-     it is CSS animation on flat shapes; nothing here costs a re-render. */
-  const WOOD = "#5E3F24", WOOD2 = "#7A5230", TAN = "#8A7248", EARTH = "#3A2A1A";
+  /* Every room is its own painting: a full-scene ambient wash in the room's
+     own colour, a handful of large shapes, one blazing light source, and a
+     few things barely seen at the edge of the gloom. All movement is CSS
+     animation on flat shapes; nothing here costs a re-render. */
   const flameG = (x, y, sc = 1, d = 0) => (
     <g className="mvFlame" style={{ animationDelay: `${d}s` }}>
-      <ellipse cx={x} cy={y} rx={2.1 * sc} ry={4 * sc} fill={C.amber} />
-      <ellipse cx={x} cy={y + sc} rx={1 * sc} ry={2 * sc} fill="#F8ECC0" />
+      <ellipse cx={x} cy={y} rx={2.2 * sc} ry={4.4 * sc} fill={C.amber} />
+      <ellipse cx={x} cy={y + sc} rx={1.1 * sc} ry={2.2 * sc} fill="#F8ECC0" />
     </g>
   );
   const glow = (x, y, r = 16, d = 0) => (
     <ellipse cx={x} cy={y} rx={r} ry={r * 0.72} fill="url(#ivsGlow)" className="mvGlowPulse" style={{ animationDelay: `${d}s` }} />
   );
-  /* the pool a live flame throws: broad, warm, breathing */
   const pool = (x, y, rx, ry, d = 0, op = 1) => (
     <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="url(#ivsWarm)" opacity={op} className="mvGlowPulse" style={{ animationDelay: `${d}s` }} />
   );
-  /* the night leaning in at the far side of the room */
-  const cool = (x, y, rx, ry, op = 1) => (
-    <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="url(#ivsCool)" opacity={op} />
-  );
-  const candle = (x, y, h = 11, d = 0) => (
+  const candle = (x, y, h = 13, sc = 1.3, d = 0) => (
     <g key={`c${x}${y}`}>
-      {glow(x, y - 4, 16, d)}
-      <rect x={x - 2.2} y={y} width={4.4} height={h} rx={1.2} fill="#E4D8BC" opacity="0.85" />
-      <path d={`M${x - 2.2},${y + 2} q-1.6,3 -0.2,${h - 5}`} stroke="#F2EAD6" strokeWidth="1" fill="none" opacity="0.55" />
-      {flameG(x, y - 4.4, 1, d)}
+      {glow(x, y - 5, 18, d)}
+      <rect x={x - 3} y={y} width={6} height={h} rx={1.6} fill="#DCD2B8" />
+      <path d={`M${x - 3},${y + 2} q-2,4 -0.4,${h - 6}`} stroke="#EDE6D2" strokeWidth="1.2" fill="none" opacity="0.6" />
+      {flameG(x, y - 5.5, sc, d)}
     </g>
   );
-  const taper = (x, y, h = 8, d = 0) => (
-    <g key={`tp${x}${y}`}>
-      <rect x={x - 1.5} y={y} width={3} height={h} fill="#E4D8BC" opacity="0.85" />
-      {flameG(x, y - 3.6, 0.8, d)}
-    </g>
-  );
-  const motes = (x, y, d = 0) => (
+  const motes = (x, y, d = 0, col = C.parch) => (
     <g>
       {[0, 1, 2].map((i) => (
-        <circle key={i} cx={x + i * 7 - 7} cy={y + (i % 2) * 6} r="0.9" fill={C.parch}
+        <circle key={i} cx={x + i * 8 - 8} cy={y + (i % 2) * 7} r="1" fill={col}
           className="mvMote" style={{ animationDelay: `${d + i * 2.3}s` }} />
       ))}
     </g>
   );
-  const sparks = (x, y, d = 0) => (
+  const sparks = (x, y, d = 0, n = 4) => (
     <g>
-      {[0, 1, 2].map((i) => (
-        <circle key={i} cx={x + i * 4 - 4} cy={y} r="1" fill="#E8A05A"
-          className="mvSpark" style={{ animationDelay: `${d + i * 1.15}s` }} />
+      {Array.from({ length: n }, (_, i) => (
+        <circle key={i} cx={x + i * 9 - (n - 1) * 4.5} cy={y + (i % 2) * 5} r="1.3" fill="#F0B060"
+          className="mvSpark" style={{ animationDelay: `${d + i * 0.9}s` }} />
       ))}
     </g>
   );
-  const bottle = (x, y, h, col, glint = true) => (
-    <g key={`b${x}${y}`}>
-      <rect x={x} y={y} width="8" height={h} rx="2" fill={col} />
-      <rect x={x + 2.5} y={y - 6} width="3" height="7" fill={col} />
-      {glint && <circle cx={x + 2.5} cy={y + 4} r="1" fill={C.parch} opacity="0.75" />}
-    </g>
-  );
-  const table = (x, w, y = 92, lit = false) => (
-    <g key={`t${x}`}>
-      <rect x={x} y={y} width={w} height={5} fill={C.sil} />
-      {lit && <rect x={x} y={y} width={w} height={1.4} fill={WOOD2} opacity="0.55" />}
-      <rect x={x + 4} y={y + 5} width={5} height={112 - y - 5} fill={C.sil} />
-      <rect x={x + w - 9} y={y + 5} width={5} height={112 - y - 5} fill={C.sil} />
-    </g>
-  );
-  const propsFor = {
+  const rooms = {
+    /* -------- THE BAKERY: the whole room is oven-warm -------- */
     marta: (<g>
-      {cool(360, 28, 70, 50, 0.55)}
-      {/* the great oven, banked for the night, warming half the room */}
-      {pool(90, 108, 100, 26, 0, 0.9)}
-      <path d="M30,112 C30,54 116,54 116,112 Z" fill={C.sil} />
-      <rect x="64" y="10" width="14" height="46" fill={C.sil} />
-      <path d="M50,112 C50,76 96,76 96,112 Z" fill="#241209" />
-      <ellipse cx="73" cy="106" rx="16" ry="6" fill="url(#ivsEmber)" className="mvEmberBed" />
-      {sparks(73, 100, 0.4)}
-      {/* flour sack in the oven's light */}
-      <path d="M122,112 q0,-17 13,-17 q13,0 13,17 Z" fill={TAN} />
-      <path d="M122,112 q0,-17 13,-17 l0,17 Z" fill="#9A7E54" opacity="0.5" />
-      <path d="M130,95 h10" stroke="#4A3A24" strokeWidth="2" />
-      {/* the peel, leaning where she left it */}
-      <g transform="rotate(12 152 52)"><rect x="150" y="20" width="4" height="76" fill={WOOD2} /><ellipse cx="152" cy="18" rx="9" ry="5" fill={WOOD} /></g>
-      {/* stool, her shawl left over it */}
-      <rect x="172" y="96" width="26" height="4" fill={WOOD} /><rect x="175" y="100" width="4" height="12" fill={C.sil} /><rect x="191" y="100" width="4" height="12" fill={C.sil} />
-      <path d="M170,96 q15,-11 30,0 l-5,9 q-10,5 -20,0 Z" fill="#5A2430" />
-      {/* loaf rack above the table, loaves cooling on it */}
-      <rect x="212" y="56" width="128" height="4" fill={C.sil} />
-      {[228, 262, 296, 326].map((x) => <path key={x} d={`M${x - 12},56 C${x - 12},47 ${x + 12},47 ${x + 12},56 Z`} fill="#2E2118" />)}
-      {table(212, 130, 92, true)}
-      {[230, 262, 296].map((x) => (
-        <g key={x}><ellipse cx={x} cy={89} rx="14" ry="6" fill={WOOD} /><path d={`M${x - 8},87 q8,-5 16,0`} stroke="#8A5C34" strokeWidth="1.2" fill="none" opacity="0.9" /></g>
+      <rect width="400" height="120" fill="url(#ivsBgMarta)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.26" />
+      {/* far shelf, tomorrow's loaves barely seen */}
+      <rect x="252" y="26" width="132" height="5" fill="#1E130C" />
+      {[272, 306, 340, 370].map((x) => <path key={x} d={`M${x - 13},26 C${x - 13},16 ${x + 13},16 ${x + 13},26 Z`} fill="#2C1C10" />)}
+      {/* the great oven, most of the left wall */}
+      <path d="M18,112 C18,34 148,34 148,112 Z" fill="#301D11" />
+      <path d="M18,112 C18,34 148,34 148,112 L134,112 C134,46 32,46 32,112 Z" fill="#422916" opacity="0.6" />
+      <rect x="72" y="4" width="20" height="40" fill="#241509" />
+      <path d="M46,112 C46,68 120,68 120,112 Z" fill="#160A05" />
+      <ellipse cx="83" cy="102" rx="34" ry="13" fill="#D85F2E" className="mvEmberBed" />
+      <ellipse cx="83" cy="103" rx="21" ry="8" fill="#F09055" className="mvEmberBed" style={{ animationDelay: "0.9s" }} />
+      <ellipse cx="83" cy="104" rx="11" ry="4.5" fill="#F8C08A" />
+      {pool(83, 108, 120, 26, 0, 1)}
+      {sparks(83, 74, 0.3)}
+      {/* the peel, taller than she is */}
+      <g transform="rotate(14 166 60)"><rect x="163" y="14" width="5" height="94" fill="#7A5230" /><path d="M154,16 q12,-12 24,0 l-4,10 h-16 Z" fill="#8A5C34" /></g>
+      {/* stool and shawl, in the warm */}
+      <rect x="192" y="92" width="30" height="5" fill="#3E2814" /><rect x="196" y="97" width="5" height="15" fill="#2A1A0E" /><rect x="213" y="97" width="5" height="15" fill="#2A1A0E" />
+      <path d="M190,92 q17,-13 34,0 l-6,11 q-11,6 -22,0 Z" fill="#6E2A34" />
+      {/* the table, the loaves that matter, the candle */}
+      <rect x="240" y="86" width="140" height="7" fill="#3E2814" /><rect x="240" y="86" width="140" height="2" fill="#6E4A24" opacity="0.7" />
+      <rect x="248" y="93" width="6" height="19" fill="#241608" /><rect x="366" y="93" width="6" height="19" fill="#241608" />
+      {[266, 302].map((x) => (
+        <g key={x}><ellipse cx={x} cy={80} rx="17" ry="8" fill="#A87840" /><path d={`M${x - 10},77 q10,-6 20,0`} stroke="#D0A068" strokeWidth="2" fill="none" /></g>
       ))}
-      {pool(300, 92, 46, 12, 0.8, 0.7)}
-      {candle(330, 81, 11, 0.8)}
+      {pool(300, 88, 55, 14, 0.8, 0.8)}
+      {candle(344, 70, 14, 1.3, 0.8)}
       {/* the cup gone cold */}
-      <rect x="352" y="103" width="12" height="8" rx="2" fill={C.sil} />
-      <path d="M358,100 q2,-6 -1,-10" stroke={C.pale} strokeWidth="1.1" fill="none" className="mvSmokeWisp" style={{ animationDelay: "1.6s" }} />
-      {motes(84, 68, 0.6)}
+      <rect x="352" y="100" width="13" height="9" rx="2" fill="#241608" />
+      <path d="M358,97 q3,-7 -1,-12" stroke={C.pale} strokeWidth="1.2" fill="none" className="mvSmokeWisp" style={{ animationDelay: "1.6s" }} />
+      {motes(100, 62, 0.6)}
     </g>),
+    /* -------- THE GRAVE SHED: cold blue, one lantern against it -------- */
     tobias: (<g>
-      {/* the night gets into the grave shed at the far wall */}
-      {cool(320, 42, 95, 62, 0.8)}
-      {/* the lantern, hung from its bracket, and the pool it throws */}
-      {pool(105, 106, 115, 30, 0.3, 1)}
-      <path d="M46,5 h14 v17" stroke={C.sil} strokeWidth="2.5" fill="none" />
-      <rect x="51" y="22" width="18" height="22" rx="2" fill="#120D08" />
-      <rect x="54" y="25" width="12" height="16" fill="#241209" />
-      {glow(60, 33, 17, 0.3)}
-      {flameG(60, 34, 1.1, 0.3)}
-      {/* the tools of the trade, handles worn to the wood */}
-      <g transform="rotate(-14 88 80)"><rect x="86" y="34" width="4" height="70" fill={WOOD2} /><path d="M80,100 h16 l-3,12 h-10 Z" fill={C.sil} /></g>
-      <g transform="rotate(10 110 80)"><rect x="108" y="38" width="4" height="66" fill={WOOD2} /><path d="M102,100 h16 l-3,12 h-10 Z" fill={C.sil} /></g>
-      {/* the sack of lime, catching the lantern light */}
-      <path d="M146,112 q-2,-20 12,-22 q14,2 12,22 Z" fill={TAN} />
-      <path d="M146,112 q-2,-20 12,-22 l0,22 Z" fill="#9A7E54" opacity="0.45" />
-      <path d="M152,90 h12" stroke="#4A3A24" strokeWidth="2" />
+      <rect width="400" height="120" fill="url(#ivsBgTobias)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.3" />
+      {/* the lantern, and everything it can hold back */}
+      <path d="M118,0 v22" stroke="#0C0E16" strokeWidth="3" />
+      {pool(118, 106, 120, 28, 0.3, 1)}
+      <rect x="103" y="22" width="30" height="34" rx="3" fill="#120D08" />
+      <rect x="108" y="27" width="20" height="24" fill="#241408" />
+      {glow(118, 39, 22, 0.3)}
+      {flameG(118, 41, 1.5, 0.3)}
+      {/* spades worn to the wood, leaning where they always lean */}
+      <g transform="rotate(-12 56 78)"><rect x="53" y="26" width="6" height="76" fill="#6E4A28" /><path d="M45,98 h22 l-4,14 h-14 Z" fill="#1A1D28" /></g>
+      <g transform="rotate(8 82 80)"><rect x="79" y="32" width="6" height="72" fill="#5E3F22" /><path d="M71,100 h22 l-4,12 h-14 Z" fill="#1A1D28" /></g>
+      {/* the lime sack in the lantern light */}
+      <path d="M154,112 q-3,-24 15,-27 q18,3 15,27 Z" fill="#8A7248" />
+      <path d="M154,112 q-3,-24 15,-27 l0,27 Z" fill="#A08454" opacity="0.5" />
+      <path d="M162,86 h14" stroke="#4A3A24" strokeWidth="2.5" />
       {/* fresh-turned earth, grass already trying, a spade still standing */}
-      <ellipse cx="210" cy="108" rx="30" ry="7" fill={EARTH} />
-      <path d="M198,101 q-2,-7 2,-10 M216,102 q3,-8 -1,-12" stroke="#6B5F44" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-      <g transform="rotate(-22 220 86)"><rect x="218" y="60" width="4" height="42" fill={WOOD2} /><rect x="214" y="56" width="12" height="5" rx="2" fill={WOOD2} /><path d="M213,98 h13 l-2,12 h-9 Z" fill={C.sil} /></g>
-      {/* the niche and what waits in it, gone blue with the hour */}
-      <path d="M258,84 v-44 a22,21 0 0 1 44,0 v44 Z" fill="#0B0E1C" />
-      <rect x="270" y="50" width="20" height="34" rx="10" fill="#26304A" />
-      <path d="M320,38 v20 M312,45 h16" stroke="#3A4468" strokeWidth="3" strokeLinecap="round" />
-      {/* urn and candle on the table */}
-      {table(330, 62, 90)}
-      <path d="M342,90 C339,77 357,77 354,90 Z" fill="#26304A" />
-      {candle(374, 79, 11, 0.9)}
-      {motes(70, 58, 1.2)}
+      <ellipse cx="228" cy="107" rx="34" ry="8" fill="#2E2216" />
+      <path d="M214,99 q-3,-8 2,-12 M240,100 q4,-9 -1,-14" stroke="#6B5F44" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <g transform="rotate(-20 240 82)"><rect x="238" y="52" width="5" height="48" fill="#7A5230" /><rect x="233" y="47" width="15" height="6" rx="3" fill="#7A5230" /><path d="M232,96 h17 l-3,14 h-11 Z" fill="#1A1D28" /></g>
+      {/* the coffin against the far wall, gone blue with the hour */}
+      <polygon points="304,22 336,22 346,50 336,110 304,110 294,50" fill="#1E2232" />
+      <polygon points="304,22 320,22 320,110 304,110 294,50" fill="#262C40" opacity="0.7" />
+      <path d="M294,50 h52" stroke="#12141E" strokeWidth="2" />
+      {/* cross on the wall, rope on the floor */}
+      <path d="M374,30 v24 M364,38 h20" stroke="#3A4468" strokeWidth="4" strokeLinecap="round" />
+      <ellipse cx="374" cy="108" rx="12" ry="4.5" fill="none" stroke="#1E2232" strokeWidth="3.5" />
+      <ellipse cx="374" cy="105" rx="7" ry="2.8" fill="none" stroke="#1E2232" strokeWidth="3" />
+      {motes(118, 62, 1.2)}
     </g>),
+    /* -------- THE VESTRY: moonlight, and one candle answering it -------- */
     ansel: (<g>
-      {/* the arched window, a thin fall of night coming through */}
-      {cool(72, 48, 62, 58, 0.85)}
-      <path d="M56,86 v-47 a15,15 0 0 1 30,0 v47 Z" fill="#0B0E1C" />
-      <path d="M71,26 v60 M56,54 h30" stroke="#1B2036" strokeWidth="2" />
-      <polygon points="58,86 84,86 122,112 76,112" fill="#8FA3C8" opacity="0.06" />
-      {/* candelabra: three flames, none in step, and the light they share */}
-      {pool(208, 90, 95, 28, 0.2, 0.9)}
-      {table(140, 140, 84, true)}
-      <rect x="206" y="64" width="3.6" height="20" fill="#6E5228" />
-      <rect x="191" y="62" width="34" height="3" fill="#6E5228" />
-      <rect x="191" y="62" width="3" height="7" fill="#6E5228" /><rect x="222" y="62" width="3" height="7" fill="#6E5228" />
-      {glow(208, 50, 26, 0.2)}
-      {taper(192.5, 54, 8, 0)}{taper(207.8, 51, 10, 0.9)}{taper(223.5, 54, 8, 1.7)}
-      {/* the cross, the open ledger */}
-      <rect x="256" y="54" width="5" height="30" fill={C.parch} opacity="0.8" />
-      <rect x="248" y="62" width="21" height="5" fill={C.parch} opacity="0.8" />
-      <rect x="316" y="60" width="26" height="24" fill={C.sil} />
-      <path d="M316,60 L329,50 L342,60" fill="none" stroke={C.sil} strokeWidth="4" />
-      <path d="M320,60 l9,-3 9,3 v2 l-9,-2.5 -9,2.5 Z" fill={C.parch} opacity="0.7" />
-      {/* the censer, still breathing */}
-      <path d="M368,5 v19" stroke={C.sil} strokeWidth="1.5" /><path d="M361,24 h14 l-2.5,9 h-9 Z" fill="#6E5228" />
-      <path d="M368,20 q4,-8 -1,-14" stroke={C.pale} strokeWidth="1.2" fill="none" className="mvSmokeWisp" />
-      {motes(208, 46, 0.9)}
+      <rect width="400" height="120" fill="url(#ivsBgAnsel)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.25" />
+      {/* the great window, the moon caught in one pane */}
+      <path d="M40,112 v-56 a34,34 0 0 1 68,0 v56 Z" fill="#0E0F1C" />
+      <path d="M48,112 v-54 a26,26 0 0 1 52,0 v54 Z" fill="url(#ivsGlass)" />
+      <path d="M74,32 v80 M48,74 h52" stroke="#0E0F1C" strokeWidth="5" />
+      <circle cx="62" cy="56" r="8" fill="#C8CEE0" opacity="0.9" />
+      <polygon points="50,112 106,112 150,120 30,120" fill="#8FA3C8" opacity="0.05" />
+      {motes(76, 60, 0.9, "#AEB4CC")}
+      {/* the kneeler, empty at this hour */}
+      <path d="M186,60 L240,52 l0,11 L186,71 Z" fill="#10101E" />
+      <rect x="192" y="66" width="9" height="46" fill="#10101E" />
+      <rect x="226" y="60" width="9" height="52" fill="#10101E" />
+      <circle cx="196.5" cy="108" r="2.2" fill="#C8A050" opacity="0.8" /><circle cx="230.5" cy="108" r="2.2" fill="#C8A050" opacity="0.8" />
+      {/* the cross, the open book, the candle keeping them */}
+      {pool(322, 108, 95, 22, 0.2, 0.95)}
+      <path d="M330,34 v70 M306,56 h48" stroke="#0E0E1A" strokeWidth="10" strokeLinecap="round" />
+      <path d="M266,104 q16,-8 30,0 q14,-8 30,0 l0,9 q-15,-6 -30,0 q-15,-6 -30,0 Z" fill="#D8CFB8" />
+      <path d="M296,100 v10" stroke="#8A7E62" strokeWidth="1.2" />
+      {candle(366, 66, 38, 1.6, 0.2)}
     </g>),
+    /* -------- THE STILLROOM: green murk, glass, and a blade -------- */
     greta: (<g>
-      {cool(60, 36, 70, 50, 0.5)}
-      <rect x="24" y="14" width="352" height="4" fill={C.sil} />
-      {/* the hanging harvest, stirring in a draught you cannot feel */}
-      {[58, 104, 152, 206, 258, 306].map((x, i) => (
-        <g key={x} className="mvSway" style={{ animationDelay: `${i * 0.9}s`, animationDuration: `${5.5 + (i % 3)}s` }}>
-          <path d={`M${x},18 L${x},${34 + (i % 3) * 5}`} stroke={C.sil} strokeWidth="1.6" />
-          <path d={`M${x - 8},${52 + (i % 3) * 5} L${x + 8},${52 + (i % 3) * 5} L${x},${32 + (i % 3) * 5} Z`} fill={i % 2 ? "#2C4A26" : "#22301F"} />
-        </g>
-      ))}
-      {/* jar shelf */}
-      <rect x="332" y="46" width="58" height="3.5" fill={C.sil} />
-      {[340, 354, 370].map((x, i) => <rect key={x} x={x} y={32 - (i % 2) * 4} width="10" height={14 + (i % 2) * 4} rx="2" fill={["#2C3A2A", "#6E5228", C.sil][i]} />)}
-      <circle cx="345" cy="38" r="1" fill={C.parch} opacity="0.7" /><circle cx="359" cy="34" r="1" fill={C.parch} opacity="0.7" />
-      {pool(330, 94, 75, 24, 0.5, 0.85)}
-      {table(240, 130, 92, true)}
-      {[258, 284, 310].map((x, i) => <rect key={x} x={x} y={80 - (i % 2) * 4} width="13" height={12 + (i % 2) * 4} rx="2" fill={i === 1 ? "#2C3A2A" : C.sil} />)}
-      {/* mortar, and the day's cuttings */}
-      <path d="M226,92 C226,82 248,82 248,92 Z" fill={C.sil} />
-      <path d="M240,82 l7,-8" stroke={WOOD2} strokeWidth="3" strokeLinecap="round" />
-      <path d="M336,108 l15,-4 M346,110 l12,-2" stroke="#3E5A34" strokeWidth="1.5" strokeLinecap="round" />
-      {candle(348, 81, 11, 0.5)}
-      {motes(348, 60, 0.7)}
-    </g>),
-    wilhelm: (<g>
-      {cool(56, 38, 70, 52, 0.5)}
-      {/* horseshoes on the wall */}
-      {[52, 76, 100].map((x, i) => <path key={x} d={`M${x - 7},${30 + (i % 2) * 7} a7,7 0 1 1 14,0 v7 m-14,-7 v7`} fill="none" stroke={C.sil} strokeWidth="3" />)}
-      {/* the forge's light reaches most of the floor */}
-      <ellipse cx="310" cy="108" rx="120" ry="26" fill="url(#ivsEmber)" opacity="0.65" className="mvGlowPulse" />
-      {/* anvil on its stump, one edge kept bright by the embers */}
-      <rect x="150" y="98" width="26" height="14" fill={C.sil} />
-      <path d="M134,84 h58 l-8,10 h-42 Z" fill={C.sil} />
-      <path d="M192,84 q16,2 12,11 l-13,-3 Z" fill={C.sil} />
-      <path d="M188,84 h4 l-6,10 h-3 Z" fill="#B4402E" opacity="0.5" />
-      {/* hammer set against the stump, tongs where they fell */}
-      <g transform="rotate(-28 218 96)"><rect x="216" y="76" width="5" height="34" fill={WOOD2} /><rect x="208" y="68" width="21" height="11" rx="2" fill={C.sil} /></g>
-      <path d="M234,110 l16,-24 M240,110 l12,-26" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
-      {/* quench bucket, a ghost of steam off the water */}
-      <path d="M254,112 v-12 h20 v12" fill={C.sil} />
-      <path d="M264,96 q4,-8 -1,-14" stroke={C.pale} strokeWidth="1.3" fill="none" className="mvSmokeWisp" style={{ animationDelay: "1.4s" }} />
-      {/* the forge itself, banked embers breathing */}
-      <ellipse cx="328" cy="88" rx="48" ry="32" fill="url(#ivsEmber)" opacity="0.5" className="mvGlowPulse" />
-      <path d="M282,112 C282,64 374,64 374,112 Z" fill={C.sil} />
-      <path d="M298,112 C298,84 358,84 358,112 Z" fill="#241209" />
-      <ellipse cx="328" cy="106" rx="20" ry="7" fill="url(#ivsEmber)" className="mvEmberBed" style={{ animationDelay: "0.6s" }} />
-      {sparks(328, 98, 0)}
-      {motes(180, 66, 0.8)}
-    </g>),
-    liesel: (<g>
-      {cool(370, 30, 60, 45, 0.5)}
-      {/* the lamp over the bar, and everything its light touches */}
-      {pool(200, 90, 105, 28, 0.2, 1)}
-      <path d="M200,5 v32" stroke="#05070F" strokeWidth="2" />
-      <path d="M188,52 L212,52 L205,38 L195,38 Z" fill="#120D08" />
-      {glow(200, 52, 20, 0.2)}
-      {flameG(200, 49, 1.2, 0.2)}
-      {/* mugs hung above the bar, swaying */}
-      <rect x="40" y="30" width="150" height="4" fill={C.sil} />
-      {bottle(46, 18, 12, "#2E4A38")}{bottle(58, 16, 14, "#5A2430")}{bottle(70, 19, 11, "#6E5228")}
-      {[98, 128, 158].map((x, i) => (
-        <g key={x} className="mvSway" style={{ animationDelay: `${i * 0.7}s`, animationDuration: `${6 + (i % 2)}s` }}>
-          <path d={`M${x},34 v7`} stroke={C.sil} strokeWidth="1.5" />
-          <rect x={x - 6} y={41} width="12" height="13" rx="2" fill={C.sil} />
-          <path d={`M${x + 6},44 q6,3 0,7`} stroke={C.sil} strokeWidth="2.2" fill="none" />
-        </g>
-      ))}
-      {/* the long bar, tankards waiting on the light */}
-      {table(36, 200, 82, true)}
-      {[80, 116, 152].map((x) => (
-        <g key={x}><rect x={x} y={68} width="14" height="14" rx="2" fill="#6E5638" /><rect x={x + 1.5} y={70} width="4" height="10" fill="#9A7E54" opacity="0.6" /><path d={`M${x + 14},72 q6,3 0,7`} stroke="#6E5638" strokeWidth="2.5" fill="none" /></g>
-      ))}
-      {/* the barrel on its cradle */}
-      <rect x="264" y="60" width="52" height="52" rx="10" fill={C.sil} />
-      <path d="M264,86 h52 M268,72 h44 M268,100 h44" stroke="#0B0E1C" strokeWidth="2" />
-      <path d="M264,80 a26,26 0 0 1 8,-14 v40 a26,26 0 0 1 -8,-14 Z" fill={WOOD} opacity="0.35" />
-      <circle cx="290" cy="92" r="3" fill="#241209" /><circle cx="290" cy="92" r="1.2" fill={C.amber} opacity="0.8" />
-      {/* bottle shelf */}
-      <rect x="336" y="36" width="54" height="3.5" fill={C.sil} />
-      {bottle(342, 22, 14, "#2C3A2A")}{bottle(356, 25, 11, "#6E5228")}{bottle(370, 22, 14, "#4A2028")}
-      {motes(200, 60, 1)}
-    </g>),
-    falk: (<g>
-      {cool(350, 28, 60, 42, 0.55)}
-      {/* the bottle shelf, labels gone brown */}
-      <rect x="46" y="30" width="130" height="4" fill={C.sil} />
-      {[58, 80, 100, 124, 148].map((x, i) => (
+      <rect width="400" height="120" fill="url(#ivsBgGreta)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.28" />
+      {/* the high shelf and its alembics */}
+      <rect y="14" width="400" height="6" fill="#090C10" />
+      <rect y="50" width="400" height="6" fill="#0A0E12" />
+      {[[64, 24, 38, "#4A5A3E"], [104, 19, 30, "#3E4E34"], [284, 26, 40, "#55684A"], [330, 20, 32, "#42533A"]].map(([x, w, h, col]) => (
         <g key={x}>
-          <rect x={x} y={16 - (i % 2) * 3} width={9 + (i % 3) * 3} height={14 + (i % 2) * 3} rx="2" fill={["#2A3040", C.sil, "#2C3A2A", C.sil, "#4A2028"][i]} />
-          <rect x={x + 2} y={22 - (i % 2) * 3} width={5 + (i % 3) * 2} height="4" fill="#6E5228" opacity="0.85" />
+          <path d={`M${x - w / 2},50 L${x + w / 2},50 L${x + 4},${50 - h} q-4,-5 -8,0 Z`} fill={col} />
+          <ellipse cx={x - 4} cy={50 - h / 2.4} rx="1.7" ry={h / 6} fill="#C8D4C0" opacity="0.35" />
         </g>
       ))}
-      {/* the bell jar, the spectacles, the open book */}
-      {pool(240, 92, 85, 24, 0.6, 0.85)}
-      {table(196, 154, 86, true)}
-      <rect x="232" y="74" width="16" height="10" rx="5" fill={C.pale} opacity="0.3" />
-      <path d="M224,86 C224,66 256,66 256,86 Z" fill="#26304A" opacity="0.45" stroke="#3A4468" strokeWidth="1" />
-      <rect x="236" y="61" width="8" height="5" rx="2" fill={C.sil} />
-      <circle cx="284" cy="82" r="4" fill="none" stroke={C.sil} strokeWidth="1.6" /><circle cx="294" cy="82" r="4" fill="none" stroke={C.sil} strokeWidth="1.6" /><path d="M288,82 h2" stroke={C.sil} strokeWidth="1.6" />
-      <path d="M308,86 l13,-4 13,4 v2 l-13,-3 -13,3 Z" fill={C.parch} opacity="0.7" />
-      {/* his cane, hooked where he can reach it */}
-      <path d="M358,50 C368,52 370,62 364,66 L356,112" stroke={WOOD2} strokeWidth="4" fill="none" strokeLinecap="round" />
-      {candle(206, 75, 11, 0.6)}
-      <path d="M206,64 q3,-7 -1,-12" stroke={C.pale} strokeWidth="1" fill="none" className="mvSmokeWisp" style={{ animationDelay: "2s" }} />
-      {motes(240, 56, 0.5)}
+      {/* two bundles still drying, stirring faintly */}
+      {[190, 228].map((x, i) => (
+        <g key={x} className="mvSway" style={{ animationDelay: `${i * 1.3}s`, animationDuration: `${6 + i}s` }}>
+          <path d={`M${x},20 v14`} stroke="#0A0E12" strokeWidth="1.8" />
+          <path d={`M${x - 8},52 h16 L${x},32 Z`} fill={i ? "#2C4A26" : "#22301F"} />
+        </g>
+      ))}
+      {/* the candle, the basin, the knife left mid-work */}
+      {pool(158, 108, 90, 22, 0.5, 0.95)}
+      {candle(158, 68, 36, 1.5, 0.5)}
+      <path d="M226,84 q26,14 52,0 l-4,24 q-22,9 -44,0 Z" fill="#4E6A48" />
+      <path d="M226,84 q26,14 52,0 l-1,6 q-25,13 -50,0 Z" fill="#5E7E56" opacity="0.7" />
+      <rect x="304" y="100" width="76" height="9" rx="3" fill="#2A1C12" />
+      <path d="M312,98 L354,92" stroke="#C8CEDA" strokeWidth="3.5" strokeLinecap="round" />
+      <rect x="352" y="88" width="20" height="6" rx="3" fill="#3E2814" transform="rotate(-8 352 91)" />
+      {/* jars almost lost in the dark */}
+      <rect x="338" y="86" width="62" height="4" fill="#0A0E12" opacity="0.8" />
+      {[344, 364, 384].map((x) => <rect key={x} x={x} y="68" width="14" height="18" rx="2" fill="#2E3A28" opacity="0.55" />)}
+      {motes(158, 58, 0.7)}
     </g>),
+    /* -------- THE FORGE: the room itself is an ember -------- */
+    wilhelm: (<g>
+      <rect width="400" height="120" fill="url(#ivsBgWilhelm)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.22" />
+      {/* the hearth, and the heart of it */}
+      <path d="M28,112 v-56 q0,-14 14,-14 h66 q14,0 14,14 v56 Z" fill="#331A0E" />
+      <path d="M28,112 v-56 q0,-14 14,-14 h66 q14,0 14,14 v56 h-10 v-54 q0,-10 -10,-10 h-54 q-10,0 -10,10 v54 Z" fill="#4E2814" opacity="0.8" />
+      <path d="M40,112 v-50 q0,-10 10,-10 h50 q10,0 10,10 v50 Z" fill="#2A1208" />
+      <ellipse cx="75" cy="84" rx="32" ry="26" fill="url(#ivsEmber)" opacity="0.6" className="mvGlowPulse" />
+      <ellipse cx="75" cy="98" rx="40" ry="15" fill="#E06030" className="mvEmberBed" />
+      <ellipse cx="75" cy="99" rx="25" ry="9" fill="#F09055" className="mvEmberBed" style={{ animationDelay: "0.8s" }} />
+      <ellipse cx="75" cy="100" rx="13" ry="5" fill="#F8C08A" />
+      {pool(75, 104, 130, 30, 0, 1)}
+      {sparks(75, 68, 0.2)}
+      {/* the bellows, standing like a friar */}
+      <path d="M158,112 L196,112 L188,50 q-11,-11 -22,0 Z" fill="#241410" />
+      <path d="M163,86 L192,83" stroke="#0E0806" strokeWidth="3" />
+      <rect x="173" y="40" width="7" height="12" rx="3.5" fill="#16100C" />
+      {/* the anvil, black against the glow */}
+      <path d="M234,82 h58 l-13,10 h-10 v10 h17 v10 h-42 v-10 h17 v-10 h-14 Z" fill="#140C0A" />
+      <path d="M292,82 q16,2 11,12 l-15,-4 Z" fill="#140C0A" />
+      {/* tongs on their peg, the sledge against the wall */}
+      <g transform="rotate(5 322 68)">
+        <path d="M322,36 v-8" stroke="#1E140E" strokeWidth="3" />
+        <ellipse cx="322" cy="68" rx="6" ry="32" fill="none" stroke="#1E140E" strokeWidth="5" />
+      </g>
+      <g transform="rotate(14 366 70)"><rect x="362" y="34" width="7" height="80" fill="#2E1C12" /><rect x="350" y="20" width="31" height="17" rx="4" fill="#1C1410" /></g>
+      {motes(130, 60, 0.8, "#F0B060")}
+    </g>),
+    /* -------- THE TAPROOM: lamplight on brass and oak -------- */
+    liesel: (<g>
+      <rect width="400" height="120" fill="url(#ivsBgLiesel)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.26" />
+      {/* the bottle shelf, catching what light reaches it */}
+      <rect x="24" y="30" width="120" height="5" fill="#140D08" />
+      {[[36, "#2E4A38"], [56, "#5A2430"], [76, "#6E5228"], [100, "#2C3A2A"], [122, "#4A2028"]].map(([x, col], i) => (
+        <g key={x}><rect x={x} y={12 - (i % 2) * 3} width="11" height={18 + (i % 2) * 3} rx="2.5" fill={col} /><rect x={x + 3.5} y={4 - (i % 2) * 3} width="4" height="9" fill={col} /><circle cx={x + 3.5} cy={18} r="1.2" fill={C.parch} opacity="0.7" /></g>
+      ))}
+      {/* the lamp over the bar */}
+      <path d="M226,0 v34" stroke="#0A0704" strokeWidth="2.5" />
+      <path d="M210,52 L242,52 L233,34 L219,34 Z" fill="#0F0A06" />
+      {glow(226, 52, 24, 0.2)}
+      {flameG(226, 49, 1.5, 0.2)}
+      {pool(226, 90, 120, 28, 0.2, 1)}
+      {/* two mugs still swinging faintly on their hooks */}
+      {[168, 194].map((x, i) => (
+        <g key={x} className="mvSway" style={{ animationDelay: `${i * 0.8}s`, animationDuration: `${6 + i}s` }}>
+          <path d={`M${x},30 v8`} stroke="#140D08" strokeWidth="2" />
+          <rect x={x - 7} y={38} width="14" height="15" rx="2.5" fill="#241608" />
+          <path d={`M${x + 7},42 q7,3.5 0,8`} stroke="#241608" strokeWidth="2.5" fill="none" />
+        </g>
+      ))}
+      {/* the bar, tankards waiting on the light */}
+      <rect x="24" y="84" width="230" height="8" fill="#3E2814" /><rect x="24" y="84" width="230" height="2.4" fill="#7A5230" opacity="0.8" />
+      <rect x="34" y="92" width="7" height="20" fill="#241608" /><rect x="240" y="92" width="7" height="20" fill="#241608" />
+      {[120, 162, 204].map((x, i) => (
+        <g key={x}><rect x={x} y={62} width="19" height="22" rx="3" fill="#8A6A3E" /><rect x={x + 2.5} y={65} width="5" height="16" fill="#B08850" opacity="0.75" /><path d={`M${x + 19},67 q8,4.5 0,12`} stroke="#8A6A3E" strokeWidth="3" fill="none" /></g>
+      ))}
+      {/* the barrel, face out, tap dripping amber */}
+      <circle cx="322" cy="80" r="32" fill="#3E2814" />
+      <circle cx="322" cy="80" r="32" fill="none" stroke="#241608" strokeWidth="4" />
+      <circle cx="322" cy="80" r="20" fill="none" stroke="#241608" strokeWidth="2.5" />
+      <circle cx="322" cy="80" r="5" fill="#180E06" />
+      <rect x="319" y="84" width="6" height="8" fill="#180E06" />
+      <circle cx="322" cy="95" r="1.4" fill={C.amber} opacity="0.85" />
+      <path d="M296,112 l8,-8 M348,112 l-8,-8" stroke="#241608" strokeWidth="5" strokeLinecap="round" />
+      {motes(226, 62, 1)}
+    </g>),
+    /* -------- THE SURGERY: cold glass, one warm island of light -------- */
+    falk: (<g>
+      <rect width="400" height="120" fill="url(#ivsBgFalk)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.28" />
+      {/* the cabinet, its bottles asleep */}
+      <rect x="30" y="18" width="88" height="94" rx="3" fill="#0F141C" />
+      <rect x="36" y="24" width="76" height="82" fill="#151C28" />
+      <path d="M36,52 h76 M36,80 h76" stroke="#0F141C" strokeWidth="4" />
+      {[44, 60, 78, 94].map((x, i) => <rect key={`ca${x}`} x={x} y={37 - (i % 2) * 3} width="11" height={15 + (i % 2) * 3} rx="2" fill={["#2A3A44", "#26323E", "#2E3A34", "#26323E"][i]} opacity="0.9" />)}
+      {[46, 64, 84].map((x, i) => <rect key={`cb${x}`} x={x} y={64 - (i % 2) * 2} width="12" height={14 + (i % 2) * 2} rx="2" fill={["#2E3A34", "#2A3A44", "#26323E"][i]} opacity="0.9" />)}
+      {/* the chart nobody asks about */}
+      <rect x="352" y="22" width="36" height="48" fill="#1A2028" stroke="#2A3240" strokeWidth="2" />
+      <path d="M370,28 v34 M363,36 h14 M361,46 h18 M364,56 h12" stroke="#3E4A58" strokeWidth="1.6" />
+      {/* the bench: bell jar, spectacles, and the candle's island */}
+      {pool(232, 96, 100, 24, 0.6, 0.95)}
+      <rect x="150" y="86" width="180" height="7" fill="#1C2430" /><rect x="150" y="86" width="180" height="2" fill="#3E4A58" opacity="0.8" />
+      <rect x="158" y="93" width="7" height="19" fill="#141A24" /><rect x="316" y="93" width="7" height="19" fill="#141A24" />
+      <rect x="230" y="66" width="22" height="14" rx="7" fill={C.pale} opacity="0.4" />
+      <path d="M220,86 C220,58 262,58 262,86 Z" fill="#3A4A66" opacity="0.4" stroke="#4E5E7C" strokeWidth="1.4" />
+      <rect x="236" y="52" width="10" height="6" rx="2" fill="#141A24" />
+      <circle cx="286" cy="81" r="4.5" fill="none" stroke="#0F141C" strokeWidth="1.8" /><circle cx="297" cy="81" r="4.5" fill="none" stroke="#0F141C" strokeWidth="1.8" /><path d="M290.5,81 h2" stroke="#0F141C" strokeWidth="1.8" />
+      {candle(186, 62, 24, 1.4, 0.6)}
+      <path d="M186,50 q4,-8 -1,-14" stroke={C.pale} strokeWidth="1.1" fill="none" className="mvSmokeWisp" style={{ animationDelay: "2s" }} />
+      {/* his bag on the floor, packed as if he might still be called for */}
+      <path d="M338,112 v-16 q0,-8 9,-8 h22 q9,0 9,8 v16 Z" fill="#3A241A" />
+      <path d="M348,88 q10,-9 20,0" stroke="#2A180F" strokeWidth="3.5" fill="none" />
+      <circle cx="358" cy="98" r="2" fill="#C8A050" opacity="0.9" />
+      {motes(232, 58, 0.5)}
+    </g>),
+    /* -------- THE SEWING ROOM: violet dusk, needle-light -------- */
     rosa: (<g>
-      {cool(80, 36, 72, 52, 0.5)}
-      {/* the dress form, wearing nothing yet */}
-      <path d="M74,44 C58,52 58,78 74,86 L94,86 C110,78 110,52 94,44 Z" fill={C.sil} />
-      <rect x="81" y="86" width="6" height="20" fill={WOOD} />
-      <path d="M66,108 h36" stroke={WOOD} strokeWidth="4" strokeLinecap="round" />
-      <circle cx="84" cy="36" r="6" fill={C.sil} />
-      <path d="M94,50 q20,10 14,34 l-8,0 q6,-20 -10,-30 Z" fill="#2E2A3E" />
+      <rect width="400" height="120" fill="url(#ivsBgRosa)" />
+      <rect y="104" width="400" height="16" fill="#000" opacity="0.26" />
+      {/* the dress form, wearing only wire */}
+      <path d="M56,34 C40,42 40,64 56,72 L84,72 C100,64 100,42 84,34 Z" fill="#332B46" />
+      <path d="M56,34 C40,42 40,64 56,72 L64,72 C52,64 52,42 64,34 Z" fill="#3E3556" opacity="0.8" />
+      {[76, 84, 92].map((y, i) => <ellipse key={y} cx="70" cy={y + i * 4} rx={22 + i * 5} ry="4.5" fill="none" stroke="#4A3E5E" strokeWidth="2.2" />)}
+      <rect x="67" y="72" width="6" height="34" fill="#5E3F24" />
+      <path d="M52,108 h36" stroke="#5E3F24" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="70" cy="26" r="6.5" fill="#332B46" />
       {/* the hoop on the wall: a bird, mid-flight, always mid-flight */}
-      <circle cx="170" cy="40" r="16" fill="none" stroke={WOOD2} strokeWidth="3" />
-      <circle cx="170" cy="40" r="12.5" fill="#1B2036" />
-      <path d="M162,43 q5,-7 11,-2 q-2,-5 3,-7" stroke={C.parch} strokeWidth="1.2" fill="none" opacity="0.7" />
-      {/* the work table: cloth in exact stacks, the shears, the spool */}
-      {pool(320, 94, 80, 24, 0.7, 0.85)}
-      {table(210, 140, 88, true)}
-      {[226, 252, 278].map((x, i) => <rect key={x} x={x} y={82 - i * 2} width="22" height={6 + i * 2} rx="2" fill={["#5A2430", "#2E2A3E", TAN][i]} />)}
-      <path d="M306,84 l12,-7 M306,77 l12,7" stroke={C.pale} strokeWidth="2" strokeLinecap="round" opacity="0.8" /><circle cx="312" cy="80.5" r="1.6" fill={C.pale} />
-      {/* the needle, thread still drifting */}
-      <path d="M330,42 q26,12 8,40" stroke={C.parch} strokeWidth="1.2" fill="none" opacity="0.55" className="mvSway" style={{ animationDuration: "7s" }} />
-      <path d="M330,42 l7,-9" stroke={C.parch} strokeWidth="2" strokeLinecap="round" opacity="0.85" />
-      {candle(338, 77, 11, 0.7)}
-      {motes(300, 58, 1.1)}
+      <circle cx="170" cy="38" r="19" fill="none" stroke="#7A5230" strokeWidth="3.5" />
+      <circle cx="170" cy="38" r="15" fill="#221B30" />
+      <path d="M160,42 q6,-9 14,-3 q-3,-6 4,-9" stroke={C.parch} strokeWidth="1.4" fill="none" opacity="0.75" />
+      {/* the worktable: bolts of cloth, the shears, the needle's own light */}
+      {pool(300, 96, 100, 24, 0.7, 0.95)}
+      <rect x="212" y="86" width="172" height="7" fill="#2A2033" /><rect x="212" y="86" width="172" height="2" fill="#4E3E5C" opacity="0.9" />
+      <rect x="220" y="93" width="7" height="19" fill="#1C1626" /><rect x="370" y="93" width="7" height="19" fill="#1C1626" />
+      {[[232, "#6E2A38"], [258, "#3E3560"], [284, "#8A7248"]].map(([x, col], i) => (
+        <g key={x}><circle cx={x} cy={76 - i * 2} r={10 + i} fill={col} /><circle cx={x} cy={76 - i * 2} r={3.5} fill="#160F20" /></g>
+      ))}
+      <path d="M312,82 l16,-9 M312,73 l16,9" stroke={C.pale} strokeWidth="2.4" strokeLinecap="round" opacity="0.85" /><circle cx="320" cy="77.5" r="2" fill={C.pale} />
+      <path d="M344,40 q28,14 8,44" stroke={C.parch} strokeWidth="1.3" fill="none" opacity="0.6" className="mvSway" style={{ animationDuration: "7s" }} />
+      <path d="M344,40 l8,-10" stroke={C.parch} strokeWidth="2.2" strokeLinecap="round" opacity="0.9" />
+      {candle(356, 68, 18, 1.4, 0.7)}
+      {motes(300, 56, 1.1)}
     </g>),
-  }[id] || null;
+  };
   return (
     <svg viewBox="0 0 400 120" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
       <defs>
         <radialGradient id="ivsGlow">
-          <stop offset="0%" stopColor="#E7B75B" stopOpacity="0.5" />
-          <stop offset="55%" stopColor="#D9A441" stopOpacity="0.18" />
+          <stop offset="0%" stopColor="#E7B75B" stopOpacity="0.55" />
+          <stop offset="55%" stopColor="#D9A441" stopOpacity="0.2" />
           <stop offset="100%" stopColor="#D9A441" stopOpacity="0" />
         </radialGradient>
         <radialGradient id="ivsWarm">
@@ -5251,26 +5255,40 @@ function InterviewScene({ id, height = 92 }) {
           <stop offset="45%" stopColor="#C87838" stopOpacity="0.2" />
           <stop offset="100%" stopColor="#C87838" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id="ivsCool">
-          <stop offset="0%" stopColor="#8FA3C8" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#8FA3C8" stopOpacity="0" />
+        <linearGradient id="ivsGlass" x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0%" stopColor="#4E5E8C" /><stop offset="100%" stopColor="#283252" />
+        </linearGradient>
+        <radialGradient id="ivsBgMarta" cx="22%" cy="72%" r="95%">
+          <stop offset="0%" stopColor="#6E4020" /><stop offset="45%" stopColor="#3A2213" /><stop offset="100%" stopColor="#171210" />
+        </radialGradient>
+        <linearGradient id="ivsBgTobias" x1="0.8" y1="0" x2="0.2" y2="1">
+          <stop offset="0%" stopColor="#2A3148" /><stop offset="55%" stopColor="#1B1E2C" /><stop offset="100%" stopColor="#14151E" />
+        </linearGradient>
+        <linearGradient id="ivsBgAnsel" x1="0" y1="0" x2="0.7" y2="1">
+          <stop offset="0%" stopColor="#3A4668" /><stop offset="55%" stopColor="#232A44" /><stop offset="100%" stopColor="#131120" />
+        </linearGradient>
+        <radialGradient id="ivsBgGreta" cx="42%" cy="55%" r="85%">
+          <stop offset="0%" stopColor="#2E3C26" /><stop offset="55%" stopColor="#1C2617" /><stop offset="100%" stopColor="#0F140D" />
+        </radialGradient>
+        <radialGradient id="ivsBgWilhelm" cx="20%" cy="70%" r="105%">
+          <stop offset="0%" stopColor="#7E3C1E" /><stop offset="45%" stopColor="#46220F" /><stop offset="100%" stopColor="#1C100C" />
+        </radialGradient>
+        <radialGradient id="ivsBgLiesel" cx="55%" cy="70%" r="90%">
+          <stop offset="0%" stopColor="#5E3A1C" /><stop offset="50%" stopColor="#33200F" /><stop offset="100%" stopColor="#171009" />
+        </radialGradient>
+        <linearGradient id="ivsBgFalk" x1="0.3" y1="0" x2="0.5" y2="1">
+          <stop offset="0%" stopColor="#2E3A44" /><stop offset="55%" stopColor="#1C2430" /><stop offset="100%" stopColor="#11141C" />
+        </linearGradient>
+        <radialGradient id="ivsBgRosa" cx="68%" cy="68%" r="95%">
+          <stop offset="0%" stopColor="#45304A" /><stop offset="50%" stopColor="#2A2033" /><stop offset="100%" stopColor="#141020" />
         </radialGradient>
         <radialGradient id="ivsEmber">
           <stop offset="0%" stopColor="#F08A4A" stopOpacity="0.9" />
           <stop offset="55%" stopColor="#B4402E" stopOpacity="0.45" />
           <stop offset="100%" stopColor="#5A1F1A" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="ivsWall" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0C0F1E" />
-          <stop offset="72%" stopColor="#161B30" />
-          <stop offset="100%" stopColor="#1B2038" />
-        </linearGradient>
       </defs>
-      <rect width="400" height="120" fill="url(#ivsWall)" />
-      <rect width="400" height="5" fill="#0B0E1C" />
-      <rect y="112" width="400" height="8" fill={C.ground} />
-      <path d="M0,115.5 H400" stroke="#070A14" strokeWidth="1" opacity="0.7" />
-      {propsFor}
+      {rooms[id] || <rect width="400" height="120" fill="#131628" />}
     </svg>
   );
 }
@@ -5278,16 +5296,9 @@ function InterviewScene({ id, height = 92 }) {
 /* Each room wears its name on the banner. */
 const IV_ROOM_NAME = {
   marta: "THE BAKERY", tobias: "THE GRAVE SHED", ansel: "THE VESTRY",
-  greta: "THE HERB HUT", wilhelm: "THE FORGE", liesel: "THE TAPROOM",
+  greta: "THE STILLROOM", wilhelm: "THE FORGE", liesel: "THE TAPROOM",
   falk: "THE SURGERY", rosa: "THE SEWING ROOM",
 };
-
-/* ---------- The interview, staged like a visit ----------
-   The room card up top (art and prose agreeing about where you stand), the
-   talk itself laid out as an exchange of speech, and every choice gathered
-   into the tray at the foot of the screen. Presentation only: every question
-   still routes through the same askQ/applyAnswer machinery, and nothing here
-   rolls or reveals anything the engine has not already decided. */
 
 /* How they stand with you, worn on the portrait: the ring and the word only
    restate what the reception prose already says out loud. */
