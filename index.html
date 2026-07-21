@@ -2458,10 +2458,23 @@ function resolveNight(prev, planIn, preEvents) {
     dawn.push(ev(`Something found you in the dark last night, close enough to end it, and chose not to. It knows your face now, whatever wears it.`, undefined, 2));
   }
 
+  /* Decide who the night takes BEFORE the gathering's incidents are drawn, so
+     the taken are never also shown pairing, brawling or wandering off at a
+     feast they did not live to leave. The attack section below reuses this
+     exact choice; the event incidents exclude this soul. */
+  let doomedId = null;
+  if (active && !s.over) {
+    const dc = s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid);
+    let dp = m.reach === "home" ? dc : dc.filter((x) => outMap[x.id] && outMap[x.id] !== "home");
+    if (huntsCrowd) { const cp = dp.filter((x) => outMap[x.id] === eventLoc); if (cp.length) dp = cp; }
+    else if (m.reach !== "home" && huntLoc) { const hp = dp.filter((x) => outMap[x.id] === huntLoc); if (hp.length && chance(0.65)) dp = hp; }
+    if (dp.length) doomedId = pick(dp).id;
+  }
+
   /* event incidents */
   let evFight = null, evPair = null, evWander = null, evOdd = [], evSweepFind = null, evSweepSense = null;
   if (evn) {
-    const attendees = s.npcs.filter((x) => x.alive && outMap[x.id] === eventLoc);
+    const attendees = s.npcs.filter((x) => x.alive && outMap[x.id] === eventLoc && x.id !== doomedId);
     evOdd = attendees.filter((x) => x.turned && chance(0.6)).map((x) => x.id);
     if (attendees.length >= 2 && chance(0.2)) { const a = pick(attendees); const b = pick(attendees.filter((x) => x.id !== a.id)); evFight = [a.id, b.id]; s.grudges[a.id] = { other: b.id, until: n + 3 }; s.grudges[b.id] = { other: a.id, until: n + 3 }; }
     if (attendees.length >= 2 && chance(0.25)) { const cand2 = attendees.filter((x) => !evFight || !evFight.includes(x.id)); if (cand2.length >= 2) { const a = pick(cand2); const b = pick(cand2.filter((x) => x.id !== a.id)); evPair = [a.id, b.id]; } }
@@ -3047,14 +3060,11 @@ function resolveNight(prev, planIn, preEvents) {
   /* --- the monster's attack --- */
   let victim = null, victimWhere = null, victimKind = null;
   if (active && !s.over) {
-    const cand = s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid);
-    let pool = m.reach === "home" ? cand : cand.filter((x) => outMap[x.id] && outMap[x.id] !== "home");
-    if (huntsCrowd) { const cp = pool.filter((x) => outMap[x.id] === eventLoc); if (cp.length) pool = cp; }
-    /* the bodies and the ground should tell one story more often than not:
-       an outdoor hunter leans toward prey caught on its own hunting ground */
-    else if (m.reach !== "home" && huntLoc) { const hp = pool.filter((x) => outMap[x.id] === huntLoc); if (hp.length && chance(0.65)) pool = hp; }
-    if (pool.length) {
-      victim = pick(pool);
+    /* the victim was chosen before the gathering's incidents (see above),
+       biased toward the hunting ground there; reuse it so the ground and the
+       body still tell one story and the dead never dance at the feast */
+    if (doomedId) {
+      victim = npcById(s, doomedId);
       victimWhere = outMap[victim.id];
       /* the collecting kinds announce themselves: one gruesome kill, then never
          another body. The "both" kinds (witch, demon) open the same way but do
@@ -4763,168 +4773,207 @@ function MonsterArt({ id, size = 64, light }) {
   );
   const art = {
     werewolf: (<g>
-      {/* mid-lunge smear: a dimmer duplicate of the same proven silhouette, offset */}
-      <polygon points="16,60 38,46 50,26 58,34 66,20 72,40 88,48 94,70 82,96 44,96 26,80" fill={C.sil} opacity="0.26" transform="translate(-7,4)" />
-      <polygon points="16,60 38,46 50,26 58,34 66,20 72,40 88,48 94,70 82,96 44,96 26,80" fill={C.sil} />
-      <polygon points="18,64 52,68 60,84 34,82 20,74" fill={C.sil} />
-      <polygon points="28,66 32,74 35,66" fill={C.parch} />
-      <polygon points="36,68 39,76 42,68" fill={C.parch} />
-      <polygon points="44,68 47,75 50,68" fill={C.parch} />
-      <path d="M16,70 L4,78 M18,76 L6,90 M22,80 L12,94" stroke={C.sil} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-      {eye(63, 46)}
-      <circle cx="8" cy="82" r="0.9" fill={C.amber} opacity="0.4" />
+      <path d="M46,118 C42,104 44,92 50,84 L56,88 L54,118 Z" fill={C.sil} />
+      <path d="M74,118 C78,104 76,92 70,84 L64,88 L66,118 Z" fill={C.sil} />
+      <path d="M46,116 l-3,4 M52,117 l-1,4 M56,116 l1,4 M74,116 l3,4 M68,117 l1,4 M64,116 l-1,4" stroke={C.parch} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M38,54 C34,74 42,88 60,90 C78,88 86,74 82,54 C76,44 44,44 38,54 Z" fill={C.sil} />
+      <path d="M40,54 L34,42 M48,48 L44,34 M60,46 L60,30 M72,48 L76,34 M80,54 L86,42" stroke={C.sil} strokeWidth="5.5" strokeLinecap="round" />
+      <path d="M40,56 C28,66 22,84 26,100 M80,56 C92,66 98,84 94,100" stroke={C.sil} strokeWidth="8.5" fill="none" strokeLinecap="round" />
+      <path d="M20,98 l-2,14 M25,100 l-1,15 M30,99 l2,14 M34,97 l4,13" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M18,110 l-2,-3 M24,112 l-1,-3 M31,110 l1,-3 M37,108 l2,-3" stroke={C.parch} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M100,98 l2,14 M95,100 l1,15 M90,99 l-2,14 M86,97 l-4,13" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M102,110 l2,-3 M96,112 l1,-3 M89,110 l-1,-3 M83,108 l-2,-3" stroke={C.parch} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M46,34 C44,22 52,16 60,16 C68,16 76,22 74,34 C74,44 68,50 60,50 C52,50 46,44 46,34 Z" fill={C.sil} />
+      <path d="M50,20 L44,6 L58,18 Z M70,20 L76,6 L62,18 Z" fill={C.sil} />
+      <path d="M52,40 C52,50 68,50 68,40 L64,52 C62,58 58,58 56,52 Z" fill={C.sil} />
+      <path d="M54,44 C57,48 63,48 66,44 L64,50 C62,53 58,53 56,50 Z" fill="#2A0A06" />
+      <polygon points="55,44 56.5,51 58,44" fill={C.parch} />
+      <polygon points="62,44 63.5,51 65,44" fill={C.parch} />
+      <polygon points="58,50 59.5,45 61,50" fill={C.parch} />
+      <path d="M47,32 L57,30 M63,30 L73,32" stroke={C.sil} strokeWidth="4.5" strokeLinecap="round" />
+      {eye(54, 35, C.amber)}{eye(66, 35, C.amber)}
     </g>),
     vampire: (<g>
-      <polygon points="60,34 14,104 24,96 30,106 38,94 46,104 54,92 60,106 66,92 74,104 82,94 90,106 96,96 106,104" fill={C.sil} />
-      <polygon points="38,56 14,26 20,52 8,46 34,64" fill={C.sil} />
-      <polygon points="82,56 106,26 100,52 112,46 86,64" fill={C.sil} />
-      <circle cx="60" cy="34" r="15" fill={C.sil} />
-      <polygon points="54,46 57,54 60,46" fill={C.parch} />
-      <polygon points="60,46 63,54 66,46" fill={C.parch} />
-      {eye(54, 32, C.redBright)}{eye(66, 32, C.redBright)}
+      <path d="M60,34 L4,116 L18,108 L24,118 L34,104 L44,116 L52,102 L60,118 L68,102 L76,116 L86,104 L96,118 L102,108 L116,116 Z" fill={C.sil} />
+      <path d="M32,58 L4,26 L12,52 L0,44 L28,68" fill={C.sil} />
+      <path d="M88,58 L116,26 L108,52 L120,44 L92,68" fill={C.sil} />
+      <path d="M40,60 C40,30 80,30 80,60 L72,54 C72,38 48,38 48,54 Z" fill={C.sil} />
+      <path d="M46,34 C46,20 74,20 74,36 C74,54 68,64 60,66 C52,64 46,52 46,34 Z" fill={C.sil} />
+      <path d="M49,46 C50,54 54,60 60,62 M71,46 C70,54 66,60 60,62" stroke="#05060E" strokeWidth="2.4" fill="none" opacity="0.8" />
+      <path d="M52,54 C56,58 64,58 68,54 L66,58 C63,61 57,61 54,58 Z" fill="#2A0A06" />
+      <polygon points="55,55 56.5,63 58,55" fill={C.parch} />
+      <polygon points="62,55 63.5,63 65,55" fill={C.parch} />
+      <path d="M47,38 L57,36 M63,36 L73,38" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
+      {eye(54, 41, C.redBright)}{eye(66, 41, C.redBright)}
+      <path d="M86,96 C82,86 84,74 90,70 L88,90 Z" fill={C.sil} />
+      <path d="M90,72 L94,58 M92,73 L98,60 M94,74 L102,62 M95,76 L104,66" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M94,60 l1,-4 M98,62 l1,-4 M102,64 l1,-3" stroke={C.parch} strokeWidth="1.6" strokeLinecap="round" />
     </g>),
     wraith: (<g>
-      <path d="M60,16 C36,16 30,42 34,60 L28,100 L40,84 L44,108 L54,86 L60,110 L68,84 L76,106 L84,82 L92,98 L86,60 C90,40 84,16 60,16 Z" fill={C.pale} opacity="0.88" />
-      <path d="M40,70 C30,84 26,98 30,112 M80,70 C90,84 94,98 90,112" stroke={C.pale} strokeWidth="2" fill="none" opacity="0.5" strokeLinecap="round" />
-      <ellipse cx="60" cy="44" rx="12" ry="15" fill={C.sky} />
-      <ellipse cx="60" cy="44" rx="12" ry="15" fill="#000" opacity="0.22" />
-      {eye(55, 43, C.parch)}{eye(65, 43, C.parch)}
+      <path d="M60,10 C34,10 26,40 32,60 L24,104 L34,90 L38,110 L46,88 L52,112 L60,88 L68,112 L74,88 L82,110 L86,90 L96,104 L88,60 C94,40 86,10 60,10 Z" fill={C.pale} opacity="0.82" />
+      <path d="M60,10 C38,10 30,34 33,52" stroke={C.parch} strokeWidth="1.6" fill="none" opacity="0.4" />
+      <path d="M42,32 C42,20 78,20 78,34 C78,58 70,72 60,74 C50,72 42,56 42,32 Z" fill={C.sil} />
+      <ellipse cx="53" cy="40" rx="4.5" ry="6.5" fill="#05070F" />
+      <ellipse cx="67" cy="40" rx="4.5" ry="6.5" fill="#05070F" />
+      {eye(53, 41, C.pale)}{eye(67, 41, C.pale)}
+      <ellipse cx="60" cy="58" rx="5" ry="9" fill="#05070F" />
+      <path d="M34,66 C20,80 16,96 20,112 M86,66 C100,80 104,96 100,112" stroke={C.pale} strokeWidth="1.8" fill="none" opacity="0.3" strokeLinecap="round" />
     </g>),
     ghoul: (<g>
-      {/* a scuttling double-exposure: the same silhouette, dimmer, mid-stride */}
-      <path d="M24,98 C22,58 44,38 68,40 C90,42 94,58 88,68 C84,74 76,74 72,68 L78,98 Z" fill={C.sil} opacity="0.28" transform="translate(7,-5)" />
-      <path d="M24,98 C22,58 44,38 68,40 C90,42 94,58 88,68 C84,74 76,74 72,68 L78,98 Z" fill={C.sil} />
-      <path d="M40,44 L36,35 M48,40 L46,29 M56,38 L57,27" stroke={C.sil} strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.75" />
-      <path d="M80,66 L98,96 M98,96 l-7,3 M98,96 l0,-8 M98,96 l7,-4 M98,96 l8,3" stroke={C.sil} strokeWidth="3.6" fill="none" strokeLinecap="round" />
-      <polygon points="66,58 69,64 72,58" fill={C.parch} />
-      {eye(76, 54)}
+      <path d="M54,70 C58,54 74,48 86,54 C96,58 98,70 92,74 C94,66 84,62 76,64 C66,66 60,74 62,80 Z" fill={C.sil} />
+      <path d="M60,66 l-1,-6 M68,58 l0,-7 M78,56 l2,-6 M88,60 l3,-5" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
+      <path d="M56,68 C46,78 40,92 40,104 M60,70 C52,82 48,94 50,104" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M40,104 l-5,9 M43,106 l-3,10 M47,105 l1,10" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
+      <path d="M34,111 l-2,-2 M40,113 l-1,-2 M48,112 l0,-2" stroke={C.parch} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M88,72 C96,78 98,90 92,100 L88,104 M92,100 l6,4" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M42,80 C34,78 30,86 34,94 C38,100 50,98 52,90 C53,84 48,80 42,80 Z" fill={C.sil} />
+      <path d="M30,88 L46,90 L44,98 L32,96 Z" fill="#2A0A06" />
+      <polygon points="33,89 35,96 37,89" fill={C.parch} />
+      <polygon points="38,89 40,97 42,89" fill={C.parch} />
+      <path d="M58,80 q8,5 0,9 M56,74 q10,6 0,11" stroke={C.sil} strokeWidth="1.2" fill="none" opacity="0.4" />
+      {eye(40, 84, "#C8C040")}
     </g>),
     witch: (<g>
-      <polygon points="28,52 84,52 62,10" fill={C.sil} />
-      <polygon points="18,56 30,48 42,56 54,48 66,56 78,48 90,56 96,54 96,60 18,60" fill={C.sil} />
-      <path d="M48,56 L44,66 L52,70 L46,78 L58,86 L60,56 Z" fill={C.sil} />
-      <path d="M90,26 L90,100" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
-      <path d="M82,98 L90,100 L98,98 M84,105 L90,100 L96,105" stroke={C.sil} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      {eye(53, 64, C.amber)}
-      <circle cx="58" cy="80" r="0.9" fill={C.amber} opacity="0.35" />
+      <path d="M22,58 C30,52 34,40 40,28 C46,14 60,6 66,20 C60,26 58,40 56,52 Z" fill={C.sil} />
+      <polygon points="14,60 30,52 44,58 58,50 72,58 88,52 100,58 100,64 14,64" fill={C.sil} />
+      <path d="M34,60 C30,74 30,88 36,100 M78,60 C82,74 82,88 76,100" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M40,58 C40,74 46,92 56,96 C64,92 70,80 70,64 Z" fill={C.sil} />
+      <path d="M54,60 L50,78 C52,84 60,84 60,78 L58,62 Z" fill={C.sil} />
+      <circle cx="54" cy="80" r="2" fill="#05070F" />
+      <path d="M48,86 C52,90 60,90 64,86" stroke="#05070F" strokeWidth="2.2" fill="none" />
+      <polygon points="53,86 54.5,90 56,86" fill={C.parch} />
+      <path d="M44,58 L54,58 M60,58 L70,58" stroke={C.sil} strokeWidth="3.5" strokeLinecap="round" />
+      {eye(49, 63, "#9EC838")}{eye(64, 63, "#9EC838")}
+      <path d="M92,20 L88,104" stroke={C.sil} strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M92,20 C86,16 84,8 88,4 C92,10 96,12 92,20 Z" fill={C.sil} />
+      <circle cx="90" cy="8" r="4.5" fill="#7AA850" opacity="0.4" className="mvGlowPulse" />
+      <path d="M78,66 L90,62 M80,70 L90,68 M80,74 L90,74" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
     </g>),
     demon: (<g>
-      <polygon points="16,104 30,92 40,104 50,90 60,104 70,90 80,104 90,92 104,104 88,66 32,66" fill={C.sil} />
-      <circle cx="60" cy="50" r="17" fill={C.sil} />
-      <path d="M45,38 C34,28 36,14 48,8 C42,20 45,30 50,38 Z" fill={C.sil} />
-      <path d="M75,38 C86,28 84,14 72,8 C78,20 75,30 70,38 Z" fill={C.sil} />
-      <polygon points="52,60 55,66 58,60" fill={C.parch} />
-      <polygon points="62,60 65,66 68,60" fill={C.parch} />
-      <path d="M84,100 C94,104 100,114 96,120 C98,110 92,104 84,100 Z" fill={C.sil} />
-      {eye(53, 48, C.redBright)}{eye(67, 48, C.redBright)}
+      <path d="M24,116 C20,88 30,64 44,58 C40,48 44,38 54,36 L60,50 L66,36 C76,38 80,48 76,58 C90,64 100,88 96,116 Z" fill={C.sil} />
+      <path d="M46,40 C34,30 34,14 46,6 C42,20 46,30 52,38 Z" fill={C.sil} />
+      <path d="M74,40 C86,30 86,14 74,6 C78,20 74,30 68,38 Z" fill={C.sil} />
+      <path d="M50,64 L70,64 L67,73 L60,68 L53,73 Z" fill="#2A0A06" />
+      <polygon points="52,64 54,70 56,64" fill={C.parch} />
+      <polygon points="58,64 60,70 62,64" fill={C.parch} />
+      <polygon points="64,64 66,70 68,64" fill={C.parch} />
+      <path d="M46,50 L57,52 M63,52 L74,50" stroke={C.sil} strokeWidth="4.5" strokeLinecap="round" />
+      {eye(54, 54, C.redBright)}{eye(66, 54, C.redBright)}
+      <path d="M92,104 C104,100 110,86 104,78" stroke={C.sil} strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d="M104,78 l-4,-4 l6,-1 l-1,6 Z" fill={C.sil} />
+      {[[36, 90], [86, 96]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.2" fill="#E8703A" opacity="0.6" className="mvSpark" style={{ animationDelay: `${i * 1.3}s` }} />)}
     </g>),
     shifter: (<g>
-      {/* a second, fainter face mid-shift, cracking loose of the first */}
-      <circle cx="64" cy="60" r="26" fill="none" stroke={C.parch} strokeWidth="1.2" opacity="0.3" />
-      <path d="M64,34 A26,26 0 0 0 64,86 Z" fill={C.sil} opacity="0.25" />
-      <circle cx="60" cy="58" r="28" fill="none" stroke={C.parch} strokeWidth="2" />
-      <path d="M60,30 A28,28 0 0 0 60,86 Z" fill={C.sil} />
-      <path d="M60,32 L55,42 L61,52 L53,64 L61,74 L56,84" stroke={C.sil} strokeWidth="1.4" fill="none" opacity="0.55" />
-      {eye(48, 55, C.parch)}{eye(72, 55, C.ink)}
-      <path d="M60,86 L60,98" stroke={C.sil} strokeWidth="3" />
-      <circle cx="60" cy="66" r="0.8" fill={C.amber} opacity="0.3" />
+      <path d="M30,116 C28,92 34,74 60,74 C86,74 92,92 90,116 Z" fill={C.sil} />
+      <ellipse cx="60" cy="52" rx="28" ry="32" fill={C.sil} />
+      <path d="M60,22 L56,40 L62,52 L54,66 L60,82" stroke="#05070F" strokeWidth="3.5" fill="none" />
+      <path d="M60,22 L57,40 L61,52 L55,66 L59,80" stroke={C.pale} strokeWidth="1.2" fill="none" opacity="0.5" />
+      {eye(48, 50, C.pale)}{eye(72, 50, C.turn)}
+      <path d="M42,64 q6,2 12,1" stroke="#05070F" strokeWidth="2" fill="none" />
+      <path d="M66,66 q6,-1 11,-4" stroke="#05070F" strokeWidth="2" fill="none" />
+      <path d="M84,42 C93,40 95,52 87,58" stroke={C.line} strokeWidth="2.2" fill="none" strokeLinecap="round" />
     </g>),
     banshee: (<g>
-      {[0, 1, 2, 3].map((i) => <path key={i} d={`M58,${34 + i * 7} C ${78 + i * 4},${28 + i * 8} ${94 + i * 3},${34 + i * 10} ${108},${40 + i * 12}`} stroke={C.pale} strokeWidth="3.2" fill="none" strokeLinecap="round" opacity={0.85 - i * 0.12} />)}
-      <path d="M52,40 C42,36 32,40 22,46" stroke={C.pale} strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.4" />
-      <path d="M52,54 C40,62 40,86 46,102 L64,102 C60,84 62,66 66,56 Z" fill={C.pale} opacity="0.85" />
-      <path d="M48,100 L44,111 M56,102 L58,113 M62,100 L67,109" stroke={C.pale} strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.55" />
-      <circle cx="55" cy="42" r="13" fill={C.pale} />
-      <ellipse cx="53" cy="47" rx="4.5" ry="7" fill={C.sky} />
-      {eye(49, 38, C.sky)}{eye(60, 38, C.sky)}
+      {[0, 1, 2, 3, 4, 5].map((i) => <path key={i} d={`M54,${28 + i * 6} C ${78 + i * 6},${20 + i * 5} ${98 + i * 4},${28 + i * 8} ${118},${34 + i * 10}`} stroke={C.pale} strokeWidth="2.2" fill="none" strokeLinecap="round" opacity={0.7 - i * 0.1} />)}
+      <path d="M50,40 C38,32 24,34 12,44 M48,52 C36,48 24,52 14,62" stroke={C.pale} strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.4" />
+      <path d="M46,52 C34,66 34,96 40,118 L44,104 L48,118 L54,102 L58,118 L60,54 Z" fill={C.pale} opacity="0.72" />
+      <path d="M44,28 C42,16 66,14 66,30 C66,54 58,70 52,72 C46,68 44,48 44,28 Z" fill={C.pale} />
+      <path d="M46,40 C46,52 48,62 52,68 M64,38 C64,52 60,62 54,68" stroke={C.sky} strokeWidth="1.4" fill="none" opacity="0.6" />
+      <ellipse cx="50" cy="36" rx="4.5" ry="7" fill="#0A121C" />
+      <ellipse cx="60" cy="35" rx="4.5" ry="7" fill="#0A121C" />
+      <path d="M50,43 L47,64 M60,42 L61,60" stroke={C.sky} strokeWidth="1.6" opacity="0.5" strokeLinecap="round" />
+      {eye(50, 36, "#7EBEDC")}{eye(60, 35, "#7EBEDC")}
+      <path d="M52,50 C48,58 48,66 52,72 C56,66 56,58 54,50 Z" fill="#060E18" />
     </g>),
     hellhound: (<g>
-      {/* mid-sprint double-exposure */}
-      <path d="M14,70 C20,54 40,50 58,54 L74,50 C88,46 100,54 104,64 L96,66 L100,78 L90,74 L84,92 L74,92 L70,78 L46,80 L42,94 L32,94 L30,76 L16,80 Z" fill={C.sil} opacity="0.28" transform="translate(-8,3)" />
-      <path d="M14,70 C20,54 40,50 58,54 L74,50 C88,46 100,54 104,64 L96,66 L100,78 L90,74 L84,92 L74,92 L70,78 L46,80 L42,94 L32,94 L30,76 L16,80 Z" fill={C.sil} />
-      <path d="M100,58 L112,52 M104,64 L114,62" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
-      <polygon points="98,68 102,74 96,74" fill={C.parch} />
-      {eye(92, 58, C.redBright)}
-      <path d="M30,44 C28,36 34,30 32,22 M44,42 C42,34 48,28 46,20" stroke={C.dim} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path d="M34,60 C50,54 74,54 92,58 C102,60 108,68 106,80 L110,92 L102,88 L98,100 L90,100 L88,86 C70,90 50,90 40,84 L36,100 L28,100 L28,84 C22,80 18,72 22,64 Z" fill={C.sil} />
+      <path d="M22,64 C14,64 8,70 6,78 L2,74 L8,72 C4,68 10,60 20,60 L30,54 L28,46 L38,56 L44,48 L46,58 Z" fill={C.sil} />
+      <path d="M40,58 l2,-9 M54,56 l2,-10 M70,56 l3,-9 M86,58 l4,-8" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
+      <path d="M6,76 L20,74 L18,84 L8,82 Z" fill="#2A0A06" />
+      <polygon points="8,76 10,84 12,77" fill={C.parch} />
+      <polygon points="14,76 16,83 18,77" fill={C.parch} />
+      <path d="M106,64 C114,66 116,76 110,82" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
+      {eye(24, 66, C.redBright)}
+      {[[54, 46], [72, 46]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.3" fill="#E8703A" opacity="0.6" className="mvSpark" style={{ animationDelay: `${i * 1.2}s` }} />)}
     </g>),
     revenant: (<g>
-      <rect x="18" y="90" width="84" height="8" rx="4" fill={C.sil} />
-      <path d="M26,90 L26,70 M18,78 L34,78" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
-      <path d="M52,32 C42,36 42,62 46,90 L50,82 L56,92 L62,82 L68,92 L76,90 C80,60 78,36 68,32 C64,27 56,27 52,32 Z" fill={C.sil} />
-      <path d="M50,82 L48,94 M62,82 L64,96 M56,92 L54,102" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.7" />
-      <path d="M46,52 L38,80 M76,52 L84,80" stroke={C.sil} strokeWidth="5" strokeLinecap="round" />
-      <circle cx="60" cy="26" r="10" fill={C.sil} />
-      {eye(56, 25, C.parch)}{eye(64, 25, C.parch)}
+      <path d="M46,116 C42,92 44,64 52,52 C50,40 54,30 60,30 C66,30 70,40 68,52 C76,64 78,92 74,116 Z" fill={C.sil} />
+      <path d="M48,60 L72,66 M46,72 L74,78 M48,84 L72,90 M50,96 L70,102" stroke="#2A2E22" strokeWidth="2.2" strokeLinecap="round" opacity="0.7" />
+      <path d="M50,54 L40,86 M70,54 L80,86" stroke={C.sil} strokeWidth="6" strokeLinecap="round" />
+      <path d="M38,86 l-2,10 M40,86 l1,10 M42,86 l3,9" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
+      <path d="M82,86 l2,10 M80,86 l-1,10 M78,86 l-3,9" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
+      <ellipse cx="60" cy="24" rx="11" ry="13" fill={C.sil} />
+      <path d="M55,30 L65,30 L63,39 L57,39 Z" fill="#2A0A06" />
+      <path d="M55,30 l1,9 M59,30 l0,9 M63,30 l-1,9" stroke={C.sil} strokeWidth="0.9" />
+      {eye(56, 22, "#9AB090")}{eye(64, 22, "#9AB090")}
     </g>),
     doppel: (<g>
-      {/* a third, near-invisible face behind the two we're already given, since it is never only two */}
-      <ellipse cx="40" cy="52" rx="20" ry="22" fill={C.sil} opacity="0.18" transform="translate(8,-5)" />
-      <circle cx="50" cy="56" r="24" fill={C.sil} />
-      <path d="M68,46 C74,44 78,50 74,56 C78,60 74,66 68,64 Z" fill={C.sil} opacity="0.7" />
-      <path d="M50,32 L48,80" stroke="#000" strokeWidth="1" opacity="0.25" />
-      <path d="M70,34 A24,24 0 0 1 70,78 L84,84 A32,32 0 0 0 84,28 Z" fill={C.pale} opacity="0.85" />
-      {eye(42, 52, C.parch)}{eye(58, 52, C.parch)}{eye(80, 52, C.sky)}
-      <path d="M50,80 L50,100 M82,84 L82,100" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
+      <g transform="translate(6,-2)"><ellipse cx="70" cy="54" rx="24" ry="30" fill={C.sil} opacity="0.5" /></g>
+      <path d="M18,116 C16,92 24,76 46,76 C58,76 66,82 68,92 L64,116 Z" fill={C.sil} />
+      <path d="M56,116 C54,90 64,74 82,76 C96,78 100,94 96,116 Z" fill={C.sil} />
+      <ellipse cx="42" cy="52" rx="22" ry="26" fill={C.sil} />
+      {eye(35, 50, C.pale)}{eye(49, 50, C.pale)}
+      <path d="M35,62 q7,3 14,0" stroke="#05070F" strokeWidth="2" fill="none" />
+      <ellipse cx="78" cy="52" rx="22" ry="26" fill={C.sil} />
+      {eye(71, 50, C.pale)}{eye(85, 50, C.dim)}
+      <path d="M71,60 q7,5 14,2" stroke="#05070F" strokeWidth="2" fill="none" />
+      <path d="M60,30 L60,78" stroke="#05070F" strokeWidth="2" opacity="0.6" />
     </g>),
     hag: (<g>
-      <path d="M34,96 C28,74 40,58 56,52 C50,44 52,32 62,28 C74,24 84,32 82,44 C96,50 100,68 92,80 L88,96 Z" fill={C.sil} />
-      <path d="M40,94 L36,106 M52,96 L50,108 M70,94 L74,105 M82,92 L88,102" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.65" />
-      <path d="M62,28 C56,40 58,54 66,66 C56,58 50,44 55,31 Z" fill={C.sil} />
-      <path d="M88,78 L104,84 M104,84 l-2,-6 M104,84 l-1,6 M104,84 l6,-2 M104,84 l5,4" stroke={C.sil} strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M60,46 q3,-2 6,0 M65,50 q3,-1 5,1" stroke={C.sil} strokeWidth="1" fill="none" opacity="0.5" />
-      <polygon points="66,45 68,49 70,45" fill={C.parch} />
-      {eye(70, 40, C.amber)}
+      <path d="M28,116 C24,96 30,80 44,74 C40,64 44,52 56,50 C50,60 54,70 64,74 C82,78 92,96 88,116 Z" fill={C.sil} />
+      <path d="M50,50 C40,44 28,46 18,56 M52,54 C42,52 32,58 26,68 M66,52 C78,50 88,58 92,70" stroke={C.sil} strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M46,52 C46,66 52,80 60,82 C68,78 72,66 70,54 Z" fill={C.sil} />
+      <path d="M58,58 L54,74 C56,80 64,79 62,73 L61,60 Z" fill={C.sil} />
+      <path d="M50,84 C54,88 62,88 66,83" stroke="#05070F" strokeWidth="2" fill="none" />
+      <polygon points="55,84 56.5,88 58,84" fill={C.parch} />
+      <path d="M46,54 L54,55 M62,55 L70,54" stroke={C.sil} strokeWidth="3.5" strokeLinecap="round" />
+      {eye(51, 59, "#A0C0C8")}{eye(65, 59, "#A0C0C8")}
+      <path d="M40,90 l-4,14 M45,92 l-2,15 M50,92 l1,15" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M37,104 l-2,-3 M44,106 l-1,-3 M51,105 l1,-3" stroke={C.parch} strokeWidth="1.6" strokeLinecap="round" />
     </g>),
     necromancer: (<g>
-      {/* hooded figure with a lit staff, and the ground opening at its feet */}
-      <path d="M52,26 C40,30 36,50 38,68 L30,100 L82,100 L74,66 C78,48 72,30 62,26 Z" fill={C.sil} />
-      <circle cx="57" cy="22" r="10" fill={C.sil} />
-      <path d="M57,10 L44,23 L57,19 L70,23 Z" fill={C.sil} />
-      <path d="M76,62 L94,30" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
-      <circle cx="95" cy="27" r="5" fill={C.turn} opacity="0.35" />
-      <circle cx="95" cy="27" r="2.4" fill={C.turn} />
-      <rect x="10" y="86" width="15" height="6" rx="3" fill={C.sil} />
-      <path d="M17,86 L17,74 M13,78 L21,78" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M98,100 L98,86 M93,91 L98,86 L103,91" stroke={C.pale} strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.85" />
-      <path d="M24,100 L106,100" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
-      {eye(53, 22, C.turn)}{eye(61, 22, C.turn)}
+      <path d="M40,116 C36,86 40,56 60,50 C80,56 84,86 80,116 Z" fill={C.sil} />
+      <path d="M46,52 C46,32 74,32 74,52 C74,44 66,38 60,38 C54,38 46,44 46,52 Z" fill={C.sil} />
+      <path d="M50,50 C50,40 70,40 70,50 L64,72 L56,72 Z" fill="#060810" />
+      <path d="M44,60 C30,54 20,44 18,32 M76,60 C90,54 100,44 102,32" stroke={C.sil} strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M18,32 l-3,-6 l6,1 M102,32 l3,-6 l-6,1" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      {eye(55, 54, C.turn)}{eye(65, 54, C.turn)}
+      <path d="M24,116 l-1,-10 l4,3 M30,116 l0,-8 M108,116 l1,-10 l-4,3 M100,116 l0,-8" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
+      {[[26, 100], [98, 102], [60, 88]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.2" fill={C.turn} opacity="0.5" className="mvMote" style={{ animationDelay: `${i * 2.5}s` }} />)}
     </g>),
     mimic: (<g>
-      {/* a shape that has not decided what it is: borrowed teeth, borrowed
-         claws, and three eyes that do not match */}
-      <path d="M28,94 C18,74 26,50 46,42 C54,26 78,26 86,40 C102,46 106,66 96,80 C100,92 88,100 74,96 C62,106 40,104 28,94 Z" fill={C.sil} />
-      <path d="M36,96 C36,104 32,108 32,112 M58,101 C58,109 62,113 60,117 M84,95 C86,103 82,107 84,111" stroke={C.sil} strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M92,58 L106,50 M94,66 L108,63" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
-      <polygon points="46,74 50,84 54,74" fill={C.parch} />
-      <polygon points="56,76 59,84 62,76" fill={C.parch} />
-      <polygon points="64,74 67,82 70,74" fill={C.parch} />
-      {eye(44, 58, C.amber)}{eye(66, 52, C.redBright)}{eye(80, 64, C.parch)}
+      <path d="M26,114 C18,92 24,66 42,58 C40,44 54,36 64,44 C70,34 86,40 84,54 C100,60 102,88 94,114 Z" fill={C.sil} />
+      <path d="M28,72 C18,68 12,58 14,48 M92,80 C102,78 108,86 106,96" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M14,48 l-3,-5 M14,48 l-5,-1 M14,48 l-1,-6" stroke={C.parch} strokeWidth="1.8" strokeLinecap="round" />
+      {eye(46, 56, C.redBright)}{eye(66, 52, "#40C0A0")}{eye(58, 76, C.amber)}
+      <path d="M40,86 C50,92 66,90 74,84 L70,90 C62,95 50,95 44,90 Z" fill="#2A0A06" />
+      <polygon points="46,86 47,92 49,86" fill={C.parch} />
+      <polygon points="60,88 61,93 63,87" fill={C.parch} />
+      <path d="M34,70 L40,76 M78,66 L72,72 M56,100 L60,94" stroke={C.turn} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
     </g>),
     succubus: (<g>
-      {/* horned, winged, elegant; a song rising off it */}
-      <path d="M40,46 C20,36 10,52 16,72 C24,62 32,64 36,72 Z" fill={C.sil} />
-      <path d="M80,46 C100,36 110,52 104,72 C96,62 88,64 84,72 Z" fill={C.sil} />
-      <path d="M60,34 C52,44 54,58 60,66 C54,78 52,90 56,104 L68,104 C72,88 68,76 64,66 C70,56 70,44 60,34 Z" fill={C.sil} />
-      <circle cx="60" cy="28" r="10" fill={C.sil} />
-      <path d="M52,21 C47,15 49,8 54,6 C52,12 54,16 57,19 Z M68,21 C73,15 71,8 66,6 C68,12 66,16 63,19 Z" fill={C.sil} />
-      <path d="M66,100 C84,96 92,84 88,74" stroke={C.sil} strokeWidth="2.6" fill="none" strokeLinecap="round" />
-      <polygon points="85,69 93,75 84,79" fill={C.sil} />
-      <path d="M26,32 q2,-7 9,-7 M94,28 q-2,-7 -9,-7" stroke={C.pale} strokeWidth="1.4" fill="none" opacity="0.5" />
-      {eye(56, 27, C.redBright)}{eye(64, 27, C.redBright)}
+      <path d="M48,116 C44,92 46,66 54,54 L66,54 C74,66 76,92 72,116 Z" fill={C.sil} />
+      <path d="M50,40 C40,50 36,72 40,96 M70,40 C80,50 84,72 80,96" stroke={C.sil} strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M52,28 C48,22 48,16 52,12 M68,28 C72,22 72,16 68,12" stroke={C.sil} strokeWidth="3" fill="none" strokeLinecap="round" />
+      <ellipse cx="60" cy="34" rx="13" ry="16" fill={C.sil} />
+      <path d="M70,60 C84,58 94,50 96,40" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M96,40 l2,-6 M98,42 l4,-4 M99,45 l5,-2" stroke={C.sil} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M97,35 l1,-3 M101,39 l2,-2" stroke={C.parch} strokeWidth="1.2" strokeLinecap="round" />
+      {eye(55, 32, C.redBright)}{eye(65, 32, C.redBright)}
+      <path d="M53,42 q7,4 14,0" stroke="#3A1420" strokeWidth="1.8" fill="none" />
+      <polygon points="59,43 60,47 61,43" fill={C.parch} />
+      {[[86, 60], [92, 70]].map(([x, y], i) => <path key={i} d={`M${x},${y} q3,-4 0,-8 q4,2 2,7`} fill="none" stroke="#E86088" strokeWidth="1.2" opacity="0.5" className="mvMote" style={{ animationDelay: `${i * 2}s` }} />)}
     </g>),
     hollowed: (<g>
-      {/* far too tall and far too thin, stooping to fit the frame at all;
-          where a face should be, a courteous smoothness. No eyes. On purpose. */}
-      <path d="M14,104 C16,86 12,78 18,64 M15,88 l-7,-6 M16,76 l7,-5 M17,70 l-6,-6" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.65" />
-      <path d="M104,104 C102,88 108,80 102,66 M103,90 l7,-6 M103,78 l-7,-5" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.65" />
-      <path d="M53,30 C51,52 52,76 55,101 L59,101 L60,62 L61,101 L65,101 C68,76 69,52 67,30 Z" fill={C.sil} />
-      <path d="M54,32 C45,48 41,68 38,90 M38,90 l-7,7 M38,90 l-2,11 M38,90 l4,10 M38,90 l8,6" stroke={C.sil} strokeWidth="2.3" fill="none" strokeLinecap="round" />
-      <path d="M66,32 C75,48 79,68 82,90 M82,90 l7,7 M82,90 l2,11 M82,90 l-4,10 M82,90 l-8,6" stroke={C.sil} strokeWidth="2.3" fill="none" strokeLinecap="round" />
-      <path d="M53,31 C53,26 56,23 60,23 C64,23 67,26 67,31 Z" fill={C.sil} />
-      <ellipse cx="60" cy="15" rx="7.5" ry="9.5" fill={C.pale} />
-      <ellipse cx="57" cy="13" rx="1.6" ry="2.2" fill="#000" opacity="0.07" />
-      <ellipse cx="63" cy="13" rx="1.6" ry="2.2" fill="#000" opacity="0.07" />
-      <path d="M60,101 L60,106 M56,106 L64,106" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
+      {[[10, 1], [22, 0.8]].map(([x, sc], i) => <g key={`lt${x}`} transform={`translate(${x},0) scale(${sc})`}><polygon points="0,120 -14,120 -7,70" fill={C.sil} opacity="0.7" /><polygon points="0,96 -12,96 -6,58" fill={C.sil} opacity="0.7" /></g>)}
+      {[[112, 1], [100, 0.8]].map(([x, sc], i) => <g key={`rt${x}`} transform={`translate(${x},0) scale(${sc})`}><polygon points="0,120 -14,120 -7,70" fill={C.sil} opacity="0.6" /></g>)}
+      <path d="M50,120 L51,34 Q51,10 60,4 Q69,10 69,34 L70,120 Z" fill={C.sil} />
+      <path d="M44,44 Q60,36 76,44 L74,54 Q60,48 46,54 Z" fill={C.sil} />
+      <ellipse cx="60" cy="18" rx="9" ry="12.5" fill={C.pale} opacity="0.9" />
+      <ellipse cx="57" cy="14" rx="2.4" ry="4.5" fill="#000" opacity="0.08" />
+      <ellipse cx="63" cy="22" rx="3" ry="2.4" fill="#000" opacity="0.12" />
+      <path d="M46,48 C34,58 30,78 32,98 C33,108 36,116 40,120 M74,48 C86,58 90,78 88,98 C87,108 84,116 80,120" stroke={C.sil} strokeWidth="5.5" fill="none" strokeLinecap="round" />
+      <path d="M34,100 l-5,18 M38,102 l-2,18 M42,102 l3,18 M86,100 l5,18 M82,102 l2,18 M78,102 l-3,18" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
     </g>),
   }[id];
   const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14, hollowed: 16 }[id] || 1;
@@ -8740,28 +8789,32 @@ function MonsterVillage() {
         </div>
       </div>
 
+      {/* the fixed foot: the night's two decisions, and beneath them the
+          journal — the staple that stays at the very bottom of the screen */}
       <div className="fixed bottom-0 inset-x-0 z-10 mvIvDock" style={{ background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}` }}>
-        <div className="max-w-md mx-auto px-4 pt-2.5 flex gap-2" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}>
-          <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" disabled={s.fled} onClick={() => setModal("accuse")}
-            style={{ flex: 1, background: s.fled ? "transparent" : C.red, border: `1px solid ${C.red}`, color: s.fled ? C.dim : "#F3E9E4", fontSize: 13, letterSpacing: 2, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
-            {s.fled ? "UNMASKED" : "ACCUSE"}
-          </button>
-          <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" onClick={() => setModal("plan")}
-            style={{ flex: 1.35, background: "transparent", border: `1px solid ${C.amber}`, color: C.amber, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>
-            NIGHTFALL →
+        <div className="max-w-md mx-auto px-4 pt-2.5" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}>
+          <div className="flex gap-2">
+            <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" disabled={s.fled} onClick={() => setModal("accuse")}
+              style={{ flex: 1, background: s.fled ? "transparent" : C.red, border: `1px solid ${C.red}`, color: s.fled ? C.dim : "#F3E9E4", fontSize: 13, letterSpacing: 2, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
+              {s.fled ? "UNMASKED" : "ACCUSE"}
+            </button>
+            <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" onClick={() => setModal("plan")}
+              style={{ flex: 1.35, background: "transparent", border: `1px solid ${C.amber}`, color: C.amber, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>
+              NIGHTFALL →
+            </button>
+          </div>
+          <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
+            className="mv-display relative w-full mt-2 py-2 rounded-lg text-center"
+            style={{ background: C.parch, color: C.ink, fontSize: 13.5, letterSpacing: 2, border: `1px solid ${C.parchLine}`, cursor: "pointer" }}>
+            ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ fontSize: 11, letterSpacing: 1, opacity: 0.75 }}> · {remainCount} remain</span> : ""}
+            {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
+            {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 7, right: 10, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
           </button>
         </div>
       </div>
 
       <div className="mvVignette" />
       <div className="mvGrainF" />
-      <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
-        className="mv-display fixed left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-t-lg"
-        style={{ bottom: 62, background: C.parch, color: C.ink, fontSize: 14, letterSpacing: 2, border: `1px solid ${C.parchLine}`, borderBottom: "none", whiteSpace: "nowrap" }}>
-        ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ fontSize: 11, letterSpacing: 1, opacity: 0.75 }}> · {remainCount} remain</span> : ""}
-        {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
-        {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 6, right: 8, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
-      </button>
     </div>
   );
 }
