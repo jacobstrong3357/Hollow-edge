@@ -5696,9 +5696,9 @@ function DawnScene({ loc, s, height = 190 }) {
     forest: (<g>
       <polygon points="334,116 260,190 306,190" fill="#EED8B0" opacity="0.08" />
       <polygon points="334,116 350,190 396,190" fill="#EED8B0" opacity="0.06" />
-      {pine(20, 0.55, "#2E3852")}{pine(86, 0.5, "#2E3852")}{pine(150, 0.6, "#2E3852")}{pine(222, 0.5, "#2E3852")}{pine(288, 0.55, "#2E3852")}{pine(354, 0.5, "#2E3852")}
-      {/* kept clear of the sun disc (centred 334,116, r60): the near rank
-         stays left of x=260 or past x=400, never crossing the light */}
+      {pine(20, 0.55, "#2E3852")}{pine(86, 0.5, "#2E3852")}{pine(150, 0.6, "#2E3852")}{pine(222, 0.5, "#2E3852")}
+      {/* kept clear of the sun disc (centred 334,116, r60): every tree
+         stays left of x=260, none crossing the light */}
       {pine(16, 0.75, "#232B3E")}{pine(48, 1.1, "#1E2434")}{pine(118, 0.85, "#232B3E")}{pine(180, 1.2, "#1E2434")}{pine(258, 0.9, "#232B3E")}
       <ellipse cx="300" cy="168" rx="14" ry="5" fill="#1E2434" />
       <rect x="292" y="156" width="16" height="12" fill="#1E2434" />
@@ -8389,14 +8389,6 @@ function MonsterVillage() {
   );
 
   /* ---------- Modals ---------- */
-  const modalWrap = (title, children) => (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => { setModal(null); setAccusePick(null); setAccuseType(null); setProfile(null); setIvSub(null); }}>
-      <div className="max-w-md w-full rounded-lg p-4 mv-body max-h-[85vh] overflow-y-auto" style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.text, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
-        <div className="mv-display mb-3" style={{ color: C.amber, fontSize: 16, letterSpacing: 1 }}>{title}</div>
-        {children}
-      </div>
-    </div>
-  );
 
   const villagerBtn = (n, onPick, disabled, suffix) => (
     <button key={n.id} disabled={disabled} onClick={onPick}
@@ -8435,9 +8427,34 @@ function MonsterVillage() {
     ])(loc) });
   };
 
-  const searchModal = modal === "search" && modalWrap("Search where by daylight?", (
+  /* Shared slim hero header for the remaining picker screens (a location or
+     villager list has no single backdrop image of its own, so this is a
+     compact chip+title bar rather than a full Scene/DawnScene hero). */
+  const pickerHero = (chip, title, onClose, accent, art) => (
+    <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+      <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${accent ? accent + "66" : C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+        {art || <div style={{ height: 76, background: "linear-gradient(160deg,#1B1E2E,#12141F)" }} />}
+        <div className="absolute inset-0" style={{ background: art ? "linear-gradient(rgba(16,19,33,0.15), rgba(16,19,33,0.88))" : "none", pointerEvents: "none" }} />
+        <div className={"mv-display" + (art ? " absolute left-4 bottom-2.5" : " absolute inset-0 flex items-center px-4")} style={{ fontSize: 16, letterSpacing: 1.5, color: C.parch, textShadow: "0 1px 8px #000" }}>{title}</div>
+        <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 2, color: accent || "#AEB6D8", background: "rgba(8,10,18,0.55)", border: `1px solid ${accent || "rgba(174,182,216,0.3)"}` }}>{chip}</div>
+        {onClose && <button onClick={onClose} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: accent || "#AEB6D8", fontSize: 12, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>}
+      </div>
+    </div>
+  );
+  const pickerShell = (chip, title, body, onClose, accent, art) => (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+        {pickerHero(chip, title, onClose, accent, art)}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+          {body}
+        </div>
+      </div>
+    </div>
+  );
+
+  const searchModal = modal === "search" && pickerShell("DAY " + s.dayNum, "Search where by daylight?", (
     <div className="flex flex-col gap-1.5">{LOCS.map((l) => locBtn(l, () => runSearchScene(l), 46))}</div>
-  ));
+  ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
 
   const daySceneModal = dayScene && (() => {
     /* the daylight search, staged in the interview/dawn language: a painted
@@ -8515,7 +8532,7 @@ function MonsterVillage() {
     );
   })();
 
-  const nightWalkModal = modal === "nightwalk" && modalWrap("Search where tonight?", (
+  const nightWalkModal = modal === "nightwalk" && pickerShell(`NIGHT ${s.nightNum + 1}`, "Search where tonight?", (
     <div>
       <div className="grid grid-cols-2 gap-2">
         {LOCS.map((l) => locBtn(l, () => startWalk(l), 56))}
@@ -8531,7 +8548,7 @@ function MonsterVillage() {
       </div>
       {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Patrolling the lanes means walking without a destination and letting the night decide what you run into. What hunts by night notices being hunted.</p>}
     </div>
-  ));
+  ), () => setModal(null), null, <NightScene height={96} />);
 
   /* --- interview --- */
   const startInterview = (id) => {
@@ -8609,11 +8626,11 @@ function MonsterVillage() {
     setIv(null); setIvSub(null);
   };
 
-  const questionModal = modal === "question" && modalWrap("Interview whom? (1 action, 3 questions)", (
+  const questionModal = modal === "question" && pickerShell("DAY " + s.dayNum + " · 1 ACTION, 3 QUESTIONS", "Interview whom?", (
     <div className="flex flex-col gap-2">
       {aliveNpcs(s).map((n) => villagerBtn(n, () => startInterview(n.id), s.questionedToday.includes(n.id), s.questionedToday.includes(n.id) ? " · already questioned today" : (s.patience[n.id] <= 0 ? " · out of patience with you" : "")))}
     </div>
-  ));
+  ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
 
   const interviewModal = iv && !(examRes && examRes.interview) && (
     <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
@@ -8781,115 +8798,174 @@ function MonsterVillage() {
     );
   })();
 
-  const planModal = modal === "plan" && modalWrap("Night falls. Where will you be?", (
-    s.fled ? (
-      <div className="flex flex-col gap-2">
-        <Btn full kind="amber" onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</Btn>
-        <Btn full kind="red" onClick={() => setModal("rite")}>Perform the rite at dusk</Btn>
-        <p style={{ color: C.dim, fontSize: 12 }} className="mt-1">It comes back every night now. Every rite performed with the wrong name costs a life, and the village will not stand in the circle for a third mistake. The right one ends this.</p>
-      </div>
-    ) : (
-      <div className="flex flex-col gap-2">
-        <Btn full kind="amber" onClick={() => setModal("watch")}>Watch a villager's door</Btn>
-        <Btn full kind="amber" onClick={() => setModal("nightwalk")}>Search an area</Btn>
-        {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 12 }} className="mt-1">Watching a door reveals where one person truly goes. Searching may find signs, or the thing itself. Behind a barred door you are safest, but you learn nothing.</p>}
-        <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
-          <Btn full kind="ghost" onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</Btn>
+  const planModal = modal === "plan" && (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})`, color: C.parch }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+        <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+          <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+            <NightScene height={120} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(10,12,24,0.1) 45%, rgba(10,12,24,0.85))", pointerEvents: "none" }} />
+            <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#AEB6D8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(174,182,216,0.3)" }}>
+              {s.fled ? "UNDER SIEGE" : `NIGHT ${s.nightNum + 1}`}
+            </div>
+            <button onClick={() => setModal(null)} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: "#AEB6D8", fontSize: 12, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>
+            <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 16, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000" }}>Where will you be?</div>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+          {s.fled ? (
+            <div className="flex flex-col gap-2">
+              <Btn full kind="amber" onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</Btn>
+              <Btn full kind="red" onClick={() => setModal("rite")}>Perform the rite at dusk</Btn>
+              <p style={{ color: C.dim, fontSize: 12.5 }} className="mt-1">It comes back every night now. Every rite performed with the wrong name costs a life, and the village will not stand in the circle for a third mistake. The right one ends this.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Btn full kind="amber" onClick={() => setModal("watch")}>Watch a villager's door</Btn>
+              <Btn full kind="amber" onClick={() => setModal("nightwalk")}>Search an area</Btn>
+              {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 12.5 }} className="mt-1">Watching a door reveals where one person truly goes. Searching may find signs, or the thing itself. Behind a barred door you are safest, but you learn nothing.</p>}
+              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+                <Btn full kind="ghost" onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</Btn>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    )
-  ));
+    </div>
+  );
 
-  const riteModal = modal === "rite" && modalWrap("Circle the creature. The rite follows the name.", (
-    <div>
-      <div className="grid grid-cols-5 gap-2">
-        {gameMonsters(s).map((mm) => {
-          const struckM = s.struck.includes(mm.id);
-          const dim = struckM || !compatM(mm);
-          const sel = accuseType === mm.id;
-          return (
-            <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
-              style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
-              <MonsterArt id={mm.id} size={44} />
-              <span style={{ fontSize: 10, color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
-            </button>
-          );
-        })}
-      </div>
-      {accuseType && (
-        <p className="mt-3" style={{ fontSize: 14, color: C.parch }}>
-          The books prescribe one rite for a {MONSTERS.find((x) => x.id === accuseType).name}: <strong>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>. Every wrong rite costs a life, and the village has faith left for two attempts. No more.
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        <Btn onClick={() => { setAccuseType(null); setModal("plan"); }}>Back</Btn>
-        <Btn kind="red" disabled={!accuseType} onClick={() => { const ty = accuseType; setAccuseType(null); nightfall({ kind: "rite", typeId: ty }); }}>Perform the rite at dusk</Btn>
+  const riteModal = modal === "rite" && (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+        <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+          <div className="rounded-2xl overflow-hidden relative" style={{ border: "1px solid rgba(194,68,80,0.4)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+            <NightScene height={100} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(46,16,22,0.2), rgba(22,10,12,0.9))", pointerEvents: "none" }} />
+            <div className="absolute top-2.5 right-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 2, color: C.redBright, background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.4)" }}>THE LAST RITE</div>
+            <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 1.5, color: C.parch, textShadow: "0 1px 8px #000" }}>Circle the creature. The rite follows the name.</div>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="grid grid-cols-5 gap-2">
+            {gameMonsters(s).map((mm) => {
+              const struckM = s.struck.includes(mm.id);
+              const dim = struckM || !compatM(mm);
+              const sel = accuseType === mm.id;
+              return (
+                <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
+                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
+                  <MonsterArt id={mm.id} size={44} light />
+                  <span style={{ fontSize: 10, color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          {accuseType && (
+            <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+              <p style={{ fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.85)" }}>
+                The books prescribe one rite for a <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>. Every wrong rite costs a life, and the village has faith left for two attempts. No more.
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#1E1218,#150C0F)", borderTop: "1px solid rgba(194,68,80,0.3)", paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+          <div className="grid grid-cols-2 gap-2">
+            <Btn onClick={() => { setAccuseType(null); setModal("plan"); }}>Back</Btn>
+            <Btn kind="red" disabled={!accuseType} onClick={() => { const ty = accuseType; setAccuseType(null); nightfall({ kind: "rite", typeId: ty }); }}>Perform the rite at dusk</Btn>
+          </div>
+        </div>
       </div>
     </div>
-  ));
+  );
 
-  const watchModal = modal === "watch" && modalWrap("Whose door will you watch?", (
+  const watchModal = modal === "watch" && pickerShell(`NIGHT ${s.nightNum + 1}`, "Whose door will you watch?", (
     <div className="flex flex-col gap-2">
       {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 13 }}>If they stay in on a night of killing, they are cleared beyond doubt, and that proof can later stand between them and a rope. If they leave, you follow. Follow the wrong figure too far into the dark, and you may not come back.</p>}
       {aliveNpcs(s).map((n) => villagerBtn(n, () => startWatchWalk(n.id)))}
     </div>
-  ));
+  ), () => setModal(null), null, <NightScene height={96} />);
 
-  const unbindModal = modal === "unbind" && modalWrap("Unbind whom of what holds them?", (
+  const unbindModal = modal === "unbind" && pickerShell("DAY " + s.dayNum, "Unbind whom of what holds them?", (
     <div className="flex flex-col gap-2">
       <p style={{ color: C.dim, fontSize: 13 }}>This costs the whole of the day, every hour you have left, and can be tried on each of the changed only once. If it works, whatever leaves them may remember something useful. If it fails, the thing they carry feels the working, and does not forgive it lightly.</p>
       {eligibleUnbind.map((n) => villagerBtn(n, () => doAction((x) => actUnbind(x, n.id))))}
     </div>
-  ));
+  ), () => setModal(null), null, <DawnScene loc="Old Church" s={s} height={96} />);
 
-  const accuseModal = modal === "accuse" && modalWrap(accusePick ? `Now circle what wears ${npcById(s, accusePick).name}'s face` : "Circle the accused", (
-    accusePick ? (
-      <div>
-        <div className="flex gap-3 items-center mb-2">
-          <Portrait id={accusePick} size={44} />
-          <p style={{ fontSize: 13, color: C.dim }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
+  const accuseModal = modal === "accuse" && (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+        <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+          <div className="rounded-2xl overflow-hidden relative" style={{ border: "1px solid rgba(194,68,80,0.4)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+            {accusePick ? <InterviewScene id={accusePick} height={100} /> : <NightScene height={100} />}
+            <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(46,16,22,0.15), rgba(22,10,12,0.9))", pointerEvents: "none" }} />
+            {accusePick ? (
+              <div className="absolute left-4 bottom-2.5 flex items-center gap-2.5">
+                <div className="shrink-0"><Portrait id={accusePick} size={44} turnedKnown={npcById(s, accusePick).turned && npcById(s, accusePick).known} /></div>
+                <div className="min-w-0 mv-display" style={{ fontSize: 14.5, letterSpacing: 1, color: C.parch, lineHeight: 1.3, textShadow: "0 1px 8px #000" }}>What wears {npcById(s, accusePick).name}'s face?</div>
+              </div>
+            ) : (
+              <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 17, letterSpacing: 2, color: C.parch, textShadow: "0 1px 8px #000" }}>Circle the accused</div>
+            )}
+            <div className="absolute top-2.5 right-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 2, color: C.redBright, background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.4)" }}>ACCUSATION</div>
+          </div>
         </div>
-      <div className="grid grid-cols-5 gap-2">
-        {gameMonsters(s).map((mm) => {
-          const struckM = s.struck.includes(mm.id);
-          const dim = struckM || !compatM(mm);
-          const sel = accuseType === mm.id;
-          return (
-            <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
-              style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
-              <MonsterArt id={mm.id} size={44} />
-              <span style={{ fontSize: 10, color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
-            </button>
-          );
-        })}
-      </div>
-        {accuseType && (
-          <p className="mt-3" style={{ fontSize: 14, color: C.parch }}>
-            Put <strong>{npcById(s, accusePick).name}</strong> to the rite of the <strong>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>, by {ritePreparer(s, accusePick)}'s hand.
-          </p>
-        )}
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <Btn onClick={() => { setAccusePick(null); setAccuseType(null); }}>Back</Btn>
-          <Btn kind="red" disabled={!accuseType} onClick={() => { const id = accusePick, ty = accuseType; setModal(null); setAccusePick(null); setAccuseType(null); setS(actAccuse(s, id, ty)); }}>Say it aloud</Btn>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+          {accusePick ? (
+            <>
+              <p style={{ fontSize: 13, color: C.dim }} className="mb-3">Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
+              <div className="grid grid-cols-5 gap-2">
+                {gameMonsters(s).map((mm) => {
+                  const struckM = s.struck.includes(mm.id);
+                  const dim = struckM || !compatM(mm);
+                  const sel = accuseType === mm.id;
+                  return (
+                    <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
+                      style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
+                      <MonsterArt id={mm.id} size={44} light />
+                      <span style={{ fontSize: 10, color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {accuseType && (
+                <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.85)" }}>
+                    Put <strong style={{ color: C.parch }}>{npcById(s, accusePick).name}</strong> to the rite of the <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>, by {ritePreparer(s, accusePick)}'s hand.
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: C.dim }} className="mb-3">The village hangs whoever you circle, and no verdict is read out. An innocent dead on your word emboldens the thing, and a second is the end of you.</p>
+              <div className="grid grid-cols-4 gap-2">
+                {aliveNpcs(s).map((n) => {
+                  const struckP = s.struckNpcs.includes(n.id);
+                  return (
+                    <button key={n.id} onClick={() => setAccusePick(n.id)} className="flex flex-col items-center gap-1" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, opacity: struckP ? 0.4 : 1 }}>
+                      <Portrait id={n.id} size={48} turnedKnown={n.turned && n.known} />
+                      <span style={{ fontSize: 10, color: C.dim, textDecoration: struckP ? "line-through" : "none" }}>{n.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#1E1218,#150C0F)", borderTop: "1px solid rgba(194,68,80,0.3)", paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+          {accusePick ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Btn onClick={() => { setAccusePick(null); setAccuseType(null); }}>Back</Btn>
+              <Btn kind="red" disabled={!accuseType} onClick={() => { const id = accusePick, ty = accuseType; setModal(null); setAccusePick(null); setAccuseType(null); setS(actAccuse(s, id, ty)); }}>Say it aloud</Btn>
+            </div>
+          ) : (
+            <Btn full onClick={() => { setModal(null); setAccusePick(null); setAccuseType(null); }}>Step back</Btn>
+          )}
         </div>
       </div>
-    ) : (
-      <div>
-        <p style={{ fontSize: 13, color: C.dim }} className="mb-2">The village hangs whoever you circle, and no verdict is read out. An innocent dead on your word emboldens the thing, and a second is the end of you.</p>
-        <div className="grid grid-cols-4 gap-2">
-          {aliveNpcs(s).map((n) => {
-            const struckP = s.struckNpcs.includes(n.id);
-            return (
-              <button key={n.id} onClick={() => setAccusePick(n.id)} className="flex flex-col items-center gap-1" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, opacity: struckP ? 0.4 : 1 }}>
-                <Portrait id={n.id} size={48} turnedKnown={n.turned && n.known} />
-                <span style={{ fontSize: 10, color: C.dim, textDecoration: struckP ? "line-through" : "none" }}>{n.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    )
-  ));
+    </div>
+  );
 
   const resultSheet = sheet && !tab && !modal && !profile && !iv && !invest && (
     <div className="fixed inset-0 z-30 flex flex-col" style={{ background: "rgba(8,10,18,0.7)" }} onClick={() => setSheet(null)}>
@@ -8931,58 +9007,84 @@ function MonsterVillage() {
         : `Slain, Night ${death.night}${death.where ? (death.where === "home" ? ", behind their own bolted door" : `, found at the ${death.where}`) : ""}. ${death.examined ? (death.found && death.found.length ? `The scene yielded this much: ${death.found.map((f) => senseFor(f, 0)).join(" ")}` : "The scene yielded nothing conclusive.") : "The death was never investigated."}`;
     else if (n.cured) status = `Unbound, Day ${n.unbindDay || s.dayNum}. The rite drew what held them out into the open air, and it is gone. They are not unmarked by it.`;
     else if (turnRec && n.known) status = `Changed, Night ${turnRec.night}. They are no longer wholly themselves. Their word serves the thing that took them.`;
-    return modalWrap(`${n.name} ${n.role}`, (
-      <div>
-        <div className="flex gap-3 items-start">
-          <div className="shrink-0"><Portrait id={n.id} size={64} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} /></div>
-          <div>
-            <p style={{ fontSize: 13, fontStyle: "italic", color: C.dim }}>{lore.body}</p>
-            <p className="mt-1" style={{ fontSize: 12, color: C.dim }}>{n.build} of build{n.alive && s.knownBuild === n.build ? ": like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ": could be the shape in the dark" : ""}</p>
-            {n.secretKnown && secretOf(s, n.id) && (
-              <p className="mt-1" style={{ fontSize: 12, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {secretOf(s, n.id).short}.</p>
-            )}
-            {n.alive && !n.fled && (
-              <p className="mt-1" style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
-            )}
-          </div>
-        </div>
-        <p className="mt-2" style={{ fontSize: 13, color: !n.alive || n.fled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : C.text }}>{status}</p>
-        <div className="mv-display mt-3" style={{ color: C.amber, fontSize: 13, letterSpacing: 2 }}>WHAT YOU KNOW</div>
-        {facts.length === 0 && <p style={{ fontSize: 14, color: C.dim }} className="mt-1">Nothing yet. You have not seen them at night, nor heard a word of their movements.</p>}
-        {(() => {
-          const PAGE = 4;
-          const total = Math.max(1, Math.ceil(facts.length / PAGE));
-          const cur = factPage === -1 ? total - 1 : Math.min(factPage, total - 1);
-          return (
-            <>
-              {facts.slice(cur * PAGE, cur * PAGE + PAGE).map((f, i) => (
-                <p key={i} className="mt-1" style={{ fontSize: 14, fontStyle: f.clue ? "italic" : "normal" }}>
-                  {f.t}{f.flag && <span style={{ color: C.redBright, fontWeight: 700 }}> ✕ {f.flag}</span>}
-                </p>
-              ))}
-              {facts.length > PAGE && (
-                <div className="flex items-center justify-between mt-2">
-                  <Btn small disabled={cur === 0} onClick={() => setFactPage(cur - 1)}>‹ Earlier</Btn>
-                  <span style={{ fontSize: 12, color: C.dim }}>page {cur + 1} of {total}</span>
-                  <Btn small disabled={cur >= total - 1} onClick={() => setFactPage(cur + 1)}>Later ›</Btn>
+    const troubled = !n.alive || n.fled;
+    const heroAccent = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "#AEB6D8";
+    const statusColor = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "rgba(233,223,200,0.85)";
+    const nAff = (n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled);
+    return (
+      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+            <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${heroAccent}55`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <InterviewScene id={n.id} height={112} afflicted={nAff} />
+              <div className="absolute inset-0" style={{ background: !n.alive ? "linear-gradient(rgba(20,16,20,0.35), rgba(20,16,20,0.92))" : "linear-gradient(rgba(20,24,41,0) 42%, rgba(20,24,41,0.9))", pointerEvents: "none" }} />
+              <button onClick={() => setProfile(null)} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: heroAccent, fontSize: 12, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>
+              <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 2, color: heroAccent, background: "rgba(8,10,18,0.55)", border: `1px solid ${heroAccent}55` }}>
+                {troubled ? (n.fled ? "IN HIDING" : "GONE") : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"}
+              </div>
+              <div className="absolute left-4 bottom-2.5 flex items-center gap-2.5">
+                <div className="shrink-0"><Portrait id={n.id} size={44} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} /></div>
+                <div className="min-w-0">
+                  <div className="mv-display" style={{ fontSize: 17, letterSpacing: 1, color: C.parch, textShadow: "0 1px 8px #000" }}>{n.name}</div>
+                  <div style={{ fontSize: 11.5, color: "rgba(233,223,200,0.75)", textShadow: "0 1px 6px #000" }}>{n.role}</div>
                 </div>
-              )}
-            </>
-          );
-        })()}
-        {n.alive && !n.fled && (
-          <div className="mt-4">
-            <Btn full onClick={() => setS({ ...s, struckNpcs: struckP ? s.struckNpcs.filter((x) => x !== n.id) : [...s.struckNpcs, n.id] })}>
-              {struckP ? "Restore them to your suspicion" : "Strike them from your suspicion"}
-            </Btn>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <Btn disabled={s.ap < 1 || s.questionedToday.includes(n.id)} onClick={() => { setProfile(null); startInterview(n.id); }}>Interview them</Btn>
-              <Btn kind="red" disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}>Accuse them</Btn>
+              </div>
             </div>
           </div>
-        )}
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+            <p style={{ fontSize: 13, fontStyle: "italic", color: "rgba(233,223,200,0.6)" }}>{lore.body}</p>
+            <p className="mt-1.5" style={{ fontSize: 12, color: C.dim }}>{n.build} of build{n.alive && s.knownBuild === n.build ? ": like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ": could be the shape in the dark" : ""}</p>
+            {n.secretKnown && secretOf(s, n.id) && (
+              <p className="mt-1.5" style={{ fontSize: 12, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {secretOf(s, n.id).short}.</p>
+            )}
+            {n.alive && !n.fled && (
+              <p className="mt-1.5" style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
+            )}
+            <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+              <p style={{ fontSize: 14, lineHeight: 1.5, color: statusColor }}>{status}</p>
+            </div>
+            <div className="mv-display mt-4" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>WHAT YOU KNOW</div>
+            {facts.length === 0 && <p style={{ fontSize: 13.5, color: C.dim }} className="mt-1.5">Nothing yet. You have not seen them at night, nor heard a word of their movements.</p>}
+            {(() => {
+              const PAGE = 4;
+              const total = Math.max(1, Math.ceil(facts.length / PAGE));
+              const cur = factPage === -1 ? total - 1 : Math.min(factPage, total - 1);
+              return (
+                <>
+                  {facts.length > 0 && (
+                    <div className="mt-1.5 rounded-xl px-3.5 py-2.5" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                      {facts.slice(cur * PAGE, cur * PAGE + PAGE).map((f, i) => (
+                        <p key={i} className={i === 0 ? "" : "mt-1.5"} style={{ fontSize: 13.5, lineHeight: 1.45, color: "rgba(233,223,200,0.85)", fontStyle: f.clue ? "italic" : "normal" }}>
+                          {f.t}{f.flag && <span style={{ color: C.redBright, fontWeight: 700 }}> ✕ {f.flag}</span>}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {facts.length > PAGE && (
+                    <div className="flex items-center justify-between mt-2">
+                      <Btn small disabled={cur === 0} onClick={() => setFactPage(cur - 1)}>‹ Earlier</Btn>
+                      <span style={{ fontSize: 12, color: C.dim }}>page {cur + 1} of {total}</span>
+                      <Btn small disabled={cur >= total - 1} onClick={() => setFactPage(cur + 1)}>Later ›</Btn>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+          {n.alive && !n.fled && (
+            <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+              <Btn full onClick={() => setS({ ...s, struckNpcs: struckP ? s.struckNpcs.filter((x) => x !== n.id) : [...s.struckNpcs, n.id] })}>
+                {struckP ? "Restore them to your suspicion" : "Strike them from your suspicion"}
+              </Btn>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Btn disabled={s.ap < 1 || s.questionedToday.includes(n.id)} onClick={() => { setProfile(null); startInterview(n.id); }}>Interview them</Btn>
+                <Btn kind="red" disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}>Accuse them</Btn>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    ));
+    );
   })();
 
   /* ---------- The dawn, faced before the day ---------- */
