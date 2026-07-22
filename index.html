@@ -8413,6 +8413,18 @@ function MonsterVillage() {
       <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{(s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span> : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 12 }}> · shut</span> : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · well fouled</span> : ""}</span>
     </button>
   );
+  /* Daylight variant of locBtn: searching by day should show the place lit
+     by day (DawnScene), not the night silhouette used for the after-dark
+     search/patrol pickers. DawnScene already bakes affliction states
+     (burned/riot/fouled/shut) into its own art, so no separate overlay. */
+  const dayLocBtn = (l, onClick, h = 64) => (
+    <button key={l} onClick={onClick} className="mv-btn rounded w-full overflow-hidden relative"
+      style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
+      <DawnScene loc={l} s={s} height={h} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.82) 0%, rgba(8,10,18,0.08) 72%)" }} />
+      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{(s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span> : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 12 }}> · shut</span> : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · well fouled</span> : ""}</span>
+    </button>
+  );
 
   /* Daylight search plays as a small staged scene of its own, in the same
      interactive style as the night walk, instead of a result sheet. */
@@ -8455,7 +8467,7 @@ function MonsterVillage() {
   );
 
   const searchModal = modal === "search" && pickerShell("DAY " + s.dayNum, "Search where by daylight?", (
-    <div className="flex flex-col gap-1.5">{LOCS.map((l) => locBtn(l, () => runSearchScene(l), 46))}</div>
+    <div className="flex flex-col gap-1.5">{LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l), 46))}</div>
   ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
 
   const daySceneModal = dayScene && (() => {
