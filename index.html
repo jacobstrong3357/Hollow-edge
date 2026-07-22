@@ -3603,8 +3603,10 @@ function actSearch(prev, loc) {
   }
   /* --- the village is awake around you while you work: one social beat,
      sometimes, before the ground gives its answer. Texture only - none of
-     this touches the find odds below. --- */
-  const folk = s.npcs.filter((x) => x.alive && !x.fled && !(x.turned && x.known));
+     this touches the find odds below. The thing itself is never among them:
+     whatever wears a neighbour's face keeps to the dark and is not seen
+     loitering the search-grounds by daylight. --- */
+  const folk = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && !(x.turned && x.known));
   if (folk.length && chance(0.4)) {
     const w = pick(folk);
     s.dayEvents.push(ev(pickFreshIdx("daySearchFolk", DAY_SEARCH_FOLK)(w.name, loc), w.id, 0));
@@ -6755,6 +6757,12 @@ function MonsterVillage() {
   const [ivSub, setIvSub] = useState(null);
   const [ivOpenerOpen, setIvOpenerOpen] = useState(false);
   const [invest, setInvest] = useState(null);
+  /* the examination now plays out inside its own page: the finding, and any
+     interview or detail that follows, all stay here instead of throwing the
+     player back to a sheet or a separate screen. null = the who-grid; else
+     { id, beats } for a plain finding, or { id, interview: true } while the
+     changed one is questioned inline. */
+  const [examRes, setExamRes] = useState(null);
   const [walk, setWalk] = useState(null);
   const [factPage, setFactPage] = useState(-1);
   const [clueSeen, setClueSeen] = useState(0);
@@ -6927,7 +6935,7 @@ function MonsterVillage() {
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
   useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);
 
-  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); };
+  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); };
   const start = () => {
     setSavedRun(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
@@ -7458,7 +7466,7 @@ function MonsterVillage() {
     );
   }
 
-  const nightfall = (plan) => { setModal(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setWalk(null); Snd.beat(false); setS(resolveNight(s, plan)); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
+  const nightfall = (plan) => { setModal(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); Snd.beat(false); setS(resolveNight(s, plan)); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
 
   /* ---------- The night walk ----------
      A fixed, ordered node queue is built once, here, from the facts already
@@ -8488,7 +8496,7 @@ function MonsterVillage() {
     </div>
   ));
 
-  const interviewModal = iv && (
+  const interviewModal = iv && !(examRes && examRes.interview) && (
     <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
       openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
       askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endInterview} />
@@ -8565,8 +8573,12 @@ function MonsterVillage() {
   /* A positive finding is not a result card: you are in the room with what
      your neighbour has become. The interview opens right there, unasked and
      free - the exam already cost the daylight. */
+  /* Everything the examination turns up stays on the examination page: a
+     changed neighbour is questioned inline (the interview opens right here),
+     an ordinary finding is read out here, and either way the player lands
+     back on the who-grid to look over someone else or leave. */
   const runExamine = (id) => {
-    setModal(null); setProfile(null); setIvOpenerOpen(false);
+    setProfile(null); setIvOpenerOpen(false);
     const wasKnown = (npcById(s, id) || {}).known;
     const next = actLookOver(s, id);
     const fresh = next.dayEvents.slice(s.dayEvents.length);
@@ -8576,17 +8588,31 @@ function MonsterVillage() {
       const opener = [...fresh.map((e) => e.t), pickFreshIdx("turnedFaced", TURNED_FACED)(npc2.name)];
       const valid = next.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
       setIv({ id, night: valid.length ? valid[valid.length - 1] : next.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })) });
+      setExamRes({ id, interview: true });
       return;
     }
-    if (!next.over && fresh.length) setSheet(fresh);
+    setExamRes({ id, beats: fresh });
   };
+  /* leaving the inline interview drops back to the who-grid, not out of the
+     examination entirely */
+  const endExamInterview = () => { setIv(null); setIvSub(null); setExamRes(null); };
 
   const examineModal = modal === "examine" && (() => {
     /* the examination, in the interview language: the reader who feels the
-       cold in a changed soul's blood (Falk, or Greta if he is gone), then
-       the grid of who to look over. Mechanics unchanged - runExamine. */
+       cold in a changed soul's blood (Falk, or Greta if he is gone). The
+       finding, and any interview or detail after it, all play out on this
+       same page - see runExamine. */
     const exId = falkCanExamine ? "falk" : "greta";
     const exN = npcById(s, exId);
+    /* a changed neighbour is questioned right here, inline */
+    if (examRes && examRes.interview && iv) {
+      return (
+        <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
+          openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
+          askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endExamInterview} />
+      );
+    }
+    const noHours = s.ap < 1;
     return (
       <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
@@ -8597,26 +8623,39 @@ function MonsterVillage() {
                 <div style={{ minWidth: 0 }}>
                   <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.turn }}>THE EXAMINATION</div>
                   <div className="mv-display" style={{ fontSize: 18, color: C.parch, lineHeight: 1.1, marginTop: 2 }}>{exN.name} reads the blood</div>
-                  <div style={{ fontSize: 11.5, color: C.dim, marginTop: 2 }}>{exId === "falk" ? "He can feel the coldness of a changed soul." : "With the doctor gone, the reading falls to her."}</div>
+                  <div style={{ fontSize: 11.5, color: C.dim, marginTop: 2 }}>{examRes ? `Looking over ${(npcById(s, examRes.id) || {}).name}` : (exId === "falk" ? "He feels the cold in a changed soul." : "With the doctor gone, the reading is hers.")}</div>
                 </div>
               </div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-5 pt-3" style={{ minHeight: 0 }}>
-            <p style={{ fontSize: 13.5, color: C.dim, lineHeight: 1.5 }}>Some horrors do not kill. They <span style={{ color: C.turn }}>change</span> their victims: the body walks and talks and passes for itself, but it belongs to the thing now, and lies for it.</p>
-            <p style={{ fontSize: 12, color: C.dim, lineHeight: 1.5 }} className="mt-2">A clean result proves little. And a changed examiner calls their own kind clean, so a clearance you later find was false points straight at whoever gave it.</p>
-            <div className="mv-display mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER? ·</div>
-            <div className="grid grid-cols-4 gap-2 mt-3">
-              {aliveNpcs(s).map((n) => (
-                <button key={n.id} onClick={() => runExamine(n.id)} className="mvIvChip flex flex-col items-center gap-1 rounded-lg px-1 py-2" style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: "pointer" }}>
-                  <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
-                  <span style={{ fontSize: 10, color: C.text, lineHeight: 1.15, textAlign: "center" }}>{n.name}</span>
-                </button>
-              ))}
-            </div>
+            {examRes ? (
+              (examRes.beats || []).map((e, i) => (<EventLine key={i} e={e} s={s} />))
+            ) : (
+              <>
+                <p style={{ fontSize: 13, color: C.dim, lineHeight: 1.5 }}>Some horrors <span style={{ color: C.turn }}>change</span> their victims rather than kill them. {exN.name} can feel the cold in changed blood, but a clean result proves little, and a changed reader clears their own kind.</p>
+                <div className="mv-display mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER? ·</div>
+                {noHours && <p className="mt-2" style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>No hours left in the day for another look.</p>}
+                <div className="grid grid-cols-4 gap-2 mt-3">
+                  {aliveNpcs(s).map((n) => (
+                    <button key={n.id} onClick={() => runExamine(n.id)} disabled={noHours} className="mvIvChip flex flex-col items-center gap-1 rounded-lg px-1 py-2" style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: noHours ? "default" : "pointer", opacity: noHours ? 0.4 : 1 }}>
+                      <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
+                      <span style={{ fontSize: 10, color: C.text, lineHeight: 1.15, textAlign: "center" }}>{n.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-            <Btn full center onClick={() => setModal(null)}>Not today</Btn>
+            {examRes ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Btn center onClick={() => setExamRes(null)} disabled={noHours}>Look over someone else</Btn>
+                <Btn center kind="amber" onClick={() => setModal(null)}>Done</Btn>
+              </div>
+            ) : (
+              <Btn full center onClick={() => setModal(null)}>Not today</Btn>
+            )}
           </div>
         </div>
       </div>
@@ -8980,7 +9019,7 @@ function MonsterVillage() {
             {actCard("invest", "Where They Fell", investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum, "#C24450")}
             {actCard("search", "Search a Place", "Turn a place over by daylight", () => setModal("search"), s.ap < 1)}
             {actCard("talk", "Hold an Interview", "Three questions, one visit", () => setModal("question"), s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length)}
-            {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => setModal("examine"), s.ap < 1 || !canExamine)}
+            {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => { setExamRes(null); setModal("examine"); }, s.ap < 1 || !canExamine)}
           </div>
           <div className="grid grid-cols-1 gap-1.5 mt-2">
             {s.mob && mobT && mobT.alive && (
