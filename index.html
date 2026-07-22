@@ -3420,10 +3420,14 @@ function resolveNight(prev, planIn, preEvents) {
     if (stained && stained.alive && chance(0.8)) dawn.push(ev(pick(ROPE_SUSPICION)(stained.name, ropeDeath.name), stained.id));
   }
 
-  /* --- a mob may form at dawn --- */
+  /* --- a mob may form at dawn ---
+     Never before night 3: two deaths can land as early as night 2, but a
+     rope by day 2 (with the hanging itself landing day 3) gives the player
+     no real time to have learned anything. The village's patience holds a
+     beat longer than its grief does. */
   const slainCount = s.deaths.filter((d) => d.kind === "slain").length;
   const hangedThisDawn = s.deaths.some((d) => d.kind === "mobbed" && d.night === n);
-  if (!s.mob && !s.over && !hangedThisDawn && slainCount >= 2 && chance(0.22)) {
+  if (!s.mob && !s.over && !hangedThisDawn && n >= 3 && slainCount >= 2 && chance(0.22)) {
     const accCand = s.npcs.filter((x) => x.alive && !x.fled);
     /* the thing (or its changed) may be the one steering the rope */
     const schemers = accCand.filter((x) => x.id === s.monster.vid || x.turned);
@@ -4721,7 +4725,10 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     tobias: { garment: <g><path d="M12,80 C12,60 68,60 68,80 Z" fill="#3E362C" /><path d="M26,64 q14,-8 28,0 l-2,6 q-12,-6 -24,0 Z" fill="#5E5040" /></g>,
       over: <g><path d="M26,50 C22,74 58,74 54,50 L50,48 C50,64 30,64 30,48 Z" fill="#9C9280" stroke="#7E7462" strokeWidth="0.8" /><path d="M36,56 q-0.5,6 -1.5,10 M44,56 q0.5,6 1.5,10 M40,57 v11" stroke="#B8AE9C" strokeWidth="1" fill="none" /><path d="M25,34 q-2,5 -0.5,9 M55,34 q2,5 0.5,9" stroke="#B8AE9C" strokeWidth="2.6" fill="none" strokeLinecap="round" /><path d="M30,28 q10,-4 20,0 M32,24.5 q8,-3 16,0" stroke="#A08C6C" strokeWidth="1" fill="none" opacity="0.6" /><path d="M27,45.5 q2,2 1.6,3.6 M53,45.5 q-2,2 -1.6,3.6" stroke="#A08C6C" strokeWidth="0.9" fill="none" opacity="0.7" /><path d="M27,44 q2,-1 3.4,0.4 l-0.6,2 q-1.6,0.6 -2.8,-0.4 Z" fill="#5E5040" opacity="0.4" /><circle cx="49.5" cy="32.5" r="1.7" fill="#5E5040" opacity="0.35" /></g>, e: [1.1, 0.7] },
     ansel: { garment: <g><path d="M14,80 C14,60 66,60 66,80 Z" fill="#26232E" /><rect x="34" y="61" width="12" height="6" rx="1.5" fill="#EDEAE0" /><path d="M40,69 v7 M37,71.8 h6" stroke="#8A8060" strokeWidth="1.3" /></g>,
-      over: <g><path d="M24,38 C23,22 57,22 56,38 L52,34 C51,26 29,26 28,34 Z" fill="#231F28" /><path d="M36,25 L40,31.5 L44,25 Z" fill="#231F28" /><path d="M27.5,46 q1.6,4 4.4,5.6 M52.5,46 q-1.6,4 -4.4,5.6" stroke="#B89A74" strokeWidth="1" fill="none" opacity="0.7" /></g>, e: [0.6, 0.3] },
+      /* a receding, grey-shot priest's hairline, kept well clear of Rosa's
+         full dark cap in both silhouette and colour so the two are never
+         mistaken for each other at a glance */
+      over: <g><path d="M26,32 C26,24 34,20 40,20 C46,20 54,24 54,32 L50,29 C48,24 32,24 30,29 Z" fill="#5A5860" /><path d="M27.5,46 q1.6,4 4.4,5.6 M52.5,46 q-1.6,4 -4.4,5.6" stroke="#B89A74" strokeWidth="1" fill="none" opacity="0.7" /></g>, e: [0.6, 0.3] },
     greta: { garment: <g><path d="M13,80 C13,62 67,62 67,80 Z" fill="#3A4A36" /><path d="M24,72 q16,-8 32,0" stroke="#2C3A2A" strokeWidth="2" fill="none" /></g>,
       over: <g><path d="M20,44 C15,14 65,14 60,44 L54,40 C56,22 24,22 26,40 Z" fill="#35503F" /><path d="M20,44 q-1,6 2,10 M60,44 q1,6 -2,10" stroke="#35503F" strokeWidth="5" fill="none" /><path d="M56,26 l5,-6 M59,29 l6,-1 M57,23 l-2,-4" stroke="#5B7A52" strokeWidth="1.4" strokeLinecap="round" /><circle cx="33" cy="47.5" r="0.7" fill="#B89A74" /><circle cx="36.5" cy="49" r="0.6" fill="#B89A74" /><circle cx="45" cy="47.5" r="0.7" fill="#B89A74" /></g>, e: [0.5, 0.7] },
     wilhelm: { garment: <g><path d="M12,80 C12,60 68,60 68,80 Z" fill="#57493A" /><path d="M24,80 L44,60 L52,66 L36,80 Z" fill="#4A3626" /><circle cx="47" cy="64" r="1.5" fill="#B8A878" /></g>,
@@ -5589,7 +5596,9 @@ function DawnScene({ loc, s, height = 190 }) {
       <polygon points="334,116 260,190 306,190" fill="#EED8B0" opacity="0.08" />
       <polygon points="334,116 350,190 396,190" fill="#EED8B0" opacity="0.06" />
       {pine(20, 0.55, "#2E3852")}{pine(86, 0.5, "#2E3852")}{pine(150, 0.6, "#2E3852")}{pine(222, 0.5, "#2E3852")}{pine(288, 0.55, "#2E3852")}{pine(354, 0.5, "#2E3852")}
-      {pine(48, 1.1, "#1E2434")}{pine(118, 0.85, "#232B3E")}{pine(180, 1.2, "#1E2434")}{pine(258, 0.9, "#232B3E")}{pine(330, 0.75, "#232B3E")}{pine(388, 1.05, "#1E2434")}
+      {/* kept clear of the sun disc (centred 334,116, r60): the near rank
+         stays left of x=260 or past x=400, never crossing the light */}
+      {pine(16, 0.75, "#232B3E")}{pine(48, 1.1, "#1E2434")}{pine(118, 0.85, "#232B3E")}{pine(180, 1.2, "#1E2434")}{pine(258, 0.9, "#232B3E")}
       <ellipse cx="300" cy="168" rx="14" ry="5" fill="#1E2434" />
       <rect x="292" y="156" width="16" height="12" fill="#1E2434" />
       <path d="M212,120 q5,8 -1,16" stroke="#6E2A34" strokeWidth="3" fill="none" className="mvSway" />
