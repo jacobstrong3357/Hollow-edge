@@ -4778,7 +4778,7 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     </svg>
   );
 }
-function MonsterArt({ id, size = 64, light }) {
+function MonsterArt({ id, size = 64, light, flat }) {
   /* eyes glow out of the dark instead of sitting flat on it */
   const eye = (x, y, c = C.amber) => (
     <g>
@@ -4837,34 +4837,50 @@ function MonsterArt({ id, size = 64, light }) {
       <path d="M34,66 C20,80 16,96 20,112 M86,66 C100,80 104,96 100,112" stroke={C.pale} strokeWidth="1.8" fill="none" opacity="0.3" strokeLinecap="round" />
     </g>),
     ghoul: (<g>
-      <path d="M54,70 C58,54 74,48 86,54 C96,58 98,70 92,74 C94,66 84,62 76,64 C66,66 60,74 62,80 Z" fill={C.sil} />
-      <path d="M60,66 l-1,-6 M68,58 l0,-7 M78,56 l2,-6 M88,60 l3,-5" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
-      <path d="M56,68 C46,78 40,92 40,104 M60,70 C52,82 48,94 50,104" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
-      <path d="M40,104 l-5,9 M43,106 l-3,10 M47,105 l1,10" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
-      <path d="M34,111 l-2,-2 M40,113 l-1,-2 M48,112 l0,-2" stroke={C.parch} strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M88,72 C96,78 98,90 92,100 L88,104 M92,100 l6,4" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
-      <path d="M42,80 C34,78 30,86 34,94 C38,100 50,98 52,90 C53,84 48,80 42,80 Z" fill={C.sil} />
-      <path d="M30,88 L46,90 L44,98 L32,96 Z" fill="#2A0A06" />
-      <polygon points="33,89 35,96 37,89" fill={C.parch} />
-      <polygon points="38,89 40,97 42,89" fill={C.parch} />
-      <path d="M58,80 q8,5 0,9 M56,74 q10,6 0,11" stroke={C.sil} strokeWidth="1.2" fill="none" opacity="0.4" />
-      {eye(40, 84, "#C8C040")}
+      {/* crouched low, the bony back arched high at the haunch */}
+      <path d="M84,116 C90,90 84,68 66,62 C52,57 40,64 38,78 C36,90 42,100 38,116 Z" fill={C.sil} />
+      {/* a knobbed spine ridge */}
+      <path d="M66,62 l3,-6 M74,66 l4,-5 M80,74 l5,-4 M84,84 l5,-2" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      {/* a long neck, dipping the head to the ground */}
+      <path d="M42,74 C32,80 26,90 24,100" stroke={C.sil} strokeWidth="7.5" fill="none" strokeLinecap="round" />
+      {/* gaunt bald head, jaw agape near the earth */}
+      <path d="M30,94 C18,92 12,100 16,108 C20,116 34,114 36,104 C37,98 34,94 30,94 Z" fill={C.sil} />
+      {/* a wide jaw of teeth */}
+      <path d="M15,104 L34,105 L31,113 L17,111 Z" fill="#2A0A06" />
+      <polygon points="17,104 19,111 21,105" fill={C.parch} />
+      <polygon points="22,105 24,112 26,105" fill={C.parch} />
+      <polygon points="27,105 29,111 31,106" fill={C.parch} />
+      {eye(26, 96, "#C8C040")}
+      {/* a long forearm braced on the ground, digging claws */}
+      <path d="M46,86 C40,98 34,108 34,116" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M34,116 l-5,-1 M34,116 l-3,-4 M34,116 l2,-4" stroke={C.sil} strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M29,115 l-2,2 M31,112 l-2,1 M36,112 l-1,2" stroke={C.parch} strokeWidth="1.5" strokeLinecap="round" />
+      {/* the rear haunch drawn up beneath it */}
+      <path d="M72,96 C82,98 88,106 86,116" stroke={C.sil} strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M86,116 l-4,-3 M86,116 l1,-4 M86,116 l5,-2" stroke={C.sil} strokeWidth="2.2" strokeLinecap="round" />
     </g>),
     witch: (<g>
-      <path d="M22,58 C30,52 34,40 40,28 C46,14 60,6 66,20 C60,26 58,40 56,52 Z" fill={C.sil} />
-      <polygon points="14,60 30,52 44,58 58,50 72,58 88,52 100,58 100,64 14,64" fill={C.sil} />
-      <path d="M34,60 C30,74 30,88 36,100 M78,60 C82,74 82,88 76,100" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
-      <path d="M40,58 C40,74 46,92 56,96 C64,92 70,80 70,64 Z" fill={C.sil} />
-      <path d="M54,60 L50,78 C52,84 60,84 60,78 L58,62 Z" fill={C.sil} />
-      <circle cx="54" cy="80" r="2" fill="#05070F" />
-      <path d="M48,86 C52,90 60,90 64,86" stroke="#05070F" strokeWidth="2.2" fill="none" />
-      <polygon points="53,86 54.5,90 56,86" fill={C.parch} />
-      <path d="M44,58 L54,58 M60,58 L70,58" stroke={C.sil} strokeWidth="3.5" strokeLinecap="round" />
-      {eye(49, 63, "#9EC838")}{eye(64, 63, "#9EC838")}
-      <path d="M92,20 L88,104" stroke={C.sil} strokeWidth="4.5" strokeLinecap="round" />
-      <path d="M92,20 C86,16 84,8 88,4 C92,10 96,12 92,20 Z" fill={C.sil} />
-      <circle cx="90" cy="8" r="4.5" fill="#7AA850" opacity="0.4" className="mvGlowPulse" />
-      <path d="M78,66 L90,62 M80,70 L90,68 M80,74 L90,74" stroke={C.sil} strokeWidth="3" strokeLinecap="round" />
+      {/* cloak flaring to the ground, ragged at the hem */}
+      <path d="M28,116 C24,90 30,62 48,54 L72,54 C90,62 96,90 92,116 L84,108 L78,116 L70,108 L62,116 L54,108 L46,116 L38,108 Z" fill={C.sil} />
+      {/* crooked staff topped with a glowing charm */}
+      <path d="M20,116 C25,88 17,62 26,38" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M26,38 C20,34 18,26 22,22 C27,27 31,29 26,38 Z" fill={C.sil} />
+      <circle cx="24" cy="26" r="4.5" fill="#7AA850" opacity="0.5" className="mvGlowPulse" />
+      {/* gnarled hand at the staff */}
+      <path d="M30,64 C24,62 22,67 26,71 M30,64 C25,66 25,71 29,72 M30,64 C27,59 22,60 22,66" stroke={C.sil} strokeWidth="2.6" fill="none" strokeLinecap="round" />
+      {/* wide pointed hat: the brim */}
+      <path d="M20,50 C40,43 80,43 100,50 C80,57 40,57 20,50 Z" fill={C.sil} />
+      {/* the crown, with a bent tip */}
+      <path d="M48,48 C50,26 58,12 78,6 C72,16 68,30 68,48 Z" fill={C.sil} />
+      {/* gaunt face beneath the brim */}
+      <path d="M48,52 C48,68 54,84 60,86 C66,82 70,68 70,54 Z" fill={C.sil} />
+      {/* a long hooked nose */}
+      <path d="M60,58 L55,74 C56,79 63,78 62,73 L62,60 Z" fill={C.sil} />
+      {/* thin mouth and a snaggletooth */}
+      <path d="M52,80 q7,3 13,-1" stroke="#05070F" strokeWidth="2" fill="none" />
+      <polygon points="55,80 56,85 58,80" fill={C.parch} />
+      <path d="M46,54 L54,55 M64,55 L72,54" stroke={C.sil} strokeWidth="3.5" strokeLinecap="round" />
+      {eye(52, 64, "#9EC838")}{eye(66, 64, "#9EC838")}
     </g>),
     demon: (<g>
       <path d="M24,116 C20,88 30,64 44,58 C40,48 44,38 54,36 L60,50 L66,36 C76,38 80,48 76,58 C90,64 100,88 96,116 Z" fill={C.sil} />
@@ -4937,23 +4953,42 @@ function MonsterArt({ id, size = 64, light }) {
       <path d="M60,30 L60,78" stroke="#05070F" strokeWidth="2" opacity="0.6" />
     </g>),
     hag: (<g>
-      <path d="M28,116 C24,96 30,80 44,74 C40,64 44,52 56,50 C50,60 54,70 64,74 C82,78 92,96 88,116 Z" fill={C.sil} />
-      <path d="M50,50 C40,44 28,46 18,56 M52,54 C42,52 32,58 26,68 M66,52 C78,50 88,58 92,70" stroke={C.sil} strokeWidth="3.5" fill="none" strokeLinecap="round" />
-      <path d="M46,52 C46,66 52,80 60,82 C68,78 72,66 70,54 Z" fill={C.sil} />
-      <path d="M58,58 L54,74 C56,80 64,79 62,73 L61,60 Z" fill={C.sil} />
-      <path d="M50,84 C54,88 62,88 66,83" stroke="#05070F" strokeWidth="2" fill="none" />
-      <polygon points="55,84 56.5,88 58,84" fill={C.parch} />
-      <path d="M46,54 L54,55 M62,55 L70,54" stroke={C.sil} strokeWidth="3.5" strokeLinecap="round" />
-      {eye(51, 59, "#A0C0C8")}{eye(65, 59, "#A0C0C8")}
-      <path d="M40,90 l-4,14 M45,92 l-2,15 M50,92 l1,15" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M37,104 l-2,-3 M44,106 l-1,-3 M51,105 l1,-3" stroke={C.parch} strokeWidth="1.6" strokeLinecap="round" />
+      {/* hunched robe with a high humped back */}
+      <path d="M30,116 C26,92 28,66 48,60 C66,55 82,64 84,84 C86,100 82,110 86,116 Z" fill={C.sil} />
+      {/* wild hair, streaming back off the skull */}
+      <path d="M52,44 C36,38 20,42 8,54 M54,50 C38,48 24,54 14,66 M56,56 C42,58 30,66 24,78" stroke={C.sil} strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M52,42 C42,32 28,30 16,34 M54,48 C44,42 32,44 22,50" stroke={C.sil} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.7" />
+      {/* gaunt head thrust forward off the neck */}
+      <path d="M52,46 C50,60 58,72 68,72 C78,68 80,54 74,46 C68,40 56,40 52,46 Z" fill={C.sil} />
+      {/* a long hooked nose */}
+      <path d="M68,54 L76,66 C76,70 71,71 70,67 L68,57 Z" fill={C.sil} />
+      {/* gaping mouth, a last few teeth */}
+      <path d="M58,66 C60,72 68,72 70,66 L68,70 C65,74 61,74 59,70 Z" fill="#05070F" />
+      <polygon points="60,66 61,71 63,66" fill={C.parch} />
+      {eye(58, 54, "#A0C0C8")}{eye(70, 52, "#A0C0C8")}
+      {/* a long reaching arm, splayed claws */}
+      <path d="M58,78 C46,84 34,92 24,102" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M24,102 l-7,2 M24,102 l-6,6 M24,102 l-2,8 M24,102 l2,7" stroke={C.sil} strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M17,104 l-2,-2 M18,108 l-2,-1 M22,110 l-1,-2 M26,109 l0,-2" stroke={C.parch} strokeWidth="1.4" strokeLinecap="round" />
+      {/* a second gnarled arm */}
+      <path d="M64,84 C58,96 50,104 44,114" stroke={C.sil} strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d="M44,114 l-4,3 M44,114 l0,4 M44,114 l4,3" stroke={C.sil} strokeWidth="2" strokeLinecap="round" />
     </g>),
     necromancer: (<g>
       <path d="M40,116 C36,86 40,56 60,50 C80,56 84,86 80,116 Z" fill={C.sil} />
       <path d="M46,52 C46,32 74,32 74,52 C74,44 66,38 60,38 C54,38 46,44 46,52 Z" fill={C.sil} />
       <path d="M50,50 C50,40 70,40 70,50 L64,72 L56,72 Z" fill="#060810" />
-      <path d="M44,60 C30,54 20,44 18,32 M76,60 C90,54 100,44 102,32" stroke={C.sil} strokeWidth="7" fill="none" strokeLinecap="round" />
-      <path d="M18,32 l-3,-6 l6,1 M102,32 l3,-6 l-6,1" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      {/* one arm raised in conjuring, the other down to grip the staff */}
+      <path d="M44,60 C30,54 20,44 18,32 M76,58 C86,62 92,70 92,82" stroke={C.sil} strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M18,32 l-3,-6 l6,1" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      {/* a tall staff crowned with a bound skull, glowing */}
+      <path d="M91,116 L90,26" stroke={C.sil} strokeWidth="4.5" strokeLinecap="round" />
+      <circle cx="90" cy="19" r="7.5" fill={C.turn} opacity="0.35" className="mvGlowPulse" />
+      <ellipse cx="90" cy="19" rx="5" ry="6.2" fill={C.sil} />
+      <circle cx="87.6" cy="18" r="1.5" fill="#060810" /><circle cx="92.4" cy="18" r="1.5" fill="#060810" />
+      <path d="M87.5,23 l5,0" stroke="#060810" strokeWidth="0.9" />
+      {/* gnarled knuckles wrapped round the shaft */}
+      <path d="M92,82 l4,-2 M92,82 l4,1 M92,82 l3,3" stroke={C.sil} strokeWidth="2.2" strokeLinecap="round" />
       {eye(55, 54, C.turn)}{eye(65, 54, C.turn)}
       <path d="M24,116 l-1,-10 l4,3 M30,116 l0,-8 M108,116 l1,-10 l-4,3 M100,116 l0,-8" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
       {[[26, 100], [98, 102], [60, 88]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.2" fill={C.turn} opacity="0.5" className="mvMote" style={{ animationDelay: `${i * 2.5}s` }} />)}
@@ -4969,17 +5004,25 @@ function MonsterArt({ id, size = 64, light }) {
       <path d="M34,70 L40,76 M78,66 L72,72 M56,100 L60,94" stroke={C.turn} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
     </g>),
     succubus: (<g>
+      {/* great bat wings, spread wide behind her */}
+      <path d="M52,50 C36,36 18,38 8,56 C19,51 26,54 30,60 C23,58 19,63 18,72 C29,65 35,68 39,74 C35,71 34,77 34,84 C42,72 49,62 54,58 Z" fill={C.sil} />
+      <path d="M68,50 C84,36 102,38 112,56 C101,51 94,54 90,60 C97,58 101,63 102,72 C91,65 85,68 81,74 C85,71 86,77 86,84 C78,72 71,62 66,58 Z" fill={C.sil} />
+      {/* the wing struts, faint bones in the membrane */}
+      <path d="M52,54 C40,48 26,50 16,58 M54,58 C44,56 32,60 24,68" stroke={C.sky} strokeWidth="1" fill="none" opacity="0.4" strokeLinecap="round" />
+      <path d="M68,54 C80,48 94,50 104,58 M66,58 C76,56 88,60 96,68" stroke={C.sky} strokeWidth="1" fill="none" opacity="0.4" strokeLinecap="round" />
+      {/* slender body */}
       <path d="M48,116 C44,92 46,66 54,54 L66,54 C74,66 76,92 72,116 Z" fill={C.sil} />
-      <path d="M50,40 C40,50 36,72 40,96 M70,40 C80,50 84,72 80,96" stroke={C.sil} strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M52,58 C46,68 44,84 46,98 M68,58 C74,68 76,84 74,98" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      {/* a slim curling tail, low at her hip */}
+      <path d="M70,96 C82,98 90,92 90,82" stroke={C.sil} strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d="M90,82 l-4,-3 l6,-1 l-1,6 Z" fill={C.sil} />
+      {/* small horns */}
       <path d="M52,28 C48,22 48,16 52,12 M68,28 C72,22 72,16 68,12" stroke={C.sil} strokeWidth="3" fill="none" strokeLinecap="round" />
       <ellipse cx="60" cy="34" rx="13" ry="16" fill={C.sil} />
-      <path d="M70,60 C84,58 94,50 96,40" stroke={C.sil} strokeWidth="4.5" fill="none" strokeLinecap="round" />
-      <path d="M96,40 l2,-6 M98,42 l4,-4 M99,45 l5,-2" stroke={C.sil} strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M97,35 l1,-3 M101,39 l2,-2" stroke={C.parch} strokeWidth="1.2" strokeLinecap="round" />
       {eye(55, 32, C.redBright)}{eye(65, 32, C.redBright)}
       <path d="M53,42 q7,4 14,0" stroke="#3A1420" strokeWidth="1.8" fill="none" />
       <polygon points="59,43 60,47 61,43" fill={C.parch} />
-      {[[86, 60], [92, 70]].map(([x, y], i) => <path key={i} d={`M${x},${y} q3,-4 0,-8 q4,2 2,7`} fill="none" stroke="#E86088" strokeWidth="1.2" opacity="0.5" className="mvMote" style={{ animationDelay: `${i * 2}s` }} />)}
+      {[[14, 64], [106, 64]].map(([x, y], i) => <path key={i} d={`M${x},${y} q3,-4 0,-8 q4,2 2,7`} fill="none" stroke="#E86088" strokeWidth="1.2" opacity="0.5" className="mvMote" style={{ animationDelay: `${i * 2}s` }} />)}
     </g>),
     hollowed: (<g>
       {[[10, 1], [22, 0.8]].map(([x, sc], i) => <g key={`lt${x}`} transform={`translate(${x},0) scale(${sc})`}><polygon points="0,120 -14,120 -7,70" fill={C.sil} opacity="0.7" /><polygon points="0,96 -12,96 -6,58" fill={C.sil} opacity="0.7" /></g>)}
@@ -5014,9 +5057,11 @@ function MonsterArt({ id, size = 64, light }) {
         </radialGradient>
         <clipPath id={`mvClip${seed}`}><rect x="2" y="2" width="116" height="116" rx="16" /></clipPath>
       </defs>
-      <rect x="2" y="2" width="116" height="116" rx="16" fill={`url(#mvAura${seed})`} />
+      {/* flat: the journal wants ink on paper, so drop the night-aura card
+          and let the silhouette sit straight on the parchment */}
+      {!flat && <rect x="2" y="2" width="116" height="116" rx="16" fill={`url(#mvAura${seed})`} />}
       <g clipPath={`url(#mvClip${seed})`}>
-        <ellipse cx="60" cy="110" rx="34" ry="5" fill="#000" opacity="0.3" />
+        <ellipse cx="60" cy="110" rx="34" ry="5" fill="#000" opacity={flat ? 0.14 : 0.3} />
         <g filter={`url(#mvR${seed})`}>{art}</g>
       </g>
     </svg>
@@ -8051,7 +8096,7 @@ function MonsterVillage() {
                 return (
                   <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
                     className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
-                    <MonsterArt id={mm.id} size={48} />
+                    <MonsterArt id={mm.id} size={48} flat />
                     <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
                   </button>
                 );
@@ -8075,7 +8120,7 @@ function MonsterVillage() {
               return (
                 <div key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
                   className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: ok ? 1 : 0.35, cursor: "pointer" }}>
-                  <div className="shrink-0"><MonsterArt id={mm.id} size={60} /></div>
+                  <div className="shrink-0"><MonsterArt id={mm.id} size={60} flat /></div>
                   <div>
                     <div className="flex items-baseline gap-3 flex-wrap">
                       <span className="mv-display" style={{ fontSize: 18, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
