@@ -313,7 +313,7 @@ const METHODS = {
   iron: "Cold Iron", mirror: "Silver Mirror", holy: "Holy Water", crossroads: "Burial at the Crossroads",
   backname: "Its Name Said Backwards", hawthorn: "Hawthorn Charm",
   rest: "Rite of Eternal Rest", quicksilver: "Draught of Quicksilver", bell: "Consecrated Bell",
-  effigy: "Burning of Its Effigy",
+  effigy: "Burning of Its Effigy", phylactery: "Shattering of Its Phylactery",
 };
 
 /* METHODS names the rite; this names the thing actually in your hands when
@@ -331,6 +331,7 @@ const METHOD_CARRY = {
   hawthorn: "the hawthorn charm", rest: "the candles and psalter of the Rite of Eternal Rest",
   quicksilver: "the draught of quicksilver", bell: "the consecrated bell",
   effigy: "its effigy, bound and soaked for the fire",
+  phylactery: "the hidden vessel of its life, and the hammer to break it",
 };
 
 const METHOD_KILL_LINES = {
@@ -350,6 +351,7 @@ const METHOD_KILL_LINES = {
   quicksilver: "The quicksilver goes down its throat mid-change, and every shape it ever borrowed tries to happen at once. What is left when they run out is small, and grey, and still.",
   bell: "The consecrated bell rings once, clear, and the charm cracks off it like ice off a bough. The second note stops the starved thing underneath in mid-reach.",
   effigy: "Its effigy takes the flame, straw arms curling, and out past the light something impossibly tall bends with it, mirroring the burning limb for limb. It talks the whole time it burns. No one who heard the vocabulary will repeat it.",
+  phylactery: "The hidden vessel is found and struck, and shatters. Across the village the thing wearing a neighbour's face comes apart all at once, the stolen years pouring out of it, and what settles is dust that was old before this village had a name.",
 };
 
 const MONSTERS = [
@@ -361,7 +363,7 @@ const MONSTERS = [
   { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens with one soul taken violently, as a signature, then claims as it pleases: some hollowed and left walking, some torn apart for joy. Walls mean nothing and no pattern holds. It leaves cold rooms, scorched workings, blighted ground. Only exorcism casts it out." },
   { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
   { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door, and the green browns and curls where it pours. Its dead bear no wound. It cannot bear its own face in a silver mirror." },
-  { id: "hellhound", name: "Hellhound", signs: ["tracks", "claw", "graves"], rhythm: { kind: "loose", p: 0.6, gap: 0 }, attack: "kill", reach: "outOnly", method: "holy", hunts: ["Dark Forest", "Graveyard"], lore: "A near-nightly hunter that will not cross a threshold. Bar your door and it passes. It leaves hound tracks too heavy for any hound, claws its prey apart, and roots in graveyard earth between kills. Holy water, and a steady hand to throw it." },
+  { id: "lich", name: "Lich", signs: ["graves", "flora", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "phylactery", hunts: ["Graveyard", "Old Church"], lore: "A sorcerer who refused to die, and hid its own life away in a vessel so death could never come looking. Its first taking is always too greedy: one neighbour drained to a cold husk in a single night. After that it learns patience, drawing the life out by degrees, and no barred door keeps it out. The touched do not fall at once. They go grey, and cold, and wrong, and a night or three later they are simply gone, empty. It leaves grave-earth turned, the green withered where it fed, and cold prints that should belong to nothing walking. Find the vessel that holds its life, and shatter it." },
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
   { id: "doppel", name: "Doppelg\u00e4nger", signs: ["claw", "bite", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, torn by tooth and nail. After that it replaces rather than kills; the taken pass for themselves. Its one other trace is a weeping that carries from no throat: the taken, grieving. Its name, said backwards, undoes it." },
   { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers when the mood takes her, resting between, and wails AS she rides, not before. Walls mean nothing. Her dead have no wound: a face frozen mid-scream, a room gone cold, her workings scratched into the bedstead. A hawthorn charm, pressed to her while she feeds." },
@@ -394,14 +396,14 @@ const INVEST_ACTS = [
    the fifteen horrors, with heavy overlap, so a sound narrows the field only
    a little and never on its own. */
 const AMBIENT_SOUNDS = [
-  { m: ["werewolf", "hellhound", "banshee", "hag", "wraith", "ghoul", "mimic"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. A wolf, some will say. The rest say nothing at all." },
-  { m: ["ghoul", "revenant", "witch", "hellhound", "werewolf", "shifter", "necromancer", "mimic"], t: "From out in the dark, a patient working sound. Digging, or chewing. Or both, taking turns." },
-  { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon", "necromancer"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
-  { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire", "necromancer", "succubus", "hollowed"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
+  { m: ["werewolf", "banshee", "hag", "wraith", "ghoul", "mimic"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. A wolf, some will say. The rest say nothing at all." },
+  { m: ["ghoul", "revenant", "witch", "lich", "werewolf", "shifter", "necromancer", "mimic"], t: "From out in the dark, a patient working sound. Digging, or chewing. Or both, taking turns." },
+  { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon", "necromancer", "lich"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
+  { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire", "necromancer", "succubus", "hollowed", "lich"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
   { m: ["vampire", "demon", "banshee", "wraith", "witch", "hag", "succubus"], t: "Something passed over the rooftops: a cloak in the wind, or wings, or both. The dogs did not bark, which is worse." },
-  { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon", "necromancer", "succubus"], t: "Every sound in the village stopped together, mid-note. No dog, no owl, no wind. The whole village holding one breath, and something walking through it." },
-  { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith", "succubus", "mimic", "hollowed"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
-  { m: ["hellhound", "werewolf", "ghoul", "revenant", "shifter", "demon", "mimic", "hollowed"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
+  { m: ["wraith", "banshee", "hag", "revenant", "vampire", "demon", "necromancer", "succubus", "lich"], t: "Every sound in the village stopped together, mid-note. No dog, no owl, no wind. The whole village holding one breath, and something walking through it." },
+  { m: ["shifter", "doppel", "vampire", "hag", "witch", "wraith", "succubus", "mimic", "hollowed", "lich"], t: "Footsteps in the lane, stopping outside a door, yours or near enough, then walking on. For a bad moment, they sounded familiar." },
+  { m: ["werewolf", "ghoul", "revenant", "shifter", "demon", "mimic", "hollowed"], t: "Something heavy went down the back lane at a flat run, close along the walls, and was gone before a single shutter opened." },
 ];
 const soundFor = (mid) => pickFreshIdx(`ambient:${mid}`, AMBIENT_SOUNDS.filter((a) => a.m.includes(mid))).t;
 
@@ -771,10 +773,10 @@ const DEATH_SCENES = {
     `Through streaming eyes: a thin shape trailing torn linen, and its face, when it lifts, is ${nm}'s, already mourning you.`,
     `The sound has always been a name, and the name is yours. Your heart simply stops arguing. They find you at the ${w} without a mark, wearing an expression nobody calls peaceful twice.`,
   ],
-  hellhound: (nm, w) => [
-    `Sulfur first, thick on the night air. Then paws heavier than any dog's, closing the ground to the ${w} in long, even strides.`,
-    `You run. Everyone runs. It has never once mattered: two coals swing level with your chest and keep coming.`,
-    `Its weight lands before you hear it leave the ground, and the jaw does not let go. Behind it, ${nm}'s easy tread arrives to watch a finish that was never in doubt.`,
+  lich: (nm, w) => [
+    `The cold reaches you before anything else does, a cold that comes from inside, as if your own warmth were being called away toward the ${w}.`,
+    `${nm} is simply there, unhurried, one hand open, and where the hand passes the years go with it: your legs, your breath, the strength to lift your own head.`,
+    `"It does not hurt," ${nm} says, almost kindly, in a voice that has outlived a dozen names. "It never does. Everything you were will keep a while longer in the vessel with the rest." They find you at first light, cold, and small, and older than you ever lived to be.`,
   ],
   revenant: (nm, w) => [
     `Slow, dragging steps behind you on the ${w}, patient as a funeral march, and however fast you walk, the gap never changes.`,
@@ -876,10 +878,10 @@ const OFFER_SCENES = {
     `It could let the grief finish what it started. Grief, for once in its long patient career, hesitates.`,
     `"I have mourned every one of them before they ever died," it says, in a voice made of everyone it has grieved, ${nm}'s somewhere underneath all the others. "You are the first who ever heard me and came closer instead of bolting a door. Grieve beside me, instead of being grieved for. Refuse, and the wail finishes reaching your name."`,
   ],
-  hellhound: (nm) => [
-    `The weight of it lands across your back and simply stays there, jaws a fraction of an inch from closing, close enough that you feel the heat of the bite before the bite.`,
-    `Sulfur, hot breath, and a patience no hound should own: it could finish the worrying it started in a single motion. It does not make the motion.`,
-    `Unhurried footsteps arrive to watch, easy, in no rush at all: ${nm}'s tread. "It likes you," ${nm} says, almost gently, sounding for once like they mean it. "It does not like anyone. Run with it instead of from it, and it will hunt beside you instead of hunting you. Refuse, and it finishes a chase it already won."`,
+  lich: (nm) => [
+    `The cold closes over you and stops, one breath short of the breath it would take for good, held there like a hand around a candle it has decided not to pinch out.`,
+    `You can feel the pull of it, your own life leaning toward the open hand, and you can feel, too, that the hand is waiting on a word.`,
+    `"I have drunk this whole village dry, a sip at a time, and forgotten every name before the cup was cold," ${nm} says, in a voice with too many years stacked behind it. "Yours I have not forgotten. Learn what I know and you need never grey and fail like the rest. Refuse, and I take you the slow way, and keep you the way I keep them all."`,
   ],
   revenant: (nm) => [
     `Grave-cold hands close on your shoulders and simply hold there, one slow pull short of the pull that empties a chest for good.`,
@@ -1824,7 +1826,7 @@ const FOLK_HINTS = [
   { m: ["ghoul", "wraith"], t: `"Some things hunger every single night. If the bell tolls daily, strike out everything patient."` },
   { m: ["vampire", "demon"], t: `"The worst ones don't leave bodies. They leave neighbours. Watch for the living who have gone quiet inside."` },
   { m: ["shifter"], t: `"A face-thief kills the pattern along with the person. If nothing about the nights makes sense, that is itself the answer."` },
-  { m: ["werewolf", "hellhound"], t: `"Two things leave claw and track both. The moon-cursed bites its kill; the hound roots in the graves between them. Find the third mark and you have it."` },
+  { m: ["lich", "vampire", "doppel"], t: `"Not everything that leaves neighbours leaves them living. Some things empty a house slowly: the touched go grey and cold and are gone in a night or three, no wound on them at all. Others leave a neighbour that walks and lies for years. Mind hard which one has come to Hollow's Edge."` },
   { m: ["shifter"], t: `"A face-thief leaves claw marks like the moon-cursed does, but no honest track to go with them. Whatever it becomes to kill, it never quite touches the ground like a beast should."` },
   { m: ["revenant", "ghoul"], t: `"Grave dirt where no one's been burying can mean hunger or homecoming. The hungry one bites what it takes. The one that came home leaves its dead cold as the stone it slept under."` },
   { m: ["hag", "banshee", "succubus"], t: `"Three things cry in the night, girl, and you'd best learn which is which. The grieving one wails the night BEFORE it takes you. The hag wails while she rides. And if what you hear is nearer a song, and you catch your own hand on your own bolt, wedge the door and stop your ears."` },
@@ -3185,7 +3187,11 @@ function resolveNight(prev, planIn, preEvents) {
         }
       } else {
         beats.push("Late, very late, you hear a window ease open somewhere across the village. A long while after, it eases shut.");
-        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, turned: true } : x));
+        /* the lich does not keep its taken: it drains them. What it turns
+           lingers a night or three, greying, then dies emptied. That decay
+           night is fixed now, so the walk and the recap agree. */
+        const decayNight = m.id === "lich" ? n + pick([1, 2, 3]) : undefined;
+        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, turned: true, ...(decayNight ? { decay: decayNight } : {}) } : x));
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "turned" });
         dawn.push(ev(chance(0.3) ? pickFreshIdx("noBodySharp", NO_BODY_SHARP) : pickFreshIdx("noBody", NO_BODY)));
       }
@@ -3213,6 +3219,26 @@ function resolveNight(prev, planIn, preEvents) {
   } else if (!wailTonight && !s.over) {
     beats.push(pickFreshIdx("quietNight", QUIET_NIGHT));
     dawn.push(ev(pickFreshIdx("quietDawn", QUIET_DAWN)));
+  }
+
+  /* ---- the lich's slow harvest ----
+     The touched do not fall the night they are drained: a night or three on,
+     when their fixed decay night arrives, the life it borrowed runs out and
+     they are found emptied, no wound, no attacker. This runs every night,
+     active or not, so a body can surface on a night the horror never stirred:
+     the delayed, wound-less death is the whole signature of this one. */
+  if (!s.over) {
+    const decayed = s.npcs.filter((x) => x.alive && x.turned && x.decay && x.decay <= n && x.id !== s.monster.vid && !x.fled);
+    for (const dv of decayed) {
+      s.npcs = s.npcs.map((x) => (x.id === dv.id ? { ...x, alive: false, known: true } : x));
+      s.deaths.push({ night: n, id: dv.id, name: dv.name, kind: "drained", where: "home", examined: false, found: [] });
+      beats.push(`Somewhere in the dark, a breathing you had stopped noticing simply stops. ${dv.name} has been greying and cold for nights, and tonight there is nothing left in them to grey.`);
+      dawn.push(ev(`${dv.name} is found in their own bed, unmarked and cold, shrunken as though every year they owned was drawn off at once. Whatever visited ${dv.name} some nights ago has finished. There was never a wound to find.`, dv.id, 2));
+      if (!s.drainClueGiven) {
+        s.drainClueGiven = true;
+        s.clues.push(`Night ${n}: ${dv.name} died in bed with no wound and no blood, withered like something emptied out over nights. They had gone strange and cold days before the end. Whatever hunts here does not tear: it drains, and the touched die on their own, a night or three after it takes them.`);
+      }
+    }
   }
 
   /* ---- the mob's ultimatum falls due at FIRST LIGHT ----
@@ -4918,16 +4944,30 @@ function MonsterArt({ id, size = 64, light, flat }) {
       {eye(50, 36, "#7EBEDC")}{eye(60, 35, "#7EBEDC")}
       <path d="M52,50 C48,58 48,66 52,72 C56,66 56,58 54,50 Z" fill="#060E18" />
     </g>),
-    hellhound: (<g>
-      <path d="M34,60 C50,54 74,54 92,58 C102,60 108,68 106,80 L110,92 L102,88 L98,100 L90,100 L88,86 C70,90 50,90 40,84 L36,100 L28,100 L28,84 C22,80 18,72 22,64 Z" fill={C.sil} />
-      <path d="M22,64 C14,64 8,70 6,78 L2,74 L8,72 C4,68 10,60 20,60 L30,54 L28,46 L38,56 L44,48 L46,58 Z" fill={C.sil} />
-      <path d="M40,58 l2,-9 M54,56 l2,-10 M70,56 l3,-9 M86,58 l4,-8" stroke={C.sil} strokeWidth="4" strokeLinecap="round" />
-      <path d="M6,76 L20,74 L18,84 L8,82 Z" fill="#2A0A06" />
-      <polygon points="8,76 10,84 12,77" fill={C.parch} />
-      <polygon points="14,76 16,83 18,77" fill={C.parch} />
-      <path d="M106,64 C114,66 116,76 110,82" stroke={C.sil} strokeWidth="5" fill="none" strokeLinecap="round" />
-      {eye(24, 66, C.redBright)}
-      {[[54, 46], [72, 46]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.3" fill="#E8703A" opacity="0.6" className="mvSpark" style={{ animationDelay: `${i * 1.2}s` }} />)}
+    lich: (<g>
+      {/* tattered sorcerer's robe, flaring wide, dripping at the ragged hem */}
+      <path d="M34,116 C30,86 34,62 60,56 C86,62 90,86 86,116 L80,104 L75,116 L69,106 L63,116 L57,106 L51,116 L45,105 L40,116 Z" fill={C.sil} />
+      {/* both arms flung up, ragged sleeves, spread bone claws */}
+      <path d="M50,62 C40,56 30,50 24,40" stroke={C.sil} strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M31,51 l-3,12 M36,54 l-2,11 M41,57 l-1,10" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M24,40 l-4,-9 M24,40 l-1,-10 M24,40 l3,-9 M24,40 l6,-7" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M70,62 C80,56 90,50 96,40" stroke={C.sil} strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M89,51 l3,12 M84,54 l2,11 M79,57 l1,10" stroke={C.sil} strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M96,40 l4,-9 M96,40 l1,-10 M96,40 l-3,-9 M96,40 l-6,-7" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
+      {/* the skull */}
+      <path d="M46,40 C46,24 74,24 74,40 C74,50 69,57 63,58 L57,58 C51,57 46,50 46,40 Z" fill={C.sil} />
+      {/* a jagged iron crown */}
+      <path d="M44,28 L40,12 L48,22 L52,6 L57,22 L60,2 L63,22 L68,6 L72,22 L80,12 L76,28 Z" fill={C.sil} />
+      {/* hollow sockets, a cold light burning far back in them */}
+      <ellipse cx="54" cy="40" rx="5.2" ry="6" fill="#04120F" />
+      <ellipse cx="66" cy="40" rx="5.2" ry="6" fill="#04120F" />
+      {eye(54, 40, "#8FE0CE")}{eye(66, 40, "#8FE0CE")}
+      {/* nasal hollow and a grinning jaw of teeth */}
+      <path d="M59,45 L60,50 L61,45 Z" fill="#050B0C" />
+      <path d="M53,52 L67,52 L65,57 L55,57 Z" fill="#050B0C" />
+      <path d="M56,52 l0,5 M60,52 l0,5 M64,52 l0,5" stroke={C.parch} strokeWidth="0.9" opacity="0.85" />
+      <polygon points="54,57 55.4,52 56.8,57" fill={C.parch} opacity="0.9" />
+      <polygon points="63.2,57 64.6,52 66,57" fill={C.parch} opacity="0.9" />
     </g>),
     revenant: (<g>
       <path d="M46,116 C42,92 44,64 52,52 C50,40 54,30 60,30 C66,30 70,40 68,52 C76,64 78,92 74,116 Z" fill={C.sil} />
@@ -5036,11 +5076,11 @@ function MonsterArt({ id, size = 64, light, flat }) {
       <path d="M34,100 l-5,18 M38,102 l-2,18 M42,102 l3,18 M86,100 l5,18 M82,102 l2,18 M78,102 l-3,18" stroke={C.sil} strokeWidth="2.6" strokeLinecap="round" />
     </g>),
   }[id];
-  const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, hellhound: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14, hollowed: 16 }[id] || 1;
+  const seed = { werewolf: 3, vampire: 11, wraith: 5, ghoul: 8, witch: 13, demon: 2, shifter: 17, banshee: 7, lich: 4, revenant: 9, doppel: 15, hag: 6, necromancer: 10, mimic: 12, succubus: 14, hollowed: 16 }[id] || 1;
   /* each horror keeps its own night-colour: a radial aura fading to black,
      the same card the bestiary mock wore, so the art reads on parchment and
      on the dark screens alike without the old red halo or pale discs. */
-  const aura = { werewolf: "#8A5A2A", vampire: "#8A2432", wraith: "#4A5E8A", ghoul: "#5A5030", witch: "#3E6A38", demon: "#8A2A18", shifter: "#5A4A6A", banshee: "#3E6E82", hellhound: "#8A3818", revenant: "#4A5040", doppel: "#585062", hag: "#3A4A5A", necromancer: "#3E5A48", mimic: "#5A3A5A", succubus: "#7A3050", hollowed: "#4A5E38" }[id] || "#3A3550";
+  const aura = { werewolf: "#8A5A2A", vampire: "#8A2432", wraith: "#4A5E8A", ghoul: "#5A5030", witch: "#3E6A38", demon: "#8A2A18", shifter: "#5A4A6A", banshee: "#3E6E82", lich: "#2E6058", revenant: "#4A5040", doppel: "#585062", hag: "#3A4A5A", necromancer: "#3E5A48", mimic: "#5A3A5A", succubus: "#7A3050", hollowed: "#4A5E38" }[id] || "#3A3550";
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} style={{ display: "block" }}>
       <defs>
@@ -5074,7 +5114,7 @@ function MonsterArt({ id, size = 64, light, flat }) {
 const METHOD_FX = {
   silver: "pierce", stake: "pierce", iron: "pierce",
   fire: "burn", grimoire: "burn", holy: "burn", effigy: "burn",
-  mirror: "shatter", bell: "shatter", backname: "shatter",
+  mirror: "shatter", bell: "shatter", backname: "shatter", phylactery: "shatter",
   salt: "dissolve", exorcism: "dissolve",
   crossroads: "sink", rest: "sink",
   hawthorn: "shrink", quicksilver: "shrink",
@@ -6212,11 +6252,25 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small, center 
   );
 }
 
+/* A struck-out entry in the journal: not a printer's rule but a pen scratch,
+   two slightly-off wavy passes in ink, dragged across the whole entry at a
+   hand's careless angle, so the reckoning reads like a real book someone has
+   been crossing names out of. Absolutely positioned; the entry sets relative. */
+function InkStrike({ color = C.ink }) {
+  return (
+    <svg className="mvStrike" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M1.5,7 C17,3.5 29,9.5 45,6.2 C61,3 77,9.2 98.5,4.6" fill="none" stroke={color} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" opacity="0.9" />
+      <path d="M3.5,8.6 C19,6 33,10.2 49,7.6 C65,5.4 81,10 96,6.8" fill="none" stroke={color} strokeWidth="1.1" strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity="0.5" />
+    </svg>
+  );
+}
+
 
 
 /* ================= UI (v7) ================= */
 
 const EXTRA_CSS = `
+.mvStrike { position:absolute; left:-3%; top:50%; width:106%; height:16px; transform:translateY(-50%) rotate(-2.4deg); pointer-events:none; overflow:visible; z-index:2; }
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
@@ -6311,7 +6365,7 @@ function TensionReveal({ lines, finale, label, kind = "red", onDone }) {
 function MoonStrip({ s }) {
   const pips = [];
   for (let n = 1; n <= s.nightNum; n++) {
-    const slain = s.deaths.find((x) => x.night === n && x.kind === "slain");
+    const slain = s.deaths.find((x) => x.night === n && (x.kind === "slain" || x.kind === "drained"));
     const turned = s.deaths.find((x) => x.night === n && x.kind === "turned");
     const log = s.nightLogs.find((x) => x.night === n);
     let bg = "transparent", border = C.dim;
@@ -6472,7 +6526,7 @@ const ACH = [
   { id: "last_orders", name: "Last Orders", desc: "End the horror after the tavern goes dark for good.", test: (s) => s.over.win && !!s.tavernShut },
   { id: "ashes", name: "Ashes to Ashes", desc: "End the horror after the church burns.", test: (s) => s.over.win && (s.burned || []).includes("Old Church") },
   { id: "say_my_name", name: "Say My Name", desc: "End a Doppelgänger.", test: (s) => s.over.win && monsterOf(s).id === "doppel" },
-  { id: "baskervilles", name: "Hound of the Baskervilles", desc: "End a Hellhound.", test: (s) => s.over.win && monsterOf(s).id === "hellhound" },
+  { id: "your_lich", name: "Make It Your Lich", desc: "End a Lich.", test: (s) => s.over.win && monsterOf(s).id === "lich" },
   { id: "not_today_satan", name: "Not Today, Satan", desc: "End a Demon.", test: (s) => s.over.win && monsterOf(s).id === "demon" },
   { id: "newblood", name: "New Blood", desc: "End the Necromancer, the Mimic, or the Succubus.", test: (s) => s.over.win && ["necromancer", "mimic", "succubus"].includes(monsterOf(s).id) },
   { id: "brought_back", name: "Snap Out of It!", desc: "Free someone from what changed them.", test: (s) => s.npcs.some((x) => x.cured) },
@@ -6539,10 +6593,10 @@ const LOSS_DEATHS = {
     (nm) => `They found ${nm} without a mark on them, face frozen somewhere between grief and recognition, as if they had been mourned to death by someone who knew and loved them, which, in its way, they had.`,
     (nm) => `${nm}'s heart stopped mid-sentence, and the last sound anyone heard through the wall was a wail that already knew their name, and had known it for some time.`,
   ],
-  hellhound: [
-    (nm) => `${nm} heard the paws circling once too often and made the mistake of opening the door to look. What crossed the threshold did not stop at the doorway, and did not stop at ${nm} either, until there was nothing left standing to stop for.`,
-    (nm) => `What the hellhound left of ${nm} was dragged half across the square in pieces too far apart to have come off gently, and the dogs of this village have kept their distance from that stretch of ground ever since.`,
-    (nm) => `${nm} did not make it across open ground fast enough. Nothing does, once the coals are already moving. The jaw that closed on them did not open again until the job was finished.`,
+  lich: [
+    (nm) => `${nm} went grey over a handful of nights, and cold, and quiet, and the village told itself it was a wasting sickness right up until ${nm} was found in bed one morning, unmarked, shrunken, emptied of every year they had.`,
+    (nm) => `Whatever came for ${nm} did not tear or bite. It drank, a little each night, patient as a man with a good bottle, until there was nothing left in the cup and ${nm} simply stopped, husk-light and old beyond counting.`,
+    (nm) => `${nm} opened a barred door to no one anyone ever saw, and paid for it slowly. By the end there was less of ${nm} each dawn, until one dawn there was none, and only the cold stayed behind in the room.`,
   ],
   revenant: [
     (nm) => `${nm} was caught outdoors on its exact night, and the revenant does not rage or hurry. It closed its grave-cold hands around them and simply did not let go until the letting go no longer mattered.`,
@@ -7350,7 +7404,7 @@ function MonsterVillage() {
             <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>THE NIGHTS AS THEY TRULY WERE</div>
             <div className="mt-1 rounded-lg p-3" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
               {s.nightLogs.map((log) => {
-                const d = s.deaths.find((x) => x.night === log.night && x.kind === "slain");
+                const d = s.deaths.find((x) => x.night === log.night && (x.kind === "slain" || x.kind === "drained"));
                 const t = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
                 const itTxt = log.active ? (log.huntLoc ? `it hunted from the ${log.huntLoc}` : "it walked in the open") : "it kept perfectly still";
                 const youTxt = !log.you ? "the village stood siege"
@@ -8095,9 +8149,10 @@ function MonsterVillage() {
                 const ok = !struckM && compatM(mm);
                 return (
                   <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
-                    className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                    className="flex flex-col items-center" style={{ position: "relative", opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
                     <MonsterArt id={mm.id} size={48} flat />
-                    <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
+                    <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: (!ok && !struckM) ? "line-through" : "none", textDecorationColor: C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
+                    {struckM && <InkStrike />}
                   </button>
                 );
               })}
@@ -8120,10 +8175,10 @@ function MonsterVillage() {
               return (
                 <div key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
                   className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: ok ? 1 : 0.35, cursor: "pointer" }}>
-                  <div className="shrink-0"><MonsterArt id={mm.id} size={60} flat /></div>
+                  <div className="shrink-0" style={{ position: "relative" }}><MonsterArt id={mm.id} size={60} flat />{struckM && <InkStrike />}</div>
                   <div>
                     <div className="flex items-baseline gap-3 flex-wrap">
-                      <span className="mv-display" style={{ fontSize: 18, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                      <span className="mv-display" style={{ position: "relative", fontSize: 18 }}>{mm.name}{struckM && <InkStrike />}</span>
                       <span style={{ fontSize: 13, color: C.red, fontWeight: 700 }}>{METHODS[mm.method]}</span>
                     </div>
                     <div style={{ fontSize: 13, color: C.inkDim }}>{mm.id === "mimic" ? <span style={{ fontStyle: "italic" }}>every sign there is, and never the same two nights running</span> : mm.signs.map((sg, si) => (<span key={sg}><span style={{ color: s.playerSigns.includes(sg) ? C.red : C.inkDim, fontWeight: s.playerSigns.includes(sg) ? 700 : 400 }}>{SIGNS[sg]}</span>{si < mm.signs.length - 1 ? " \u00b7 " : ""}</span>))}</div>
@@ -8161,6 +8216,7 @@ function MonsterVillage() {
             <div className="mt-3">
               {s.nightLogs.map((log) => {
                 const slain = s.deaths.find((x) => x.night === log.night && x.kind === "slain");
+                const drained = s.deaths.find((x) => x.night === log.night && x.kind === "drained");
                 const turned = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
                 const mobd = s.deaths.find((x) => x.night === log.night && x.kind === "mobbed");
                 const showTurned = turned && npcById(s, turned.id) && npcById(s, turned.id).known;
@@ -8168,8 +8224,8 @@ function MonsterVillage() {
                   <div key={log.night} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
                     <div className="flex gap-3" style={{ fontSize: 14 }}>
                       <span className="mv-display" style={{ width: 60, flexShrink: 0 }}>Night {log.night}</span>
-                      <span style={{ color: slain ? C.red : showTurned ? C.turn : C.inkDim }}>
-                        {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
+                      <span style={{ color: slain ? C.red : drained ? C.red : showTurned ? C.turn : C.inkDim }}>
+                        {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : drained ? `${drained.name} found drained, at home` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
                         {mobd ? ` · ${mobd.name} hanged by the mob` : ""}{log.wail ? " · wailing heard" : ""}{log.weather ? ` · ${log.weather}` : ""}{log.event ? ` · ${log.event.name}` : ""}
                       </span>
                     </div>
