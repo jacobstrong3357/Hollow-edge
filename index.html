@@ -7091,11 +7091,6 @@ function MonsterVillage() {
             </>
           )}
           <div className="mvIn mt-auto pb-5 shrink-0" style={{ animationDelay: "1.5s", paddingTop: 14 }}>
-            {savedRun && (
-              <div className="mb-2">
-                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 2 }}>RETURN TO {savedRun.phase === "day" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`} · UNFINISHED</span></Btn>
-              </div>
-            )}
             {/* one mistap must not cost an unfinished run: abandoning asks twice */}
             {savedRun && confirmAbandon ? (
               <>
@@ -7105,8 +7100,13 @@ function MonsterVillage() {
                   <Btn full center onClick={() => setConfirmAbandon(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>KEEP THE RUN</span></Btn>
                 </div>
               </>
+            ) : savedRun ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 1.5 }}>CONTINUE · {savedRun.phase === "day" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`}</span></Btn>
+                <Btn kind="red" full center onClick={() => setConfirmAbandon(true)}><span className="mv-display" style={{ letterSpacing: 1.5 }}>NEW GAME</span></Btn>
+              </div>
             ) : (
-              <Btn kind="red" full center onClick={savedRun ? () => setConfirmAbandon(true) : start}><span className="mv-display" style={{ letterSpacing: 2 }}>{savedRun ? "ABANDON IT · START ANEW" : "ENTER HOLLOW'S EDGE"}</span></Btn>
+              <Btn kind="red" full center onClick={start}><span className="mv-display" style={{ letterSpacing: 2 }}>ENTER HOLLOW'S EDGE</span></Btn>
             )}
             <div className="flex justify-center mt-2">
               <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
