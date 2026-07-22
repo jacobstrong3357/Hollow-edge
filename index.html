@@ -2237,7 +2237,7 @@ function newGame(veteran, hollowedUnlocked) {
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
     knownBuild: null, buildClues: [], faceKnown: null, monsterSawYou: false, mob: null, embolden: 0,
-    dawn: [], dawnScene: null, dayEvents: [],
+    dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
     struck: [], nightBeats: [], beatTitle: null, phase: "night",
@@ -2374,6 +2374,9 @@ function resolveNight(prev, planIn, preEvents) {
   const s = JSON.parse(JSON.stringify(prev));
   s.deathBeats = null;
   s.deathAfterBeats = false;
+  /* the day that is ending, before s.dayNum gets overwritten below - used to
+     file the day's search/exam findings under the right day in the journal */
+  const endedDay = prev.dayNum;
   const m = monsterOf(s);
   const prevFaceKnown = prev.faceKnown;
   const n = s.nightNum + 1;
@@ -2445,6 +2448,7 @@ function resolveNight(prev, planIn, preEvents) {
     s.nightLogs.push({ night: n, active: true, huntLoc: null, outMap: {}, wail: false, weather: null, event: null });
     s.dawn = dawn; s.nightBeats = beats; s.beatTitle = `NIGHT ${n} \u00b7 UNDER SIEGE`; s.phase = "night";
     s.dawnScene = { loc: "Old Church", kind: s.deaths.find(d => d.night === n && d.kind === "slain") ? "body" : "quiet" };
+    if (s.dayEvents.length) s.dayLogs = [...(s.dayLogs || []), { day: endedDay, events: s.dayEvents }];
     s.dayEvents = []; s.ap = 2; s.questionedToday = []; s.investigatedNight = null;
     if (!s.over && untainted(s).length <= 1) {
       s.over = { win: false, reason: "lost", text: `It took them all, one patient night at a time, while you searched the books for its true name. ${monsterNpc.name}'s face was the last thing most of them saw.` };
@@ -3389,6 +3393,7 @@ function resolveNight(prev, planIn, preEvents) {
   else if (watching) s.dawnScene = { loc: HOME_LOC[watching] || "Cottage", kind: "quiet" };
   else s.dawnScene = { loc: LOCS[(n + 2) % LOCS.length], kind: "quiet" };
 
+  if (s.dayEvents.length) s.dayLogs = [...(s.dayLogs || []), { day: endedDay, events: s.dayEvents }];
   s.dayEvents = []; s.ap = 2; s.questionedToday = []; s.investigatedNight = null;
 
   /* --- false calm: a hanging followed by quiet feels like victory --- */
@@ -6803,7 +6808,6 @@ function MonsterVillage() {
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [snd, setSndOn] = useState(false);
   const [dawnDone, setDawnDone] = useState(false);
-  const [dayEventsExpanded, setDayEventsExpanded] = useState(false);
   const [beatsRevealed, setBeatsRevealed] = useState(false);
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
@@ -6953,15 +6957,14 @@ function MonsterVillage() {
     walkStageRef.current = stage;
   }, [walk && walk.stage]);
 
-  /* -- the dawn carousel and the day's running log both start over on a new day -- */
+  /* -- the dawn carousel starts over on a new day -- */
   useEffect(() => { setDawnDone(false); }, [s && s.nightNum]);
-  useEffect(() => { setDayEventsExpanded(false); }, [s && s.dayNum]);
 
   /* -- night beats re-hide themselves each time a fresh night arrives -- */
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
   useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);
 
-  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setDayEventsExpanded(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); };
+  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); };
   const start = () => {
     setSavedRun(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
@@ -7110,133 +7113,185 @@ function MonsterVillage() {
             </div>
           </div>
         </div>
+        {/* Shared hero-card shell for the title screen's meta drawers: a dark
+            hero header (chip + title, matching the interview/dawn/night
+            hero cards) over a dark panel body, replacing the old plain
+            parchment bottom sheets. A fixed CLOSE tray replaces
+            tap-the-backdrop-to-dismiss. */}
         {showHowTo && (
-          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowHowTo(false)}>
-            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-baseline justify-between">
-                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>How to Play</span>
-                <button onClick={() => setShowHowTo(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
-              </div>
-              {HOW_TO_PLAY.map((sec, i) => (
-                <div key={i} className="mt-3">
-                  <div className="mv-display" style={{ fontSize: 12, letterSpacing: 1.5, color: C.red }}>{sec.h}</div>
-                  <p className="mt-1" style={{ fontSize: 14 }}>{sec.b}</p>
+          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
+                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#AEB6D8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(174,182,216,0.3)" }}>BEFORE YOU BEGIN</div>
+                  <div className="left-4 bottom-2.5 relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>How to Play</div>
                 </div>
-              ))}
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+                <div className="rounded-xl p-4" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                  {HOW_TO_PLAY.map((sec, i) => (
+                    <div key={i} className={i === 0 ? "" : "mt-3"}>
+                      <div className="mv-display" style={{ fontSize: 12, letterSpacing: 1.5, color: C.redBright }}>{sec.h}</div>
+                      <p className="mt-1" style={{ fontSize: 14, color: "rgba(233,223,200,0.85)" }}>{sec.b}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+                <Btn full center kind="amber" onClick={() => setShowHowTo(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
+              </div>
             </div>
           </div>
         )}
         {showBestiaryHome && meta && (
-          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowBestiaryHome(false)}>
-            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-baseline justify-between">
-                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>The Black Book</span>
-                <button onClick={() => setShowBestiaryHome(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
-              </div>
-              <p style={{ fontSize: 12, color: C.inkDim }} className="mt-1">{defeatedCount} of {MONSTERS.length} horrors ended, across every game you've played. A horror's true nature stays hidden until you've beaten it once.</p>
-              {MONSTERS.map((mm) => {
-                const done = !!meta.defeated[mm.id];
-                return (
-                  <div key={mm.id} className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: done ? 1 : 0.4 }}>
-                    <div className="shrink-0"><MonsterArt id={mm.id} size={56} /></div>
-                    <div>
-                      <div className="flex items-baseline gap-3 flex-wrap">
-                        <span className="mv-display" style={{ fontSize: 17 }}>{done ? mm.name : "?????"}</span>
-                        {done && <span style={{ fontSize: 12, color: C.red }}>ended {meta.defeated[mm.id]}×</span>}
-                      </div>
-                      <p style={{ fontSize: 13.5 }} className="mt-1">{done ? mm.lore : mm.id === "hollowed" && hollowedLocked ? "Locked. Defeat the other fifteen horrors, and this one enters the draw." : "Defeat this horror once to reveal what it is and how it kills."}</p>
-                    </div>
+          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+                <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
+                  <div className="flex items-center justify-center flex-wrap gap-1.5 py-4 px-3" style={{ minHeight: 88 }}>
+                    {MONSTERS.filter((mm) => meta.defeated[mm.id]).slice(0, 10).map((mm) => <MonsterArt key={mm.id} id={mm.id} size={30} light />)}
+                    {!MONSTERS.some((mm) => meta.defeated[mm.id]) && <span style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>Not one horror ended yet.</span>}
                   </div>
-                );
-              })}
+                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{defeatedCount} OF {MONSTERS.length} ENDED</div>
+                  <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000" }}>The Black Book</div>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+                <p style={{ fontSize: 12.5, color: C.dim }}>A horror's true nature stays hidden until you've beaten it once.</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {MONSTERS.map((mm) => {
+                    const done = !!meta.defeated[mm.id];
+                    return (
+                      <div key={mm.id} className="rounded-xl p-3 flex gap-3" style={{ background: C.panel2, border: `1px solid ${C.line}`, opacity: done ? 1 : 0.45 }}>
+                        <div className="shrink-0"><MonsterArt id={mm.id} size={48} light /></div>
+                        <div className="min-w-0">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="mv-display" style={{ fontSize: 15, color: C.parch }}>{done ? mm.name : "?????"}</span>
+                            {done && <span style={{ fontSize: 11, color: C.redBright }}>ended {meta.defeated[mm.id]}×</span>}
+                          </div>
+                          <p style={{ fontSize: 12.5, color: "rgba(233,223,200,0.75)", marginTop: 2 }}>{done ? mm.lore : mm.id === "hollowed" && hollowedLocked ? "Locked. Defeat the other fifteen horrors, and this one enters the draw." : "Defeat this horror once to reveal what it is and how it kills."}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+                <Btn full center kind="amber" onClick={() => setShowBestiaryHome(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE THE BOOK</span></Btn>
+              </div>
             </div>
           </div>
         )}
         {showStatsHome && meta && (
-          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowStatsHome(false)}>
-            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-baseline justify-between">
-                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Your Record</span>
-                <button onClick={() => setShowStatsHome(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
+                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{meta.wins}–{meta.losses} DAWNS</div>
+                  <div className="relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>Your Record</div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                {[
-                  ["Games played", meta.games],
-                  ["Dawns won", meta.wins],
-                  ["Villages lost", meta.losses],
-                  ["Current streak", meta.streak],
-                  ["Best streak", meta.bestStreak],
-                  ["Fastest win", meta.fastestWin ? `night ${meta.fastestWin}` : "-"],
-                  ["Total nights walked", meta.nights],
-                  ["Innocents hanged", meta.hanged],
-                  ["Horrors ended", `${defeatedCount} of ${MONSTERS.length}`],
-                  ["Deeds earned", `${meta.ach.length} of ${ACH.length}`],
-                ].map(([label, val]) => (
-                  <div key={label} className="rounded p-2" style={{ border: `1px solid ${C.parchLine}` }}>
-                    <div style={{ fontSize: 11, color: C.inkDim }}>{label}</div>
-                    <div className="mv-display" style={{ fontSize: 18 }}>{val}</div>
-                  </div>
-                ))}
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    ["Games played", meta.games],
+                    ["Dawns won", meta.wins],
+                    ["Villages lost", meta.losses],
+                    ["Current streak", meta.streak],
+                    ["Best streak", meta.bestStreak],
+                    ["Fastest win", meta.fastestWin ? `night ${meta.fastestWin}` : "-"],
+                    ["Total nights walked", meta.nights],
+                    ["Innocents hanged", meta.hanged],
+                    ["Horrors ended", `${defeatedCount} of ${MONSTERS.length}`],
+                    ["Deeds earned", `${meta.ach.length} of ${ACH.length}`],
+                  ].map(([label, val]) => (
+                    <div key={label} className="rounded-xl p-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                      <div style={{ fontSize: 11, color: C.dim }}>{label}</div>
+                      <div className="mv-display" style={{ fontSize: 18, color: C.parch }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+                <Btn full center kind="amber" onClick={() => setShowStatsHome(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
               </div>
             </div>
           </div>
         )}
         {showSecretsHome && meta && (
-          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowSecretsHome(false)}>
-            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-baseline justify-between">
-                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Secrets Kept</span>
-                <button onClick={() => setShowSecretsHome(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
+                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)} OF {Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)} KNOWN</div>
+                  <div className="relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>Secrets Kept</div>
+                </div>
               </div>
-              <p style={{ fontSize: 12, color: C.inkDim }} className="mt-1">Every human secret you've ever drawn out of a neighbour, across every game you've played. Each villager only ever carries one per game - it can take a few playthroughs to hear them all.</p>
-              {NPC_DEFS.map((n) => {
-                const pool = SECRET_POOL[n.id] || [];
-                const found = (meta.secretsFound && meta.secretsFound[n.id]) || [];
-                return (
-                  <div key={n.id} className="py-3" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
-                    <div className="flex items-center gap-3">
-                      <Portrait id={n.id} size={40} />
-                      <div className="flex items-baseline gap-2">
-                        <span className="mv-display" style={{ fontSize: 15 }}>{n.name} {n.role}</span>
-                        <span style={{ fontSize: 12, color: C.inkDim }}>{found.length} of {pool.length} known</span>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+                <p style={{ fontSize: 12.5, color: C.dim }}>Every human secret you've drawn out of a neighbour, across every game. Each villager carries one per game - it can take a few playthroughs to hear them all.</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {NPC_DEFS.map((n) => {
+                    const pool = SECRET_POOL[n.id] || [];
+                    const found = (meta.secretsFound && meta.secretsFound[n.id]) || [];
+                    return (
+                      <div key={n.id} className="rounded-xl p-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                        <div className="flex items-center gap-3">
+                          <Portrait id={n.id} size={38} />
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="mv-display" style={{ fontSize: 14, color: C.parch }}>{n.name} {n.role}</span>
+                            <span style={{ fontSize: 11, color: C.dim }}>{found.length} of {pool.length} known</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-col gap-1.5">
+                          {pool.map((sec, i) => (
+                            <p key={i} style={{ fontSize: 12.5, color: found.includes(i) ? "rgba(233,223,200,0.85)" : C.dim, fontStyle: found.includes(i) ? "normal" : "italic" }}>
+                              {found.includes(i) ? sec.short : "????? - not yet learned"}
+                            </p>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      {pool.map((sec, i) => (
-                        <p key={i} style={{ fontSize: 13, color: found.includes(i) ? C.ink : C.inkDim, fontStyle: found.includes(i) ? "normal" : "italic" }}>
-                          {found.includes(i) ? sec.short : "????? - not yet learned"}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+                <Btn full center kind="amber" onClick={() => setShowSecretsHome(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
+              </div>
             </div>
           </div>
         )}
         {showAch && (
-          <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setShowAch(false)}>
-            <div className="mt-auto rounded-t-xl p-4 max-h-[80vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-baseline justify-between">
-                <span className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Deeds of the Watcher</span>
-                <button onClick={() => setShowAch(false)} className="mv-display" style={{ background: "transparent", border: "none", color: C.inkDim, fontSize: 13, cursor: "pointer" }}>Close ✕</button>
+          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
+                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{meta ? meta.ach.length : 0} OF {ACH.length} EARNED</div>
+                  <div className="relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>Deeds of the Watcher</div>
+                </div>
               </div>
-              {ACH.map((a) => {
-                const got = meta && meta.ach.includes(a.id);
-                const sealed = a.hidden && !got;
-                return (
-                  <div key={a.id} className="flex gap-2.5 items-baseline py-2" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: got ? 1 : 0.5 }}>
-                    <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.red : C.inkDim }}>{got ? "✠" : sealed ? "🔒" : "·"}</span>
-                    <div className="min-w-0">
-                      <div style={{ fontWeight: 700, letterSpacing: sealed ? 1.5 : 0 }}>{sealed ? "??????" : a.name}</div>
-                      <div style={{ fontSize: 13, color: C.inkDim, lineHeight: 1.35, fontStyle: sealed ? "italic" : "normal" }}>
-                        {sealed ? "Sealed. The Black Book knows the shape of this deed, and is not telling." : a.desc}
-                        {!sealed && !got && a.prog && meta && (() => { const [cur, max] = a.prog(meta); return <span style={{ color: C.red, fontWeight: 700 }}> · {cur} of {max}</span>; })()}
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+                <div className="rounded-xl p-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                  {ACH.map((a, i) => {
+                    const got = meta && meta.ach.includes(a.id);
+                    const sealed = a.hidden && !got;
+                    return (
+                      <div key={a.id} className={"flex gap-2.5 items-baseline py-2" + (i === 0 ? "" : "")} style={{ borderTop: i === 0 ? "none" : `1px solid ${C.line}`, opacity: got ? 1 : 0.55 }}>
+                        <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.redBright : C.dim }}>{got ? "✠" : sealed ? "🔒" : "·"}</span>
+                        <div className="min-w-0">
+                          <div className="mv-display" style={{ fontSize: 13, color: C.parch, letterSpacing: sealed ? 1.5 : 0 }}>{sealed ? "??????" : a.name}</div>
+                          <div style={{ fontSize: 12.5, color: "rgba(233,223,200,0.75)", lineHeight: 1.35, fontStyle: sealed ? "italic" : "normal" }}>
+                            {sealed ? "Sealed. The Black Book knows the shape of this deed, and is not telling." : a.desc}
+                            {!sealed && !got && a.prog && meta && (() => { const [cur, max] = a.prog(meta); return <span style={{ color: C.redBright, fontWeight: 700 }}> · {cur} of {max}</span>; })()}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+                <Btn full center kind="amber" onClick={() => setShowAch(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
+              </div>
             </div>
           </div>
         )}
@@ -8169,7 +8224,7 @@ function MonsterVillage() {
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setTab(null)}>
       <div className="mt-auto rounded-t-xl p-4 max-h-[85vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-2 flex-wrap mb-3">
-          {[["evidence", "Evidence"], ["bestiary", "Bestiary"], ["statements", "Testimony"], ["nights", "Nights"], ["help", "Help"]].map(([k, label]) => (
+          {[["evidence", "Evidence"], ["bestiary", "Bestiary"], ["statements", "Testimony"], ["nights", "Nights"], ["days", "Days"], ["help", "Help"]].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="mv-display px-3 py-1 rounded"
               style={{ fontSize: 13, letterSpacing: 1, background: tab === k ? C.ink : "transparent", color: tab === k ? C.parch : C.inkDim, border: `1px solid ${tab === k ? C.ink : C.parchLine}` }}>
               {label}
@@ -8293,6 +8348,24 @@ function MonsterVillage() {
             {s.deaths.some((d) => d.kind === "executed") && (
               <p className="mt-3" style={{ fontSize: 13, color: C.red }}>Executed on your word: {s.deaths.filter((d) => d.kind === "executed").map((d) => d.name).join(", ")}.</p>
             )}
+          </div>
+        )}
+
+        {tab === "days" && (
+          <div>
+            <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>By daylight</div>
+            <p style={{ fontSize: 13, color: C.inkDim }} className="mt-1">What searching a place, or a body, turned up each day - kept here instead of crowding the morning.</p>
+            <div className="mt-3">
+              {[...(s.dayLogs || []), ...(s.dayEvents.length ? [{ day: s.dayNum, events: s.dayEvents, today: true }] : [])].length === 0 && (
+                <p style={{ fontSize: 13, color: C.inkDim, fontStyle: "italic" }}>Nothing searched out yet.</p>
+              )}
+              {[...(s.dayLogs || []), ...(s.dayEvents.length ? [{ day: s.dayNum, events: s.dayEvents, today: true }] : [])].map((log, li) => (
+                <div key={li} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
+                  <div className="mv-display" style={{ fontSize: 13, color: C.inkDim }}>Day {log.day}{log.today ? " (today)" : ""}</div>
+                  {log.events.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -9019,16 +9092,10 @@ function MonsterVillage() {
           </div>
         )}
 
-        {s.dayEvents.length > 0 && (
-          <div className="mt-2 rounded-lg p-3 pt-1.5" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-            {(dayEventsExpanded ? s.dayEvents : s.dayEvents.slice(-2)).map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))}
-            {s.dayEvents.length > 2 && (
-              <button onClick={() => setDayEventsExpanded((v) => !v)} className="mv-body mt-1.5" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 12, cursor: "pointer", padding: 0 }}>
-                {dayEventsExpanded ? "▴ show less" : `· · ·  show more (${s.dayEvents.length - 2} earlier)`}
-              </button>
-            )}
-          </div>
-        )}
+        {/* Daylight search/exam findings no longer sit inline here - they
+            crowded the page. They're filed in the Journal's Days tab, and
+            the JOURNAL bar's notification dot (keyed to s.clues) already
+            flags when something new is waiting there. */}
 
         <div className="mt-3 grid grid-cols-4 gap-y-2 place-items-center">
           {s.npcs.map((n) => {
