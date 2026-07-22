@@ -6257,25 +6257,11 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small, center 
   );
 }
 
-/* A struck-out entry in the journal: not a printer's rule but a pen scratch,
-   two slightly-off wavy passes in ink, dragged across the whole entry at a
-   hand's careless angle, so the reckoning reads like a real book someone has
-   been crossing names out of. Absolutely positioned; the entry sets relative. */
-function InkStrike({ color = C.ink }) {
-  return (
-    <svg className="mvStrike" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M1.5,7 C17,3.5 29,9.5 45,6.2 C61,3 77,9.2 98.5,4.6" fill="none" stroke={color} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" opacity="0.9" />
-      <path d="M3.5,8.6 C19,6 33,10.2 49,7.6 C65,5.4 81,10 96,6.8" fill="none" stroke={color} strokeWidth="1.1" strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity="0.5" />
-    </svg>
-  );
-}
-
 
 
 /* ================= UI (v7) ================= */
 
 const EXTRA_CSS = `
-.mvStrike { position:absolute; left:-3%; top:50%; width:106%; height:16px; transform:translateY(-50%) rotate(-2.4deg); pointer-events:none; overflow:visible; z-index:2; }
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
@@ -8160,10 +8146,9 @@ function MonsterVillage() {
                 const ok = !struckM && compatM(mm);
                 return (
                   <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
-                    className="flex flex-col items-center" style={{ position: "relative", opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                    className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
                     <MonsterArt id={mm.id} size={48} flat />
-                    <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: (!ok && !struckM) ? "line-through" : "none", textDecorationColor: C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
-                    {struckM && <InkStrike />}
+                    <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
                   </button>
                 );
               })}
@@ -8186,10 +8171,10 @@ function MonsterVillage() {
               return (
                 <div key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
                   className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: ok ? 1 : 0.35, cursor: "pointer" }}>
-                  <div className="shrink-0" style={{ position: "relative" }}><MonsterArt id={mm.id} size={60} flat />{struckM && <InkStrike />}</div>
+                  <div className="shrink-0"><MonsterArt id={mm.id} size={60} flat /></div>
                   <div>
                     <div className="flex items-baseline gap-3 flex-wrap">
-                      <span className="mv-display" style={{ position: "relative", fontSize: 18 }}>{mm.name}{struckM && <InkStrike />}</span>
+                      <span className="mv-display" style={{ fontSize: 18, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
                       <span style={{ fontSize: 13, color: C.red, fontWeight: 700 }}>{METHODS[mm.method]}</span>
                     </div>
                     <div style={{ fontSize: 13, color: C.inkDim }}>{mm.id === "mimic" ? <span style={{ fontStyle: "italic" }}>every sign there is, and never the same two nights running</span> : mm.signs.map((sg, si) => (<span key={sg}><span style={{ color: s.playerSigns.includes(sg) ? C.red : C.inkDim, fontWeight: s.playerSigns.includes(sg) ? 700 : 400 }}>{SIGNS[sg]}</span>{si < mm.signs.length - 1 ? " \u00b7 " : ""}</span>))}</div>
