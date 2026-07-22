@@ -411,42 +411,44 @@ const soundFor = (mid) => pickFreshIdx(`ambient:${mid}`, AMBIENT_SOUNDS.filter((
 
 /* Kept short (trimmed ~30%): the hero-card cinematic leaves less vertical
    room for stacked beats than the old thin-header layout did. */
+/* Kept to roughly 85% of the prior pass: hero-card screens have less room
+   for stacked beats than the old thin-header layout. */
 const DUSK_LINES = [
-  "The sun goes down like something being put in the ground. Doors slam shut along the lane, one after another.",
-  "Dusk comes early and wrong-coloured. The dogs will not eat, and nobody will say why.",
+  "The sun goes down like something being put in the ground. Doors slam shut along the lane.",
+  "Dusk comes early and wrong-coloured. The dogs will not eat.",
   "The last light leaves the rooftops and the whole village holds its breath.",
-  "Candles go out early tonight. Light draws the eye, and no one wants to be the eye it draws.",
-  "The dark does not fall. It rises, out of the ditches, out of the well, out of the ground beneath the church.",
-  "The sun dies behind the tree line. Doors bang shut along the lane, one after another.",
-  "Dusk comes down like a lid. The last cart rattles home and the village holds its breath.",
-  "The light goes from gold to grey to nothing. Somewhere a bolt is drawn across a door.",
-  "The church bell rings the hour early, as if the ringer wanted to be home before it finished.",
+  "Candles go out early tonight. No one wants to be the eye the light draws.",
+  "The dark does not fall. It rises, out of the ditches, the well, the ground beneath the church.",
+  "The sun dies behind the tree line. Doors bang shut, one after another.",
+  "Dusk comes down like a lid. The last cart rattles home.",
+  "The light goes from gold to grey to nothing. A bolt is drawn across a door.",
+  "The church bell rings the hour early, as if the ringer wanted to be home first.",
   "Fog comes up off the fields at sundown and stands in the lanes like something waiting.",
-  "The dogs go quiet all at once, the way they do now, every evening, at the exact same failing of the light.",
-  "Swallows leave the eaves in one dark ribbon, all together, and do not come back.",
-  "The last light catches the weathervane and dies there. Someone starts praying aloud.",
+  "The dogs go quiet all at once, every evening now, at the exact same failing of the light.",
+  "Swallows leave the eaves in one dark ribbon, together, and do not come back.",
+  "The last light catches the weathervane and dies there. Someone starts praying.",
 ];
 const HOME_LINES = [
   "You bar the door and sit facing it with the bread knife across your knees, and hate how small it looks.",
-  "You stop your ears with wool. If it comes tonight, you'd rather not hear whose door.",
-  "By midnight every knot in the ceiling beam has become a face. You know them all by name before you sleep, if you sleep.",
+  "You stop your ears with wool. You'd rather not hear whose door, if it comes tonight.",
+  "By midnight every knot in the ceiling beam is a face. You know them all by name before you sleep.",
   "You bank the fire low and lie counting the gaps between the dogs. The gaps are getting longer.",
-  "You bar the door, bank the fire low, and sit where you can watch both windows.",
-  "You check the bolt twice, then a third time, and settle in the chair that faces the door.",
-  "You salt the sill, the way Greta says, feeling foolish, and doing it anyway.",
-  "You sit in the dark on purpose. A lit window is an invitation, and you are done inviting.",
+  "You bar the door, bank the fire low, and watch both windows.",
+  "You check the bolt twice, then a third time, and sit facing the door.",
+  "You salt the sill, the way Greta says, feeling foolish, and do it anyway.",
+  "You sit in the dark on purpose. A lit window is an invitation.",
   "You wedge the settle against the door and sleep in your boots, if you sleep at all.",
 ];
 /* A barred door is not a skipped night, only a quieter one: at most one of
    these lands on a stay-home night, and none of them carry information.
    Staying in stays safe and stays blind - that is the bargain. */
 const HOME_NIGHT_MOMENTS = [
-  "Sometime past midnight a moth beats itself against the shutter, over and over, desperate to get OUT. You spend a while not thinking about what that might mean.",
-  "You wake once certain someone in the room has just stopped speaking. The room is empty. The certainty takes an hour to leave.",
-  "Rain, or fingers, at the window for a moment. Rain, you decide. You are still deciding it at dawn.",
-  "The fire pops and you are on your feet with the bread knife out before you know you moved. You do not put it down.",
-  "Under the door, one breath of a smell that does not belong to the lane: cold earth, or old iron. Then it is gone.",
-  "You count the church bell's hours and lose the number twice. Every dog in the village goes quiet at once, and you sit up until they start again.",
+  "Sometime past midnight a moth beats against the shutter, desperate to get OUT. You spend a while not thinking about what that means.",
+  "You wake once certain someone in the room just stopped speaking. The room is empty.",
+  "Rain, or fingers, at the window. Rain, you decide. You are still deciding it at dawn.",
+  "The fire pops and you are on your feet with the knife out before you know you moved.",
+  "Under the door, one breath of a smell that doesn't belong: cold earth, or old iron. Then it's gone.",
+  "You count the bell's hours and lose the number twice. Every dog in the village goes quiet at once.",
 ];
 const OUT_LINES = [
   (l) => `You go over the back wall like a thief in your own village, and the dark closes over you the whole road to the ${l}.`,
@@ -471,24 +473,24 @@ const WATCH_LINES = [
 ];
 const CIRCLE_LINES = [
   "Something circles the village for hours, testing the dark, finding no way in.",
-  "Twice in the night, every dog on the lane starts up together, and twice the barking dies mid-note, as if commanded.",
-  "Something walks the boundary of the village all night, round and round, like a thing pacing a cage from outside.",
-  "Gates are found open at dawn that were shut at dusk. Nothing was taken. Something was looking.",
+  "Twice in the night every dog on the lane starts up together, and twice the barking dies mid-note.",
+  "Something walks the village boundary all night, like a thing pacing a cage from outside.",
+  "Gates are found open at dawn that were shut at dusk. Nothing was taken.",
 ];
 const QUIET_NIGHT = [
   "Nothing comes. That is not the same as nothing being out there.",
-  "Around midnight every candle in the village dips at once, as if the same breath passed every window. Then nothing more.",
+  "Around midnight every candle in the village dips at once, as if the same breath passed every window.",
   "You wake at three with your heart slamming and no memory of the sound that did it.",
   "A quiet night, or a patient one. From behind a barred door you cannot tell which.",
-  "Frost ticks against the glass all night like fingernails asking, politely, to be let in.",
+  "Frost ticks against the glass all night like fingernails asking to be let in.",
   "The night passes empty. You dream of teeth anyway, and wake with your jaw aching.",
   "The hours crawl. An owl. A fox. Nothing more.",
   "The night gives you nothing but cold feet and the sound of your own blood.",
   "Rain comes after midnight, soft, and whatever else is out there keeps its own company.",
-  "A long, ordinary night. You had forgotten what one felt like. You do not trust it.",
+  "A long, ordinary night. You had forgotten what one felt like.",
   "Nothing. All night, gloriously, terribly, nothing.",
-  "A cart passes through the village in the small hours without stopping, quick as its horse can go. You lie awake wondering what they knew.",
-  "You dream the bell is ringing and wake to plain silence, three times before dawn. You can no longer say which you were hoping for.",
+  "A cart passes through the village in the small hours without stopping. You lie awake wondering what they knew.",
+  "You dream the bell is ringing and wake to plain silence, three times before dawn.",
 ];
 const QUIET_DAWN = [
   "No dead this morning. The village still counts itself twice in the square, out loud, to be sure.",
@@ -506,23 +508,23 @@ const QUIET_DAWN = [
 ];
 const AT = (w) => (w && w !== "home" ? `, out by the ${w}` : "");
 const SCREAM_LINES = [
-  (w) => `A scream${AT(w)} that starts as a name and ends as something with no shape left in it. Then the ordinary night keeps going.`,
+  (w) => `A scream${AT(w)} that starts as a name and ends with no shape left in it. The ordinary night keeps going.`,
   (w) => `Something wet gives way${AT(w)}. One high sound, cut off mid-note, like a fiddle string snapping.`,
-  (w) => `A door splinters${AT(w)}. One word, maybe a name, then a wet, rhythmic sound like meat on a table, slowing.`,
-  (w) => `It is not loud${AT(w)}. That is the horror of it: something is taking its time, and whatever it is taking has stopped fighting back.`,
-  (w) => `Running footsteps${AT(w)}, and something heavier gaining on them stride for stride. Then only the heavier steps, walking on.`,
-  (w) => `Screaming${AT(w)}, and then something worse: a wet, bubbling attempt at it, a throat already full of blood trying to shape a name. It goes on too long.`,
-  (w) => `Laughter${AT(w)}. High, delighted, unhurried. Underneath it, someone begging. The begging loses its words. The laughter never changes.`,
-  (w) => `Pleading${AT(w)}, too muffled to make out, but the shape of it unmistakable: bargaining, promising anything. A long pause, as if weighed. Then it is declined.`,
-  (w) => `A child's voice somewhere${AT(w)}, crying for its mother. A second voice answers in the mother's exact tones, and the crying follows it off, getting smaller.`,
-  (w) => `A scream tears open${AT(w)} and drops straight into a gurgle, a beat too long before it stops.`,
-  (w) => `One cry${AT(w)}, choked off mid-breath, and a tearing sound continuing without it, patient, for a while yet.`,
+  (w) => `A door splinters${AT(w)}. One word, maybe a name, then a wet, rhythmic sound, slowing.`,
+  (w) => `It is not loud${AT(w)}. That is the horror of it: something is taking its time.`,
+  (w) => `Running footsteps${AT(w)}, and something heavier gaining stride for stride. Then only the heavier steps.`,
+  (w) => `Screaming${AT(w)}, then something worse: a wet, bubbling attempt at a name, from a throat already full of blood.`,
+  (w) => `Laughter${AT(w)}. High, delighted, unhurried. Underneath it, someone begging. The begging loses its words.`,
+  (w) => `Pleading${AT(w)}, too muffled to make out: bargaining, promising anything. A long pause. Then it is declined.`,
+  (w) => `A child's voice somewhere${AT(w)}, crying for its mother. A second voice answers in her exact tones, getting smaller.`,
+  (w) => `A scream tears open${AT(w)} and drops into a gurgle, a beat too long before it stops.`,
+  (w) => `One cry${AT(w)}, choked off mid-breath, and a tearing sound continuing without it, patient.`,
   (w) => `Something heavy drops${AT(w)}. Then the drag of a body, moved by something that does not care if it's heard.`,
-  (w) => `A struggle${AT(w)}, a voice you half know calling one name twice. The second time, the name comes apart in the middle.`,
-  (w) => `Every dog in the village screams at once${AT(w)}, and goes silent in the same half-second, like a hand closing over every throat.`,
-  (w) => `A door bangs open${AT(w)} and is not banged shut. A scuffle, a grunt of effort, the particular silence of a mouth being covered.`,
-  (w) => `The worst of it${AT(w)} is the pause: a cry cut off, ten heartbeats of nothing, as if the night were checking whether anyone would come. It starts again, slower.`,
-  (w) => `Somewhere${AT(w)} glass goes in, one pane, almost dainty, and after it a voice that does not stop so much as get carried away, growing smaller.`,
+  (w) => `A struggle${AT(w)}, a voice you half know calling one name twice. The second time it comes apart.`,
+  (w) => `Every dog in the village screams at once${AT(w)}, and goes silent in the same half-second.`,
+  (w) => `A door bangs open${AT(w)} and is not banged shut. A scuffle, then the silence of a mouth being covered.`,
+  (w) => `The worst of it${AT(w)} is the pause: a cry cut off, ten heartbeats of nothing. It starts again, slower.`,
+  (w) => `Somewhere${AT(w)} glass goes in, almost dainty, and after it a voice that gets carried away, growing smaller.`,
 ];
 const BODY_FOUND = [
   (v, w) => `${v.name} is found ${w === "home" ? "in the ruin of their own bed" : `at the ${w}, in pieces the crows reached first`}. The man who found them is sick twice before he can go for help.`,
@@ -952,49 +954,49 @@ const SIEGE_KILLS = [
 /* the victim's last ordinary act, by trade, with the night-falls framing
    folded in. Kept short: the whole scene is five tight beats. */
 const N1_OPEN = {
-  marta: (nm) => `Night falls. ${nm} damps the ovens and steps out into a dark come down too fast.`,
+  marta: (nm) => `Night falls. ${nm} damps the ovens and steps into a dark come down too fast.`,
   tobias: (nm) => `Night falls. ${nm} shoulders his spade and leaves the churchyard, telling himself tonight is like the rest.`,
-  ansel: (nm) => `Night falls. ${nm} snuffs the altar candles, locks the church, and pockets the key.`,
-  greta: (nm) => `Night falls. ${nm} ties off her drying herbs and steps into the cold at the forest's edge.`,
-  wilhelm: (nm) => `Night falls. ${nm} banks the forge and draws the shutters against it.`,
-  liesel: (nm) => `Night falls. ${nm} turns out the last drinkers and bolts the taproom.`,
-  falk: (nm) => `Night falls. ${nm} closes his bag and sets off down the lane on his cane.`,
-  rosa: (nm) => `Night falls. ${nm} sets down the needle and steps out for one breath of air.`,
+  ansel: (nm) => `Night falls. ${nm} snuffs the candles, locks the church, and pockets the key.`,
+  greta: (nm) => `Night falls. ${nm} ties off her herbs and steps into the cold at the forest's edge.`,
+  wilhelm: (nm) => `Night falls. ${nm} banks the forge and draws the shutters.`,
+  liesel: (nm) => `Night falls. ${nm} turns out the drinkers and bolts the taproom.`,
+  falk: (nm) => `Night falls. ${nm} closes his bag and sets off down the lane.`,
+  rosa: (nm) => `Night falls. ${nm} sets down the needle and steps out for air.`,
 };
 /* Two sets of tension/death beats: one for a victim caught OUTDOORS, one for
    a victim taken AT HOME behind their own bolt. They must never mix - a
    soul who just barred their door cannot then be "the only thing moving on
-   the lane". Kept short (trimmed ~30%): the hero-card cinematic leaves less
-   room to scroll than the old header did. */
+   the lane". Kept to roughly 85% of the prior pass: the hero-card
+   cinematic leaves less room to scroll than the old header did. */
 const N1_TENSION_1 = [
-  (nm, s, S, o, p) => `The night goes quiet all at once. ${S} knows, the way an animal knows, ${s} is the only thing moving on the lane.`,
-  (nm, s, S, o, p) => `A sound falls in behind ${o}, almost a footstep, and does not stop when ${s} does.`,
-  (nm, s, S, o, p) => `The quiet finds ${o} first. Then the certainty of being watched by something in no hurry.`,
+  (nm, s, S, o, p) => `The night goes quiet all at once. ${S} knows ${s} is the only thing moving on the lane.`,
+  (nm, s, S, o, p) => `A sound falls in behind ${o}, almost a footstep, that does not stop when ${s} does.`,
+  (nm, s, S, o, p) => `The quiet finds ${o} first. Then the certainty of being watched.`,
 ];
 const N1_TENSION_2 = [
-  (nm, s, S, o, p) => `${S} does not turn around. Everyone knows you do not. ${S} walks faster. Whatever keeps pace does not trouble to.`,
-  (nm, s, S, o, p) => `The shape ahead was not there a breath ago, is no neighbour, and is not waiting to be asked in.`,
-  (nm, s, S, o, p) => `The last lit window goes dark as ${s} passes, and the lane belongs to ${o} and one other thing.`,
+  (nm, s, S, o, p) => `${S} does not turn around. ${S} walks faster. Whatever keeps pace does not trouble to.`,
+  (nm, s, S, o, p) => `The shape ahead was not there a breath ago, and is no neighbour.`,
+  (nm, s, S, o, p) => `The last lit window goes dark as ${s} passes. The lane belongs to ${o} and one other thing.`,
 ];
 const N1_DEATH = [
-  (nm, s, S, o, p) => `It comes fast, with no scream worth the name. The lane is empty again, and Hollow's Edge is one soul lighter, and will not know it until dawn.`,
-  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch, and can tell no one, ever. The dark closes over ${o} and keeps its counsel until morning.`,
-  (nm, s, S, o, p) => `It is quick, or not; no one is left by dawn to say. The night grants ${o} only this: knowing ${s} had been right to be afraid.`,
+  (nm, s, S, o, p) => `It comes fast, no scream worth the name. The lane is empty again, and Hollow's Edge is one soul lighter.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch. The dark closes over ${o} and keeps its counsel.`,
+  (nm, s, S, o, p) => `It is quick, or not; no one is left to say. The night grants ${o} only this: knowing ${s} had been right to be afraid.`,
 ];
 const N1_TENSION_1_HOME = [
-  (nm, s, S, o, p) => `${S} is barely done with the bolt when the dog next door stops mid-bark, the way a sound stops when a hand closes over it.`,
-  (nm, s, S, o, p) => `From the lane outside, footsteps come up to the door, evenly, without hurry. And stop.`,
-  (nm, s, S, o, p) => `The fire settles low. At the back of the house, a latch ${nm} shut an hour ago tries itself, quietly, twice.`,
+  (nm, s, S, o, p) => `${S} is barely done with the bolt when the dog next door stops mid-bark.`,
+  (nm, s, S, o, p) => `From the lane, footsteps come up to the door, evenly, without hurry. And stop.`,
+  (nm, s, S, o, p) => `The fire settles low. At the back of the house, a latch ${nm} shut an hour ago tries itself, twice.`,
 ];
 const N1_TENSION_2_HOME = [
-  (nm, s, S, o, p) => `${S} sits very still and waits for a knock. None comes. The silence outside just goes on standing there.`,
-  (nm, s, S, o, p) => `${S} tells ${o}self it is the wind. The house answers with the one sound it should never make: the bolt, easing back on its own.`,
-  (nm, s, S, o, p) => `The candle leans. There is no draught. It leans anyway, toward the window, and ${nm} watches and does not move.`,
+  (nm, s, S, o, p) => `${S} sits still and waits for a knock. None comes. The silence outside just stands there.`,
+  (nm, s, S, o, p) => `${S} tells ${o}self it is the wind. The house answers with the one sound it should never make: the bolt, easing back.`,
+  (nm, s, S, o, p) => `The candle leans. There is no draught. ${nm} watches, and does not move.`,
 ];
 const N1_DEATH_HOME = [
-  (nm, s, S, o, p) => `Whatever comes in does not use the door. By the time it is in the room there is nothing left to do, and the house keeps what it saw until morning.`,
-  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, there in ${p} own home. The candle goes out. The village sleeps on.`,
-  (nm, s, S, o, p) => `It is quick, or not; the walls do not say. At dawn the door is still bolted from inside, the first thing the village fails to explain.`,
+  (nm, s, S, o, p) => `Whatever comes in does not use the door. The house keeps what it saw until morning.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, in ${p} own home. The candle goes out.`,
+  (nm, s, S, o, p) => `It is quick, or not; the walls do not say. At dawn the door is still bolted, and the village cannot explain it.`,
 ];
 /* Ansel and Liesel do not have a separate home to walk to: their whole
    world already closed up in the N1_OPEN beat (the church locked, the
@@ -1002,8 +1004,8 @@ const N1_DEATH_HOME = [
    homes (see HOME_LOC). The generic "way home is short" journey line would
    have them walking to, and bolting, a door they already just bolted. */
 const N1_ALREADY_HOME = {
-  ansel: (nm, s, S, o, p) => `There is no walk to make. The church is where ${nm} sleeps too, and locking its door was the whole of going home. ${S} sits a long while, the too-small key still in ${p} fist.`,
-  liesel: (nm, s, S, o, p) => `There is no walk to make. The stair from the taproom is ${p} whole journey, taken slowly, the one bolt this house owns already thrown.`,
+  ansel: (nm, s, S, o, p) => `There is no walk to make: the church is where ${nm} sleeps too. ${S} sits a long while, the too-small key still in ${p} fist.`,
+  liesel: (nm, s, S, o, p) => `There is no walk to make. The stair from the taproom is ${p} whole journey, the one bolt this house owns already thrown.`,
 };
 function NIGHT_ONE_SCENE(v, where) {
   const s = v.sex === "f" ? "she" : "he";
@@ -1014,8 +1016,8 @@ function NIGHT_ONE_SCENE(v, where) {
   const home = where === "home";
   const open = (N1_OPEN[v.id] || ((n) => `Night falls, and ${n} finishes the day's work and steps out into the dark.`))(nm);
   const journey = home
-    ? (N1_ALREADY_HOME[v.id] ? N1_ALREADY_HOME[v.id](nm, s, S, o, p) : `The way home is short. Tonight ${s} walks it too fast and throws the bolt with hands that will not keep still.`)
-    : `One last errand takes ${nm} past the last lit window, toward the ${where}, where the dark seems to rise to meet ${o}.`;
+    ? (N1_ALREADY_HOME[v.id] ? N1_ALREADY_HOME[v.id](nm, s, S, o, p) : `The way home is short. Tonight ${s} walks it too fast and throws the bolt with shaking hands.`)
+    : `One last errand takes ${nm} past the last lit window, toward the ${where}, where the dark rises to meet ${o}.`;
   return [
     open,
     journey,
@@ -1138,7 +1140,7 @@ const AFTER_WALK_LINES = [
   "Your own door, your own bolt. You sit facing it a while, boots still on.",
   "You get home cold to the bone and bar the door. Sleep circles you and won't land.",
   "Behind your own bolt at last. You listen to the lanes you just walked, waiting for the dark to say what it was keeping.",
-  "Behind your own door at last. You stand your boots by the fire and listen at the shutter, cataloguing every ordinary noise as it proves itself ordinary.",
+  "Behind your own door, you stand your boots by the fire and listen at the shutter, cataloguing every ordinary noise.",
   "The house takes you back with its familiar creaks. You bank the fire, sit, and let the shaking arrive.",
   "You bolt the door and eat something standing up, not tasting it, fixing the night in memory before sleep can blur it.",
   "Home. Bolt, bar, chair under the latch. The rest of the night belongs to the village now.",
@@ -1240,17 +1242,17 @@ const THRALL_SIGHTS = [
    Never names or genders it: the voice is unrecognisable until you know the
    face behind it. Surfaced as a night beat and, sometimes, a village rumour. */
 const MONSTER_VOICE = [
-  `Somewhere out past the last house, a voice sings a child's counting rhyme, slow and off: "one for the ground, and two for the crow..." It is keeping count.`,
-  `From no direction you can fix, a low and delighted whisper: "eeny... meeny... miny..." A savouring pause. Then, softer: "...caught one."`,
-  `It is reciting names in the dark. Your neighbours' names, one after another, in a fond little sing-song, and you do not want to be on the part it has left.`,
+  `Somewhere past the last house, a voice sings a counting rhyme, slow and off: "one for the ground, and two for the crow..." It is keeping count.`,
+  `From no direction you can fix, a low delighted whisper: "eeny... meeny... miny..." A pause. Then, softer: "...caught one."`,
+  `It is reciting names in the dark. Your neighbours' names, in a fond little sing-song, and you do not want to be on the part it has left.`,
   `A voice out in the black, talking pleasantly to someone who has stopped answering: "No, no. Hold still. It's nicer if you hold still."`,
-  `Laughter comes over the rooftops, far too happy for the hour, then a voice, conversational, as if choosing an apple: "Which house tonight? Eeny. Meeny."`,
-  `Something is humming a lullaby in the dark, note-perfect and with no warmth in it at all, and every dog in the village has gone silent to listen.`,
-  `A whisper threads down the lane, patient and amused: "I know which bed is yours. I know which board creaks. I have all the nights in the world, and you have so few."`,
-  `Out past the byres, something is trying to whistle, the way the shepherds do. It has nearly got it. Every dog that should answer is pressed flat under its own porch.`,
-  `A voice in the dark does both halves of a conversation: one half in a neighbour's voice, the other in something lower. The neighbour half keeps saying "please".`,
-  `From the church wall, softly: "Four rows. Six deep." A pause. "Room for more." The arithmetic of the churchyard, done aloud, fondly.`,
-  `Something below the hill repeats the evening's gossip to itself in half the village's voices, trying each one on. Yours is among them. Not quite right yet.`,
+  `Laughter comes over the rooftops, far too happy for the hour, then a voice, conversational: "Which house tonight? Eeny. Meeny."`,
+  `Something is humming a lullaby in the dark, note-perfect and with no warmth, and every dog has gone silent to listen.`,
+  `A whisper threads down the lane, amused: "I know which bed is yours. I know which board creaks. I have all the nights, and you have so few."`,
+  `Out past the byres, something is trying to whistle, the way the shepherds do. Every dog that should answer is pressed flat under its porch.`,
+  `A voice in the dark does both halves of a conversation: one in a neighbour's voice, the other lower. The neighbour half keeps saying "please".`,
+  `From the church wall, softly: "Four rows. Six deep." A pause. "Room for more." The churchyard's arithmetic, done aloud, fondly.`,
+  `Something below the hill repeats the evening's gossip in half the village's voices, trying each on. Yours is among them. Not quite right yet.`,
 ];
 /* A neighbour whose mind has gone to the thing: interviewed, they no longer
    lie for it (that is the hidden thrall's job); they only leak, in fragments,
