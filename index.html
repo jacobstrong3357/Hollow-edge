@@ -5797,6 +5797,37 @@ function DawnScene({ loc, s, height = 190 }) {
   );
 }
 
+/* The night cinematic's hero: a moonlit village, the counterpart to
+   DawnScene. Always the same skyline - the night itself is the subject,
+   not a place - so it needs no location argument. */
+function NightScene({ height = 190 }) {
+  return (
+    <svg viewBox="0 0 400 190" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="nsSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0A0E20" /><stop offset="55%" stopColor="#141A30" /><stop offset="100%" stopColor="#1C2138" />
+        </linearGradient>
+        <radialGradient id="nsMoon"><stop offset="0%" stopColor="#EEF0F8" stopOpacity="0.9" /><stop offset="100%" stopColor="#AEB4CC" stopOpacity="0" /></radialGradient>
+      </defs>
+      <rect width="400" height="190" fill="url(#nsSky)" />
+      <circle cx="322" cy="48" r="48" fill="url(#nsMoon)" className="mvGlowPulse" />
+      <circle cx="322" cy="48" r="20" fill="#E9ECF6" />
+      <circle cx="316" cy="44" r="3.2" fill="#C4C9DA" opacity="0.5" /><circle cx="328" cy="55" r="2.5" fill="#C4C9DA" opacity="0.5" />
+      {[[40, 32], [80, 58], [130, 26], [180, 46], [230, 32], [268, 62], [360, 36], [388, 60]].map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="1.15" fill="#DDE2F0" opacity="0.6" className="mvFlick" style={{ animationDelay: `${i * 0.5}s` }} />
+      ))}
+      <ellipse className="mvFog" cx="120" cy="158" rx="150" ry="14" fill="#3A4468" opacity="0.16" />
+      <rect y="166" width="400" height="24" fill="#0B0E1C" />
+      {[[20, 40, 30], [70, 32, 40], [250, 38, 34], [300, 44, 30], [356, 50, 26]].map(([x, w, h]) => (
+        <g key={x}><rect x={x} y={166 - h} width={w} height={h} fill="#0C1120" /><polygon points={`${x - 4},${166 - h} ${x + w + 4},${166 - h} ${x + w / 2},${166 - h - 14}`} fill="#0A0E1A" /></g>
+      ))}
+      <rect x="42" y="158" width="7" height="9" fill="#D9A441" opacity="0.85" className="mvFlick" />
+      <rect x="316" y="158" width="7" height="9" fill="#D9A441" opacity="0.7" className="mvFlick" style={{ animationDelay: "1.2s" }} />
+      <path d="M150,170 q4,-16 12,-16 q8,0 12,16 Z" fill="#0C1120" />
+    </svg>
+  );
+}
+
 /* A sliver of the village in morning light, behind the day header. */
 function DayStrip({ height = 64 }) {
   return (
@@ -7259,32 +7290,45 @@ function MonsterVillage() {
         </div>
       );
     }
+    const won = s.over && s.over.win;
+    const heroAccent = beatsFirst ? "#C24450" : won ? C.amber : "#AEB6D8";
     return (
-      <div className="h-screen mv-body relative overflow-hidden" style={{ background: "linear-gradient(#3E3450, #B4623E 72%, #6E2530)", color: C.parch }}>
+      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
         <style>{CSS_ALL}</style>
-        <div className="absolute inset-0 mvNightFade" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})` }} />
-        <div className="mvSun absolute" style={{ left: "16%", top: "34%", width: 46, height: 46, borderRadius: "50%", background: "#E8B04B", boxShadow: "0 0 60px 22px rgba(232,176,75,0.35)" }} />
-        <div className="mvMoon absolute" style={{ right: "12%", top: "17%", width: 34, height: 34, borderRadius: "50%", background: C.parch, boxShadow: "0 0 40px 12px rgba(233,223,200,0.15)" }} />
-        <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 h-full flex flex-col">
-          <div className="flex items-baseline justify-between shrink-0">
-            <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</span>
-            <button onClick={advance} className="mv-body" style={{ background: "rgba(8,10,18,0.5)", border: "none", color: C.parch, fontSize: 13, cursor: "pointer", position: "relative", zIndex: 3, padding: "3px 10px", borderRadius: 8 }}>skip ≫</button>
-          </div>
-          {/* the night's ending, seen as well as read: the rite consuming the
-              thing on a won night, or the thing itself looming over your own
-              death. Ordinary nights stay art-free and let the words work. */}
-          {s.over && s.over.win && (
-            <div className="flex justify-center mt-3 shrink-0">
-              <MonsterDeath id={m.id} method={m.method} size={112} light />
+        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.6)" }}>
+              <div className="relative">
+                {/* the night's ending, seen as well as read: the rite
+                    consuming the thing on a won night. Ordinary and
+                    JUDGMENT nights get the moonlit village and let the
+                    words work. */}
+                {won ? (
+                  <div className="flex justify-center items-center" style={{ height: 168, background: "linear-gradient(180deg,#241B1E,#161014)" }}>
+                    <MonsterDeath id={m.id} method={m.method} size={128} light />
+                  </div>
+                ) : (
+                  <NightScene height={168} />
+                )}
+                <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(20,16,20,0) 60%, rgba(20,16,20,0.85))" : "linear-gradient(rgba(10,14,32,0) 55%, rgba(10,14,32,0.82))", pointerEvents: "none" }} />
+                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: heroAccent, background: "rgba(8,10,18,0.55)", border: `1px solid ${heroAccent}55` }}>
+                  {beatsFirst ? "THE RITE UNRAVELS" : won ? "THE RECKONING" : `THE NIGHT · DAY ${s.dayNum} GIVES WAY`}
+                </div>
+                <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 17, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</div>
+                <button onClick={advance} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: heroAccent, fontSize: 12, cursor: "pointer", padding: "3px 9px" }}>skip ≫</button>
+              </div>
             </div>
-          )}
-          <div className="mt-6 flex-1 min-h-0 overflow-y-auto pr-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
-            {beats.map((b, i) => (
-              <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.45, animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s`, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{b}</p>
-            ))}
           </div>
-          <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
-            <Btn full kind={beatsFirst ? "red" : "amber"} onClick={advance}>{beatsFirst ? "And then →" : "Onward →"}</Btn>
+          <div className="flex-1 overflow-y-auto px-6 pt-5" onClick={() => setBeatsRevealed(true)} style={{ minHeight: 0, cursor: beatsRevealed ? "default" : "pointer" }}>
+            {beats.map((b, i) => (
+              <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.5, textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
+            ))}
+            {!beatsRevealed && <p className="mt-5" style={{ fontSize: 14, color: C.dim, letterSpacing: 4, textAlign: "center" }}>· · ·</p>}
+          </div>
+          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+            <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
+              <Btn full center kind={beatsFirst ? "red" : "amber"} onClick={advance}><span className="mv-display" style={{ letterSpacing: 2 }}>{beatsFirst ? "AND THEN →" : "ONWARD →"}</span></Btn>
+            </div>
           </div>
         </div>
       </div>
