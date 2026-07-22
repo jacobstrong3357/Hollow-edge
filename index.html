@@ -212,7 +212,7 @@ const Snd = {
 
 /* ================= DATA ================= */
 
-const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Tavern"];
+const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Tavern", "Old Mill"];
 
 const SIGNS = {
   claw: "Claw Marks", tracks: "Strange Tracks", bite: "Bite Marks",
@@ -355,13 +355,13 @@ const METHOD_KILL_LINES = {
 };
 
 const MONSTERS = [
-  { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Village Square"], lore: "Bound to the moon. It hunts on exact, ritual nights, every third, and cannot break the pattern. Takes only those caught outdoors, and takes them apart. The books prescribe the silver blade." },
+  { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Old Mill"], lore: "Bound to the moon. It hunts on exact, ritual nights, every third, and cannot break the pattern. Takes only those caught outdoors, and takes them apart. The books prescribe the silver blade." },
   { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], dayHidden: true, lore: "Its first feeding is always too deep: a body torn by tooth and talon. After that it feeds as the thirst takes it, never two nights running, and no door stops it. By day it beds in stolen grave earth. Its victims do not die: they change, and hide it. The stake ends it." },
   { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], dayHidden: true, lore: "Stalks almost every night, but takes only those who wander after dark. Its grief carries on the wind, its cold clings to the ground, and its prints stop mid-stride, as if it forgot to keep touching the earth. Bar your door and it passes. A ring of salt unmakes it." },
   { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger. It dens among the graves and prowls from there, but takes anyone caught outdoors, wherever it finds them. Too craven to enter a home. Consecrated fire, and nothing less." },
   { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Its workings want blighted herbs and fresh-dug grave earth. Some it curses dead without a mark; others it bends into servants who walk on and lie for it. Burn the grimoire, and the witch burns with it." },
   { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens with one soul taken violently, as a signature, then claims as it pleases: some hollowed and left walking, some torn apart for joy. Walls mean nothing and no pattern holds. It leaves cold rooms, scorched workings, blighted ground. Only exorcism casts it out." },
-  { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Tavern"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
+  { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Old Mill"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
   { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], dayHidden: true, lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door, and the green browns and curls where it pours. Its dead bear no wound. It cannot bear its own face in a silver mirror." },
   { id: "lich", name: "Lich", signs: ["graves", "flora", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "phylactery", hunts: ["Graveyard", "Old Church"], lore: "A sorcerer who cheated death by binding its life into a hidden vessel. It does not tear its victims but drains them: the touched go grey and cold and die on their own a night or three later, unmarked and withered. No barred door stops it. Find the vessel that holds its life, and shatter it." },
   { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], dayHidden: true, lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
@@ -688,6 +688,7 @@ const AFFLICTION_DAWN = {
   wellFouled: () => `The village well comes up wrong this morning: the water black, the smell off it like old iron and rot, something dead down the shaft or something worse. Nobody will draw from it. They queue at the cold stream instead, and watch each other's buckets, and say nothing.`,
   tavernShut: (nm) => `${nm} bolts the tavern for good and will not open it. The one warm room left in Hollow's Edge goes dark. "I'm done pouring for a village that's eating itself," is all she says through the barred door, and the drinkers stand in the cold lane a while before they drift home to their own.`,
   churchBurn: (nm) => `In the small hours someone put fire to the Old Church. "If God will not clean His house, fire will." It burned to the rafters while the village watched and fetched no water.${nm ? ` ${nm} stood closest of all, and his face held no grief.` : ""}`,
+  millFlood: () => `In the night the millrace broke its bank. The wheel came apart on the stones with a sound folk are still describing wrong. By morning the mill floor stands in black water to the knee, the season's grain ruined in the sacks, and nobody has yet said aloud what might have broken the bank in the first place.`,
 };
 /* What you witness of it if you are out in the lanes when it happens. */
 const AFFLICTION_WALK = {
@@ -695,6 +696,7 @@ const AFFLICTION_WALK = {
   wellFouled: () => `A crowd stands about the village well by lantern-light, and the smell reaches you before you understand it: the water has come up black and foul. Someone is being blamed. Someone is always being blamed now. You go the long way around them.`,
   tavernShut: (nm) => `The tavern windows are dark for the first time in memory, and ${nm || "the innkeeper"} is out front driving the last bolt home by lantern, deaf to the drinkers pleading at her back. The one lit room in Hollow's Edge, going out while you watch.`,
   churchBurn: (nm) => `The sky over the churchyard is the wrong colour, and then the smell of it reaches you: the Old Church is burning, a great tearing sheet of flame, and the village stands in a ring around it and fetches no water. ${nm ? nm + " stands closest of all, and does not weep." : "No one weeps."} You feel the heat of it from the lane.`,
+  millFlood: () => `You hear it before you understand it: a groan of straining wood, then a crack like a shot, carrying from the millpond. By the time you reach the rise the wheel hangs broken off its axle, and the water is running wrong, black and fast where it should be slow. You do not go closer. Whatever startled the water into that, you would rather not meet it.`,
 };
 /* The muffled version, heard through your own shutters on a night you stayed in. */
 const AFFLICTION_HOME_BEAT = {
@@ -702,6 +704,7 @@ const AFFLICTION_HOME_BEAT = {
   wellFouled: "There is a commotion at the well in the small hours, lanterns and low furious voices, and a smell rides in on the night air that has no business in clean water.",
   tavernShut: "The tavern's light, always the last on the lane to go out, goes out early tonight and does not come back. The dark outside your window is one lamp deeper for it.",
   churchBurn: "The edges of your shutters go orange. Something enormous is burning off toward the churchyard, and the sound of it carries: a roar, and beneath the roar, a crowd that does no shouting at all.",
+  millFlood: "A sound reaches you from the direction of the mill, wood tearing, and then a long rush of water that does not sound like any weather you know. You bar the shutter tighter and do not go to look.",
 };
 /* one dusk-mood line each, surfaced on later nights so the wound stays felt */
 const AFFLICTION_MOOD = {
@@ -709,6 +712,7 @@ const AFFLICTION_MOOD = {
   wellFouled: "Nobody has touched the well in days. The walk to the stream is long and cold, and the queues there are silent, and everybody counts everybody else in line.",
   tavernShut: "The tavern stays dark and bolted. There is nowhere left to be a person for an hour among other people, and the village feels the lack of it the way a mouth feels a pulled tooth.",
   churchBurned: "Where the church stood there is a black ruin now, and nowhere to carry a Sunday's fear. A few still pray in the lane by the ash. Most have given it up.",
+  millFlood: "The mill stands wheel-broken and flooded still, grain rotting where the water took it. Bread is dearer for it, and the walk to the next village's mill is a full day nobody can spare.",
 };
 /* the affected villager's interview opener, once the wound is theirs */
 const AFFLICTION_OPENER = {
@@ -1602,6 +1606,8 @@ const EVENTS = [
   { id: "pedlar", name: "pedlar's visit", loc: "Village Square", intro: "A pedlar arrives before dusk with ribbons, knives and news, and the whole village turns out to touch something from elsewhere." },
   { id: "boarding", name: "boarding-up", loc: "Village Square", intro: "Hammers till dark: the village turns out together to board windows and mend shutters, lending ladders, sharing nails, watching the sun." },
   { id: "sweep", name: "torch search", loc: "Graveyard", intro: "Torches at dusk: a search party sweeps the graveyard end to end, poking the hedges, calling out finds." },
+  { id: "millgrind", name: "grain weighing", loc: "Old Mill", intro: "The last of the season's grain is weighed and bagged at the mill by lantern-light, the whole village turning out to see the harvest counted honestly." },
+  { id: "millrace", name: "millrace clearing", loc: "Old Mill", intro: "The millrace is cleared of leaves and silt before the frost can jam it, a cold wet job the young men draw lots for and the old men supervise from dry ground." },
 ];
 const EVENT_INCIDENT_FIGHT = [
   (a, b) => `Late on, ${a} and ${b} come to blows over something no one afterwards can name. It takes three others to part them.`,
@@ -1752,10 +1758,10 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} slips from a house where someone has been dying loud and long, tucking a small stoppered bottle back into her shawl. Behind her, the crying has stopped. She has done this before. She will do it again. It may be the kindest crime there is.`,
       hail: (nm) => `${nm} meets your eyes without a flicker. "Someone was suffering. Now they are not. Ask me no more than that, and you can tell yourself you never knew." She walks past you, and does not hurry.`,
       confess: `"When the dying beg, and the physician has nothing left but to watch, I bring them the last mercy in a bottle. Yes. I help them go. The church calls it murder, and the sufferers called it grace, and I stopped letting the church do my deciding a long time ago. Do what you must with it."` },
-    { loc: "Dark Forest", outP: 0.3, short: "she keeps a hidden child out past the last field, one the village must never know she has",
-      walk: (nm) => `${nm} goes to a woodcutter's hut past the last field, and through the window you watch her lift a small child, and feed it, and sing to it, low. No one in the village knows the child exists. She means to keep it that way for as long as she draws breath.`,
-      hail: (nm) => `${nm} steps between you and the hut. "There is nothing out here but my herbs and my business, and both of them bite. Go home before you find out which." Behind her, faintly, a child fusses, and she does not turn her head.`,
-      confess: `"My sister died bearing it, and the father wanted it drowned for the shame, so I took it and hid it, and I have raised it in a hut in the trees for three years on lies and moonlight. If the village learns of it, they will hand it back to the same men who wanted it dead. So I lie about my nights. Endlessly, and without one ounce of shame."` },
+    { loc: "Old Mill", outP: 0.3, short: "she keeps a hidden child in the old mill, one the village must never know she has",
+      walk: (nm) => `${nm} climbs the mill's outside stair to a loft the miller never uses, and through the shutter-crack you watch her lift a small child, and feed it, and sing to it, low. No one in the village knows the child exists. She means to keep it that way for as long as she draws breath.`,
+      hail: (nm) => `${nm} steps between you and the stair. "There is nothing out here but old grain dust and my business, and both of them bite. Go home before you find out which." Behind her, faintly, a child fusses, and she does not turn her head.`,
+      confess: `"My sister died bearing it, and the father wanted it drowned for the shame, so I took it and hid it, and I have raised it above the mill for three years on lies and moonlight. If the village learns of it, they will hand it back to the same men who wanted it dead. So I lie about my nights. Endlessly, and without one ounce of shame."` },
   ],
   wilhelm: [
     { loc: "Dark Forest", outP: 0.3, short: "he poaches the lord's deer to feed his boys",
@@ -1766,10 +1772,10 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} meets three men at the tree line and hands over a wrapped bundle that rings faintly of good steel. Blades, made after hours, off the ledger. Whatever these men intend for the manor, ${nm} is arming it, one honest hammer-stroke at a time.`,
       hail: (nm) => `${nm} steps square into your path, all shoulders. "You're a long way out for a man with no business. Whatever you think you saw, you didn't, and we'll both live longer for it." The others are already gone into the dark.`,
       confess: `"There are men in this valley done with kneeling, and they need steel, and I'm the one who makes it. Aye. I forge for the rising. My boys will not grow up bowing to the man who's working their grandfather into an early grave. If that's treason, the manor's welcome to my hands. They'll have to catch them first."` },
-    { loc: "Dark Forest", outP: 0.3, short: "he meets a man he loves after dark, a thing the forge and the village would break him for",
-      walk: (nm) => `${nm}, who is all iron and few words by daylight, stands close in the dark with another man, foreheads nearly touching, talking too low to hear. When they part, the smith holds on a moment longer than any handshake, and watches the man go the way you watch a thing you cannot keep.`,
+    { loc: "Old Mill", outP: 0.3, short: "he meets a man he loves in the shell of the old mill, a thing the forge and the village would break him for",
+      walk: (nm) => `${nm}, who is all iron and few words by daylight, stands close in the mill's dark with another man, foreheads nearly touching, talking too low to hear over the dead wheel's drip. When they part, the smith holds on a moment longer than any handshake, and watches the man go the way you watch a thing you cannot keep.`,
       hail: (nm) => `${nm}'s whole body goes to iron. "Say nothing." Not a threat, for once. Something closer to a plea, from a man who has never asked anyone for anything. "Please. I've two boys. Say nothing."`,
-      confess: `"There's a man. That's all you get of him, and if you're any kind of decent it's all you'll ever say. I've two sons and a forge and a village that would put me out of all three for this, so I take my one hour in the dark and ask nothing else of the world. You're the second soul alive who knows. Be a better one than most have been."` },
+      confess: `"There's a man. That's all you get of him, and if you're any kind of decent it's all you'll ever say. I've two sons and a forge and a village that would put me out of all three for this, so I take my one hour in the old mill and ask nothing else of the world. You're the second soul alive who knows. Be a better one than most have been."` },
   ],
   liesel: [
     { loc: "Dark Forest", outP: 0.3, short: "she meets a married man from the next village where the road forks",
@@ -1786,10 +1792,10 @@ const SECRET_POOL = {
       confess: `"I was sixteen, and it was given away before I'd properly held it, and it grew up in the city calling another woman mother. I found her, years on. She doesn't know me. But every coin this bar can spare goes to her, in the dark, through the coach, and it's the only good thing I've ever done in secret. Laugh at that, and I'll bar you for life."` },
   ],
   falk: [
-    { loc: "Village Square", outP: 0.3, short: "laudanum for the pain, and he walks the square until his hands stop shaking",
-      walk: (nm) => `${nm}, alone by the well, taking something from a small brown bottle with the practiced speed of shame. Then he walks the square. Around, and around, cane ticking on the stones, until his hands are still enough to belong to a physician again.`,
+    { loc: "Old Mill", outP: 0.3, short: "laudanum for the pain, and he walks the dead mill floor until his hands stop shaking",
+      walk: (nm) => `${nm}, alone on the mill floor, taking something from a small brown bottle with the practiced speed of shame. Then he walks it. Around, and around the idle stones, cane ticking, until his hands are still enough to belong to a physician again.`,
       hail: (nm) => `${nm} slides something into his coat before turning. "Insomnia. Professionally speaking." His pupils are wrong, and his hands, for once, are perfectly steady.`,
-      confess: `He sets the little brown bottle on the table between you, defiantly. "Laudanum. For a spine that is forty years older than the rest of me. I dose after dark and walk it off in the square, because a physician whose hands shake is a physician no one sends for. You'd have found the bottle eventually. You have that kind of face."` },
+      confess: `He sets the little brown bottle on the table between you, defiantly. "Laudanum. For a spine that is forty years older than the rest of me. I dose after dark and walk it off where no one goes anymore, because a physician whose hands shake is a physician no one sends for. You'd have found the bottle eventually. You have that kind of face."` },
     { loc: "Old Church", outP: 0.3, short: "he signs false causes of death so the shamed and the self-killed can lie in holy ground",
       walk: (nm) => `${nm} comes away from a house of grief having written, in his careful hand, a lie: fever, where it was a rope; a failing heart, where it was a bottle taken on purpose. So the dead can lie in the churchyard and the living can grieve without the extra shame. He has filled a page of the ledger with such mercies.`,
       hail: (nm) => `${nm} caps his pen. "A death to certify. They come at all hours, the dead. One does not keep them waiting." He does not offer to show you what he wrote, and you know better than to ask.`,
@@ -1850,17 +1856,12 @@ const FLED_OPENERS = [
   (nm) => `"I keep seeing ${nm}'s face at the window in my sleep. Except it is not ${nm}'s face anymore, is it. It never was."`,
 ];
 
-/* You have seen its face in the dark and it did not kill you for it - a
-   deliberate restraint, not an oversight (see the "Yet." beats in the night
-   walk). Sitting across from that same face by daylight, before you have
-   said a word out loud to anyone, deserves its own charged atmosphere: both
-   of you know, and neither of you says so first. Never shown once the
-   village itself knows (s.fled), which gets its own FLED_OPENERS instead. */
-const FACE_KNOWN_OPENERS = [
-  (nm) => `They receive you exactly as they always have: warm, unhurried, unbothered. For one unguarded half-second before the mask settles back into place, something in their eyes says, quite plainly, that they know precisely why you keep coming back. Neither of you says so aloud.`,
-  (nm) => `${nm} talks to you the way ${nm} has always talked to you. It is, you realize partway through, a performance now, and a good one, and you are both aware of it, and neither of you is the one who says so first.`,
-  (nm) => `There is a stillness in ${nm} today that was not there before you learned that face in the dark. Not fear. Something nearer patience. Whatever this is, it has decided to let the visit play out a little longer.`,
-];
+/* Once you have seen its face in the dark AND it saw you seeing (mutual
+   sighting, s.monsterSawYou), it stops receiving visitors who know what
+   they now know - it goes to ground for interviews instead (see the
+   "nowhere to be found" handling in questionModal/profileModal). If only
+   you saw it, it has no reason yet to hide, and the interview plays out
+   with normal dialogue. */
 
 const DEMEANOR = {
   normal: [
@@ -2291,10 +2292,11 @@ function sampleNight(s, m, n) {
       if (!s.wellFouled) opts.push("wellFouled");
       if (!s.tavernShut && liesel && liesel.alive && !liesel.fled) opts.push("tavernShut");
       if (!(s.burned || []).includes("Old Church") && slainSoFar >= 3) opts.push("churchBurn");
+      if (!(s.burned || []).includes("Old Mill") && slainSoFar >= 3) opts.push("millFlood");
       if (opts.length && chance(0.18)) affliction = pick(opts);
     }
   }
-  const afflictLoc = { breadRiot: "Village Square", wellFouled: "Village Square", tavernShut: "Tavern", churchBurn: "Old Church" }[affliction];
+  const afflictLoc = { breadRiot: "Village Square", wellFouled: "Village Square", tavernShut: "Tavern", churchBurn: "Old Church", millFlood: "Old Mill" }[affliction];
 
   let evn = null;
   /* A gathering cannot be held where the place for it no longer exists: the
@@ -2329,7 +2331,7 @@ function sampleNight(s, m, n) {
     } else if (npc.turned) {
       /* the changed do not keep to their beds: they serve it, and wander to
          the eerie ground it keeps, where the player can catch them at it */
-      outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest"].filter((l) => l !== HOME_LOC[npc.id])) : "home";
+      outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest", "Old Mill"].filter((l) => l !== HOME_LOC[npc.id])) : "home";
     } else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) {
       secretOut[npc.id] = true; outMap[npc.id] = secretOf(s, npc.id).loc;
     } else {
@@ -3422,6 +3424,7 @@ function resolveNight(prev, planIn, preEvents) {
     else if (affliction === "wellFouled") { s.wellFouled = { night: n }; dawn.push(ev(AFFLICTION_DAWN.wellFouled(), undefined, 2)); }
     else if (affliction === "tavernShut") { s.tavernShut = { night: n }; dawn.push(ev(AFFLICTION_DAWN.tavernShut(liesel ? liesel.name : "the innkeeper"), "liesel", 2)); }
     else if (affliction === "churchBurn") { if (!s.burned.includes("Old Church")) s.burned.push("Old Church"); dawn.push(ev(AFFLICTION_DAWN.churchBurn(ansel && ansel.alive ? ansel.name : null), "ansel", 2)); }
+    else if (affliction === "millFlood") { if (!s.burned.includes("Old Mill")) s.burned.push("Old Mill"); dawn.push(ev(AFFLICTION_DAWN.millFlood(), undefined, 2)); }
     /* a stay-home night did not live it in the lanes: give it a muffled beat */
     if (!plan.facts) beats.push(AFFLICTION_HOME_BEAT[affliction]);
   }
@@ -3448,6 +3451,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (s.wellFouled) moods.push(AFFLICTION_MOOD.wellFouled);
     if (s.tavernShut) moods.push(AFFLICTION_MOOD.tavernShut);
     if ((s.burned || []).includes("Old Church")) moods.push(AFFLICTION_MOOD.churchBurned);
+    if ((s.burned || []).includes("Old Mill")) moods.push(AFFLICTION_MOOD.millFlood);
     if (moods.length && chance(0.4)) dawn.push(ev(pick(moods), undefined, 0));
   }
 
@@ -3739,6 +3743,26 @@ function actUnbind(prev, id) {
     }
     s.dayEvents.push(...beats.map((b, i) => ev(b, i === 0 ? npc.id : undefined)));
   }
+  return s;
+}
+
+/* -- Pass G2: acting on the coercion note. The note promised the killing
+   ends if you hand over its target; it does not, because nothing it says
+   is a bargain made in good faith. Giving in kills them anyway and buys
+   the thing's quiet satisfaction (the same s.monsterProtects a wrongful
+   execution of this same target would earn, per monsterKillsAccuser's
+   sibling branch above) - so the two paths into this trap pay off
+   identically, only the telling of it differs. */
+function actGiveUp(prev, id) {
+  const s = JSON.parse(JSON.stringify(prev));
+  const npc = npcById(s, id);
+  if (!npc || !s.coerceNote || s.coerceNote.target !== id) return s;
+  s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false } : x));
+  s.deaths.push({ night: s.nightNum, id, name: npc.name, kind: "slain", where: "home", examined: false, found: [] });
+  s.monsterProtects = true;
+  s.coerceNote = null;
+  s.dayEvents.push(ev(`You do as the note asked. By morning ${npc.name} is dead all the same, and beside the body, in the same small unhurried hand as before: "SILLY, SILLY. SO TRUSTING. WHO SHALL WE PICK NEXT?"`, id, 2));
+  s.clues.push(`Day ${s.dayNum}: you gave it ${npc.name}, and it took them, and left a second note laughing at you for believing the first. It does not bargain. It only takes.`);
   return s;
 }
 
@@ -4717,6 +4741,15 @@ function Scene({ loc, kind, height = 150 }) {
     <rect x="282" y="88" width="26" height="4" fill={C.sil} />
     <rect x="296" y="92" width="16" height="20" fill={C.amber} opacity="0.75" />
     <ellipse cx="80" cy="152" rx="14" ry="10" fill={C.sil} /></g>);
+  else if (loc === "Old Mill") elems = (<g>
+    <rect x="118" y="92" width="92" height="68" fill={C.sil} />
+    <polygon points="110,92 218,92 164,56" fill={C.sil} />
+    <rect x="200" y="118" width="10" height="42" fill={C.ink} />
+    {win(140, 114, 10, 14)}
+    <circle cx="235" cy="130" r="30" fill="none" stroke={C.sil} strokeWidth="6" />
+    <circle cx="235" cy="130" r="5" fill={C.sil} />
+    <path d="M235,130 L265,130 M235,130 L256,151 M235,130 L235,160 M235,130 L214,151 M235,130 L205,130 M235,130 L214,109 M235,130 L235,100 M235,130 L256,109" stroke={C.sil} strokeWidth="4" />
+    <rect x="195" y="158" width="90" height="6" fill={C.sil} opacity="0.7" /></g>);
   else elems = (<g>{house(140, 110, 68)}
     <rect x="222" y="66" width="12" height="24" fill={C.sil} />
     {[60, 80, 100, 300, 320, 340].map((x) => <rect key={x} x={x} y={140} width="5" height="20" fill={C.sil} />)}</g>);
@@ -5637,7 +5670,8 @@ function DawnScene({ loc, s, height = 190 }) {
     loc === "Dark Forest" ? "forest" :
     loc === "Old Church" ? ((s.burned || []).includes("Old Church") ? "church_burned" : "church") :
     loc === "Village Square" ? (s.wellFouled ? "well_fouled" : s.breadRiot ? "square_riot" : "square") :
-    loc === "Tavern" ? (s.tavernShut ? "tavern_shut" : "tavern") : "cottage";
+    loc === "Tavern" ? (s.tavernShut ? "tavern_shut" : "tavern") :
+    loc === "Old Mill" ? ((s.burned || []).includes("Old Mill") ? "mill_flood" : "mill") : "cottage";
   const pine = (x, sc = 1, col = "#372C4A") => (
     <g key={`pn${x}`} transform={`translate(${x},0) scale(${sc})`}>
       <polygon points="0,164 -24,164 -12,112" fill={col} /><polygon points="0,138 -21,138 -10,94" fill={col} />
@@ -5655,8 +5689,10 @@ function DawnScene({ loc, s, height = 190 }) {
     well_fouled: ["#2A3240", "#48564E", "#6E8062", "#9AA070", 200, 140, 50],
     tavern: ["#2C3050", "#684E68", "#B47062", "#E2A578", 344, 126, 70],
     tavern_shut: ["#282C46", "#4E4658", "#7E6058", "#A88468", 344, 130, 50],
+    mill: ["#283048", "#5C6A72", "#9CA26A", "#D8C87E", 300, 122, 65],
+    mill_flood: ["#242A34", "#40484A", "#5E6858", "#8A9270", 300, 124, 50],
   }[key];
-  const MIST = { graveyard: 0.26, forest: 0.3, square: 0.22, well_fouled: 0.24, church_burned: 0.12, tavern_shut: 0.12, square_riot: 0.15 }[key] || 0.18;
+  const MIST = { graveyard: 0.26, forest: 0.3, square: 0.22, well_fouled: 0.24, church_burned: 0.12, tavern_shut: 0.12, square_riot: 0.15, mill: 0.24, mill_flood: 0.32 }[key] || 0.18;
   const houses = [[26, 96, 62, 58], [318, 96, 60, 56]].map(([x, y, w, h]) => (
     <g key={x}><rect x={x} y={y} width={w} height={h} fill="#1E1934" /><polygon points={`${x - 6},${y} ${x + w + 6},${y} ${x + w / 2},${y - 26}`} fill="#181430" /><rect x={x + w / 2 - 6} y={y + 14} width="12" height="14" fill="#0E0B18" /></g>
   ));
@@ -5784,6 +5820,36 @@ function DawnScene({ loc, s, height = 190 }) {
       <g transform="rotate(7 243 120)"><rect x="230" y="117" width="27" height="5" fill="#3A2A18" /></g>
       <path d="M272,92 h30" stroke="#131022" strokeWidth="3" />
       <g transform="rotate(12 296 152)"><rect x="286" y="140" width="20" height="15" rx="2" fill="#131022" /><circle cx="296" cy="147" r="4" fill="none" stroke="#6E5A42" strokeWidth="1.4" /></g>
+    </g>),
+    mill: (<g>
+      <rect x="130" y="96" width="100" height="66" fill="#1E1F34" />
+      <polygon points="122,96 238,96 180,58" fill="#181828" />
+      <rect x="150" y="60" width="10" height="26" fill="#181828" />
+      <rect x="204" y="122" width="24" height="40" fill="#0B0A16" />
+      <rect x="150" y="116" width="14" height="16" fill="#0E0D1A" />
+      {/* the wheel, turning at the mill's flank */}
+      <circle cx="258" cy="132" r="30" fill="none" stroke="#181828" strokeWidth="7" />
+      <circle cx="258" cy="132" r="5" fill="#181828" />
+      <path d="M258,132 L288,132 M258,132 L279,153 M258,132 L258,162 M258,132 L237,153 M258,132 L228,132 M258,132 L237,111 M258,132 L258,102 M258,132 L279,111" stroke="#181828" strokeWidth="5" />
+      {/* the millpond, still and dark, catching the sky */}
+      <ellipse cx="230" cy="172" rx="150" ry="14" fill="#3A4A56" opacity="0.55" />
+      <ellipse cx="230" cy="170" rx="60" ry="4" fill="#E8C87E" opacity="0.28" />
+      <path d="M60,150 q6,-6 12,0" stroke="#181828" strokeWidth="2" fill="none" />
+    </g>),
+    mill_flood: (<g>
+      <rect x="130" y="96" width="100" height="66" fill="#171826" />
+      <polygon points="122,96 238,96 180,58" fill="#14141F" />
+      <rect x="150" y="60" width="10" height="26" fill="#14141F" />
+      <rect x="204" y="122" width="24" height="40" fill="#080712" />
+      {/* the wheel, broken off its axle, hanging wrong */}
+      <g transform="rotate(24 258 132)">
+        <circle cx="258" cy="132" r="30" fill="none" stroke="#14141F" strokeWidth="7" strokeDasharray="14 6" />
+        <path d="M258,132 L279,153 M258,132 L258,162 M258,132 L228,132 M258,132 L237,111" stroke="#14141F" strokeWidth="5" />
+      </g>
+      {/* the flood: water climbed the walls, dark and wide */}
+      <ellipse cx="220" cy="176" rx="180" ry="20" fill="#26343C" opacity="0.75" />
+      <ellipse cx="200" cy="160" rx="70" ry="8" fill="#26343C" opacity="0.6" />
+      <path d="M172,150 h56" stroke="#26343C" strokeWidth="4" opacity="0.7" />
     </g>),
   }[key];
   return (
@@ -6798,6 +6864,7 @@ function MonsterVillage() {
   const [examRes, setExamRes] = useState(null);
   const [walk, setWalk] = useState(null);
   const [factPage, setFactPage] = useState(-1);
+  const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const [clueSeen, setClueSeen] = useState(0);
   const [armedDetail, setArmedDetail] = useState(true);
   const [meta, setMeta] = useState(null);
@@ -6961,6 +7028,8 @@ function MonsterVillage() {
 
   /* -- the dawn carousel starts over on a new day -- */
   useEffect(() => { setDawnDone(false); }, [s && s.nightNum]);
+  /* -- the give-them-up confirm step resets whenever the profile changes or closes -- */
+  useEffect(() => { setGiveUpConfirm(false); }, [profile]);
 
   /* -- night beats re-hide themselves each time a fresh night arrives -- */
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
@@ -8404,25 +8473,36 @@ function MonsterVillage() {
     </button>
   );
 
+  /* Shared across locBtn/dayLocBtn: every lasting village affliction that
+     touches a searchable place, so a burned church, a fouled well, a riot
+     at the square or a shuttered tavern always reads on its card - the
+     art (DawnScene) bakes these in for the day pickers, but the night
+     Scene silhouette does not, so the text label is the one place both
+     agree. */
+  const locAffSuffix = (l) => (s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span>
+    : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 12 }}> · shut</span>
+    : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · well fouled</span>
+    : (s.breadRiot && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · riot</span>
+    : "";
   const locBtn = (l, onClick, h = 64) => (
     <button key={l} onClick={onClick} className="mv-btn rounded w-full overflow-hidden relative"
       style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
       <Scene loc={l} kind="quiet" height={h} />
       {(s.burned || []).includes(l) && <div className="mvScorch" />}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.9) 0%, rgba(8,10,18,0.12) 72%)" }} />
-      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{(s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span> : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 12 }}> · shut</span> : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · well fouled</span> : ""}</span>
+      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{locAffSuffix(l)}</span>
     </button>
   );
   /* Daylight variant of locBtn: searching by day should show the place lit
      by day (DawnScene), not the night silhouette used for the after-dark
-     search/patrol pickers. DawnScene already bakes affliction states
-     (burned/riot/fouled/shut) into its own art, so no separate overlay. */
+     search/patrol pickers. DawnScene also bakes affliction states
+     (burned/riot/fouled/shut) into its own art, on top of the shared label. */
   const dayLocBtn = (l, onClick, h = 64) => (
     <button key={l} onClick={onClick} className="mv-btn rounded w-full overflow-hidden relative"
       style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
       <DawnScene loc={l} s={s} height={h} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.82) 0%, rgba(8,10,18,0.08) 72%)" }} />
-      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{(s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 12 }}> · burned</span> : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 12 }}> · shut</span> : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 12 }}> · well fouled</span> : ""}</span>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(8,10,18,0) 45%, rgba(8,10,18,0.85) 100%)" }} />
+      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{locAffSuffix(l)}</span>
     </button>
   );
 
@@ -8467,7 +8547,7 @@ function MonsterVillage() {
   );
 
   const searchModal = modal === "search" && pickerShell("DAY " + s.dayNum, "Search where by daylight?", (
-    <div className="flex flex-col gap-1.5">{LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l), 46))}</div>
+    <div className="grid grid-cols-2 gap-2">{LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l), 92))}</div>
   ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
 
   const daySceneModal = dayScene && (() => {
@@ -8550,17 +8630,8 @@ function MonsterVillage() {
     <div>
       <div className="grid grid-cols-2 gap-2">
         {LOCS.map((l) => locBtn(l, () => startWalk(l), 56))}
-        <button onClick={() => startWalk(pick(LOCS))} className="mv-btn rounded w-full overflow-hidden relative"
-          style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
-          <Scene loc="Village Square" kind="quiet" height={72} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.92) 0%, rgba(8,10,18,0.15) 72%)" }} />
-          <div style={{ position: "absolute", left: 12, right: 10, bottom: 6, display: "flex", flexDirection: "column", gap: 1 }}>
-            <span className="mv-display" style={{ color: C.parch, fontSize: 13, letterSpacing: 0.5, textShadow: "0 1px 6px #000", lineHeight: 1.15, whiteSpace: "nowrap" }}>Patrol the Lanes</span>
-            <span style={{ color: C.dim, fontSize: 9.5, textShadow: "0 1px 6px #000", lineHeight: 1.25 }}>no destination · the night picks your road</span>
-          </div>
-        </button>
       </div>
-      {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Patrolling the lanes means walking without a destination and letting the night decide what you run into. What hunts by night notices being hunted.</p>}
+      {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Every place holds its own signs, and its own risks. What hunts by night notices being hunted.</p>}
     </div>
   ), () => setModal(null), null, <NightScene height={96} />);
 
@@ -8582,7 +8653,6 @@ function MonsterVillage() {
     else if (id === "liesel" && s2.tavernShut) opener.push(AFFLICTION_OPENER.liesel(npc.name));
     else if (id === "ansel" && (s2.burned || []).includes("Old Church")) opener.push(AFFLICTION_OPENER.ansel(npc.name));
     else if ((id === "greta" || id === "falk") && s2.wellFouled) opener.push(AFFLICTION_OPENER[id](npc.name));
-    if (id === s2.monster.vid && s2.faceKnown === id && !s2.fled) opener.push(pickFreshIdx(`faceKnownOpener:${id}`, FACE_KNOWN_OPENERS)(npc.name));
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
     setS(s2); setModal(null); setIvOpenerOpen(false);
     const valid = s2.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
@@ -8642,7 +8712,16 @@ function MonsterVillage() {
 
   const questionModal = modal === "question" && pickerShell("DAY " + s.dayNum + " · 1 ACTION, 3 QUESTIONS", "Interview whom?", (
     <div className="flex flex-col gap-2">
-      {aliveNpcs(s).map((n) => villagerBtn(n, () => startInterview(n.id), s.questionedToday.includes(n.id), s.questionedToday.includes(n.id) ? " · already questioned today" : (s.patience[n.id] <= 0 ? " · out of patience with you" : "")))}
+      {aliveNpcs(s).map((n) => {
+        /* Once the monster's worn face and the player have seen each other
+           (the watch-and-follow mutual sighting), it stops calmly receiving
+           visitors who know what they now know - it goes to ground instead
+           of sitting for questions. */
+        const evading = s.faceKnown === n.id && s.monsterSawYou;
+        const disabled = evading || s.questionedToday.includes(n.id);
+        const suffix = evading ? " · nowhere to be found" : s.questionedToday.includes(n.id) ? " · already questioned today" : (s.patience[n.id] <= 0 ? " · out of patience with you" : "");
+        return villagerBtn(n, () => startInterview(n.id), disabled, suffix);
+      })}
     </div>
   ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
 
@@ -9087,11 +9166,30 @@ function MonsterVillage() {
           </div>
           {n.alive && !n.fled && (
             <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+              {s.coerceNote && s.coerceNote.target === n.id && (
+                giveUpConfirm ? (
+                  <div className="mb-2">
+                    <p style={{ fontSize: 12, color: C.redBright, fontStyle: "italic" }} className="mb-1.5">There is no telling whether it keeps its word. There is no undoing this.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Btn onClick={() => setGiveUpConfirm(false)}>Keep them safe</Btn>
+                      <Btn kind="red" onClick={() => { setGiveUpConfirm(false); setProfile(null); doAction((x) => actGiveUp(x, n.id)); }}>Give them up, truly</Btn>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-2">
+                    <Btn full kind="red" onClick={() => setGiveUpConfirm(true)}>Give them up to it</Btn>
+                  </div>
+                )
+              )}
               <Btn full onClick={() => setS({ ...s, struckNpcs: struckP ? s.struckNpcs.filter((x) => x !== n.id) : [...s.struckNpcs, n.id] })}>
                 {struckP ? "Restore them to your suspicion" : "Strike them from your suspicion"}
               </Btn>
               <div className="grid grid-cols-2 gap-2 mt-2">
-                <Btn disabled={s.ap < 1 || s.questionedToday.includes(n.id)} onClick={() => { setProfile(null); startInterview(n.id); }}>Interview them</Btn>
+                {s.faceKnown === n.id && s.monsterSawYou ? (
+                  <Btn disabled>Nowhere to be found</Btn>
+                ) : (
+                  <Btn disabled={s.ap < 1 || s.questionedToday.includes(n.id)} onClick={() => { setProfile(null); startInterview(n.id); }}>Interview them</Btn>
+                )}
                 <Btn kind="red" disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}>Accuse them</Btn>
               </div>
             </div>
