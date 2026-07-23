@@ -2259,8 +2259,11 @@ function newGame(veteran, hollowedUnlocked) {
 
 function isActive(s, m, n) {
   if (n === 1) return true;
-  if (n === s.embolden) return true;
+  /* The ritual-bound kinds cannot break their count - the lore promises it and
+     Ansel's ledger clue leans on it. Emboldenment only ever forces an EXTRA
+     night out of the loose horrors, never an off-cycle kill from a strict one. */
   if (m.rhythm.kind === "strict") return (n - 1) % m.rhythm.n === 0;
+  if (n === s.embolden) return true;
   if (n - s.lastActive <= m.rhythm.gap) return false;
   return chance(m.rhythm.p);
 }
@@ -3182,7 +3185,11 @@ function resolveNight(prev, planIn, preEvents) {
            is no assailant for them to gasp a description of, so this beat is
            skipped for it entirely. */
         if (n > 1 && chance(0.12) && m.id !== "succubus") {
-          const closeSign = m.id === "mimic" ? pick(m.signs.filter((sg) => sg !== "wail")) : m.signs[2];
+          /* wail is never "found" this way - it surfaces only through the
+             wailTonight path (it has no ground/search presence). Drop it here
+             so a dying whisper never writes it into the journal, and take the
+             last real sign in its place for the wail-carriers. */
+          const closeSign = m.id === "mimic" ? pick(m.signs.filter((sg) => sg !== "wail")) : m.signs.filter((sg) => sg !== "wail").slice(-1)[0];
           if (chance(0.5) && !s.foundSigns.includes(closeSign)) {
             s.foundSigns.push(closeSign);
             dawn.push(ev(`${victim.name} did not die at once. The searchers found them still breathing, and everyone kneeling there noticed the same thing before the end came. ${senseFor(closeSign)}`, victim.id));
