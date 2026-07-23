@@ -3712,6 +3712,11 @@ function actUnbind(prev, id) {
   if (chance(off.p)) {
     beats.push(...unbindSuccessScene(npc.name));
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, turned: false, cured: true, unbindDay: s.dayNum } : x));
+    /* Wresting one of its own back enrages the thing for the rest of the game:
+       s.enraged is a one-way latch (never cleared), and it permanently raises
+       the odds of a caught/killed night out (outDeathChance) and of it salting
+       your trail with decoys (see resolveNight's plant branch). Attempting the
+       rite and failing angers it just the same (the else branch below). */
     s.enraged = true;
     s.bond = 0;
     s.embolden = s.nightNum + 1;
@@ -7432,7 +7437,7 @@ function MonsterVillage() {
   const falkCanExamine = examinerN && examinerN.alive && !examinerN.fled;
   const gretaN = npcById(s, "greta");
   const canExamine = falkCanExamine || (gretaN && gretaN.alive && !gretaN.fled);
-  const compatM = (mm) => s.playerSigns.every((sg) => mm.signs.includes(sg));
+  const compatM = (mm) => (s.playerSigns || []).every((sg) => mm.signs.includes(sg));
   const reckoned = gameMonsters(s).filter((mm) => !s.struck.includes(mm.id) && compatM(mm));
   const remainCount = reckoned.length;
   /* the journal worked down to a single name means the player walks armed:
