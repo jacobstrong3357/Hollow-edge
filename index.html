@@ -6602,7 +6602,10 @@ function defendLabel(s, mobT) {
 
 /* ================= META · THE BLACK BOOK ================= */
 
-const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fastestWin: null, hanged: 0, nights: 0, defeated: {}, ach: [], sound: false, secretsFound: {} };
+const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fastestWin: null, hanged: 0, nights: 0, defeated: {}, ach: [], sound: false, secretsFound: {},
+  /* -- richer record-keeping (all default in for older saves via the
+     {...EMPTY_META, ...saved} merge on load) -- */
+  faced: {}, longestRun: 0, soulsSaved: 0, soulsLost: 0, mobbed: 0, freed: 0, offers: 0, joined: 0 };
 
 /* A short, deliberately incomplete rulebook for the title screen: the goal
    and the rhythm of play, not the whole reference (that lives in the
@@ -6970,6 +6973,12 @@ function MonsterVillage() {
         secretsFound[npc.id] = arr;
       }
     });
+    /* every horror faced, win or lose: with `defeated` (wins only) this gives
+       a full personal record against each kind, shown in the Black Book. */
+    const faced = { ...(meta.faced || {}) };
+    faced[s.monster.type] = (faced[s.monster.type] || 0) + 1;
+    const soulsLost = s.npcs.filter((x) => !x.alive).length;
+    const survivors = s.npcs.filter((x) => x.alive && !x.fled && !x.turned).length;
     const next = {
       ...meta,
       games: meta.games + 1,
@@ -6980,6 +6989,14 @@ function MonsterVillage() {
       fastestWin: won ? Math.min(meta.fastestWin || 99, s.nightNum) : meta.fastestWin,
       hanged: meta.hanged + s.deaths.filter((d) => d.kind === "executed").length,
       nights: meta.nights + s.nightNum,
+      faced,
+      longestRun: Math.max(meta.longestRun || 0, s.nightNum),
+      soulsSaved: (meta.soulsSaved || 0) + (won ? survivors : 0),
+      soulsLost: (meta.soulsLost || 0) + soulsLost,
+      mobbed: (meta.mobbed || 0) + s.deaths.filter((d) => d.kind === "mobbed").length,
+      freed: (meta.freed || 0) + s.npcs.filter((x) => x.cured).length,
+      offers: (meta.offers || 0) + (s.offerMade ? 1 : 0),
+      joined: (meta.joined || 0) + (!won && s.over.reason === "joined" ? 1 : 0),
       defeated,
       secretsFound,
       ach: [...meta.ach],
@@ -7245,7 +7262,11 @@ function MonsterVillage() {
                         <div className="min-w-0">
                           <div className="flex items-baseline gap-2 flex-wrap">
                             <span className="mv-display" style={{ fontSize: 15, color: C.parch }}>{done ? mm.name : "?????"}</span>
-                            {done && <span style={{ fontSize: 11, color: C.redBright }}>ended {meta.defeated[mm.id]}×</span>}
+                            {(meta.faced || {})[mm.id] > 0 && (
+                              <span style={{ fontSize: 11, color: C.redBright }}>
+                                faced {meta.faced[mm.id]}×{done ? ` · ended ${meta.defeated[mm.id]}×` : " · never ended"}
+                              </span>
+                            )}
                           </div>
                           <p style={{ fontSize: 12.5, color: "rgba(233,223,200,0.75)", marginTop: 2 }}>{done ? mm.lore : mm.id === "hollowed" && hollowedLocked ? "Locked. Defeat the other fifteen horrors, and this one enters the draw." : "Defeat this horror once to reveal what it is and how it kills."}</p>
                         </div>
@@ -7270,16 +7291,43 @@ function MonsterVillage() {
                 </div>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+                {/* the horror you have met most, with your personal record
+                    against it. Named only once it has been ended at least
+                    once, to keep the Black Book's slow reveal intact. */}
+                {(() => {
+                  const facedIds = Object.keys(meta.faced || {}).filter((k) => meta.faced[k] > 0);
+                  if (!facedIds.length) return null;
+                  const nemId = facedIds.sort((a, b) => (meta.faced[b] - meta.faced[a]) || (meta.defeated[a] ? 1 : -1))[0];
+                  const nem = MONSTERS.find((mm) => mm.id === nemId);
+                  const beaten = !!meta.defeated[nemId];
+                  const met = meta.faced[nemId], ended = meta.defeated[nemId] || 0;
+                  return (
+                    <div className="rounded-xl p-3 mb-3 flex gap-3 items-center" style={{ background: C.panel2, border: `1px solid ${beaten ? C.amber + "66" : C.line}` }}>
+                      <div className="shrink-0" style={{ opacity: beaten ? 1 : 0.5 }}><MonsterArt id={nemId} size={46} light /></div>
+                      <div className="min-w-0">
+                        <div style={{ fontSize: 11, color: C.dim, letterSpacing: 1 }}>YOUR NEMESIS</div>
+                        <div className="mv-display" style={{ fontSize: 17, color: beaten ? C.parch : C.dim }}>{beaten ? nem.name : "A nameless horror"}</div>
+                        <div style={{ fontSize: 12, color: "rgba(233,223,200,0.7)" }}>Met {met}×{ended ? ` · ended ${ended}×` : " · never ended"}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     ["Games played", meta.games],
+                    ["Win rate", meta.games ? `${Math.round((meta.wins / meta.games) * 100)}%` : "-"],
                     ["Dawns won", meta.wins],
                     ["Villages lost", meta.losses],
                     ["Current streak", meta.streak],
                     ["Best streak", meta.bestStreak],
                     ["Fastest win", meta.fastestWin ? `night ${meta.fastestWin}` : "-"],
+                    ["Longest run", meta.longestRun ? `${meta.longestRun} night${meta.longestRun === 1 ? "" : "s"}` : "-"],
                     ["Total nights walked", meta.nights],
-                    ["Innocents hanged", meta.hanged],
+                    ["Souls saved", meta.soulsSaved || 0],
+                    ["Souls lost", meta.soulsLost || 0],
+                    ["Changed souls freed", meta.freed || 0],
+                    ["Hanged on your word", meta.hanged],
+                    ["Hanged by the mob", meta.mobbed || 0],
                     ["Horrors ended", `${defeatedCount} of ${MONSTERS.length}`],
                     ["Deeds earned", `${meta.ach.length} of ${ACH.length}`],
                   ].map(([label, val]) => (
