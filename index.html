@@ -2679,8 +2679,23 @@ function resolveNight(prev, planIn, preEvents) {
       } else if (act === "watch") {
         if (!s.knownBuild) { s.knownBuild = fw.build; s.buildClues = [...(s.buildClues || []), [fw.build, fw.build]]; }
         s.monsterSawYou = chance(0.6) ? true : s.monsterSawYou;
-        beats.push(`You stay, and you watch, and you memorize everything: the gait, the build, the length of the stride, until it lifts its head and tastes the air, and you leave before it finishes.`);
-        dawn.push(ev(`You have seen the face it wears: ${fw.name}. Whatever kind of thing it is, it goes about in ${fw.name}, and you would swear to it in any court. Now you need only its true nature.`, fw.id, 2));
+        /* Staying to LEARN it is the riskier read (see deathP2 above), so on
+           survival it earns more than the face fleeing already gives: pressed
+           close enough to watch the change, you come away with one of its true
+           tells as well. Never wail - that is only ever heard on a wailing
+           night, never studied off the changing body. */
+        const learnable = m.signs.filter((sg) => sg !== "wail" && !s.foundSigns.includes(sg));
+        const learned = learnable.length ? pick(learnable) : null;
+        if (learned) {
+          s.foundSigns.push(learned);
+          const sense = senseFor(learned);
+          beats.push(`You stay, and you watch, and you make yourself memorize all of it: the gait, the build, the stride, and one thing more, the mark of what it truly is showing plain through the borrowed skin. ${sense}`);
+          s.clues.push(`Night ${n}: you held your nerve and studied ${fw.name} in the dark until its true nature showed through. ${sense}`);
+          dawn.push(ev(`You have seen the face it wears: ${fw.name}, and by staying to watch you learned one of its true tells besides. ${sense} The field narrows.`, fw.id, 2));
+        } else {
+          beats.push(`You stay, and you watch, and you memorize everything: the gait, the build, the length of the stride, until it lifts its head and tastes the air, and you leave before it finishes.`);
+          dawn.push(ev(`You have seen the face it wears: ${fw.name}. Whatever kind of thing it is, it goes about in ${fw.name}, and you would swear to it in any court. Now you need only its true nature.`, fw.id, 2));
+        }
       } else {
         s.monsterSawYou = chance(0.4) ? true : s.monsterSawYou;
         beats.push(`You go back the way you came, slowly, placing each foot like a debt, and do not breathe properly until your own bolt is thrown.`);
