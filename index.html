@@ -1176,8 +1176,8 @@ const WALK_ODD_SIGHTS = [
 
 /* Animal victims that carry a real sign: a way to surface evidence on nights
    the thing changed someone or took no human at all. Keyed by the sign each
-   scene reveals, so the tell is honest. Reflect is the one sign that will not
-   fit a dead animal, so it never appears here. */
+   scene reveals, so the tell is honest. Wail is the one sign that is heard
+   and never found, so it has no entry here and never will. */
 const ANIMAL_SIGN = {
   bite: ["A cat lies dead by the path, small and cold and barely marked but for two deep punctures at the throat, paired and clean. Nothing that hunts cats leaves a bite like that.", "A farm dog is dead against its own kennel, and the only wound on it is a single bite, wider than a wolf's, that went through the neck in one closing."],
   claw: ["A dog lies opened along the fence, four deep parallel tears down its flank, torn and not bitten. No fox did that. Something with a hand did.", "A dead ewe in the ditch, raked open in four long lines, evenly spaced, far too wide for any paw you could name."],
@@ -2001,6 +2001,14 @@ const HOWARE_OFF = [
   `"Don't." A raised hand, not quite steady. "Kind of you. But if I start answering honestly I won't have the shutters barred by dark."`,
   `"Fine." Flat as a shut door. Some people armour themselves in courtesy. This one has run out.`,
 ];
+const HOWARE_MONSTER = [
+  `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
+  `"One day at a time, like everyone." The words are right, and the warmth almost reaches the eyes. "You look tired, though. You should rest. The village leans on you too hard." It is kindly meant. You spend a while, later, deciding whether you believe that.`,
+];
+const HOWARE_TURNED = [
+  `"I am well," they say, and stop, as if the sentence has run out of the things it was given to say. "I am well," they say again, softer, checking the fit of it.`,
+  `A long pause. "It is quieter now," they say at last. "Inside." They seem to believe that answers the question. Perhaps, somewhere, it does.`,
+];
 const PAST_OFF = [
   `"Before?" They look at you as if you had asked after a country that sank. "What use is before." It is not mystery. It is grief, guarding what it has left.`,
   `They start the story twice and lose it twice: "Ask someone else. Not tonight." Fear has been at their memories like moths at wool.`,
@@ -2031,6 +2039,106 @@ const TALK_TURNED = [
   `They make the shapes of conversation: nod, smile, answer. But the answers arrive a half-beat late, and once they get their own childhood wrong, and correct it the way you correct a recitation.`,
   `Sitting with them is like sitting with a portrait of them. Everything is where it should be. Nothing is behind it. They say your name at the door, and it sounds like something being filed away.`,
 ];
+
+/* ---------- who was close to whom ----------
+   Every villager has exactly two named ties, and the eight of them chain
+   into one closed ring, so every death lands specifically on two people
+   instead of vaguely on the village. Grief is written in the mourner's own
+   voice, one line per direction: Tobias does not mourn a neighbour, he
+   mourns the man he drank with.
+   The thing wearing a face has no dead of its own. It performs the grief
+   from outside, and performs it well more often than not (the same
+   good-actor roll as every other tell), so a hollow answer is a chill and
+   never a proof. */
+const MOURN = {
+  marta: {
+    liesel: `"The week Klaus drowned, Liesel poured for me every night and never once asked how I was. That was the kindness." She sets down a loaf nobody came for. "Nobody left to not ask."`,
+    wilhelm: `"His boys have had my bread every morning since their mother went. I went up at first light out of habit and stood in the lane holding two loaves." Her hands find work, because they must. "Somebody has to tell them properly."`,
+  },
+  tobias: {
+    wilhelm: `"Corner table, left of the fire, most evenings since his Anja went. He never said much and never needed to." He turns his cap over in his hands. "I'll dig it myself. I'll not have another man's spade on him."`,
+    ansel: `"Forty years the pair of us at the same graveside. Him at the head with the book, me at the foot with the spade." He looks a long time at the church. "I have never buried anyone without a priest. I don't know the words. I'll have to make some up."`,
+  },
+  ansel: {
+    tobias: `"Tobias dug every grave I ever prayed over. Forty years, and I never learned whether he believed a word of it." He closes the ledger without writing. "I would give a great deal to have asked."`,
+    falk: `"Falk and I met at every deathbed in this parish. He did what could be done, then stood back and let me do what could not." A long pause. "I never told him I thought his the harder half."`,
+  },
+  greta: {
+    falk: `"That old fool called my remedies superstition to my face and sent me his hard cases out his back door." She strips a stem clean, harder than the work wants. "Every year since he came. I'd have called it friendship if either of us could have stood the word."`,
+    rosa: `"They crossed the road from her and they cross it from me. Two women with nobody to speak for them." She sets the jar down. "She used to nod at me in the lane. That was all it ever was. You would not think it could leave a hole."`,
+  },
+  wilhelm: {
+    tobias: `"Every evening, that corner table, and he'd talk about the ground until I could go home and sleep." The hammer goes down on the anvil and stays there. "Two boys upstairs asking me who's next. I've run out of the other answer."`,
+    marta: `"That woman fed my boys four years of mornings and never once let me pay her." He is not looking at you. "There's a debt I can't clear now. You tell me how a man carries that."`,
+  },
+  liesel: {
+    marta: `"Bread through my back door at six, and every evening she'd take one small beer and give me the whole village." She wipes the same clean spot on the bar. "Two widows keeping each other's hours. There's just the one set of hours now, love."`,
+    rosa: `"Two hours over one drink, that one, in the corner, watching the lot of us and saying nothing." A short laugh with nothing under it. "I liked her for it. Do you know how restful it is, someone who doesn't talk? And I never said so, because when would you."`,
+  },
+  falk: {
+    greta: `"We disagreed about everything from the day I arrived. Willow bark, chiefly." The old mouth works. "She was right about the willow bark. I never said so, and the saying is no use to either of us now."`,
+    ansel: `"That man came to every bedside I was losing and made it bearable for them." He turns his cup and does not drink from it. "I have signed his certificate. There is a little box on it for the cause, and nothing I know to put in there."`,
+  },
+  rosa: {
+    liesel: `"My first night in this village she put a bowl in front of me and asked nothing at all. Two springs, and I never repaid it." She folds the work in her lap very precisely. "I am sewing her shroud. I asked to. It is the only thing I have that she needs."`,
+    greta: `"She was the one person here who never asked me where I came from." The needle has stopped. "In two springs that was the whole of my welcome. It was enough. Now it is over."`,
+  },
+};
+const tiesOf = (id) => Object.keys(MOURN[id] || {});
+/* The tie this villager has most recently lost, if any. Fled is not dead:
+   only a body starts the grieving. */
+function lostTie(s, id) {
+  const dead = tiesOf(id).map((tid) => npcById(s, tid)).filter((x) => x && !x.alive);
+  if (!dead.length) return null;
+  const nightOf = (x) => { const d = s.deaths.find((dd) => dd.id === x.id); return d ? d.night : 0; };
+  return dead.sort((a, b) => nightOf(b) - nightOf(a))[0];
+}
+const deathKindOf = (s, id) => { const d = s.deaths.find((x) => x.id === id); return d ? d.kind : null; };
+/* One line each for the six they were not tied to: real, and general. */
+const MOURN_PLAIN = {
+  marta: `"I keep baking for the count we had last week. Every morning now there is bread nobody comes for."`,
+  tobias: `"Another one for me to put down. That's my trade, and it was never meant to be the whole of my week."`,
+  ansel: `"I have written the name in the ledger. It is a very small line for a whole person. It is all the ledger allows."`,
+  greta: `"I sent them something for the sleeplessness a fortnight back. It worked, I'm told." A hard breath. "Small comfort, and I'll take it, having no other."`,
+  wilhelm: `"Knew them to nod to, all my life." He works the bellows once, for nothing. "Turns out that was friendship, in a place this size."`,
+  liesel: `"Their mug's still up on the shelf, love. I can't be the one to move it and nobody else will dare."`,
+  falk: `"I have seen a very great deal of death, and never once found that the practice makes it smaller."`,
+  rosa: `"I am measuring for another shroud. I have come to know this village entirely by the length of its people."`,
+};
+/* Grief performed from the outside: correct in every particular, and fitted
+   to no one. Never journal-marked, never flagged. A chill, not a finding. */
+const MOURN_FAKE = [
+  `The grief is all there: the pause, the wet eye, the hand that finds the table. It arrives in precisely the right order, and you cannot name one thing that was wrong with it.`,
+  `"A terrible loss. This village will not be the same." Both true, both perfectly said, and neither of them, you notice on the road home, about the person who died.`,
+  `They speak beautifully about the dead for a full minute, and every word would have fitted any of the eight. It is a eulogy with the name left blank.`,
+];
+const MOURN_TURNED = [
+  `"Yes," they say. "That was very sad." They wait, pleasantly, to see whether anything more is wanted, and when nothing comes they go back to the window.`,
+  `They grieve at some length, warmly and correctly, for someone standing in the next room alive. Corrected, they take it without embarrassment and grieve again, just as warmly, for the right one.`,
+];
+/* When the neck was the player's doing, the grief comes back with your name
+   in it. Appended to whatever the mourner said. */
+const MOURN_ROPE = [
+  ` Then, without heat: "You'll want to know whether I blame you. I've decided not to. It took all night, and I may have to decide it again tomorrow."`,
+  ` At the door: "They asked for you at the end. I thought hard about whether to tell you, and decided you should have to carry it too."`,
+];
+/* Sitting an hour with the bereaved: no information, and worth doing. */
+const MOURN_COMFORT = [
+  (dn) => ` You say very little about ${dn}, and neither do they, and the saying was never the point. When you stand to go they hold your hand a moment longer than either of you expected.`,
+  (dn) => ` ${dn}'s name comes up once, early, and after that you are simply another living person in the room. Judging by how they are at the door, that was worth an hour.`,
+];
+/* The morning's grief, seen from the lane. One shared pool: the composed
+   ones are in it too, because people do bear it that way, and because the
+   thing wearing a face draws from the same pool as everybody else. */
+const MOURN_DAWN = [
+  (mn, dn) => `${mn} sits the whole morning outside ${dn}'s door and will not be moved along, and by noon the village has given up trying.`,
+  (mn, dn) => `${mn} has not opened up today. Whatever ${dn} was to them, the village is only now doing the arithmetic of it.`,
+  (mn, dn) => `Someone asks ${mn} a small ordinary question about ${dn} and gets a long silence for it. The lane clears itself politely.`,
+  (mn, dn) => `${mn} puts ${dn}'s name in the present tense twice before noon and corrects it both times. It is the second correction that lands.`,
+  (mn, dn) => `${mn} weeps for ${dn} in the square, briefly and completely, and is composed again inside a minute, and gets on with the day.`,
+  (mn, dn) => `${mn} is first to ${dn}'s door and stays longest, with the right word for each one who comes. By afternoon half the village has been comforted by the one who lost most.`,
+];
+
 function dispTier(d) {
   const v = d || 0;
   if (v <= -2) return "hate";
@@ -3347,6 +3455,25 @@ function resolveNight(prev, planIn, preEvents) {
     }
   }
 
+  /* --- the village grieves by name --- */
+  if (!s.over) {
+    const freshDead = s.deaths.filter((d) => d.night === n && d.kind !== "turned");
+    if (freshDead.length && chance(0.55)) {
+      const gone = pick(freshDead);
+      /* whoever was closest to them and is still able to show it. The thing
+         wearing a face draws from this pool like everyone else: in the lane,
+         in front of the village, it grieves as well as anybody. */
+      const mourners = Object.keys(MOURN).filter((mid) => {
+        const x = npcById(s, mid);
+        return MOURN[mid][gone.id] && x && x.alive && !x.fled && !x.turned;
+      });
+      if (mourners.length) {
+        const mn = npcById(s, pick(mourners));
+        dawn.push(ev(pickFreshIdx("mournDawn", MOURN_DAWN)(mn.name, gone.name), mn.id, 0));
+      }
+    }
+  }
+
   const hiddenTurned = s.npcs.filter((x) => x.alive && !x.fled && x.turned && !x.known && x.id !== s.lastRumor);
   /* pointed rumors about a named neighbour hold off until the village has
      had a few nights to fray: a day-one whisper reads as a handed-out clue
@@ -4317,6 +4444,13 @@ function computeAnswer(s, id, night, q, targetId) {
       quote = pickFreshIdx("talkOff", TALK_OFF);
     } else {
       quote = pickFreshIdx(`talkLines:${id}`, TALK_LINES[id] || [`They talk, and you listen, and for an hour the village is only a village again.`]);
+      /* An hour given to someone who has just lost one of their two buys no
+         information at all, and is worth more to them than any of it. */
+      const grieving = lostTie(s, id);
+      if (grieving) {
+        quote += pickFreshIdx("mournComfort", MOURN_COMFORT)(grieving.name);
+        s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+      }
       const lastActive = [...s.nightLogs].reverse().find((lg) => lg.active && lg.huntLoc);
       if (lastActive && dispChance(0.3, (npc.disp || 0) + 1)) {
         quote += ` Then, at the door, quieter: "Keep away from the ${lastActive.huntLoc} after dark. Don't ask me how I know. Just keep away."`;
@@ -4330,24 +4464,35 @@ function computeAnswer(s, id, night, q, targetId) {
   }
 
   if (q === "howare") {
+    /* Once one of their two is in the ground, "how are you holding up" stops
+       being a question about the village and becomes a question about a
+       person, and they answer it that way. */
+    const lost = lostTie(s, id);
+    /* Fresh grief answers for them every time; after a few nights it only
+       surfaces now and then, so a villager never gets stuck on one line and
+       the village slowly, horribly, goes back to ordinary fear. */
+    const lostNight = lost ? (s.deaths.find((d) => d.id === lost.id) || {}).night : null;
+    const mourn = lost && (s.nightNum - lostNight <= 2 || chance(0.5)) ? (MOURN[id][lost.id] || MOURN_PLAIN[id]) : null;
+    const plainLoss = !lost && s.deaths.some((d) => d.kind !== "turned") && chance(0.3) ? MOURN_PLAIN[id] : null;
     if (isMonster) {
+      /* it has no dead. More often than not it gives you the borrowed face's
+         own grief, word for word and pitch perfect; the rest of the time the
+         performance shows a seam, and a seam has never hanged anyone. */
       quote = chance(0.45)
-        ? pickFreshIdx("howareMonster", [
-            `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
-            `"One day at a time, like everyone." The words are right, and the warmth almost reaches the eyes. "You look tired, though. You should rest. The village leans on you too hard." It is kindly meant. You spend a while, later, deciding whether you believe that.`,
-          ])
-        : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
+        ? (mourn ? pickFreshIdx("mournFake", MOURN_FAKE) : pickFreshIdx("howareMonster", HOWARE_MONSTER))
+        : (mourn || plainLoss || pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]));
     } else if (npc.turned) {
-      quote = pickFreshIdx(`howareTurned:${id}`, [
-        `"I am well," they say, and stop, as if the sentence has run out of the things it was given to say. "I am well," they say again, softer, checking the fit of it.`,
-        `A long pause. "It is quieter now," they say at last. "Inside." They seem to believe that answers the question. Perhaps, somewhere, it does.`,
-      ]);
+      quote = mourn
+        ? pickFreshIdx("mournTurned", MOURN_TURNED)
+        : pickFreshIdx(`howareTurned:${id}`, HOWARE_TURNED);
     } else {
-      quote = chance(0.15)
+      quote = mourn || plainLoss || (chance(0.15)
         ? pickFreshIdx("howareOff", HOWARE_OFF)
-        : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
+        : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]));
       if (chance(0.5)) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     }
+    /* a neck taken on your word comes back to you in the grieving */
+    if (mourn && quote === mourn && ["executed", "mobbed"].includes(deathKindOf(s, lost.id))) quote += pickFreshIdx("mournRope", MOURN_ROPE);
   }
 
   if (q === "past") {
@@ -9202,6 +9347,14 @@ function MonsterVillage() {
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
             <p style={{ fontSize: 13, fontStyle: "italic", color: "rgba(233,223,200,0.6)" }}>{lore.body}</p>
             <p className="mt-1.5" style={{ fontSize: 12, color: C.dim }}>{n.build} of build{n.alive && s.knownBuild === n.build ? ": like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ": could be the shape in the dark" : ""}</p>
+            {/* who they drink with, eat with, bury with: village knowledge,
+                no part of the reckoning, and the reason the grief has names */}
+            {tiesOf(n.id).length > 0 && (
+              <p className="mt-1.5" style={{ fontSize: 12, color: C.dim }}>Closest in the village to {tiesOf(n.id).map((t, i) => {
+                const o = npcById(s, t);
+                return <span key={t}>{i > 0 ? " and " : ""}<span style={{ color: o && !o.alive ? C.redBright : C.dim, textDecoration: o && !o.alive ? "line-through" : "none" }}>{o ? o.name : t}</span></span>;
+              })}.</p>
+            )}
             {n.secretKnown && secretOf(s, n.id) && (
               <p className="mt-1.5" style={{ fontSize: 12, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {secretOf(s, n.id).short}.</p>
             )}
