@@ -61,7 +61,7 @@ does not change, so these stay valid.
 | # | Screen | Canvas | Offset | Replaces | Status |
 |---|---|---|---|---|---|
 | 11 | **Daylight search** | `t20` 20a-20c | 368 | `searchModal`, `runSearchScene`, `dayLocBtn` | **done** — `bac0533` |
-| — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — `3c42df4` |
+| — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — *"Lift the four recurring objects out of the search screen"* |
 | 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749, 653 | walk render, `watchModal` | todo |
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | todo |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
@@ -100,9 +100,10 @@ Set by the daylight search (`bac0533`). Reuse these; do not reinvent them.
 
 - **`evPlaque(ev(...), rule, sign)`** (near the `ev` helper, ~L2133) tags a day
   beat that the game *reports* rather than sets atmosphere around, so the
-  renderer can give it a ruled plaque. `rule` is `"amber"` (a find, and stamps a
-  `<SIGN> · STAMPED` chip), `"bone"` (a daylight fact), or `"red"` (a mark
-  exposed as planted). Purely presentational — nothing else reads it.
+  renderer can give it a ruled plaque. `rule` is a `PLAQUE_RULES` key — `"amber"`
+  (a find, and stamps a `<SIGN> · STAMPED` chip), `"bone"` (a daylight fact),
+  `"danger"` (a mark exposed as planted), `"change"`. Purely presentational —
+  nothing else reads it.
 - **`DAY_STRIP_MASK`** (just after the `C` object) is the shared fade ramp for
   any full-bleed strip that runs off the top of a screen. Full-bleed art never
   hard-cuts.
@@ -110,10 +111,8 @@ Set by the daylight search (`bac0533`). Reuse these; do not reinvent them.
   `MonsterVillage`, near `searchModal`) are the daylight header: masked
   `DayStrip` at 230px, amber kicker, 26px display title, `C.dim` sub. The
   examination (20d) and the day screen use the same one.
-- **The dock** is `className="mvIvDock"` with
-  `background: linear-gradient(#181D31,#131728)`, `borderTop: 1px solid C.line`,
-  `paddingBottom: max(env(safe-area-inset-bottom),16px)`. One committing action,
-  amber outline; destructive filled `C.red`; secondary transparent + `C.line`.
+- **The dock** is now the `<Dock>` / `<DockBtn>` pair — see the next section.
+  Do not hand-roll one.
 - **Content sits against the dock, not under the header**: the scrolling middle
   is `flex-1 min-h-0` and its choice group carries `marginTop: "auto"`. This is
   what stops the half-empty screens the first drafts had.
@@ -165,7 +164,9 @@ you redesign its screen, not before.
    come from `NPC_DEFS` but every run generates its own cast.
 4. Test (below). Zero page errors is the bar.
 5. Commit one screen, in the repo's voice (see "Authorship").
-6. **Update this file**: flip the row to `done` with the commit sha, add any new
+6. **Update this file**: flip the row to `done`, identifying the commit by its
+   **subject line, not its sha** — you cannot know your own sha before you make
+   the commit, and amending to backfill it only changes the sha again. Add any new
    convention to "Conventions", add any mock-vs-code conflict to "Conflicts
    found". Commit that with the screen.
 7. `git push -u origin <branch>`.
