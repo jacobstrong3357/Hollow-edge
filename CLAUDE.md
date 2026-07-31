@@ -14,8 +14,17 @@ must name both WHO and WHAT before the village runs out of people.
   (achievements, bestiary, secrets) with localStorage. The in-progress run
   is persisted too (`mv-run`, saved on every state change, cleared when
   `s.over` lands) and offered back at the gate as "RETURN TO ... UNFINISHED".
-- `netlify.toml` 404s `/CLAUDE.md` on the published site; the deploy is
-  wired to pushes on `main` (site `hollowsedge` on Netlify).
+- `netlify.toml` 404s `/CLAUDE.md` and `/design_handoff_hollows_edge_redesign/*`
+  on the published site; the deploy is wired to pushes on `main` (site
+  `hollowsedge` on Netlify).
+- **`design_handoff_hollows_edge_redesign/`** is the mobile redesign handoff:
+  `README.md` (design system + a section per screen, naming the repo function
+  each replaces) and `Hollow's Edge Redesign.dc.html` (the canvas; find a
+  screen by its `id="tNN"` section, options `NNa`/`NNb`/…). The other files
+  (`hollow-art.jsx`, `ios-frame.jsx`, `support.js`) are the mock runtime, not
+  production code. It is presentation only: where it seems to add, remove or
+  reweight a player choice, `index.html` wins. Being worked one screen at a
+  time; done so far: **§11 daylight search (20a-20c)**.
 
 ## How the file is organized (top to bottom)
 
@@ -115,7 +124,19 @@ must name both WHO and WHAT before the village runs out of people.
   never diagnostic, slightly likelier on its actual hunting ground).
 - The day search plays as a staged scene (`runSearchScene`/`daySceneModal`):
   pick an approach (cosmetic — outcome already settled), then beats reveal
-  one at a time. Beats are `ev` objects so portraits ride along.
+  one at a time, with pips for how many are left. Beats are `ev` objects so
+  portraits ride along. A beat the search *reports* rather than sets
+  atmosphere around is wrapped in `evPlaque(ev(...), rule, sign)` and renders
+  as a ruled plaque instead of plain prose: `"amber"` = a find (and stamps a
+  `<SIGN> · STAMPED` chip under the prose), `"bone"` = a daylight fact (the
+  necromancer's grave), `"red"` = a mark exposed as planted. The tag is
+  presentational — nothing else reads it, and it touches no odds.
+- The search picker is the daylight masthead (`dayMasthead`), not the shared
+  `pickerShell`: masked `DayStrip`, question in display type, the six places
+  two-up and weighted to the bottom of the screen. Day cards carry no
+  affliction suffix — `DawnScene` already bakes burned/riot/fouled/shut into
+  the art. Nothing is ticked, greyed or removed: the same place tomorrow is
+  a different search.
 - `runExamine` wraps `actLookOver`: a positive "changed" finding opens the
   interview with the turned villager immediately (free — the exam already
   cost the daylight), opened with a `TURNED_FACED` line; their answers are

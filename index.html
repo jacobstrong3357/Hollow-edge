@@ -2130,6 +2130,14 @@ const aliveNpcs = (s) => s.npcs.filter((n) => n.alive && !n.fled);
    villager marked for the rope, the note), 1 = normal (your own night's
    findings), 0 = atmosphere, dropped first. */
 const ev = (t, pid, pri) => ({ t, pid, pri: pri === undefined ? 1 : pri });
+/* Presentation only. A day beat that REPORTS something, rather than setting
+   atmosphere around it, is tagged here so the daylight search can give it a
+   ruled plaque instead of running it as plain prose. rule names the kind the
+   way the palette does: "amber" = a find, "bone" = a daylight fact, "red" =
+   something turned against you. sign, where there is one, stamps the sign
+   chip under the prose. Nothing but the search scene reads any of this, and
+   it touches no odds and no state. */
+const evPlaque = (e, rule, sign) => { e.plaque = { rule, sign }; return e; };
 const turnNightOf = (s, id) => { const d = s.deaths.find((x) => x.id === id && x.kind === "turned"); return d ? d.night : null; };
 
 function ritePreparer(s, excludeId) {
@@ -3626,7 +3634,7 @@ function actSearch(prev, loc) {
       if (seed && chance(0.4)) {
         s.necroGraveFound = true;
         s.clues.push(`Day ${s.dayNum}: ${seed.name}'s plot stands open, dug from the inside, the earth thrown outward and heaped wrong, as if the digging went the wrong direction entirely. Whatever left that grave did not need help getting out of it.`);
-        s.dayEvents.push(ev(`Something at the ${loc} stops you cold: ${seed.name}'s grave, freshly turned again though the burying was days ago, the dirt piled the wrong way. You did not imagine that.`, seed.id));
+        s.dayEvents.push(evPlaque(ev(`Something at the ${loc} stops you cold: ${seed.name}'s grave, freshly turned again though the burying was days ago, the dirt piled the wrong way. You did not imagine that.`, seed.id), "bone"));
         return s;
       }
     }
@@ -3637,7 +3645,7 @@ function actSearch(prev, loc) {
     suspect.exposed = true;
     s.foundSigns = s.foundSigns.filter((sg) => sg !== suspect.sg);
     s.clues.push(`Day ${s.dayNum}: the ${SIGNS[suspect.sg]} at the ${loc} were MADE. Too regular, cut with a tool, meant to be found. Something is salting your trail. Untick it if you ticked it.`);
-    s.dayEvents.push(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`));
+    s.dayEvents.push(evPlaque(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`), "red"));
     return s;
   }
   /* --- the village is awake around you while you work: one social beat,
@@ -3666,9 +3674,9 @@ function actSearch(prev, loc) {
        bare on the ground: same find, same odds, told closer to home. Only
        signs whose animal vignettes read right by daylight qualify. */
     const dayAnimal = ["bite", "claw", "tracks", "flora", "hex"].includes(sg) && chance(0.4);
-    s.dayEvents.push(ev(dayAnimal
+    s.dayEvents.push(evPlaque(ev(dayAnimal
       ? `Your search of the ${loc} finds its answer in a small dead thing. ${animalSignScene(sg)}`
-      : `Searching the ${loc} in daylight, you find it. ${senseFor(sg)} ${lastWx === "frost" ? "The frost held it for you overnight, sharp as the moment it was made." : "Fainter than it would have been by night, but real."}`));
+      : `Searching the ${loc} in daylight, you find it. ${senseFor(sg)} ${lastWx === "frost" ? "The frost held it for you overnight, sharp as the moment it was made." : "Fainter than it would have been by night, but real."}`), "amber", sg));
     /* the day log clears at dusk, so the find is written into the lasting
        record too, place and all, where the journal keeps it */
     s.clues.push(`Day ${s.dayNum}: you searched the ${loc} and found ${senseFor(sg, 0)}`);
@@ -4721,6 +4729,10 @@ const C = {
   parch: "#E9DFC8", parchLine: "#C9B98F", ink: "#2B2416", inkDim: "#6B5F44", turn: "#7A5FA0",
   sky: "#141830", ground: "#0B0E1C", sil: "#05070F", pale: "#AEB4CC", garment: "#232845",
 };
+
+/* Full-bleed art never hard-cuts: every strip that runs off the top of a
+   screen fades out through this ramp instead of ending on a line. */
+const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 52%, rgba(0,0,0,0.6) 74%, rgba(0,0,0,0.2) 90%, transparent 100%)";
 
 function Scene({ loc, kind, height = 150 }) {
   const win = (x, y, w = 8, h = 12, arch) => (
@@ -8548,7 +8560,7 @@ function MonsterVillage() {
     </button>
   );
 
-  /* Shared across locBtn/dayLocBtn: every lasting village affliction that
+  /* Used by the after-dark locBtn: every lasting village affliction that
      touches a searchable place, so a burned church, a fouled well, a riot
      at the square or a shuttered tavern always reads on its card - the
      art (DawnScene) bakes these in for the day pickers, but the night
@@ -8570,14 +8582,20 @@ function MonsterVillage() {
   );
   /* Daylight variant of locBtn: searching by day should show the place lit
      by day (DawnScene), not the night silhouette used for the after-dark
-     search/patrol pickers. DawnScene also bakes affliction states
-     (burned/riot/fouled/shut) into its own art, on top of the shared label. */
-  const dayLocBtn = (l, onClick, h = 64) => (
-    <button key={l} onClick={onClick} className="mv-btn rounded w-full overflow-hidden relative"
-      style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
-      <DawnScene loc={l} s={s} height={h} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(8,10,18,0) 45%, rgba(8,10,18,0.85) 100%)" }} />
-      <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 16, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{locAffSuffix(l)}</span>
+     search/patrol pickers. The label sits under the art on its own row
+     rather than over it, and carries no affliction suffix: DawnScene already
+     bakes burned/riot/fouled/shut into the art, so the word would only say
+     twice what the picture says once. */
+  const dayLocBtn = (l, onClick, h = 110) => (
+    <button key={l} onClick={onClick} className="mv-btn mv-body"
+      style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "hidden", background: C.sky, border: `1px solid ${C.line}`, borderRadius: 4, color: C.parch, cursor: "pointer" }}>
+      <span style={{ display: "block", position: "relative", width: "100%", height: h, overflow: "hidden" }}>
+        <DawnScene loc={l} s={s} height={h} />
+        <span style={{ position: "absolute", inset: 0, background: `linear-gradient(rgba(20,24,41,0) 44%, rgba(20,24,41,0.8))` }} />
+      </span>
+      <span style={{ display: "flex", alignItems: "center", width: "100%", padding: "9px 11px 10px", textAlign: "left" }}>
+        <span className="mv-display" style={{ fontSize: 13, letterSpacing: 0.6, color: C.parch }}>{l}</span>
+      </span>
     </button>
   );
 
@@ -8621,9 +8639,46 @@ function MonsterVillage() {
     </div>
   );
 
-  const searchModal = modal === "search" && pickerShell("DAY " + s.dayNum, "Search where by daylight?", (
-    <div className="grid grid-cols-2 gap-2">{LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l), 92))}</div>
-  ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
+  /* The daylight actions get a masthead of their own rather than the slim
+     picker hero: the village skyline behind the question, the question in
+     display type, and the choices weighted to the bottom of the screen so
+     the thumb reaches them. The strip is masked rather than clipped so the
+     art never hard-cuts into the ground colour. */
+  const dayMasthead = (kicker, title, sub) => (
+    <>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 0, WebkitMaskImage: DAY_STRIP_MASK, maskImage: DAY_STRIP_MASK }}>
+        <DayStrip height={230} />
+      </div>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(8,10,18,0.3) 0%, rgba(8,10,18,0.62) 34%, rgba(16,19,33,0.9) 62%, #101321 88%)" }} />
+      <div className="mvGrain" />
+      <div className="relative" style={{ flexShrink: 0, padding: "0 22px", paddingTop: "max(env(safe-area-inset-top),20px)" }}>
+        <span className="mv-display block" style={{ fontSize: 10.5, letterSpacing: 3.2, whiteSpace: "nowrap", color: C.amber }}>{kicker}</span>
+        <h1 className="mv-display" style={{ margin: "6px 0 0", fontSize: 26, lineHeight: 1.1, color: C.parch }}>{title}</h1>
+        <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.45, color: C.dim }}>{sub}</p>
+      </div>
+    </>
+  );
+  /* how many daylight hours are left, said the way the village would say it */
+  const apKicker = () => `DAY ${s.dayNum} · ${s.ap === 1 ? "ONE ACTION LEFT" : s.ap === 2 ? "TWO ACTIONS" : `${s.ap} ACTIONS`}`;
+
+  const searchModal = modal === "search" && (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
+        {dayMasthead(apKicker(), "Search where by daylight?", "One place, one action.")}
+        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoRows: "min-content", gap: 9, paddingBottom: 4 }}>
+            {LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l)))}
+          </div>
+        </div>
+        <div className="px-4 pt-3 mvIvDock relative" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+          <button onClick={() => setModal(null)} className="mv-btn mv-display w-full"
+            style={{ borderRadius: 3, padding: "13px 0", textAlign: "center", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>CLOSE</button>
+        </div>
+      </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
+    </div>
+  );
 
   const daySceneModal = dayScene && (() => {
     /* the daylight search, staged in the interview/dawn language: a painted
@@ -8633,70 +8688,88 @@ function MonsterVillage() {
     const beats = dayScene.beats || [];
     const arriving = dayScene.stage !== "beats";
     const idx = Math.min(dayScene.idx || 0, Math.max(0, beats.length - 1));
-    const styleIcon = { ground: "ground", walls: "walls", listen: "air" };
+    /* A beat is either something the morning does around you (prose, with the
+       neighbour's face beside it where there is one) or something the search
+       REPORTS, which gets a ruled plaque and, for a sign, the stamp chip that
+       says it is written down now. The stamp comes after the prose, never
+       instead of it: you read what you found before it becomes a label. */
+    const PLAQUE_RULE = { amber: C.amber, bone: C.parchLine, red: C.redBright };
     const beatEl = (e, i, spoken) => {
       const npc = e.pid ? npcById(s, e.pid) : null;
-      return (
-        <div key={i} className="mt-3 first:mt-0 flex gap-2.5 items-start">
-          {npc && <div className="shrink-0"><Portrait id={npc.id} size={34} dead={!npc.alive} turnedKnown={npc.turned && npc.known} disp={npc.disp} /></div>}
-          <div className="rounded-xl px-3 py-2" style={{ background: C.panel2, border: `1px solid ${C.line}`, flex: 1 }}>
-            <p style={{ fontSize: 15, lineHeight: 1.5 }}>{spoken ? <SpokenText text={e.t} speed={35} /> : e.t}</p>
+      const body = spoken ? <SpokenText text={e.t} speed={35} /> : e.t;
+      if (e.plaque) {
+        return (
+          <div key={i} className="mvIvIn" style={{ padding: "14px 15px 15px", background: C.sky, borderTop: `2px solid ${PLAQUE_RULE[e.plaque.rule] || C.amber}`, borderRadius: 2 }}>
+            <p style={{ margin: 0, fontSize: 16.5, lineHeight: 1.45, color: C.parch, textWrap: "pretty" }}>{body}</p>
+            {e.plaque.sign && (
+              <span style={{ display: "flex", gap: 6, marginTop: 11 }}>
+                <span className="mv-display" style={{ fontSize: 9, letterSpacing: 1.6, whiteSpace: "nowrap", color: C.parch, background: C.ink, border: `1px solid ${C.ink}`, borderRadius: 2, padding: "4px 8px" }}>
+                  {SIGNS[e.plaque.sign].toUpperCase()} · STAMPED
+                </span>
+              </span>
+            )}
           </div>
+        );
+      }
+      return (
+        <div key={i} className="mvIvIn flex gap-3 items-start">
+          {npc && <div className="shrink-0"><Portrait id={npc.id} size={40} dead={!npc.alive} turnedKnown={npc.turned && npc.known} disp={npc.disp} /></div>}
+          <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.45, color: C.text, textWrap: "pretty" }}>{body}</p>
         </div>
       );
     };
     return (
-      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
-        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg,#1A1F36,#141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-              <div className="relative">
-                <DawnScene loc={dayScene.loc} s={s} height={arriving ? 150 : 70} />
-                <div className="absolute inset-0" style={{ background: arriving ? "linear-gradient(rgba(20,24,41,0) 55%, rgba(20,24,41,0.9))" : "linear-gradient(rgba(20,24,41,0.3), rgba(20,24,41,0.82))", pointerEvents: "none" }} />
-                {arriving ? (
-                  <>
-                    <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#F5D9A0", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(245,217,160,0.3)" }}>DAY {s.dayNum} · SEARCH BY DAYLIGHT</div>
-                    <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>THE {dayScene.loc.toUpperCase()}</div>
-                  </>
-                ) : (
-                  <div className="absolute mv-display" style={{ top: 7, left: 12, fontSize: 9.5, letterSpacing: 2.5, color: "#F5D9A0", textShadow: "0 1px 4px #000" }}>DAY {s.dayNum} · THE {dayScene.loc.toUpperCase()}</div>
-                )}
-              </div>
+      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+          <div className="mvGrain" />
+          <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),16px)" }}>
+            <div className="overflow-hidden relative" style={{ borderRadius: 14, border: `1px solid ${C.line}`, background: "linear-gradient(180deg,#1A1F36,#141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <DawnScene loc={dayScene.loc} s={s} height={arriving ? 188 : 150} />
+              <div className="absolute inset-0" style={{ background: arriving ? "linear-gradient(rgba(20,24,41,0) 62%, rgba(20,24,41,0.92))" : "linear-gradient(rgba(20,24,41,0) 52%, rgba(20,24,41,0.94))", pointerEvents: "none" }} />
+              {arriving && <span className="mv-display absolute" style={{ top: 10, left: 12, fontSize: 10.5, letterSpacing: 2.5, color: "#F5D9A0", background: "rgba(8,10,18,0.5)", border: "1px solid rgba(245,217,160,0.3)", borderRadius: 3, padding: "2px 8px" }}>DAY {s.dayNum}</span>}
+              <span className="mv-display absolute" style={{ left: 15, bottom: arriving ? 10 : 9, fontSize: arriving ? 15 : 14, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>THE {dayScene.loc.toUpperCase()}</span>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-5 pt-3.5" style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", gap: 12, WebkitOverflowScrolling: "touch" }}>
             {arriving ? (
               <>
-                <p style={{ fontSize: 14.5, color: "rgba(233,223,200,0.62)", lineHeight: 1.5 }}>{dayScene.open}</p>
-                <p className="mv-display text-center mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· CHOOSE HOW TO WORK THE PLACE ·</p>
-                <div className="grid grid-cols-1 gap-2 mt-3">
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{dayScene.open}</p>
+                <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8, paddingBottom: 4 }}>
+                  <span className="mv-display text-center" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· CHOOSE HOW TO WORK THE PLACE ·</span>
                   {Object.entries(DAY_SEARCH_STYLES).map(([k, st]) => (
                     <button key={k} onClick={() => setDayScene({ ...dayScene, stage: "beats", styleLine: st.line(dayScene.loc), idx: 0 })}
-                      className="mvIvChip rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left" style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: "pointer" }}>
-                      <span style={{ color: C.amber, flexShrink: 0 }}><MvIcon k={styleIcon[k]} /></span>
-                      <span className="mv-display" style={{ fontSize: 13.5, color: C.parch }}>{st.label}</span>
+                      className="mv-btn mv-body mvIvChip" style={{ display: "flex", alignItems: "center", textAlign: "left", padding: 14, background: C.sky, border: `1px solid ${C.line}`, borderRadius: 8, cursor: "pointer" }}>
+                      <span style={{ fontSize: 15, lineHeight: 1.3, color: C.parch }}>{st.label}</span>
                     </button>
                   ))}
                 </div>
               </>
             ) : (
               <>
-                <p style={{ fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>{dayScene.styleLine}</p>
-                <div className="mt-2">
-                  {beats.slice(0, idx).map((e, i) => beatEl(e, i, false))}
-                  {beats.length > 0 && beatEl(beats[idx], idx, true)}
+                <p style={{ margin: 0, fontSize: 15, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.62)", textWrap: "pretty" }}>{dayScene.styleLine}</p>
+                {beats.slice(0, idx).map((e, i) => beatEl(e, i, false))}
+                {beats.length > 0 && beatEl(beats[idx], idx, true)}
+                <div style={{ marginTop: "auto", display: "flex", justifyContent: "center", gap: 6, padding: "8px 0 4px" }}>
+                  {beats.map((_, i) => (
+                    <span key={i} style={{ width: 6, height: 6, borderRadius: 3, background: i === idx ? C.amber : C.line, boxShadow: i === idx ? "0 0 6px rgba(217,164,65,0.45)" : "none" }} />
+                  ))}
                 </div>
               </>
             )}
           </div>
-          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-            {arriving
-              ? <Btn full center onClick={() => setDayScene(null)}>Leave it for now</Btn>
-              : idx < beats.length - 1
-                ? <Btn full center kind="amber" onClick={() => setDayScene({ ...dayScene, idx: idx + 1 })}><span className="mv-display" style={{ letterSpacing: 2 }}>LOOK ON →</span></Btn>
-                : <Btn full center kind="amber" onClick={() => setDayScene(null)}><span className="mv-display" style={{ letterSpacing: 2 }}>BACK TO THE VILLAGE →</span></Btn>}
+          <div className="px-4 pt-3 mvIvDock relative" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+            <button
+              onClick={() => (arriving || idx >= beats.length - 1) ? setDayScene(null) : setDayScene({ ...dayScene, idx: idx + 1 })}
+              className="mv-btn mv-display w-full"
+              style={{ borderRadius: 3, padding: "13px 0", textAlign: "center", fontSize: 13, letterSpacing: 2, cursor: "pointer", ...(arriving
+                ? { background: "transparent", border: `1px solid ${C.line}`, color: C.text }
+                : { background: "rgba(217,164,65,0.1)", border: `1px solid ${C.amber}`, color: C.amber }) }}>
+              {arriving ? "CLOSE" : "ONWARD"}
+            </button>
           </div>
         </div>
+        <div className="mvVignette" />
+        <div className="mvGrainF" />
       </div>
     );
   })();

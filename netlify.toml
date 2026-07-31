@@ -4,3 +4,11 @@
   to = "/"
   status = 404
   force = true
+
+# The design handoff (README, canvas, mock runtime) is reference for the
+# redesign, not part of the game.
+[[redirects]]
+  from = "/design_handoff_hollows_edge_redesign/*"
+  to = "/"
+  status = 404
+  force = true
