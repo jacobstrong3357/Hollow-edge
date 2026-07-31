@@ -23,8 +23,11 @@ must name both WHO and WHAT before the village runs out of people.
   screen by its `id="tNN"` section, options `NNa`/`NNb`/…). The other files
   (`hollow-art.jsx`, `ios-frame.jsx`, `support.js`) are the mock runtime, not
   production code. It is presentation only: where it seems to add, remove or
-  reweight a player choice, `index.html` wins. Being worked one screen at a
-  time; done so far: **§11 daylight search (20a-20c)**.
+  reweight a player choice, `index.html` wins.
+  **`MIGRATION.md` in that folder is the ledger for this work** — status of all
+  17 rows, the order, established conventions, the test recipe, and how to
+  resume cold. Read it before touching a redesign screen, and update it in the
+  same commit as the screen. Done so far: **§11 daylight search (20a-20c)**.
 
 ## How the file is organized (top to bottom)
 
