@@ -65,7 +65,7 @@ does not change, so these stay valid.
 | 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749, 653 | walk render, `watchModal` | todo |
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | todo |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
-| 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | todo |
+| 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; needs `ShroudH` folded in | todo |
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | todo |
@@ -236,6 +236,13 @@ Where a mock implied a mechanic the code does not have, and what was done.
   mock and the code (the roll is settled in `actSearch` before the scene opens),
   and the mock's "nothing is ticked or greyed" matches the code, where searching
   the same place again is a fresh roll.
+
+- **§1 day screen** — none, and one near-miss worth recording. The mock's
+  journal bar reads `THE JOURNAL · 7 REMAIN`, which looks like the auto-computed
+  "tally of what remains" §5 forbids. It is not: `remainCount` is derived from
+  the player's own tick-marks and the bar has always shown it. Kept as-is.
+  Check before you cut something for breaking an invariant — it may already be
+  the shipped behaviour the mock was drawn from.
 
 ## Findings banked for later rows
 

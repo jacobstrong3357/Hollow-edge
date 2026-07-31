@@ -6701,6 +6701,11 @@ function investigateLabel(s, freshDeath) {
   if (!freshDeath) return "No one died last night. There is nothing to investigate.";
   return `Go to where ${freshDeath.name} fell`;
 }
+/* The village counts its days the way it would say them aloud, and stops
+   counting in words once a run has gone on longer than anyone expected. */
+const DAY_ORDINALS = ["", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Eleventh", "Twelfth"];
+const dayTitle = (n) => (DAY_ORDINALS[n] ? `The ${DAY_ORDINALS[n]} Day` : `Day ${n}`);
+
 function examineLabel(canExamine, viaGreta) {
   if (!canExamine) return "No one remains who can read the change in a body";
   return viaGreta ? "Have Greta look someone over for the change" : "Have someone examined for the change";
@@ -6984,6 +6989,9 @@ function MonsterVillage() {
      changed one is questioned inline. */
   const [examRes, setExamRes] = useState(null);
   const [walk, setWalk] = useState(null);
+  /* the rope notice states the sentence at all times; what you can do about
+     it folds away, because it is the same four options every morning */
+  const [ropeOpen, setRopeOpen] = useState(false);
   const [factPage, setFactPage] = useState(-1);
   const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const [clueSeen, setClueSeen] = useState(0);
@@ -9430,13 +9438,28 @@ function MonsterVillage() {
   })();
 
   /* ---------- The dawn, faced before the day ---------- */
-  const actCard = (icon, title, hint, onClick, disabled, accent) => (
-    <button onClick={onClick} disabled={disabled} className="mv-btn rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left"
-      style={{ background: C.panel2, border: `1px solid ${!disabled && accent ? accent : C.line}`, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
-      <span style={{ color: !disabled && accent ? accent : C.amber, flexShrink: 0 }}><MvIcon k={icon} /></span>
+  /* An errand is an engraved plaque with daylight on its rule: amber, because
+     pressing it spends one of the day's two hours. The rule is the same on all
+     four - what differs is what the errand is, not how much it costs. */
+  const actCard = (icon, title, hint, onClick, disabled) => (
+    <button onClick={onClick} disabled={disabled} className="mv-btn"
+      style={{ display: "flex", gap: 9, alignItems: "flex-start", textAlign: "left", padding: "11px 12px 10px", background: C.sky, border: "none", borderTop: `2px solid ${C.amber}`, borderRadius: 2, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
+      <span style={{ color: C.amber, flexShrink: 0, marginTop: 1 }}><MvIcon k={icon} /></span>
       <span style={{ minWidth: 0 }}>
-        <span className="mv-display block" style={{ fontSize: 13.5, color: !disabled && accent ? accent : C.parch, lineHeight: 1.15 }}>{title}</span>
-        <span className="block" style={{ fontSize: 10.5, color: C.dim, lineHeight: 1.3 }}>{hint}</span>
+        <span className="mv-display block" style={{ fontSize: 14, letterSpacing: 1, color: C.parch, lineHeight: 1.15 }}>{title}</span>
+        <span className="block" style={{ fontSize: 11, color: C.dim, fontStyle: "italic", lineHeight: 1.3, marginTop: 2 }}>{hint}</span>
+      </span>
+    </button>
+  );
+  /* The errands the village asks of you, rather than the four you choose from:
+     bone on the rule, full width, and they still cost an hour. */
+  const sideActCard = (glyph, title, hint, onClick, disabled) => (
+    <button onClick={onClick} disabled={disabled} className="mv-btn w-full"
+      style={{ display: "flex", gap: 9, alignItems: "flex-start", textAlign: "left", padding: "11px 12px 10px", background: C.sky, border: "none", borderTop: `2px solid ${C.parchLine}`, borderRadius: 2, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
+      <span style={{ color: C.parchLine, fontSize: 19, flexShrink: 0, lineHeight: 1, width: 24, textAlign: "center" }}>{glyph}</span>
+      <span style={{ minWidth: 0 }}>
+        <span className="mv-display block" style={{ fontSize: 14, letterSpacing: 1, color: C.parch, lineHeight: 1.15 }}>{title}</span>
+        <span className="block" style={{ fontSize: 11, color: C.dim, fontStyle: "italic", lineHeight: 1.3, marginTop: 2 }}>{hint}</span>
       </span>
     </button>
   );
@@ -9480,30 +9503,65 @@ function MonsterVillage() {
       <style>{CSS_ALL}</style>
       {journal}{searchModal}{daySceneModal}{nightWalkModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{watchModal}{unbindModal}{accuseModal}{profileModal}{resultSheet}
 
+      {/* the masthead: the day named the way the village would say it, over the
+          skyline, with the nights it has already survived under the title and
+          the count of who is left at the right */}
       <div className="sticky top-0 z-20" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="relative">
-          <DayStrip height={66} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(16,19,33,0.2), rgba(16,19,33,0.9))" }} />
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-1.5">
-            <div className="max-w-md mx-auto flex items-baseline gap-3">
-              <span className="mv-display" style={{ fontSize: 23, color: C.parch, lineHeight: 1, textShadow: "0 1px 6px #000" }}>Day {s.dayNum}{s.fled ? " · under siege" : ""}</span>
-              <MoonStrip s={s} />
-              <span className="ml-auto" style={{ fontSize: 11.5, color: C.pale, textShadow: "0 1px 4px #000", whiteSpace: "nowrap" }}>
-                <button onClick={toggleSound} className="mv-body mr-2" style={{ background: "transparent", border: "none", color: C.pale, fontSize: 11.5, cursor: "pointer", padding: 0 }}>{snd ? "♪" : "♪·off"}</button>
-                {aliveNpcs(s).length} living{knownChanged ? ", some changed" : ""}
-              </span>
+          <DayStrip height={124} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(16,19,33,0.05) 0%, rgba(16,19,33,0.45) 55%, rgba(16,19,33,0.86) 100%)" }} />
+          <div className="absolute inset-x-0 bottom-0" style={{ padding: "0 18px 10px" }}>
+            <div className="max-w-md mx-auto flex items-end" style={{ gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <h1 className="mv-display" style={{ margin: 0, fontSize: 28, lineHeight: 1, color: C.parch, textShadow: "0 2px 10px #000" }}>{dayTitle(s.dayNum)}</h1>
+                <div className="flex items-center" style={{ gap: 9, marginTop: 7 }}>
+                  <MoonStrip s={s} />
+                  {s.fled && <span className="mv-display" style={{ fontSize: 9, letterSpacing: 2, color: C.redBright }}>UNDER SIEGE</span>}
+                </div>
+              </div>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 14, alignItems: "center" }}>
+                <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.pale, fontSize: 11.5, cursor: "pointer", padding: 0, textShadow: "0 1px 4px #000" }}>{snd ? "♪" : "♪·off"}</button>
+                <div style={{ textAlign: "center" }}>
+                  <div className="mv-display" style={{ fontSize: 19, lineHeight: 1, color: C.parch, textShadow: "0 1px 6px #000" }}>{aliveNpcs(s).length}</div>
+                  <div className="mv-display" style={{ fontSize: 8, letterSpacing: 1.5, color: knownChanged ? C.turn : C.dim }}>{knownChanged ? "SOME CHANGED" : "LIVING"}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* the rope notice states the sentence always; the four things you can do
+          about it fold away, because they are the same four every morning */}
       {s.mob && mobT && mobT.alive && (
-        <div className="px-4 py-2" style={{ background: "rgba(158,48,57,0.18)", borderBottom: `1px solid ${C.red}` }}>
-          <div className="max-w-md mx-auto flex items-center gap-3">
-            <Portrait id={mobT.id} size={36} turnedKnown={mobT.turned && mobT.known} />
-            <p style={{ fontSize: 13, color: C.parch }}>
-              <strong>{mobA ? mobA.name : "The mob"}</strong> has sworn to hang <strong>{mobT.name}</strong> at FIRST LIGHT tomorrow unless the truth is found first. You have today and tonight: accuse the guilty, speak for {mobT.name} in the square, watch their door after dark, or let the rope decide.
-            </p>
+        <div style={{ padding: ropeOpen ? "9px 18px 11px" : "9px 18px", background: "rgba(158,48,57,0.16)", borderBottom: "1px solid rgba(158,48,57,0.5)" }}>
+          <div className="max-w-md mx-auto">
+            <div className="flex items-center" style={{ gap: 10 }}>
+              <span style={{ flexShrink: 0, borderRadius: 4, overflow: "hidden", boxShadow: "0 0 0 1px rgba(194,68,80,0.6)", display: "flex" }}>
+                <Portrait id={mobT.id} size={30} turnedKnown={mobT.turned && mobT.known} />
+              </span>
+              <p style={{ margin: 0, flex: 1, fontSize: 12.5, color: C.parch, lineHeight: 1.35 }}>
+                <strong>{mobA ? mobA.name : "The mob"}</strong> has the rope. <strong>{mobT.name}</strong> hangs at first light unless you find the truth.
+              </p>
+              <button onClick={() => setRopeOpen(!ropeOpen)} className="mv-body" style={{ flexShrink: 0, background: ropeOpen ? "rgba(194,68,80,0.2)" : "transparent", border: "1px solid rgba(194,68,80,0.55)", borderRadius: 4, color: ropeOpen ? C.parch : C.redBright, fontSize: 11, padding: "3px 7px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                {ropeOpen ? "close ▴" : "what can I do? ▾"}
+              </button>
+            </div>
+            {ropeOpen && (
+              <div style={{ marginTop: 6, marginLeft: 25, display: "flex", flexDirection: "column", gap: 3 }}>
+                {[
+                  ["I", <><strong>Accuse the guilty.</strong> Right face, right name, ends it tonight.</>, false],
+                  ["II", <><strong>Speak for {mobT.name} in the square.</strong> Costs an errand.</>, false],
+                  ["III", <><strong>Watch {mobT.name}'s door tonight.</strong> What you see counts.</>, false],
+                  ["IV", <><strong>Let the rope decide.</strong> And live with it.</>, true],
+                ].map(([num, text, quiet], i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, fontSize: 12, color: quiet ? C.dim : C.parch, lineHeight: 1.35 }}>
+                    <span className="mv-display" style={{ color: quiet ? C.dim : C.redBright, flexShrink: 0 }}>{num}</span>
+                    <span>{text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -9541,7 +9599,10 @@ function MonsterVillage() {
             the JOURNAL bar's notification dot (keyed to s.clues) already
             flags when something new is waiting there. */}
 
-        <div className="mt-3 grid grid-cols-4 gap-y-2 place-items-center">
+        {/* Every villager wears a bone nameplate. The plate's underline carries
+            whatever the village knows about them, so a state is legible from
+            the grid without reading a caption: bone is nothing known. */}
+        <div className="mt-3" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px 8px" }}>
           {s.npcs.map((n) => {
             const struckP = s.struckNpcs.includes(n.id) && n.alive;
             /* Once the monster's own face is known, only that villager is
@@ -9554,39 +9615,56 @@ function MonsterVillage() {
               : s.mob && s.mob.target === n.id && n.alive ? C.red
               : n.alive && !faceK && s.knownBuild === n.build ? C.amber
               : n.alive && !faceK && cands && cands.length < BUILDS.length && cands.includes(n.build) ? "rgba(217,164,65,0.4)" : null;
+            /* the underline states what is known, and the caption says it in
+               words. Order matters: dead first, then the things that outrank a
+               rumour. A build hint stays a ring and never earns a caption,
+               because it is a guess and the plate is for what is settled. */
+            const st = !n.alive ? { rule: C.line, note: "BURIED", noteColor: C.dim }
+              : n.fled ? { rule: C.redBright, note: "IN HIDING", noteColor: C.redBright }
+              : faceK === n.id ? { rule: C.redBright, note: "IT WEARS THIS FACE", noteColor: C.redBright }
+              : n.turned && n.known ? { rule: C.turn, note: "CHANGED", noteColor: C.turn }
+              : n.cured ? { rule: C.amber, note: "UNBOUND", noteColor: C.amber }
+              : s.mob && s.mob.target === n.id ? { rule: C.red, note: "MARKED", noteColor: C.redBright }
+              : { rule: C.parchLine, note: null };
             return (
-              <button key={n.id} onClick={() => setProfile(n.id)} className="flex flex-col items-center gap-0.5 mv-btn" style={{ width: 72, background: "transparent", border: "none", cursor: "pointer", padding: 0, opacity: struckP ? 0.5 : 1 }}>
-                <div style={{ borderRadius: 12, boxShadow: ring ? `0 0 0 2px ${ring}` : "none" }}>
-                  <Portrait id={n.id} size={50} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} />
+              <button key={n.id} onClick={() => setProfile(n.id)} className="mv-btn"
+                style={{ display: "flex", flexDirection: "column", alignItems: "stretch", background: "transparent", border: "none", padding: 0, cursor: "pointer", opacity: !n.alive || struckP ? 0.5 : 1 }}>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <div style={{ borderRadius: 12, boxShadow: ring ? `0 0 0 2px ${ring}` : "none" }}>
+                    <Portrait id={n.id} size={50} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} />
+                  </div>
                 </div>
-                <div className="text-center" style={{ fontSize: 10.5, color: C.dim, lineHeight: "12px", textDecoration: struckP ? "line-through" : "none" }}>
-                  {n.name}{n.fled ? <><br /><span style={{ color: C.redBright }}>in hiding</span></> : faceK === n.id && n.alive ? <><br /><span style={{ color: C.redBright }}>it wears this face</span></> : n.turned && n.known ? <><br /><span style={{ color: C.turn }}>changed</span></> : n.cured ? <><br /><span style={{ color: C.amber }}>unbound</span></> : s.mob && s.mob.target === n.id && n.alive ? <><br /><span style={{ color: C.redBright }}>marked</span></> : null}
-                </div>
+                <div className="mv-display" style={{
+                  marginTop: 5, fontSize: 8.5, letterSpacing: 0.6, whiteSpace: "nowrap", textAlign: "center", padding: "3px 0",
+                  overflow: "hidden", textOverflow: "ellipsis",
+                  background: n.alive ? C.parch : "#3A3D45", color: n.alive ? C.ink : "#B9BCC6",
+                  borderBottom: `2px solid ${st.rule}`,
+                  textDecoration: !n.alive || struckP ? "line-through" : "none",
+                }}>{n.name.toUpperCase()}</div>
+                {st.note && <div className="mv-display" style={{ fontSize: 8.5, letterSpacing: 1, color: st.noteColor, textAlign: "center", marginTop: 2 }}>{st.note}</div>}
               </button>
             );
           })}
         </div>
 
         <div className="mt-3">
-          <div className="flex items-center justify-between">
-            <span className="mv-display" style={{ fontSize: 13, letterSpacing: 2, color: C.dim }}>DAYLIGHT REMAINING</span>
-            <span>{[0, 1].map((i) => (<span key={i} className="inline-block rounded-full ml-1.5" style={{ width: 10, height: 10, background: i < s.ap ? C.amber : "transparent", border: `1.5px solid ${i < s.ap ? C.amber : C.line}`, boxShadow: i < s.ap ? "0 0 8px rgba(217,164,65,0.55)" : "none" }} />))}</span>
+          {/* the errands, under a ruled heading that carries the day's hours */}
+          <div className="flex items-end justify-between" style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 5, marginTop: 18 }}>
+            <span className="mv-display" style={{ fontSize: 10, letterSpacing: 3.5, color: C.dim }}>ACTIONS</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span className="mv-display" style={{ fontSize: 9, letterSpacing: 2, color: C.dim }}>DAYLIGHT</span>
+              {[0, 1].map((i) => (<span key={i} style={{ display: "inline-block", width: 11, height: 11, borderRadius: "50%", background: i < s.ap ? C.amber : "transparent", border: i < s.ap ? "none" : `1.5px solid ${C.line}`, boxShadow: i < s.ap ? "0 0 8px rgba(217,164,65,0.55)" : "none" }} />))}
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-1.5">
-            {actCard("invest", "Where They Fell", investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum, "#C24450")}
+          <div className="grid grid-cols-2" style={{ gap: 8, marginTop: 10 }}>
+            {actCard("invest", "Where They Fell", investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum)}
             {actCard("search", "Search a Place", "Turn a place over by daylight", () => setModal("search"), s.ap < 1)}
             {actCard("talk", "Hold an Interview", "Three questions, one visit", () => setModal("question"), s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length)}
             {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => { setExamRes(null); setModal("examine"); }, s.ap < 1 || !canExamine)}
           </div>
-          <div className="grid grid-cols-1 gap-1.5 mt-2">
-            {s.mob && mobT && mobT.alive && (
-              <Btn small disabled={s.ap < 1 || s.defendedToday} onClick={() => doAction((x) => actDefend(x))}>
-                {defendLabel(s, mobT)}
-              </Btn>
-            )}
-            {eligibleUnbind.length > 0 && (
-              <Btn small disabled={s.ap < 1} onClick={() => setModal("unbind")}>Attempt the Rite of Unbinding</Btn>
-            )}
+          <div className="grid grid-cols-1" style={{ gap: 8, marginTop: 8 }}>
+            {s.mob && mobT && mobT.alive && sideActCard("⚖", `Speak for ${mobT.name} in the Square`, defendLabel(s, mobT), () => doAction((x) => actDefend(x)), s.ap < 1 || s.defendedToday)}
+            {eligibleUnbind.length > 0 && sideActCard("✝", "The Rite of Unbinding", "Try to call one of them back from the change", () => setModal("unbind"), s.ap < 1)}
           </div>
           {armedGuess && !s.fled && (() => {
             /* the journal has been worked down to a single possible creature:
@@ -9615,25 +9693,25 @@ function MonsterVillage() {
 
       {/* the fixed foot: the night's two decisions, and beneath them the
           journal — the staple that stays at the very bottom of the screen */}
-      <div className="fixed bottom-0 inset-x-0 z-10 mvIvDock" style={{ background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}` }}>
-        <div className="max-w-md mx-auto px-4 pt-2.5" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}>
-          <div className="flex gap-2">
-            <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" disabled={s.fled} onClick={() => setModal("accuse")}
-              style={{ flex: 1, background: s.fled ? "transparent" : C.red, border: `1px solid ${C.red}`, color: s.fled ? C.dim : "#F3E9E4", fontSize: 13, letterSpacing: 2, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
+      <div className="fixed bottom-0 inset-x-0 z-10 mvIvDock" style={{ background: "linear-gradient(#141830,#0C0F1A)", borderTop: `1px solid ${C.line}` }}>
+        <div className="max-w-md mx-auto" style={{ padding: "10px 18px", paddingBottom: "max(env(safe-area-inset-bottom), 10px)", display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
+            className="mv-display relative w-full text-center"
+            style={{ padding: "9px 0", borderRadius: 2, background: "transparent", color: C.parch, fontSize: 12, letterSpacing: 3, border: `1px solid ${C.parchLine}`, cursor: "pointer" }}>
+            THE JOURNAL{remainCount < gameMonsters(s).length ? ` · ${remainCount} REMAIN` : ""}
+            {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
+            {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 11, right: 12, width: 7, height: 7, borderRadius: 4, background: C.redBright, boxShadow: `0 0 6px ${C.redBright}` }} />}
+          </button>
+          <div className="flex" style={{ gap: 8 }}>
+            <button className="mv-btn mv-display text-center" disabled={s.fled} onClick={() => setModal("accuse")}
+              style={{ width: 104, borderRadius: 2, padding: "12px 0", background: "transparent", border: `1px solid ${C.red}`, color: C.redBright, fontSize: 12, letterSpacing: 2.5, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
               {s.fled ? "UNMASKED" : "ACCUSE"}
             </button>
-            <button className="mv-btn mv-display rounded-lg px-3 py-2.5 text-center" onClick={() => setModal("plan")}
-              style={{ flex: 1.35, background: "transparent", border: `1px solid ${C.amber}`, color: C.amber, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>
-              NIGHTFALL →
+            <button className="mv-btn mv-display text-center" onClick={() => setModal("plan")}
+              style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: "linear-gradient(#D9A441,#B8863A)", border: "none", color: "#1A1408", fontSize: 13, letterSpacing: 3, cursor: "pointer" }}>
+              NIGHTFALL ☾
             </button>
           </div>
-          <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}
-            className="mv-display relative w-full mt-2 py-2 rounded-lg text-center"
-            style={{ background: C.parch, color: C.ink, fontSize: 13.5, letterSpacing: 2, border: `1px solid ${C.parchLine}`, cursor: "pointer" }}>
-            ☰ JOURNAL{remainCount < gameMonsters(s).length ? <span style={{ fontSize: 11, letterSpacing: 1, opacity: 0.75 }}> · {remainCount} remain</span> : ""}
-            {/* any new evidence lights the dot: a written clue OR a freshly witnessed sign, cleared when the journal is opened */}
-            {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 7, right: 10, width: 8, height: 8, borderRadius: 4, background: C.red, boxShadow: `0 0 6px ${C.redBright}` }} />}
-          </button>
         </div>
       </div>
 
