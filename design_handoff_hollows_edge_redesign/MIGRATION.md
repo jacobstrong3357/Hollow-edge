@@ -71,7 +71,7 @@ does not change, so these stay valid.
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | todo |
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | todo |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | todo |
-| 2 | Villager page | `t2` 2c | 3546 | `profileModal` | todo |
+| 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | todo |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | todo |
@@ -243,6 +243,15 @@ Where a mock implied a mechanic the code does not have, and what was done.
   the player's own tick-marks and the bar has always shown it. Kept as-is.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
+
+- **§2 villager page** — the canvas and the README disagree, and the README
+  wins. Screen 2c's own caption says *"the existing villager page, recreated as
+  it is in the build. No redesign"*, but README §2 asks for "what you have on
+  them as plaques", and 2c's foot is already drawn in the **new** dock
+  vocabulary. So 2c is a *before* picture with an updated foot, not a spec.
+  Built to the README: status and record became plaques, foot matches the day
+  screen. **Where a canvas option says it is only recreating the build, read the
+  README entry as the intent.**
 
 ## Findings banked for later rows
 

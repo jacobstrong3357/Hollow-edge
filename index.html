@@ -9307,6 +9307,12 @@ function MonsterVillage() {
     </div>
   );
 
+  /* the quiet step-through for a paged record */
+  const pageBtn = (label, off, go) => (
+    <button onClick={off ? undefined : go} disabled={off} className="mv-btn mv-display"
+      style={{ borderRadius: 2, padding: "5px 12px", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 10.5, letterSpacing: 2, opacity: off ? 0.35 : 1, cursor: off ? "default" : "pointer" }}>{label}</button>
+  );
+
   const profileModal = profile && (() => {
     const n = npcById(s, profile);
     const lore = NPC_LORE[n.id];
@@ -9341,6 +9347,9 @@ function MonsterVillage() {
     const troubled = !n.alive || n.fled;
     const heroAccent = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "#AEB6D8";
     const statusColor = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "rgba(233,223,200,0.85)";
+    /* what the village knows about them is a report, so it takes a rule: the
+       same vocabulary as everywhere else, and the state picks it. */
+    const statusRule = troubled ? "danger" : n.turned && n.known ? "change" : n.cured ? "amber" : "bone";
     const nAff = (n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled);
     return (
       <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
@@ -9371,9 +9380,9 @@ function MonsterVillage() {
             {n.alive && !n.fled && (
               <p className="mt-1.5" style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
             )}
-            <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-              <p style={{ fontSize: 14, lineHeight: 1.5, color: statusColor }}>{status}</p>
-            </div>
+            <Plaque rule={statusRule} className="mt-3">
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: statusColor, textWrap: "pretty" }}>{status}</p>
+            </Plaque>
             <div className="mv-display mt-4" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>WHAT YOU KNOW</div>
             {facts.length === 0 && <p style={{ fontSize: 13.5, color: C.dim }} className="mt-1.5">Nothing yet. You have not seen them at night, nor heard a word of their movements.</p>}
             {(() => {
@@ -9383,19 +9392,19 @@ function MonsterVillage() {
               return (
                 <>
                   {facts.length > 0 && (
-                    <div className="mt-1.5 rounded-xl px-3.5 py-2.5" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                    <Plaque rule="bone" className="mt-1.5" style={{ padding: "10px 14px 12px" }}>
                       {facts.slice(cur * PAGE, cur * PAGE + PAGE).map((f, i) => (
-                        <p key={i} className={i === 0 ? "" : "mt-1.5"} style={{ fontSize: 13.5, lineHeight: 1.45, color: "rgba(233,223,200,0.85)", fontStyle: f.clue ? "italic" : "normal" }}>
+                        <p key={i} style={{ margin: i === 0 ? 0 : "6px 0 0", fontSize: 13.5, lineHeight: 1.45, color: "rgba(233,223,200,0.85)", fontStyle: f.clue ? "italic" : "normal" }}>
                           {f.t}{f.flag && <span style={{ color: C.redBright, fontWeight: 700 }}> ✕ {f.flag}</span>}
                         </p>
                       ))}
-                    </div>
+                    </Plaque>
                   )}
                   {facts.length > PAGE && (
                     <div className="flex items-center justify-between mt-2">
-                      <Btn small disabled={cur === 0} onClick={() => setFactPage(cur - 1)}>‹ Earlier</Btn>
+                      {pageBtn("‹ EARLIER", cur === 0, () => setFactPage(cur - 1))}
                       <span style={{ fontSize: 12, color: C.dim }}>page {cur + 1} of {total}</span>
-                      <Btn small disabled={cur >= total - 1} onClick={() => setFactPage(cur + 1)}>Later ›</Btn>
+                      {pageBtn("LATER ›", cur >= total - 1, () => setFactPage(cur + 1))}
                     </div>
                   )}
                 </>
@@ -9419,16 +9428,30 @@ function MonsterVillage() {
                   </div>
                 )
               )}
-              <Btn full onClick={() => setS({ ...s, struckNpcs: struckP ? s.struckNpcs.filter((x) => x !== n.id) : [...s.struckNpcs, n.id] })}>
-                {struckP ? "Restore them to your suspicion" : "Strike them from your suspicion"}
-              </Btn>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {s.faceKnown === n.id && s.monsterSawYou ? (
-                  <Btn disabled>Nowhere to be found</Btn>
-                ) : (
-                  <Btn disabled={s.ap < 1 || s.questionedToday.includes(n.id)} onClick={() => { setProfile(null); startInterview(n.id); }}>Interview them</Btn>
-                )}
-                <Btn kind="red" disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}>Accuse them</Btn>
+              {/* striking a name is free and reversible, so it stays quiet;
+                  the two that cost something sit below it, and the interview
+                  is filled amber because it spends an hour of daylight */}
+              <button onClick={() => setS({ ...s, struckNpcs: struckP ? s.struckNpcs.filter((x) => x !== n.id) : [...s.struckNpcs, n.id] })}
+                className="mv-btn mv-display w-full text-center"
+                style={{ borderRadius: 2, padding: "9px 0", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 12, letterSpacing: 3, cursor: "pointer" }}>
+                {struckP ? "RESTORE TO SUSPICION" : "STRIKE FROM SUSPICION"}
+              </button>
+              <div className="flex mt-2" style={{ gap: 8 }}>
+                <button disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}
+                  className="mv-btn mv-display text-center"
+                  style={{ width: 104, borderRadius: 2, padding: "12px 0", background: "transparent", border: `1px solid ${C.red}`, color: C.redBright, fontSize: 12, letterSpacing: 2.5, opacity: s.fled ? 0.5 : 1, cursor: s.fled ? "default" : "pointer" }}>ACCUSE</button>
+                {(() => {
+                  const gone = s.faceKnown === n.id && s.monsterSawYou;
+                  const spent = s.ap < 1 || s.questionedToday.includes(n.id);
+                  const off = gone || spent;
+                  return (
+                    <button disabled={off} onClick={off ? undefined : () => { setProfile(null); startInterview(n.id); }}
+                      className="mv-btn mv-display text-center"
+                      style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: off ? "transparent" : "linear-gradient(#D9A441,#B8863A)", border: off ? `1px solid ${C.line}` : "none", color: off ? C.dim : "#1A1408", fontSize: 13, letterSpacing: 3, opacity: off ? 0.5 : 1, cursor: off ? "default" : "pointer" }}>
+                      {gone ? "NOWHERE TO BE FOUND" : "INTERVIEW"}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           )}
