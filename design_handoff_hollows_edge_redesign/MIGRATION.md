@@ -66,7 +66,7 @@ does not change, so these stay valid.
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | todo |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | todo |
-| 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | todo |
+| 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; needs `ShroudH` folded in | todo |
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | todo |
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | todo |
@@ -248,6 +248,16 @@ Things noticed in passing that will save the next session a lookup.
 - **§13 examination** — the day-screen action label is generated, not fixed: it
   reads "Have Greta look someone over" once Falk is gone. Whatever the redesign
   does must keep reading from that generator.
+- **§3 interview owes §13 a debt.** A positive examination is already, in code,
+  the raving interview: `runExamine` seeds `iv` with the verdict beats plus a
+  `TURNED_FACED` opener and `examineModal` hands off to `InterviewView` whole.
+  That means **screen 20e is InterviewView wearing violet**, and it was left
+  undone rather than forked — forking it would have built §3's screen twice.
+  When you redesign `InterviewView`, give it a `tone` prop (`"change"` →
+  `C.turn` rules, `#C0A6E0` rubrics, pill buttons at `rgba(122,95,160,.16)`,
+  mood word "no longer wholly herself", dock label "THREE QUESTIONS · FREE")
+  and 20e falls out. The 20e mock in the canvas is the spec for that variant —
+  read it when you do §3, not before.
 
 ---
 

@@ -9057,51 +9057,66 @@ function MonsterVillage() {
       );
     }
     const noHours = s.ap < 1;
+    const target = examRes ? npcById(s, examRes.id) : null;
     return (
-      <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
-        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-              <div className="relative flex items-center gap-3 p-3.5" style={{ background: "linear-gradient(120deg,#241B33,#161226)" }}>
-                <div style={{ flexShrink: 0, borderRadius: 12, overflow: "hidden", border: `2px solid ${C.turn}` }}><Portrait id={exId} size={58} turnedKnown={exN.turned && exN.known} disp={exN.disp} /></div>
-                <div style={{ minWidth: 0 }}>
-                  <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.turn }}>THE EXAMINATION</div>
-                  <div className="mv-display" style={{ fontSize: 18, color: C.parch, lineHeight: 1.1, marginTop: 2 }}>{exN.name} reads the blood</div>
-                  <div style={{ fontSize: 11.5, color: C.dim, marginTop: 2 }}>{examRes ? `Looking over ${(npcById(s, examRes.id) || {}).name}` : (exId === "falk" ? "He feels the cold in a changed soul." : "With the doctor gone, the reading is hers.")}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 pt-3" style={{ minHeight: 0 }}>
+      <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
+          {dayMasthead(apKicker(), examRes ? `${exN.name} reads the blood` : "Examined for the change",
+            examRes ? `Looking over ${(target || {}).name}.` : "Costs a neighbour's trust, whatever it finds.")}
+          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "18px 20px 0", gap: 14, WebkitOverflowScrolling: "touch" }}>
             {examRes ? (
-              (examRes.beats || []).map((e, i) => (<EventLine key={i} e={e} s={s} />))
+              /* the reading, in the reader's own words. Violet is the change:
+                 death red must never appear on this screen. */
+              (examRes.beats || []).map((e, i) => (
+                <Plaque key={i} className="mvIvIn" rule="change"
+                  portrait={<Portrait id={e.pid || exId} size={40} turnedKnown={(npcById(s, e.pid || exId) || {}).turned && (npcById(s, e.pid || exId) || {}).known} />}>
+                  <p style={{ margin: 0, fontSize: 16, lineHeight: 1.45, color: C.parch, textWrap: "pretty" }}>{e.t}</p>
+                </Plaque>
+              ))
             ) : (
               <>
-                <p style={{ fontSize: 13, color: C.dim, lineHeight: 1.5 }}>Some horrors <span style={{ color: C.turn }}>change</span> their victims rather than kill them. {exN.name} can feel the cold in changed blood, but a clean result proves little, and a changed reader clears their own kind.</p>
-                <div className="mv-display mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER? ·</div>
-                {noHours && <p className="mt-2" style={{ fontSize: 12, color: C.dim, fontStyle: "italic" }}>No hours left in the day for another look.</p>}
-                <div className="grid grid-cols-4 gap-2 mt-3">
-                  {aliveNpcs(s).map((n) => (
-                    <button key={n.id} onClick={() => runExamine(n.id)} disabled={noHours} className="mvIvChip flex flex-col items-center gap-1 rounded-lg px-1 py-2" style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: noHours ? "default" : "pointer", opacity: noHours ? 0.4 : 1 }}>
-                      <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
-                      <span style={{ fontSize: 10, color: C.text, lineHeight: 1.15, textAlign: "center" }}>{n.name}</span>
-                    </button>
-                  ))}
+                {/* the reader fronts the screen, because the action is theirs */}
+                <Plaque rule="change" portrait={<Portrait id={exId} size={44} turnedKnown={exN.turned && exN.known} disp={exN.disp} />}>
+                  <span className="mv-display" style={{ display: "block", fontSize: 15, letterSpacing: 1, color: C.parch }}>
+                    {exN.name} <span style={{ fontSize: 12, fontStyle: "italic", letterSpacing: 0, color: C.dim }}>{exN.role}</span>
+                  </span>
+                  <span style={{ display: "block", marginTop: 4, fontSize: 13, lineHeight: 1.4, color: C.dim }}>
+                    {exId === "falk"
+                      ? "He will press a glass to a chest and listen for a cold that should not be there. He is the only one who reads it well."
+                      : "With the doctor gone, the reading is hers, and she is the last of it. Nobody comes after her."}
+                    {" "}A clean result proves little, and a changed reader clears their own kind.
+                  </span>
+                </Plaque>
+                <div style={{ marginTop: "auto", paddingBottom: 4 }}>
+                  <span className="mv-display" style={{ display: "block", textAlign: "center", fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER ·</span>
+                  {noHours && <p className="text-center" style={{ margin: "8px 0 0", fontSize: 12, color: C.dim, fontStyle: "italic" }}>No hours left in the day for another look.</p>}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8, marginTop: 12 }}>
+                    {aliveNpcs(s).map((n) => {
+                      const changed = n.turned && n.known;
+                      return (
+                        <button key={n.id} onClick={() => runExamine(n.id)} disabled={noHours} className="mv-btn mv-body mvIvChip"
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 4px 10px", background: C.sky, border: `1px solid ${changed ? C.turn : C.line}`, borderRadius: 8, cursor: noHours ? "default" : "pointer", opacity: noHours ? 0.4 : 1 }}>
+                          <Portrait id={n.id} size={38} turnedKnown={changed} disp={n.disp} />
+                          <span style={{ fontSize: 10, lineHeight: 1.15, textAlign: "center", color: changed ? "#C0A6E0" : C.text }}>{n.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </>
             )}
           </div>
-          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+          <Dock>
             {examRes ? (
               <div className="grid grid-cols-2 gap-2">
-                <Btn center onClick={() => setExamRes(null)} disabled={noHours}>Look over someone else</Btn>
-                <Btn center kind="amber" onClick={() => setModal(null)}>Done</Btn>
+                <DockBtn onClick={() => setExamRes(null)} disabled={noHours}>LOOK OVER ANOTHER</DockBtn>
+                <DockBtn kind="commit" onClick={() => setModal(null)}>DONE</DockBtn>
               </div>
-            ) : (
-              <Btn full center onClick={() => setModal(null)}>Not today</Btn>
-            )}
-          </div>
+            ) : <DockBtn onClick={() => setModal(null)}>LEAVE IT</DockBtn>}
+          </Dock>
         </div>
+        <div className="mvVignette" />
+        <div className="mvGrainF" />
       </div>
     );
   })();
