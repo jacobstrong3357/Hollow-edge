@@ -61,7 +61,7 @@ does not change, so these stay valid.
 | # | Screen | Canvas | Offset | Replaces | Status |
 |---|---|---|---|---|---|
 | 11 | **Daylight search** | `t20` 20a-20c | 368 | `searchModal`, `runSearchScene`, `dayLocBtn` | **done** — `bac0533` |
-| 2 | Recurring objects as helpers | — | — | plaque / stamp / pips / dock, lifted out of the search screen | todo — **do this first** |
+| — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — `3c42df4` |
 | 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749, 653 | walk render, `watchModal` | todo |
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | todo |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
@@ -124,25 +124,32 @@ Set by the daylight search (`bac0533`). Reuse these; do not reinvent them.
   `.mvGrainF`, `.mvIvIn` (fade-up), `.mvIvChip`, `.mvIvDock`, `.mvDangerPulse`,
   `.mvEdgeRed`, `.mvHeart`, `.mvLoom`, `.mvKill-*`.
 
-### Still to be lifted out (the "helpers" row)
+### The four recurring objects — built, use them
 
-The search screen built plaque / stamp / pips inline. The README's own suggested
-order wants them as shared helpers before going wide. That is the next row, and
-it should extract from `daySceneModal`:
+Module-level components just after `Btn` (~L6395). They hold no state and no
+game knowledge, so a screen decides *what* to say and these decide how it looks.
+**Assemble screens out of these rather than restating their styles inline.**
 
-- `plaque(rule, children)` — `#141830`, `borderTop: 2px solid <rule>`,
-  `borderRadius: 2`, `padding: 13-14px`. Rule colours: amber `C.amber` = a find,
-  `C.parchLine` = a body/daylight fact, `C.redBright` = danger, `#9E7FC4` = the
-  change.
-- `stampChip(sign, held)` — held: `background: C.ink`, bone label, 9px display,
-  `letterSpacing: 1.6`. Not held: `rgba(233,223,200,.07)`, `1px solid C.line`,
-  label at 45%. **Only ever list signs the player has actually found** — the row
-  must not double as a checklist of what is missing.
-- `pips(n, live)` — 6-8px dots, `C.amber` with
-  `boxShadow: 0 0 6px rgba(217,164,65,.45)` when live, `C.line` when spent.
+- **`<Plaque rule portrait className style>`** — anything the game *reports*.
+  `rule` is a key, never a colour: `"amber"` = a find, `"bone"` = a daylight
+  fact, `"danger"` = something turned against you, `"change"` = the examination
+  and a neighbour known changed (`PLAQUE_RULES` holds the hexes). Pass
+  `portrait={<Portrait .../>}` for the left-portrait variant at 40-44px, gap 12.
+  **A rule may not mean two things** — that is the whole vocabulary.
+- **`<StampChip sign held suffix>`** — a sign written into evidence. `held`
+  false renders the not-held treatment. Default suffix is `· STAMPED`; pass
+  `suffix=""` for a bare label (the bestiary's sign rows).
+  **Only ever list signs the player has actually found.**
+- **`<Pips n live size>`** — how many looks or beats remain.
+- **`<Dock tone line>`** + **`<DockBtn kind>`** — the bottom bar. `tone` is
+  `"night"` (default), `"deep"`, or `"bruise"` (accusation, death scene).
+  `DockBtn` `kind` is `"commit"` (amber outline), `"destroy"` (filled `C.red`),
+  or `"quiet"`. **Amber is never decoration**: if it is amber, pressing it
+  spends something or ends a phase.
 
-Keep the search screen working when you extract them; it is the reference
-implementation.
+The daylight search is the reference implementation of all five. The ~15 older
+docks elsewhere in the file still carry their styles inline; convert each one as
+you redesign its screen, not before.
 
 ---
 
@@ -228,6 +235,18 @@ Where a mock implied a mechanic the code does not have, and what was done.
   mock and the code (the roll is settled in `actSearch` before the scene opens),
   and the mock's "nothing is ticked or greyed" matches the code, where searching
   the same place again is a fresh roll.
+
+## Findings banked for later rows
+
+Things noticed in passing that will save the next session a lookup.
+
+- **§12 death scene** — the README's "two looks out of four" is correct. The
+  live modal offers four: *Examine the wounds · Search the ground nearby · Feel
+  the air, the chill of it · Study the surroundings*, and closes on **STEP AWAY
+  FROM THE BODY**. Do not reduce the four to two; the two is the spend.
+- **§13 examination** — the day-screen action label is generated, not fixed: it
+  reads "Have Greta look someone over" once Falk is gone. Whatever the redesign
+  does must keep reading from that generator.
 
 ---
 

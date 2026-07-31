@@ -2133,8 +2133,9 @@ const ev = (t, pid, pri) => ({ t, pid, pri: pri === undefined ? 1 : pri });
 /* Presentation only. A day beat that REPORTS something, rather than setting
    atmosphere around it, is tagged here so the daylight search can give it a
    ruled plaque instead of running it as plain prose. rule names the kind the
-   way the palette does: "amber" = a find, "bone" = a daylight fact, "red" =
-   something turned against you. sign, where there is one, stamps the sign
+   way the palette does, using the PLAQUE_RULES keys: "amber" = a find,
+   "bone" = a daylight fact, "danger" = something turned against you, "change"
+   = the examination. sign, where there is one, stamps the sign
    chip under the prose. Nothing but the search scene reads any of this, and
    it touches no odds and no state. */
 const evPlaque = (e, rule, sign) => { e.plaque = { rule, sign }; return e; };
@@ -3645,7 +3646,7 @@ function actSearch(prev, loc) {
     suspect.exposed = true;
     s.foundSigns = s.foundSigns.filter((sg) => sg !== suspect.sg);
     s.clues.push(`Day ${s.dayNum}: the ${SIGNS[suspect.sg]} at the ${loc} were MADE. Too regular, cut with a tool, meant to be found. Something is salting your trail. Untick it if you ticked it.`);
-    s.dayEvents.push(evPlaque(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`), "red"));
+    s.dayEvents.push(evPlaque(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`), "danger"));
     return s;
   }
   /* --- the village is awake around you while you work: one social beat,
@@ -6406,6 +6407,84 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small, center 
   );
 }
 
+/* ---------- the four recurring objects ----------
+   Every redesigned screen is assembled out of these. They carry no state and
+   no game knowledge: a screen decides WHAT to say and these decide how it
+   looks, so the language stays the same from the search to the accusation. */
+
+/* PLAQUE - anything the game reports, as opposed to atmosphere it sets around
+   the report. The rule along the top states the kind, and that is the whole
+   vocabulary: nothing else may be ruled, and a rule may not mean two things.
+   Screens pass the key, never the colour. */
+const PLAQUE_RULES = {
+  amber: C.amber,       /* a find: something you now have */
+  bone: C.parchLine,    /* a daylight fact: a body, an open grave */
+  danger: C.redBright,  /* something turned against you */
+  change: "#9E7FC4",    /* the examination, and a neighbour known changed */
+};
+function Plaque({ rule = "amber", children, portrait, className = "", style }) {
+  const body = <div style={{ minWidth: 0, flex: 1 }}>{children}</div>;
+  return (
+    <div className={className} style={{ padding: "13px 14px 14px", background: C.sky, borderTop: `2px solid ${PLAQUE_RULES[rule] || C.amber}`, borderRadius: 2, ...(portrait ? { display: "flex", gap: 12, alignItems: "flex-start" } : null), ...style }}>
+      {portrait && <div className="shrink-0">{portrait}</div>}
+      {portrait ? body : children}
+    </div>
+  );
+}
+
+/* STAMP TILE - a sign written into your evidence. `held` is the only state:
+   a stamp row must never double as a checklist of what is missing, because
+   that would hand the player the deduction the game refuses to do for them.
+   Screens list only signs actually found. */
+function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
+  return (
+    <span className="mv-display" style={{
+      fontSize: 9, letterSpacing: 1.6, whiteSpace: "nowrap", borderRadius: 2, padding: "4px 8px",
+      color: held ? C.parch : "rgba(233,223,200,0.45)",
+      background: held ? C.ink : "rgba(233,223,200,0.07)",
+      border: `1px solid ${held ? C.ink : C.line}`,
+    }}>{SIGNS[sign].toUpperCase()}{suffix ? " " + suffix : ""}</span>
+  );
+}
+
+/* PIPS - how many looks or beats remain. Amber and lit is spendable; a spent
+   pip goes to the hairline colour and stops glowing. */
+function Pips({ n, live, size = 6 }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+      {Array.from({ length: n }, (_, i) => (
+        <span key={i} style={{ width: size, height: size, borderRadius: size / 2, background: i === live ? C.amber : C.line, boxShadow: i === live ? "0 0 6px rgba(217,164,65,0.45)" : "none" }} />
+      ))}
+    </div>
+  );
+}
+
+/* DOCK - the bottom bar every screen commits from. `tone` picks the ground:
+   night is the default, bruise is for the accusation and the death scene. */
+const DOCK_TONES = { night: "linear-gradient(#181D31,#131728)", deep: "linear-gradient(#161B30,#111528)", bruise: "linear-gradient(#1E1218,#150C0F)" };
+function Dock({ children, tone = "night", line }) {
+  return (
+    <div className="px-4 pt-3 mvIvDock relative" style={{ flexShrink: 0, background: DOCK_TONES[tone] || DOCK_TONES.night, borderTop: `1px solid ${line || (tone === "bruise" ? "rgba(194,68,80,0.3)" : C.line)}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+      {children}
+    </div>
+  );
+}
+/* The committing action is amber; destructive is filled red; anything else is
+   quiet. Amber is never decoration - if it is amber, pressing it spends
+   something or ends a phase. */
+const DOCK_BTN_KINDS = {
+  commit: { background: "rgba(217,164,65,0.1)", border: `1px solid ${C.amber}`, color: C.amber },
+  destroy: { background: C.red, border: `1px solid ${C.red}`, color: "#F3E9E4" },
+  quiet: { background: "transparent", border: `1px solid ${C.line}`, color: C.text },
+};
+function DockBtn({ children, onClick, kind = "quiet", disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className="mv-btn mv-display w-full"
+      style={{ borderRadius: 3, padding: "13px 0", textAlign: "center", fontSize: 13, letterSpacing: 2, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.35 : 1, ...DOCK_BTN_KINDS[kind] }}>
+      {children}
+    </button>
+  );
+}
 
 
 /* ================= UI (v7) ================= */
@@ -8670,10 +8749,7 @@ function MonsterVillage() {
             {LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l)))}
           </div>
         </div>
-        <div className="px-4 pt-3 mvIvDock relative" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-          <button onClick={() => setModal(null)} className="mv-btn mv-display w-full"
-            style={{ borderRadius: 3, padding: "13px 0", textAlign: "center", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>CLOSE</button>
-        </div>
+        <Dock><DockBtn onClick={() => setModal(null)}>CLOSE</DockBtn></Dock>
       </div>
       <div className="mvVignette" />
       <div className="mvGrainF" />
@@ -8693,22 +8769,19 @@ function MonsterVillage() {
        REPORTS, which gets a ruled plaque and, for a sign, the stamp chip that
        says it is written down now. The stamp comes after the prose, never
        instead of it: you read what you found before it becomes a label. */
-    const PLAQUE_RULE = { amber: C.amber, bone: C.parchLine, red: C.redBright };
     const beatEl = (e, i, spoken) => {
       const npc = e.pid ? npcById(s, e.pid) : null;
       const body = spoken ? <SpokenText text={e.t} speed={35} /> : e.t;
       if (e.plaque) {
         return (
-          <div key={i} className="mvIvIn" style={{ padding: "14px 15px 15px", background: C.sky, borderTop: `2px solid ${PLAQUE_RULE[e.plaque.rule] || C.amber}`, borderRadius: 2 }}>
+          <Plaque key={i} className="mvIvIn" rule={e.plaque.rule}>
             <p style={{ margin: 0, fontSize: 16.5, lineHeight: 1.45, color: C.parch, textWrap: "pretty" }}>{body}</p>
             {e.plaque.sign && (
               <span style={{ display: "flex", gap: 6, marginTop: 11 }}>
-                <span className="mv-display" style={{ fontSize: 9, letterSpacing: 1.6, whiteSpace: "nowrap", color: C.parch, background: C.ink, border: `1px solid ${C.ink}`, borderRadius: 2, padding: "4px 8px" }}>
-                  {SIGNS[e.plaque.sign].toUpperCase()} · STAMPED
-                </span>
+                <StampChip sign={e.plaque.sign} />
               </span>
             )}
-          </div>
+          </Plaque>
         );
       }
       return (
@@ -8749,24 +8822,18 @@ function MonsterVillage() {
                 <p style={{ margin: 0, fontSize: 15, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.62)", textWrap: "pretty" }}>{dayScene.styleLine}</p>
                 {beats.slice(0, idx).map((e, i) => beatEl(e, i, false))}
                 {beats.length > 0 && beatEl(beats[idx], idx, true)}
-                <div style={{ marginTop: "auto", display: "flex", justifyContent: "center", gap: 6, padding: "8px 0 4px" }}>
-                  {beats.map((_, i) => (
-                    <span key={i} style={{ width: 6, height: 6, borderRadius: 3, background: i === idx ? C.amber : C.line, boxShadow: i === idx ? "0 0 6px rgba(217,164,65,0.45)" : "none" }} />
-                  ))}
+                <div style={{ marginTop: "auto", padding: "8px 0 4px" }}>
+                  <Pips n={beats.length} live={idx} />
                 </div>
               </>
             )}
           </div>
-          <div className="px-4 pt-3 mvIvDock relative" style={{ flexShrink: 0, background: "linear-gradient(#181D31,#131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-            <button
-              onClick={() => (arriving || idx >= beats.length - 1) ? setDayScene(null) : setDayScene({ ...dayScene, idx: idx + 1 })}
-              className="mv-btn mv-display w-full"
-              style={{ borderRadius: 3, padding: "13px 0", textAlign: "center", fontSize: 13, letterSpacing: 2, cursor: "pointer", ...(arriving
-                ? { background: "transparent", border: `1px solid ${C.line}`, color: C.text }
-                : { background: "rgba(217,164,65,0.1)", border: `1px solid ${C.amber}`, color: C.amber }) }}>
+          <Dock>
+            <DockBtn kind={arriving ? "quiet" : "commit"}
+              onClick={() => (arriving || idx >= beats.length - 1) ? setDayScene(null) : setDayScene({ ...dayScene, idx: idx + 1 })}>
               {arriving ? "CLOSE" : "ONWARD"}
-            </button>
-          </div>
+            </DockBtn>
+          </Dock>
         </div>
         <div className="mvVignette" />
         <div className="mvGrainF" />
