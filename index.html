@@ -7969,7 +7969,7 @@ function MonsterVillage() {
                 it brightens as it goes, the way a night card does */}
             <div className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col justify-center" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer" }}>
               {s.deathBeats.map((b, i) => (
-                <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 15, lineHeight: 1.45, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.62 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.22).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
+                <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 12.75, lineHeight: 1.5, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.62 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.22).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
               ))}
             </div>
             <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
@@ -8021,7 +8021,7 @@ function MonsterVillage() {
               <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: title.length > 12 ? 27 : 35, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{title}</h1>
               <div className="flex flex-col" style={{ flex: 1, minHeight: 0, justifyContent: "center", gap: 9, marginTop: 13, paddingBottom: 6, overflowY: "auto" }}>
                 {beats.map((b, i) => (
-                  <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: beatColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
+                  <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 12.75, lineHeight: 1.5, color: beatColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
                 ))}
                 {!beatsRevealed && <p className="mvBeat" style={{ margin: 0, fontSize: 14, letterSpacing: 4, textAlign: "center", color: "rgba(233,223,200,0.35)", animationDelay: `${total}s` }}>· · ·</p>}
               </div>
@@ -8108,7 +8108,7 @@ function MonsterVillage() {
           <div className="relative flex-1 min-h-0 flex flex-col justify-end" style={{ gap: 10, padding: "0 26px 26px", overflowY: "auto" }}
             onClick={() => setBeatsRevealed(true)}>
             {offerBeats.map((b, i) => (
-              <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: i === offerBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.6 + (offerBeats.length > 1 ? i / (offerBeats.length - 1) : 1) * 0.18).toFixed(2)})`, textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.7)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
+              <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 12.75, lineHeight: 1.5, color: i === offerBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.6 + (offerBeats.length > 1 ? i / (offerBeats.length - 1) : 1) * 0.18).toFixed(2)})`, textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.7)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
             ))}
           </div>
           <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
