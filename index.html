@@ -6465,18 +6465,18 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
 const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
 /* the ordinary dark, and the dark once it has stopped pretending */
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
-function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", children }) {
+function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, children }) {
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   return (
     <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
-        <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK }}>
+        <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
           <Scene loc={loc} kind="quiet" height={190} />
         </div>
         <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
         <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
-          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: `radial-gradient(circle, rgba(244,242,232,0.42) 0%, rgba(220,230,255,0.14) 38%, rgba(${tn.veil},0) 72%)` }} />
-          <div className="absolute" style={{ left: 342, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
+          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,0.44) 0%, rgba(226,150,150,0.16) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,0.42) 0%, rgba(220,230,255,0.14) 38%, rgba(${tn.veil},0) 72%)` }} />
+          <div className="absolute" style={{ left: 342, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: danger ? "radial-gradient(circle at 36% 30%, #FBF1EA 0%, #F3E2DA 42%, #D9C4C4 72%, #B09A9E 100%)" : "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: danger ? "0 0 34px rgba(226,160,168,0.5), inset -6px -5px 14px rgba(140,110,116,0.45)" : "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
             {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
               <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
             ))}
@@ -6486,8 +6486,9 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
         <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
         <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
         <div className="mvGrain" />
+        {danger && <div className="mvEdgeRed" />}
         <div className="relative flex items-baseline" style={{ flexShrink: 0, gap: 10, padding: "0 22px", paddingTop: "calc(max(env(safe-area-inset-top),18px) + 26px)" }}>
-          <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.6, whiteSpace: "nowrap", color: "rgba(233,223,200,0.62)" }}>{kicker}</span>
+          <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.6, whiteSpace: "nowrap", color: danger ? C.redBright : "rgba(233,223,200,0.62)" }}>{kicker}</span>
           {onClose && (
             <button onClick={onClose} className="mv-btn mv-body" style={{ padding: "2px 0", background: "transparent", border: "none", borderBottom: "1px solid rgba(138,143,168,0.4)", color: C.dim, fontSize: 12, cursor: "pointer" }}>{closeLabel}</button>
           )}
@@ -6599,6 +6600,14 @@ const EXTRA_CSS = `
 @keyframes mvfogA { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
 @keyframes mvfogB { from { transform: translateX(20px); } to { transform: translateX(-16px); } }
 .mvMoonGlow { animation: mvglowpulse 9s ease-in-out infinite alternate; }
+/* something is close: the edges of the night go red and breathe on a slow
+   two-and-a-half second beat. On only when it is actually near you. */
+.mvEdgeRed { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 90px rgba(158,48,57,0.45), inset 0 0 0 1px rgba(194,68,80,0.35);
+  animation: mvheart 2.4s ease-in-out infinite; }
+.mvHeart { animation: mvheart 2.4s ease-in-out infinite; }
+@keyframes mvheart { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mvEdgeRed, .mvHeart { animation: none; opacity: 0.8; } }
 @media (prefers-reduced-motion: reduce) { .mvFogA, .mvFogB, .mvMoonGlow { animation: none; } }
 /* the thing that is already holding you does not lunge: it hangs, and
    breathes, and waits for an answer */

@@ -91,10 +91,13 @@ pass and record what they are here.
 `mingled`). Do not try to migrate it in one pass; migrate it in slices, one
 commit each, ticking them here:
 
-1. **Give `NightShell` a `danger` prop** — scene `filter: saturate(.6)
-   brightness(.75)`, moon warmed to `#FBF1EA` with a pink glow, `.mvEdgeRed` +
-   `.mvHeart` on the 2.4s beat, kicker in `C.redBright`. Nothing else changes.
-   Testable on its own by forcing the prop.
+1. ~~**Give `NightShell` a `danger` prop**~~ — **DONE**, *"Give the night shell
+   a sighting state"*. Pass `danger` and the scene desaturates, the moon warms
+   to `#FBF1EA` with a pink glow, `.mvEdgeRed` breathes on the 2.4s beat and the
+   kicker goes `C.redBright`. Note `.mvEdgeRed`/`.mvHeart` **did not exist** —
+   the handoff named them as if they were in the build; they are now, next to
+   `.mvFogBank`. To see the state, force `danger = true` in the signature in a
+   *test copy*.
 2. **The main walk stages** (`depart → lane → event → sound → approach →
    return`) onto `NightShell` + `NightChoice`, keeping every existing
    `nextStage` call site untouched. The place + weather line goes on the ruled
@@ -291,6 +294,11 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§9 slice 1** — the handoff's "Interactions & behaviour" section lists
+  `.mvEdgeRed` and `.mvHeart` as *"already implemented in the build — keep it"*.
+  They were not in the build at all. **Do not trust the handoff's claims about
+  what already exists**; grep before assuming, as with `ShroudH` (which was
+  inlined, not a component) and the `*H` wrappers (which are mock-only).
 - **§16 endings** — none. The three endings are one plate with the colour
   changed: amber for a win, red for a loss, and the fouled-well green
   `#8FA678` on ground `#080C0A` for taking the offer, spent there and nowhere
