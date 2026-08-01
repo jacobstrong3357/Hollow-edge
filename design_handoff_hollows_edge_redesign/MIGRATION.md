@@ -98,11 +98,18 @@ commit each, ticking them here:
    the handoff named them as if they were in the build; they are now, next to
    `.mvFogBank`. To see the state, force `danger = true` in the signature in a
    *test copy*.
-2. **The main walk stages** (`depart → lane → event → sound → approach →
-   return`) onto `NightShell` + `NightChoice`, keeping every existing
-   `nextStage` call site untouched. The place + weather line goes on the ruled
-   line, the atmosphere in the italic rule, the event sentence at 19px.
-3. **The sighting stages** (`hide`, `hidden`, `fate`, `chased`, and `approach`
+2. ~~**The main walk stages**~~ — **DONE**, *"Put the walk in the night's own
+   furniture"*. This was **much smaller than it looked**: `walkModal`'s ~1194
+   lines are one shared shell plus ~30 per-stage blocks, so moving the shell
+   onto `NightShell` moved every stage at once, and the shared `beat()` helper
+   took the 19px event line everywhere in one edit. The per-stage blocks were
+   not touched and no `nextStage` call site moved.
+   - Still per-stage: the choice buttons are still `Btn` (they read correctly
+     as amber outlines, but slice 3 wants two of them **filled** `C.red` under
+     `danger`).
+3. **The sighting stages** — `tense` already computes them and already drives
+   `danger` on the shell; what is left is the choice collapse.
+   **The old detail:** (`hide`, `hidden`, `fate`, `chased`, and `approach`
    when `facts.active && facts.huntLoc === walk.loc`) — these pass
    `danger`, the rubric reads "SOMETHING IS CLOSE", and the choices collapse
    to two with the committing one **filled** `C.red`.

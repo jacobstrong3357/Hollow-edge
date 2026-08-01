@@ -6465,13 +6465,14 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
 const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
 /* the ordinary dark, and the dark once it has stopped pretending */
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
-function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, children }) {
+function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, scorched, children }) {
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   return (
     <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
         <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
           <Scene loc={loc} kind="quiet" height={190} />
+          {scorched && <div className="mvScorch" />}
         </div>
         <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
         <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
@@ -8312,12 +8313,13 @@ function MonsterVillage() {
        Lead-in (pre) lines land one at a time first, so the beat's own
        typing waits for them rather than everything arriving at once. */
     const preDelay = (walk.pre || []).length * 900;
+    /* The event line is the sentence that IS the night, so it sits on the
+       dark at full size rather than inside a panel: the walk is a place you
+       are standing in, not a feed of cards. */
     const beat = (text, color) => (
-      <div className="rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-        <p style={{ fontSize: 16, lineHeight: 1.5, color: color || C.parch }}>
-          <SpokenText text={text} speed={40} delay={preDelay} />
-        </p>
-      </div>
+      <p style={{ margin: 0, fontSize: 19, lineHeight: 1.42, color: color || C.parch, textWrap: "pretty", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
+        <SpokenText text={text} speed={40} delay={preDelay} />
+      </p>
     );
     /* the night, seen: a living view of the ground the current beat plays
        out on, going red when something is close - the hero card matching
@@ -8332,31 +8334,24 @@ function MonsterVillage() {
     const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
     const wxWord = walk.facts.wx ? { fog: "FOG", storm: "STORM COMING", frost: "HARD FROST" }[walk.facts.wx] : "CLEAR";
     return (
-      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})`, color: C.parch }}>
-        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-            <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${tense ? "rgba(158,48,57,0.65)" : C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-              <Scene loc={sceneLoc} kind="quiet" height={140} />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(10,12,24,0.1) 45%, rgba(10,12,24,0.85))", pointerEvents: "none" }} />
-              {(s.burned || []).includes(sceneLoc) && <div className="mvScorch" />}
-              {tense && <div className="mvDangerPulse" style={{ position: "absolute", inset: 0 }} />}
-              <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: tense ? "#E8A0A8" : "#AEB6D8", background: "rgba(8,10,18,0.55)", border: `1px solid ${tense ? "rgba(194,68,80,0.4)" : "rgba(174,182,216,0.3)"}` }}>
-                NIGHT {s.nightNum + 1} · {isWatch ? "THE WATCH" : "THE LANES"}
-              </div>
-              <div className="absolute top-2.5 right-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 1.5, color: "rgba(233,223,200,0.85)", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(174,182,216,0.25)" }}>{wxWord}</div>
-              <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 16, letterSpacing: 2.5, color: tense ? C.redBright : C.parch, textShadow: "0 1px 8px #000" }}>
-                {heroLabel}{tense ? " · SOMETHING IS CLOSE" : ""}
-              </div>
+      <NightShell loc={sceneLoc} danger={tense} scorched={(s.burned || []).includes(sceneLoc)}
+        kicker={`NIGHT ${s.nightNum + 1} · ${isWatch ? "THE WATCH" : "THE LANES"}`}>
+        <div style={{ marginTop: "auto", paddingTop: 8 }}>
+          {/* where you are and what the sky is doing, on one line */}
+          <span style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+            <span className="mv-display" style={{ fontSize: 12, letterSpacing: 3.2, whiteSpace: "nowrap", color: tense ? C.redBright : "rgba(233,223,200,0.5)" }}>{heroLabel}</span>
+            <span className="mv-display" style={{ marginLeft: "auto", fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: "rgba(233,223,200,0.42)" }}>{wxWord}</span>
+          </span>
+          {tense && <span className="mv-display mvHeart block" style={{ marginTop: 6, fontSize: 9.5, letterSpacing: 2.5, color: C.redBright }}>SOMETHING IS CLOSE</span>}
+          {(walk.pre || []).length > 0 && (
+            <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: "2px solid rgba(233,223,200,0.22)" }}>
+              {(walk.pre || []).map((t, i) => (
+                <p key={`${walk.stage}:${i}`} className="mvIn" style={{ margin: i === 0 ? 0 : "8px 0 0", animationDelay: `${i * 0.9}s`, fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.7)" }}>{t}</p>
+              ))}
             </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-8" style={{ WebkitOverflowScrolling: "touch" }}>
-            {(walk.pre || []).length > 0 && (
-              <div className="mb-3 pl-3" style={{ borderLeft: `2px solid ${C.line}` }}>
-                {(walk.pre || []).map((t, i) => (
-                  <p key={`${walk.stage}:${i}`} className="mb-2 last:mb-0 mvIn" style={{ animationDelay: `${i * 0.9}s`, fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.75)" }}>{t}</p>
-                ))}
-              </div>
-            )}
+          )}
+        </div>
+        <div style={{ flexShrink: 0, marginTop: 16, display: "flex", flexDirection: "column", gap: 10, paddingBottom: 4 }}>
 
             {walk.stage === "fate" && walk.fate && (
               <TensionReveal lines={walk.fate.lines} finale={walk.fate.finale} label={walk.fate.label} kind={walk.fate.kind} onDone={runFate} />
@@ -8678,9 +8673,8 @@ function MonsterVillage() {
                 </div>
               );
             })()}
-          </div>
         </div>
-      </div>
+      </NightShell>
     );
   })();
 
