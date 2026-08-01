@@ -67,7 +67,7 @@ does not change, so these stay valid.
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
-| 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; needs `ShroudH` folded in | todo |
+| 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; `ShroudH` folded in | **done** — *"Finish the death scene"* |
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | **done** — *"Redesign the dawn reveal"* |
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | todo |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | todo |
@@ -271,14 +271,15 @@ Where a mock implied a mechanic the code does not have, and what was done.
   night branch is `if (false)` and the offer branch is `if (true)` with
   `offerBeats` defaulted to `OFFER_SCENES.wraith("<name>")`.
 
+- **§12 death scene** — none. Most of this row was **already built**: bruised
+  ground, red-washed hero, the shroud, the two-of-four looks, the amber pips and
+  the left-ruled findings were all shipped. Only the dock, the hero radius, the
+  `ShroudH` extraction and the stamp-on-the-way-out were outstanding. **Read the
+  target function before assuming a row is a rewrite** — some are a half-hour.
+
 ## Findings banked for later rows
 
 Things noticed in passing that will save the next session a lookup.
-
-- **§12 death scene** — the README's "two looks out of four" is correct. The
-  live modal offers four: *Examine the wounds · Search the ground nearby · Feel
-  the air, the chill of it · Study the surroundings*, and closes on **STEP AWAY
-  FROM THE BODY**. Do not reduce the four to two; the two is the spend.
 - **§13 examination** — the day-screen action label is generated, not fixed: it
   reads "Have Greta look someone over" once Falk is gone. Whatever the redesign
   does must keep reading from that generator.
