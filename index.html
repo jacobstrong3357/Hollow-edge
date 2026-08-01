@@ -1348,6 +1348,11 @@ const WEATHER = {
 };
 /* Weather is lived, not just announced: it walks with you and it leaves a
    morning behind it. */
+/* NOT WIRED UP. Three paragraphs for the moment you are actually out in the
+   weather, written for the walk and never given a home there - the walk shows
+   `WEATHER[wx].beat` at dusk instead, and now carries the weather in the sky
+   (`NIGHT_SKIES`). Kept because it is authored prose, not dead scaffolding.
+   Giving it a beat on the walk would be a content change, not a cleanup. */
 const WEATHER_WALK = {
   fog: "Ten steps out, the fog takes the village away. Your own gate is a rumour behind you, and every shape ahead is a question that only answers itself once it is close enough to touch.",
   storm: "The first thunder breaks as you clear the last house, and the rain arrives all at once, cold and hard, hammering the lanes to mud and drowning every sound smaller than the sky. Whatever screams tonight, screams unheard.",
@@ -6399,13 +6404,7 @@ const fontStyles = `
 @media (prefers-reduced-motion: reduce) { .mvFlame, .mvGlowPulse, .mvEmberBed, .mvSway, .mvMote, .mvSpark, .mvSmokeWisp { animation: none; } .mvMote, .mvSpark, .mvSmokeWisp { opacity: 0.25; } }
 .mvBeat { opacity: 0; animation: mvbeat 1s ease forwards; }
 @keyframes mvbeat { to { opacity: 1; } }
-.mvNightFade { opacity: 0; animation: mvnight 5s ease forwards; }
-@keyframes mvnight { to { opacity: 1; } }
-.mvSun { animation: mvsunset 5s ease forwards; }
-@keyframes mvsunset { to { transform: translateY(150px); opacity: 0; } }
-.mvMoon { opacity: 0; animation: mvmoonrise 3.5s ease 2.8s forwards; }
-@keyframes mvmoonrise { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .mvFog, .mvFog2, .mvFlick, .mvBeat, .mvNightFade, .mvSun, .mvMoon { animation: none; opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .mvFog, .mvFog2, .mvFlick, .mvBeat { animation: none; opacity: 1; transform: none; } }
 `;
 
 function Btn({ children, onClick, disabled, kind = "ghost", full, small, center }) {
@@ -6731,9 +6730,6 @@ const EXTRA_CSS = `
 .mvIvChip:hover { border-color: #D9A441 !important; }
 .mvIvDock { box-shadow: 0 -12px 26px rgba(4,6,12,0.55); }
 @media (prefers-reduced-motion: reduce) { .mvIvIn { animation: none; opacity: 1; } }
-.mvDangerPulse { background: radial-gradient(ellipse at 50% 100%, rgba(158,48,57,0.5), rgba(158,48,57,0.05) 72%); animation: mvdpulse 1.5s ease-in-out infinite alternate; pointer-events: none; }
-@keyframes mvdpulse { from { opacity: 0.25; } to { opacity: 0.85; } }
-@media (prefers-reduced-motion: reduce) { .mvDangerPulse { animation: none; opacity: 0.5; } }
 /* the walk's weather: two banks of fog crossing at different speeds, and a
    moon that breathes. Nothing else moves out there. */
 .mvFogBank { background: radial-gradient(ellipse 58% 52% at 50% 50%, rgba(180,196,224,0.11), transparent 72%); }
@@ -6819,13 +6815,6 @@ const EXTRA_CSS = `
 @media (prefers-reduced-motion: reduce) { .mvKill-burn, .mvKill-pierce, .mvKill-shatter, .mvKill-sink, .mvKill-shrink, .mvKill-dissolve, .mvKillFlash { animation: none; opacity: 0.45; filter: grayscale(1) brightness(0.5); } }
 `;
 const CSS_ALL = fontStyles + EXTRA_CSS;
-const DAY_TINTS = [
-  "linear-gradient(rgba(217,164,65,0.14), rgba(0,0,0,0))",
-  "linear-gradient(rgba(120,140,170,0.16), rgba(0,0,0,0))",
-  "linear-gradient(rgba(158,48,57,0.10), rgba(0,0,0,0))",
-  "linear-gradient(rgba(90,110,90,0.14), rgba(0,0,0,0))",
-  "linear-gradient(rgba(233,223,200,0.10), rgba(0,0,0,0))",
-];
 
 function SpokenText({ text, speed = 38, delay = 0 }) {
   const words = text.split(" ");

@@ -11,9 +11,13 @@ must name both WHO and WHAT before the village runs out of people.
   browser) + Tailwind CDN + Tone.js (synthesized audio), all loaded from CDNs
   on first page load. Deploy = serve/open the file.
 - `window.storage` shim at the top backs the persistent "Black Book" meta
-  (achievements, bestiary, secrets) with localStorage. The in-progress run
-  is persisted too (`mv-run`, saved on every state change, cleared when
-  `s.over` lands) and offered back at the gate as "RETURN TO ... UNFINISHED".
+  (achievements, bestiary, secrets) with localStorage under key
+  `mv-black-book` (the shim prefixes everything with `he:`). The in-progress
+  run is persisted too (`mv-run`, saved on every state change, cleared when
+  `s.over` lands) and offered back at the gate as **`CONTINUE · DAY N`** /
+  **`CONTINUE · NIGHT N`**. A gate with no record shows only HOW TO PLAY and
+  ENTER; the Black Book, the tally, Deeds and Secrets appear once `meta`
+  has a game in it.
 - `netlify.toml` 404s `/CLAUDE.md` and `/design_handoff_hollows_edge_redesign/*`
   on the published site; the deploy is wired to pushes on `main` (site
   `hollowsedge` on Netlify).
@@ -208,8 +212,10 @@ must name both WHO and WHAT before the village runs out of people.
   dark-on-dark contexts: home Black Book grid, epilogue, death/offer/win
   screens. The journal/bestiary render on parchment and must NOT use it.
 - The night cinematic shows `MonsterDeath` art on a win and a looming
-  `MonsterArt` (`.mvLoom`) on a player death; the walk overlay has a live
-  `Scene` panel that pulses red (`.mvDangerPulse`) during dangerous stages.
+  `MonsterArt` (`.mvLoom`) on a player death. The walk is a full-bleed
+  `NightShell` whose whole frame goes red and breathes (`.mvEdgeRed`,
+  `.mvHeart` on the SOMETHING IS CLOSE line) during dangerous stages —
+  the old `.mvDangerPulse` panel is gone.
 
 ## Testing (no network to unpkg from CI/sandbox)
 
