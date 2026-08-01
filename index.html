@@ -7309,6 +7309,8 @@ function MonsterVillage() {
   const [recFilter, setRecFilter] = useState("all");
   /* the ending shows its plate first; the village's fates wait behind it */
   const [epiOpen, setEpiOpen] = useState(false);
+  /* which villager's fate the epilogue's deck is showing */
+  const [epiCard, setEpiCard] = useState(0);
   const [modal, setModal] = useState(null);
   const [accusePick, setAccusePick] = useState(null);
   const [accuseType, setAccuseType] = useState(null);
@@ -7517,7 +7519,7 @@ function MonsterVillage() {
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
   useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);
 
-  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); };
+  const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); setEpiCard(0); };
   const start = () => {
     setSavedRun(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
@@ -8129,6 +8131,15 @@ function MonsterVillage() {
     const monsterNpc = npcById(s, s.monster.vid);
     const mobbed = s.deaths.filter((d) => d.kind === "mobbed");
     const fates = s.npcs.map((x) => ({ x, line: epilogueLine(s, x) })).filter((f) => f.line);
+    /* one word for what the village will say happened to them. Read off the
+       same state the line was written from, never re-decided here. */
+    const fateWord = (x) => {
+      if (x.alive) return x.turned && x.known ? "CHANGED" : "SURVIVED";
+      const d = s.deaths.find((dd) => dd.id === x.id);
+      return d && d.kind === "executed" ? "HANGED ON YOUR WORD"
+        : d && d.kind === "mobbed" ? "HANGED BY THE MOB"
+          : x.turned ? "CHANGED, THEN LOST" : "TAKEN";
+    };
     const planted = (s.planted || []);
     const joined = !s.over.win && s.over.reason === "joined";
 
@@ -8203,7 +8214,7 @@ function MonsterVillage() {
             )}
           </div>
           <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
-            <button onClick={() => setEpiOpen(true)} className="mv-btn mv-display w-full"
+            <button onClick={() => { setEpiCard(0); setEpiOpen(true); }} className="mv-btn mv-display w-full"
               style={{ borderRadius: 3, padding: "13px 0", background: `${tone.glow}`, border: `1px solid ${tone.ink}`, color: tone.ink, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>WHAT BECAME OF THEM</button>
             <button onClick={() => { setEpiOpen(false); setS(null); }} className="mv-btn mv-display w-full"
               style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>ANOTHER VILLAGE</button>
@@ -8275,14 +8286,41 @@ function MonsterVillage() {
 
           <div className="mvIn mt-4" style={{ animationDelay: "2.3s" }}>
             <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>{s.over.win ? "WHAT BECAME OF THEM" : joined ? "WHAT YOU LEAVE BEHIND" : "THE FALL OF HOLLOW'S EDGE"}</div>
-            <div className="mt-1">
-              {fates.map(({ x, line }) => (
-                <div key={x.id} className="flex gap-3 items-start py-1.5" style={{ borderBottom: `1px solid ${C.line}` }}>
-                  <div className="shrink-0"><Portrait id={x.id} size={36} dead={!x.alive} turnedKnown={x.turned && x.known} /></div>
-                  <p style={{ fontSize: 13.5 }}>{line}</p>
+            {/* A deck, not a wall. Eight lives read as eight lives when you
+                have to turn each one over; stacked, they read as a list of
+                names you are already scrolling past. The pips carry the count,
+                so the weight of how many is still stated. */}
+            {fates.length > 0 && (() => {
+              const i = Math.min(epiCard, fates.length - 1);
+              const { x, line } = fates[i];
+              const arrow = (label, to, on) => (
+                <button onClick={() => on && setEpiCard(to)} disabled={!on} className="mv-btn mv-display"
+                  style={{ background: "transparent", border: "none", padding: "4px 10px", fontSize: 22, lineHeight: 1,
+                    color: on ? tone.ink : C.line, cursor: on ? "pointer" : "default" }}>{label}</button>
+              );
+              return (
+                <div className="mt-2">
+                  <div className="flex" style={{ gap: 14, alignItems: "flex-start", padding: "16px 16px 17px", background: C.sky, borderTop: `2px solid ${tone.ink}`, borderRadius: 2 }}>
+                    <span className="shrink-0 flex"><Portrait id={x.id} size={56} dead={!x.alive} turnedKnown={x.turned && x.known} /></span>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span className="mv-display block" style={{ fontSize: 17, letterSpacing: 0.6, color: C.parch }}>{x.name}</span>
+                      <span className="mv-display block" style={{ marginTop: 2, fontSize: 9, letterSpacing: 1.6, color: C.dim }}>{x.role.replace(/^the /, "THE ").toUpperCase()} · {fateWord(x)}</span>
+                      <p style={{ margin: "8px 0 0", fontSize: 15.5, lineHeight: 1.5, color: "rgba(233,223,200,0.9)", textWrap: "pretty" }}>{line}</p>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between" style={{ marginTop: 14 }}>
+                    {arrow("‹", i - 1, i > 0)}
+                    <span className="flex" style={{ gap: 6 }}>
+                      {fates.map((f, k) => (
+                        <button key={f.x.id} onClick={() => setEpiCard(k)} className="mv-btn"
+                          style={{ width: 6, height: 6, borderRadius: 3, padding: 0, border: "none", cursor: "pointer", background: k === i ? tone.ink : C.line }} />
+                      ))}
+                    </span>
+                    {arrow("›", i + 1, i < fates.length - 1)}
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
 
           <p className="mvIn mt-3" style={{ animationDelay: "3s", color: C.dim, fontSize: 13 }}>
@@ -8963,25 +9001,38 @@ function MonsterVillage() {
 
         {tab === "evidence" && (
           <div>
-            <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>Signs · tick what you believe</div>
-            <div className="grid grid-cols-2 gap-x-4 mt-2">
+            {/* A sign is a stamp, not a checkbox: pressing one inks the tile
+                through, the way the stamped chips on the search and the dawn
+                already read. The witnessed dot rides INSIDE the tile, so a
+                mark you saw and a mark you believe are one object with two
+                states rather than two separate signals. */}
+            <div className="flex items-baseline" style={{ gap: 10 }}>
+              <span className="mv-display" style={{ fontSize: 17, letterSpacing: 0.6, whiteSpace: "nowrap" }}>Signs</span>
+              <span className="mv-display" style={{ marginLeft: "auto", fontSize: 11.5, letterSpacing: 1.4, whiteSpace: "nowrap", color: "#8A6E32" }}>TAP TO STAMP</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, marginTop: 7 }}>
               {Object.entries(SIGNS).map(([k, label]) => {
                 const ticked = s.playerSigns.includes(k);
                 const witnessed = s.foundSigns.includes(k);
                 return (
                   <button key={k} onClick={() => setS({ ...s, playerSigns: ticked ? s.playerSigns.filter((x) => x !== k) : [...s.playerSigns, k] })}
-                    className="flex items-center gap-2 py-0.5" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: C.ink, opacity: ticked ? 1 : 0.55 }}>
-                    <span style={{ width: 14, textAlign: "center", color: ticked ? C.red : C.inkDim }}>{ticked ? "☒" : "☐"}</span>
-                    <span style={{ fontWeight: ticked ? 700 : 400 }}>{label}</span>
-                    {witnessed && !ticked && <span title="you have witnessed this" style={{ width: 7, height: 7, borderRadius: 4, background: C.red, opacity: 0.85, display: "inline-block", flexShrink: 0 }} />}
+                    className="mv-btn flex items-center" title={witnessed ? "you have witnessed this" : undefined}
+                    style={{ gap: 7, minHeight: 27, padding: "3px 9px", textAlign: "left", cursor: "pointer",
+                      background: ticked ? C.ink : "#F1E8D4", border: `1px solid ${ticked ? C.ink : C.parchLine}` }}>
+                    <span className="mv-display" style={{ minWidth: 0, flex: 1, fontSize: 11.5, letterSpacing: 1.2, lineHeight: 1.15, color: ticked ? C.parch : "rgba(43,36,22,0.7)" }}>{label.toUpperCase()}</span>
+                    {witnessed && <span style={{ flexShrink: 0, width: 6, height: 6, borderRadius: 3, background: C.red, opacity: ticked ? 1 : 0.85 }} />}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-2" style={{ fontSize: 13, color: C.inkDim }}>Tick what the nights show you; the book dims what cannot be. A red dot marks a sign witnessed by you or a truthful mouth. It still waits on your tick: marks can be planted, and mouths borrowed.</p>
-            <div className="mv-display mt-4" style={{ fontSize: 16, letterSpacing: 1 }}>Your reckoning</div>
+            <p style={{ margin: "9px 0 0", fontSize: 12.5, lineHeight: 1.45, color: C.inkDim }}>Tick what the nights show you; the book dims what cannot be. A red dot marks a sign witnessed by you or a truthful mouth. It still waits on your tick: marks can be planted, and mouths borrowed.</p>
+            <div style={{ marginTop: 14, borderTop: `1px solid ${C.parchLine}` }} />
+            <div className="flex items-baseline" style={{ gap: 10, marginTop: 18 }}>
+              <span className="mv-display" style={{ fontSize: 17, letterSpacing: 0.6, whiteSpace: "nowrap" }}>Your reckoning</span>
+              <span className="mv-display" style={{ marginLeft: "auto", fontSize: 11.5, letterSpacing: 1.4, whiteSpace: "nowrap", color: "#8A6E32" }}>STRIKE TO RULE OUT</span>
+            </div>
             {/* 15 creatures sit 5x3; the year The Hollowed walks, 16 sit 4x4 */}
-            <div className="mt-2" style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "10px 6px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "12px 6px", marginTop: 10 }}>
               {gameMonsters(s).map((mm) => {
                 const struckM = s.struck.includes(mm.id);
                 const ok = !struckM && compatM(mm);
@@ -8989,7 +9040,7 @@ function MonsterVillage() {
                   <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
                     className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
                     <MonsterArt id={mm.id} size={48} flat />
-                    <span style={{ fontSize: 11, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
+                    <span style={{ fontSize: 11.5, lineHeight: 1.25, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
                   </button>
                 );
               })}
