@@ -9375,46 +9375,51 @@ function MonsterVillage() {
   })();
 
   const riteModal = modal === "rite" && (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch }}>
-      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-        <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-          <div className="rounded-2xl overflow-hidden relative" style={{ border: "1px solid rgba(194,68,80,0.4)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+        <div className="mvGrain" />
+        <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),16px)" }}>
+          <div className="overflow-hidden relative" style={{ borderRadius: 16, border: "1px solid rgba(194,68,80,0.4)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
             <NightScene height={100} />
             <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(46,16,22,0.2), rgba(22,10,12,0.9))", pointerEvents: "none" }} />
             <div className="absolute top-2.5 right-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 2, color: C.redBright, background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.4)" }}>THE LAST RITE</div>
             <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 1.5, color: C.parch, textShadow: "0 1px 8px #000" }}>Circle the creature. The rite follows the name.</div>
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="grid grid-cols-5 gap-2">
+        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "14px 16px 0", WebkitOverflowScrolling: "touch" }}>
+          {/* ruled-out creatures stay pressable here too: the rite is the same
+              naming as an accusation, and the game still does not decide */}
+          <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
             {gameMonsters(s).map((mm) => {
               const struckM = s.struck.includes(mm.id);
               const dim = struckM || !compatM(mm);
               const sel = accuseType === mm.id;
               return (
-                <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
-                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
-                  <MonsterArt id={mm.id} size={44} light />
-                  <span style={{ fontSize: 10, color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="mv-btn flex flex-col items-center"
+                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
+                  <MonsterArt id={mm.id} size={42} light />
+                  <span style={{ fontSize: 9.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
                 </button>
               );
             })}
           </div>
           {accuseType && (
-            <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-              <p style={{ fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.85)" }}>
-                The books prescribe one rite for a <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>. Every wrong rite costs a life, and the village has faith left for two attempts. No more.
+            <div style={{ marginTop: 14, marginBottom: 2, padding: "13px 15px", background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12 }}>
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.85)", textWrap: "pretty" }}>
+                The books prescribe one rite for a <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>. Every wrong name costs a life, and the village has faith left for {2 - s.wrongGuesses === 1 ? "one more attempt" : `${2 - s.wrongGuesses} attempts`}. No more.
               </p>
             </div>
           )}
         </div>
-        <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#1E1218,#150C0F)", borderTop: "1px solid rgba(194,68,80,0.3)", paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+        <Dock tone="bruise">
           <div className="grid grid-cols-2 gap-2">
-            <Btn onClick={() => { setAccuseType(null); setModal("plan"); }}>Back</Btn>
-            <Btn kind="red" disabled={!accuseType} onClick={() => { const ty = accuseType; setAccuseType(null); nightfall({ kind: "rite", typeId: ty }); }}>Perform the rite at dusk</Btn>
+            <DockBtn kind="quietBruise" onClick={() => { setAccuseType(null); setModal("plan"); }}>BACK</DockBtn>
+            <DockBtn kind="destroy" disabled={!accuseType} onClick={() => { const ty = accuseType; setAccuseType(null); nightfall({ kind: "rite", typeId: ty }); }}>PERFORM THE RITE</DockBtn>
           </div>
-        </div>
+        </Dock>
       </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
     </div>
   );
 
