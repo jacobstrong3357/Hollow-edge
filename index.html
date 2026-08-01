@@ -7069,6 +7069,9 @@ function epilogueLine(s, x) {
 function MonsterVillage() {
   const [s, setS] = useState(null);
   const [tab, setTab] = useState(null);
+  /* which slice of the record is showing. Filters what is written, never
+     what it means. */
+  const [recFilter, setRecFilter] = useState("all");
   const [modal, setModal] = useState(null);
   const [accusePick, setAccusePick] = useState(null);
   const [accuseType, setAccuseType] = useState(null);
@@ -8601,14 +8604,13 @@ function MonsterVillage() {
   const journal = tab && (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setTab(null)}>
       <div className="mt-auto rounded-t-xl p-4 max-h-[85vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex gap-2 flex-wrap mb-3">
-          {[["evidence", "Evidence"], ["bestiary", "Bestiary"], ["statements", "Testimony"], ["nights", "Nights"], ["days", "Days"], ["help", "Help"]].map(([k, label]) => (
+        <div className="flex gap-2 flex-wrap" style={{ paddingBottom: 8, marginBottom: 12, borderBottom: `1px solid ${C.parchLine}` }}>
+          {[["evidence", "Evidence"], ["bestiary", "Bestiary"], ["record", "Record"], ["help", "Help"]].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="mv-display px-3 py-1 rounded"
               style={{ fontSize: 13, letterSpacing: 1, background: tab === k ? C.ink : "transparent", color: tab === k ? C.parch : C.inkDim, border: `1px solid ${tab === k ? C.ink : C.parchLine}` }}>
               {label}
             </button>
           ))}
-          <button onClick={() => setTab(null)} className="ml-auto mv-display px-3 py-1" style={{ color: C.inkDim, fontSize: 13 }}>Close ✕</button>
         </div>
 
         {tab === "evidence" && (
@@ -8677,75 +8679,89 @@ function MonsterVillage() {
           </div>
         )}
 
-        {tab === "statements" && (
-          <div>
-            {s.statements.length === 0 && <p style={{ color: C.inkDim }}>No testimony yet.</p>}
-            {[...s.statements].reverse().map((st, i) => (
-              <div key={i} className="py-2 flex gap-3 items-start" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
-                <div className="shrink-0 mt-1"><Portrait id={st.id} size={42} dead={!npcById(s, st.id).alive} turnedKnown={npcById(s, st.id).turned && npcById(s, st.id).known} /></div>
-                <div>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span style={{ fontWeight: 700 }}>{st.name}</span>
-                    <span style={{ fontSize: 12, color: C.inkDim }}>Day {st.day}{st.q === "where" || st.q === "saw" || st.q === "about" ? ` · about Night ${st.night}` : ""}</span>
-                  </div>
-                  <p style={{ fontSize: 14, fontStyle: "italic" }}>{st.quote}</p>
-                  {st.flag && <p style={{ fontSize: 13, color: C.red, fontWeight: 700 }}>✕ {st.flag}</p>}
-                </div>
+        {tab === "record" && (() => {
+          /* One ledger, in the order the village lived it: a day, then the
+             night that followed it. The three separate logs said the same
+             things in three places and made the player do the joining. The
+             chips only filter what is already written - nothing here is
+             counted, compared or concluded for them. */
+          const rows = [];
+          (s.nightLogs || []).forEach((log) => rows.push({ order: log.night * 2 + 1, kind: "night", log }));
+          [...(s.dayLogs || []), ...(s.dayEvents.length ? [{ day: s.dayNum, events: s.dayEvents, today: true }] : [])]
+            .forEach((log) => rows.push({ order: log.day * 2, kind: "day", log }));
+          (s.statements || []).forEach((st, i) => rows.push({ order: st.day * 2 + 0.5, sub: i, kind: "said", st }));
+          rows.sort((a, b) => (b.order - a.order) || ((b.sub || 0) - (a.sub || 0)));
+          const shown = rows.filter((r) => recFilter === "all" || recFilter === r.kind);
+          const chips = [["all", "Everything"], ["night", "Nights"], ["day", "Days"], ["said", "Testimony"]];
+          return (
+            <div>
+              <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>The record</div>
+              <p style={{ fontSize: 13, color: C.inkDim }} className="mt-1">Some things keep a rhythm. Count the gaps, and mind where the dead were taken: behind their own bolts, or out under the sky. Not everything can pass a barred door.</p>
+              <div className="flex gap-2 flex-wrap mt-3">
+                {chips.map(([k, label]) => (
+                  <button key={k} onClick={() => setRecFilter(k)} className="mv-display px-2.5 py-1 rounded-full"
+                    style={{ fontSize: 11.5, letterSpacing: 1, background: recFilter === k ? C.ink : "transparent", color: recFilter === k ? C.parch : C.inkDim, border: `1px solid ${recFilter === k ? C.ink : C.parchLine}`, cursor: "pointer" }}>
+                    {label}
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-
-        {tab === "nights" && (
-          <div>
-            <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>The pattern of nights</div>
-            <p style={{ fontSize: 13, color: C.inkDim }} className="mt-1">Some things keep a rhythm. Count the gaps. And mind where the dead were taken: behind their own bolts, or out under the sky. Not everything can pass a barred door.</p>
-            <div className="mt-3">
-              {s.nightLogs.map((log) => {
-                const slain = s.deaths.find((x) => x.night === log.night && x.kind === "slain");
-                const drained = s.deaths.find((x) => x.night === log.night && x.kind === "drained");
-                const turned = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
-                const mobd = s.deaths.find((x) => x.night === log.night && x.kind === "mobbed");
-                const showTurned = turned && npcById(s, turned.id) && npcById(s, turned.id).known;
-                return (
-                  <div key={log.night} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
-                    <div className="flex gap-3" style={{ fontSize: 14 }}>
-                      <span className="mv-display" style={{ width: 60, flexShrink: 0 }}>Night {log.night}</span>
-                      <span style={{ color: slain ? C.red : drained ? C.red : showTurned ? C.turn : C.inkDim }}>
-                        {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : drained ? `${drained.name} found drained, at home` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
-                        {mobd ? ` · ${mobd.name} hanged by the mob` : ""}{log.wail ? " · wailing heard" : ""}{log.weather ? ` · ${log.weather}` : ""}{log.event ? ` · ${log.event.name}` : ""}
-                      </span>
+              <div className="mt-3">
+                {shown.length === 0 && <p style={{ fontSize: 13, color: C.inkDim, fontStyle: "italic" }}>Nothing written here yet.</p>}
+                {shown.map((r, ri) => {
+                  if (r.kind === "night") {
+                    const log = r.log;
+                    const slain = s.deaths.find((x) => x.night === log.night && x.kind === "slain");
+                    const drained = s.deaths.find((x) => x.night === log.night && x.kind === "drained");
+                    const turned = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
+                    const mobd = s.deaths.find((x) => x.night === log.night && x.kind === "mobbed");
+                    const showTurned = turned && npcById(s, turned.id) && npcById(s, turned.id).known;
+                    return (
+                      <div key={`n${log.night}`} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
+                        <div className="flex gap-3" style={{ fontSize: 14 }}>
+                          <span className="mv-display" style={{ width: 60, flexShrink: 0 }}>Night {log.night}</span>
+                          <span style={{ color: slain ? C.red : drained ? C.red : showTurned ? C.turn : C.inkDim }}>
+                            {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : drained ? `${drained.name} found drained, at home` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
+                            {mobd ? ` · ${mobd.name} hanged by the mob` : ""}{log.wail ? " · wailing heard" : ""}{log.weather ? ` · ${log.weather}` : ""}{log.event ? ` · ${log.event.name}` : ""}
+                          </span>
+                        </div>
+                        {slain && slain.examined && slain.found && slain.found.length > 0 && (
+                          <p style={{ fontSize: 12.5, color: C.inkDim, marginLeft: 72, marginTop: 2 }}>the scene held: {slain.found.map((f) => senseFor(f, 0)).join(" ")}</p>
+                        )}
+                      </div>
+                    );
+                  }
+                  if (r.kind === "day") {
+                    const log = r.log;
+                    return (
+                      <div key={`d${log.day}${log.today ? "t" : ""}`} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
+                        <div className="mv-display" style={{ fontSize: 13, color: C.inkDim }}>Day {log.day}{log.today ? " (today)" : ""}</div>
+                        {log.events.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))}
+                      </div>
+                    );
+                  }
+                  const st = r.st;
+                  const stn = npcById(s, st.id);
+                  return (
+                    <div key={`s${ri}`} className="py-2 flex gap-3 items-start" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
+                      <div className="shrink-0 mt-1"><Portrait id={st.id} size={42} dead={!stn.alive} turnedKnown={stn.turned && stn.known} /></div>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span style={{ fontWeight: 700 }}>{st.name}</span>
+                          <span style={{ fontSize: 12, color: C.inkDim }}>Day {st.day}{st.q === "where" || st.q === "saw" || st.q === "about" ? ` · about Night ${st.night}` : ""}</span>
+                        </div>
+                        <p style={{ fontSize: 14, fontStyle: "italic" }}>{st.quote}</p>
+                        {st.flag && <p style={{ fontSize: 13, color: C.red, fontWeight: 700 }}>✕ {st.flag}</p>}
+                      </div>
                     </div>
-                    {slain && slain.examined && slain.found && slain.found.length > 0 && (
-                      <p style={{ fontSize: 12.5, color: C.inkDim, marginLeft: 72, marginTop: 2 }}>the scene held: {slain.found.map((f) => senseFor(f, 0)).join(" ")}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {s.deaths.some((d) => d.kind === "executed") && (
-              <p className="mt-3" style={{ fontSize: 13, color: C.red }}>Executed on your word: {s.deaths.filter((d) => d.kind === "executed").map((d) => d.name).join(", ")}.</p>
-            )}
-          </div>
-        )}
-
-        {tab === "days" && (
-          <div>
-            <div className="mv-display" style={{ fontSize: 16, letterSpacing: 1 }}>By daylight</div>
-            <p style={{ fontSize: 13, color: C.inkDim }} className="mt-1">What searching a place, or a body, turned up each day - kept here instead of crowding the morning.</p>
-            <div className="mt-3">
-              {[...(s.dayLogs || []), ...(s.dayEvents.length ? [{ day: s.dayNum, events: s.dayEvents, today: true }] : [])].length === 0 && (
-                <p style={{ fontSize: 13, color: C.inkDim, fontStyle: "italic" }}>Nothing searched out yet.</p>
+                  );
+                })}
+              </div>
+              {s.deaths.some((d) => d.kind === "executed") && (
+                <p className="mt-3" style={{ fontSize: 13, color: C.red }}>Executed on your word: {s.deaths.filter((d) => d.kind === "executed").map((d) => d.name).join(", ")}.</p>
               )}
-              {[...(s.dayLogs || []), ...(s.dayEvents.length ? [{ day: s.dayNum, events: s.dayEvents, today: true }] : [])].map((log, li) => (
-                <div key={li} className="py-1.5" style={{ borderBottom: `1px solid ${C.parchLine}` }}>
-                  <div className="mv-display" style={{ fontSize: 13, color: C.inkDim }}>Day {log.day}{log.today ? " (today)" : ""}</div>
-                  {log.events.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))}
-                </div>
-              ))}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {tab === "help" && (
           <div style={{ fontSize: 14 }}>
@@ -8762,6 +8778,10 @@ function MonsterVillage() {
             <p className="mt-2"><strong>Accusing:</strong> name a person and a creature together. Right on both, it ends. Wrong person, and an innocent dies by the rite. Right face, wrong name, and it flees to besiege the village. Wrong twice in any mix, and it stops feeding on the village and comes for you.</p>
           </div>
         )}
+        {/* the book shuts on its own bar, in ink, rather than on a small
+            cross tucked into the tabs */}
+        <button onClick={() => setTab(null)} className="mv-display w-full"
+          style={{ marginTop: 16, padding: "11px 0", textAlign: "center", background: C.ink, color: C.parch, border: "none", borderRadius: 2, fontSize: 12.5, letterSpacing: 3, cursor: "pointer" }}>CLOSE</button>
       </div>
     </div>
   );

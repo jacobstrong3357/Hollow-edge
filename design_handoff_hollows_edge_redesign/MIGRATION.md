@@ -69,7 +69,7 @@ does not change, so these stay valid.
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **done** — 20d in *"Redesign the examination"*, 20e closed by §3 |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; `ShroudH` folded in | **done** — *"Finish the death scene"* |
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | **done** — *"Redesign the dawn reveal"* |
-| 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | todo |
+| 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | **done** — *"Merge the journal's three logs into one record"* |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | **done** — *"Turn the interview violet when it is no longer them"* |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
@@ -262,6 +262,13 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§5 journal** — none, and the invariants were checked deliberately because
+  this is the row most able to break them. Evidence was **already** correct:
+  signs are ticked only by the player, a witnessed sign gets a red dot that
+  still waits on their tick, and nothing is auto-ticked. The Record merge is a
+  pure reordering of what the three old tabs already showed — the filter chips
+  hide rows, they do not count, compare or conclude. **Nothing in the journal
+  computes anything for the player, and it must stay that way.**
 - **§15 riteModal** — carried a **copy bug**, not a design one: it told the
   player "the village has faith left for two attempts" no matter how many they
   had already spent. It now reads `2 - s.wrongGuesses`, matching the siege
