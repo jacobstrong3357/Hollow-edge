@@ -64,7 +64,7 @@ does not change, so these stay valid.
 | — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — *"Lift the four recurring objects out of the search screen"* |
 | 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749, 653 | walk render, `watchModal` | todo |
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | **done** — *"Redesign nightfall, and build the night shell"* |
-| 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
+| 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | **done** — *"Strip nightfall down for the siege"*. 16b was already covered by §7's night card |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; `ShroudH` folded in | **done** — *"Finish the death scene"* |
@@ -262,6 +262,11 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§10 under siege** — none. `FAITH REMAINING` reads `s.wrongGuesses`, not
+  `s.riteFails`: the run ends at `wrongGuesses >= 2`, and a wrong *accusation*
+  counts toward it exactly as a wrong rite does. `riteFails` exists but only
+  feeds an achievement. The meter therefore states a fact the day screen
+  already warns about in prose, rather than computing a new one.
 - **§8 nightfall** — **a real one.** 17a puts the night's weather in the italic
   rule. The weather does not exist yet at nightfall: `sampleNight()` runs inside
   `nightfall(plan)`, *after* the player chooses. Sampling it earlier to fill the

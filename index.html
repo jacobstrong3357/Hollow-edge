@@ -6456,23 +6456,26 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
    asking pinned to the bottom where the thumb is. A screen supplies only its
    own words; the dark is the same dark every time. */
 const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
-function NightShell({ loc, kicker, onClose, closeLabel = "close", children }) {
+/* the ordinary dark, and the dark once it has stopped pretending */
+const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
+function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", children }) {
+  const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   return (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: "#070910", color: C.parch, overflow: "hidden" }}>
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
         <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK }}>
           <Scene loc={loc} kind="quiet" height={190} />
         </div>
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: "linear-gradient(rgba(7,9,16,0.55) 0%, rgba(7,9,16,0.06) 26%, rgba(7,9,16,0.66) 70%, #070910 100%)" }} />
+        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
         <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
-          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: "radial-gradient(circle, rgba(244,242,232,0.42) 0%, rgba(220,230,255,0.14) 38%, rgba(7,9,16,0) 72%)" }} />
+          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: `radial-gradient(circle, rgba(244,242,232,0.42) 0%, rgba(220,230,255,0.14) 38%, rgba(${tn.veil},0) 72%)` }} />
           <div className="absolute" style={{ left: 342, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
             {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
               <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
             ))}
           </div>
         </div>
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: "radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,0.16) 0%, rgba(214,224,255,0.05) 42%, rgba(7,9,16,0) 74%)" }} />
+        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,0.16) 0%, rgba(214,224,255,0.05) 42%, rgba(${tn.veil},0) 74%)` }} />
         <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
         <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
         <div className="mvGrain" />
@@ -9267,7 +9270,7 @@ function MonsterVillage() {
       : `NIGHT ${s.nightNum + 1} · NIGHTFALL`;
     const back = planStage ? () => setPlanStage(null) : () => setModal(null);
     return (
-      <NightShell loc={planStage === "search" ? "Village Square" : "Village Square"} kicker={kicker} onClose={back} closeLabel={planStage ? "back" : "close"}>
+      <NightShell loc="Village Square" kicker={kicker} onClose={back} closeLabel={planStage ? "back" : "close"} tone={s.fled ? "siege" : "night"}>
         {planStage === "watch" ? (
           <>
             <div style={{ marginTop: "auto" }}>
@@ -9311,13 +9314,20 @@ function MonsterVillage() {
         ) : (
           <>
             <div style={{ marginTop: "auto" }}>
-              <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.2, color: "rgba(233,223,200,0.5)" }}>HOLLOW'S EDGE</span>
+              {/* under siege the line turns red and stops naming the village:
+                  there is nothing left to learn out there, only a name to get
+                  right, so the screen says what is coming instead of where */}
+              <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.2, color: s.fled ? "rgba(194,68,80,0.85)" : "rgba(233,223,200,0.5)" }}>
+                {s.fled ? "IT COMES TONIGHT" : "HOLLOW'S EDGE"}
+              </span>
               <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: "2px solid rgba(233,223,200,0.22)" }}>
-                <p style={{ margin: 0, fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.7)" }}>{duskLine}</p>
+                <p style={{ margin: 0, fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.7)" }}>
+                  {s.fled ? "It has stopped pretending to be anyone. Every night from here is its night." : duskLine}
+                </p>
               </div>
               <p style={{ margin: "12px 0 0", fontSize: 16, lineHeight: 1.45, color: "rgba(233,223,200,0.9)", textWrap: "pretty", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
                 {s.fled
-                  ? "It is loose in the village and it knows your face. There is no walking abroad tonight."
+                  ? "It comes every night now. A wrong name costs a life, and the village has one mistake left in it."
                   : "Doors are going on the bar down the lane. You have until the last of them."}
               </p>
             </div>
@@ -9325,8 +9335,19 @@ function MonsterVillage() {
               {s.fled ? (
                 <>
                   <NightChoice onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</NightChoice>
-                  <NightChoice onClick={() => setModal("rite")}>Perform the rite at dusk</NightChoice>
-                  <p style={{ margin: "6px 0 0", fontSize: 12.5, lineHeight: 1.45, color: C.dim }}>Every rite performed with the wrong name costs a life, and the village will not stand in the circle for a third mistake. The right one ends this.</p>
+                  <button onClick={() => setModal("rite")} className="mv-btn mv-body"
+                    style={{ borderRadius: 4, padding: "12px 16px", textAlign: "left", fontSize: 15, cursor: "pointer", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8" }}>Perform the rite at dusk</button>
+                  {/* how many more wrong names the village will stand for.
+                      Two, and the second one is the one it comes for you on -
+                      the same count the day screen already warns about. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, paddingTop: 12, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
+                    <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.45)" }}>FAITH REMAINING</span>
+                    <span style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                      {[0, 1].map((i) => (
+                        <span key={i} style={{ width: 7, height: 7, borderRadius: 4, background: i < 2 - s.wrongGuesses ? C.redBright : "transparent", border: i < 2 - s.wrongGuesses ? "none" : "1px solid rgba(194,68,80,0.4)" }} />
+                      ))}
+                    </span>
+                  </div>
                 </>
               ) : (
                 <>
