@@ -4740,8 +4740,10 @@ const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 62%, rgba(0,0,0,0.5) 88%,
 
 /* `unlit` puts every lamp in the picture out. A dark window is drawn at the
    same value as a doorway, so it reads as a socket rather than as a window
-   somebody forgot to fill in, and nothing flickers because nothing is burning. */
-function Scene({ loc, kind, height = 150, unlit }) {
+   somebody forgot to fill in, and nothing flickers because nothing is burning.
+   `moonless` takes the moon out of the sky and leaves the stars, for the
+   nights when something is between the village and it. */
+function Scene({ loc, kind, height = 150, unlit, moonless }) {
   const lit = unlit ? C.ink : C.amber;
   const win = (x, y, w = 8, h = 12, arch) => (
     <g key={`w${x}${y}`}>
@@ -4804,8 +4806,8 @@ function Scene({ loc, kind, height = 150, unlit }) {
   return (
     <svg viewBox="0 0 400 175" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMid slice">
       <rect width="400" height="175" fill={C.sky} />
-      <circle cx="330" cy="42" r="26" fill={C.parch} opacity="0.1" />
-      <circle cx="330" cy="42" r="16" fill={C.parch} opacity="0.9" />
+      {!moonless && <circle cx="330" cy="42" r="26" fill={C.parch} opacity="0.1" />}
+      {!moonless && <circle cx="330" cy="42" r="16" fill={C.parch} opacity="0.9" />}
       {[[50, 30], [110, 55], [170, 25], [230, 45], [285, 22]].map(([x, y]) => <circle key={x} cx={x} cy={y} r="1.1" fill={C.parch} opacity="0.5" />)}
       <rect y="158" width="400" height="17" fill={C.ground} />
       {elems}
@@ -6471,46 +6473,97 @@ const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
 /* THE VILLAGE'S WOUNDS, as the night sees them. A wound is never a different
    screen: it is this same dark with one thing wrong in it. An entry says how
-   much moon the sky has left (a multiplier on the glow the shell already
-   draws), whether anything down there is still burning, and any one extra
-   layer the wound breathes over the place. Nothing here reads or changes
-   state - the wound is chosen by `nightWound` from flags already set. */
+   much moon the sky has left (`moon`, a multiplier on the glow the shell
+   already draws, or 0 for a sky with no moon in it at all), whether anything
+   down there is still burning (`unlit`), and `art` - whatever the wound
+   breathes over the night, drawn above the moon and below the fog. Nothing
+   here reads or changes state: the wound is chosen by `nightWound` from
+   flags that are already set. */
 const NIGHT_WOUNDS = {
   /* the absence of light as an event. With no lamp left anywhere in Hollow's
      Edge the moon is the only one burning, and reads brighter for it: high,
-     and no use at all to a village with nowhere warm to be. */
+     and no use at all to a village with nowhere warm to be. The press is why
+     the moon needs the boost - it sits above the moon, and would otherwise
+     put out the one light the wound means to leave standing. */
   shut: {
     unlit: true, moon: 1.6,
-    layer: (v) => ({ top: 0, height: 300, background: `linear-gradient(rgba(${v},0.35), rgba(${v},0.62) 72%, rgba(${v},0))` }),
+    art: (v) => <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, pointerEvents: "none", background: `linear-gradient(rgba(${v},0.35), rgba(${v},0.62) 72%, rgba(${v},0))` }} />,
+  },
+  /* a village scar shown instead of reported. Fire behind the nave throws
+     orange the length of the lane, smoke rolls off it and climbs, and no moon
+     shows through any of it - the sky over the churchyard is the wrong colour
+     and that is the whole tell. */
+  burn: {
+    moon: 0,
+    art: (v) => (<React.Fragment>
+      <div className="mvFire absolute" style={{ left: 200, top: 104, width: 230, height: 170, marginLeft: -115, pointerEvents: "none", background: `radial-gradient(ellipse 50% 55% at 50% 62%, rgba(255,196,92,0.85) 0%, rgba(226,116,38,0.55) 34%, rgba(158,48,57,0.22) 58%, rgba(${v},0) 78%)` }} />
+      <div className="mvGlowPulse absolute" style={{ left: 0, right: 0, top: 0, height: 320, pointerEvents: "none", background: `radial-gradient(ellipse 340px 250px at 200px 130px, rgba(230,132,48,0.3) 0%, rgba(158,48,57,0.12) 45%, rgba(${v},0) 76%)` }} />
+      <div className="mvSmoke absolute" style={{ left: 130, top: 96, width: 120, height: 130, pointerEvents: "none", background: "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(38,34,40,0.85) 0%, rgba(38,34,40,0.35) 48%, rgba(38,34,40,0) 74%)" }} />
+      <div className="mvSmoke absolute" style={{ left: 196, top: 108, width: 150, height: 150, pointerEvents: "none", animationDelay: "6s", background: "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(30,27,34,0.8) 0%, rgba(30,27,34,0.3) 48%, rgba(30,27,34,0) 74%)" }} />
+      {[["44%", 224, 0.4], ["52%", 238, 2.6], ["38%", 230, 4.9], ["60%", 220, 6.8]].map(([l, t, d]) => (
+        <span key={l} className="mvEmber" style={{ left: l, top: t, animationDelay: `${d}s` }} />
+      ))}
+    </React.Fragment>),
+  },
+  /* a crowd that has stopped being neighbours. The moon is halved rather than
+     taken, and the square is lit by the same night as everywhere else - no
+     lanterns, which is the point of it. Nobody here is holding a light for
+     anybody. */
+  riot: { unlit: true, moon: 0.85 },
+  /* the only place in the whole walk that is not bone, amber or red. The
+     miasma breathes over the well on its own slow beat and the moon is dimmed
+     to nothing much above it. */
+  fouled: {
+    moon: 0.85,
+    art: (v) => <div className="mvMiasma absolute" style={{ left: "49%", top: 148, width: 230, height: 150, marginLeft: -115, pointerEvents: "none", background: `radial-gradient(ellipse 50% 50% at 50% 60%, rgba(74,102,62,0.55) 0%, rgba(52,74,48,0.22) 42%, rgba(${v},0) 74%)` }} />,
+  },
+  /* black standing water where the mill floor was, holding the moonlight flat
+     and giving none of it back. The silhouette is untouched: everything below
+     the race is simply water now. */
+  flood: {
+    moon: 1.3,
+    art: () => <div className="mvFlood absolute" style={{ left: 0, right: 0, top: 194, height: 150, pointerEvents: "none", background: "linear-gradient(rgba(24,34,52,0), rgba(28,42,66,0.6) 34%, rgba(22,32,50,0.5) 62%, rgba(20,30,48,0))" }} />,
   },
 };
-/* which wound, if any, this place is wearing tonight */
-const nightWound = (s, loc) => (s.tavernShut && loc === "Tavern") ? "shut" : null;
-function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, scorched, wound, children }) {
+/* Which wound, if any, this place is wearing tonight. Flags only - every one
+   of these was set by resolveNight long before the walk began, and this
+   reads the same state in the same order of precedence as `DawnScene`, so
+   the night and the morning after it never disagree about a place.
+   `s.burned` is the build's list of ruined ground rather than burned ground:
+   the flooded mill is pushed onto it too, and is told apart by which place
+   it is. Nothing else can put either of those two there. */
+const nightWound = (s, loc) =>
+  (s.burned || []).includes(loc) ? (loc === "Old Mill" ? "flood" : "burn")
+    : (s.tavernShut && loc === "Tavern") ? "shut"
+      : (s.wellFouled && loc === "Village Square") ? "fouled"
+        : (s.breadRiot && loc === "Village Square") ? "riot"
+          : null;
+function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, wound, children }) {
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   const wd = NIGHT_WOUNDS[wound] || null;
-  const mo = (a) => Math.min(0.85, +(a * ((wd && wd.moon) || 1)).toFixed(3));
+  const moonMul = wd && wd.moon !== undefined ? wd.moon : 1;
+  const hasMoon = moonMul > 0;
+  const mo = (a) => Math.min(0.85, +(a * moonMul).toFixed(3));
   return (
     <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
         <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
-          <Scene loc={loc} kind="quiet" height={190} unlit={wd && wd.unlit} />
-          {scorched && <div className="mvScorch" />}
+          <Scene loc={loc} kind="quiet" height={190} unlit={wd && wd.unlit} moonless={!hasMoon} />
         </div>
         <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
-        <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
+        {hasMoon && <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
           <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,${mo(0.44)}) 0%, rgba(226,150,150,${mo(0.16)}) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,${mo(0.42)}) 0%, rgba(220,230,255,${mo(0.14)}) 38%, rgba(${tn.veil},0) 72%)` }} />
           <div className="absolute" style={{ left: 342, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: danger ? "radial-gradient(circle at 36% 30%, #FBF1EA 0%, #F3E2DA 42%, #D9C4C4 72%, #B09A9E 100%)" : "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: danger ? "0 0 34px rgba(226,160,168,0.5), inset -6px -5px 14px rgba(140,110,116,0.45)" : "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
             {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
               <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
             ))}
           </div>
-        </div>
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,${mo(0.16)}) 0%, rgba(214,224,255,${mo(0.05)}) 42%, rgba(${tn.veil},0) 74%)` }} />
+        </div>}
+        {hasMoon && <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,${mo(0.16)}) 0%, rgba(214,224,255,${mo(0.05)}) 42%, rgba(${tn.veil},0) 74%)` }} />}
         {/* one cloud, crossing the whole sky in the time nobody watches it for.
             The only thing up there that ever passes in front of the moon. */}
         <div className="mvCloud absolute" style={{ left: 0, top: 52, width: 240, height: 88, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%, rgba(16,19,33,0.82) 0%, rgba(16,19,33,0.46) 46%, rgba(16,19,33,0) 74%)" }} />
-        {wd && wd.layer && <div className="absolute" style={{ left: 0, right: 0, pointerEvents: "none", ...wd.layer(tn.veil) }} />}
+        {wd && wd.art && wd.art(tn.veil)}
         <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
         <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
         <div className="mvGrain" />
@@ -6664,6 +6717,18 @@ const EXTRA_CSS = `
 .mvMoonGlow { animation: mvglowpulse 9s ease-in-out infinite alternate; }
 .mvCloud { animation: mvcloud 48s linear infinite; }
 @keyframes mvcloud { from { transform: translateX(-16%); } to { transform: translateX(116%); } }
+/* what the village's wounds do while you stand in front of them: fire that
+   breathes, smoke that climbs and thins, a miasma that swells over the well,
+   and standing water that only ever shifts a little. */
+.mvFire { animation: mvfire 2.6s ease-in-out infinite alternate; }
+@keyframes mvfire { from { opacity: 0.62; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
+.mvSmoke { animation: mvsmoke 15s ease-in-out infinite; }
+@keyframes mvsmoke { 0% { transform: translate3d(0,10px,0) scale(1); opacity: 0; } 22% { opacity: 0.5; } 100% { transform: translate3d(26px,-120px,0) scale(1.7); opacity: 0; } }
+.mvMiasma { animation: mvmiasma 9s ease-in-out infinite alternate; }
+@keyframes mvmiasma { from { opacity: 0.55; transform: translateY(0) scale(1); } to { opacity: 0.9; transform: translateY(-6px) scale(1.06); } }
+.mvFlood { animation: mvflood 8s ease-in-out infinite alternate; }
+@keyframes mvflood { from { opacity: 0.85; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mvFire, .mvSmoke, .mvMiasma, .mvFlood { animation: none; } .mvSmoke { opacity: 0.4; } }
 /* the possession sweep on the title screen: a dark comes up over one face
    at a time and passes on, so the promise is made by the picture and not
    only by the sentence under it */
@@ -8455,7 +8520,7 @@ function MonsterVillage() {
     const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
     const wxWord = walk.facts.wx ? { fog: "FOG", storm: "STORM COMING", frost: "HARD FROST" }[walk.facts.wx] : "CLEAR";
     return (
-      <NightShell loc={sceneLoc} danger={tense} scorched={(s.burned || []).includes(sceneLoc)} wound={nightWound(s, sceneLoc)}
+      <NightShell loc={sceneLoc} danger={tense} wound={nightWound(s, sceneLoc)}
         kicker={`NIGHT ${s.nightNum + 1} · ${isWatch ? "THE WATCH" : "THE LANES"}`}>
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
           {/* where you are and what the sky is doing, on one line */}
