@@ -397,6 +397,38 @@ Where a mock implied a mechanic the code does not have, and what was done.
   `ShroudH` extraction and the stamp-on-the-way-out were outstanding. **Read the
   target function before assuming a row is a rewrite** — some are a half-hour.
 
+## What has actually been verified
+
+Per screen, every row got: a boot check (catches Babel parse errors), a
+screenshot of the screen itself, and a 3-day/night smoke run. All green.
+
+Beyond that:
+
+- **The night walk** — full queue under four `Math.random` seeds and the door
+  watch under three: depart / followed / mingled / sound / chased / search /
+  return / flee / follow / empty-watch, plus a live sighting state.
+- **A real win** — harness reads the answer out of `newGame` in a *test copy*
+  (`window.__answer`), accuses correctly, reaches the amber plate with matching
+  creature and prose.
+- **A real loss** — seeded `wrongGuesses: 1` so one wrong accusation ends it;
+  reaches the death screen (`YOU DO NOT SEE THE DAWN`, creature looming) and
+  then the red plate.
+- **The Hollow plate** — seeded `over.reason = "joined"`; fouled-well green,
+  the single plaque, still-living counting you.
+
+**Still not verified, and worth knowing:**
+
+- **The offer screen (15a) has never been seen.** It needs `monsterFancies` +
+  `bond >= OFFER_BOND_MIN` + `night >= OFFER_MIN_NIGHT` + being *caught* on a
+  walk, and four attempts to force that failed — seeding the first three still
+  leaves the catch roll, which the walk settles through `mods.fateDeath`. It
+  compiles and throws nothing. **Look at it before you touch it.**
+- **The death screen (`s.deathBeats`) was never restyled.** §16 asks for death
+  beats at 21px; it still renders them at 16px with the old `Btn`. It works and
+  looks fine, but it is the one screen in the endgame still in the old voice.
+- Ending plates were screenshotted **after a 3s settle** — the staged `mvIn`
+  fades make an immediate capture look broken when it is not.
+
 ## Findings banked for later rows
 
 Things noticed in passing that will save the next session a lookup.
