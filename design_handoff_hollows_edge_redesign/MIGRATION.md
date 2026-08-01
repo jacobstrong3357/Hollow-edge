@@ -74,7 +74,7 @@ does not change, so these stay valid.
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
-| 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | todo |
+| 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **15a done** — *"Redesign the offer"*. `riteModal` still todo |
 | 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | todo |
 
@@ -262,6 +262,10 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§14 accusation** — none, and one invariant deliberately kept: creatures
+  your signs rule out render at 35% but **stay pressable**. The game never
+  decides for the player, and the ticks driving `compatM` are their own theory,
+  not proof. Do not "helpfully" disable them.
 - **§10 under siege** — none. `FAITH REMAINING` reads `s.wrongGuesses`, not
   `s.riteFails`: the run ends at `wrongGuesses >= 2`, and a wrong *accusation*
   counts toward it exactly as a wrong rite does. `riteFails` exists but only

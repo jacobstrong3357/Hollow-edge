@@ -6547,6 +6547,8 @@ const DOCK_BTN_KINDS = {
   commit: { background: "rgba(217,164,65,0.1)", border: `1px solid ${C.amber}`, color: C.amber },
   destroy: { background: C.red, border: `1px solid ${C.red}`, color: "#F3E9E4" },
   quiet: { background: "transparent", border: `1px solid ${C.line}`, color: C.text },
+  /* the quiet way out of a bruised screen: the hairline bruises too */
+  quietBruise: { background: "transparent", border: "1px solid #3A2430", color: C.text },
 };
 function DockBtn({ children, onClick, kind = "quiet", disabled }) {
   return (
@@ -9417,10 +9419,11 @@ function MonsterVillage() {
   ), () => setModal(null), null, <DawnScene loc="Old Church" s={s} height={96} />);
 
   const accuseModal = modal === "accuse" && (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch }}>
-      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-        <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-          <div className="rounded-2xl overflow-hidden relative" style={{ border: "1px solid rgba(194,68,80,0.4)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+        <div className="mvGrain" />
+        <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),16px)" }}>
+          <div className="overflow-hidden relative" style={{ borderRadius: 16, border: "1px solid rgba(194,68,80,0.4)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
             {accusePick ? <InterviewScene id={accusePick} height={100} /> : <NightScene height={100} />}
             <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(46,16,22,0.15), rgba(22,10,12,0.9))", pointerEvents: "none" }} />
             {accusePick ? (
@@ -9434,27 +9437,29 @@ function MonsterVillage() {
             <div className="absolute top-2.5 right-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10, letterSpacing: 2, color: C.redBright, background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.4)" }}>ACCUSATION</div>
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "14px 16px 0", WebkitOverflowScrolling: "touch" }}>
           {accusePick ? (
             <>
-              <p style={{ fontSize: 13, color: C.dim }} className="mb-3">Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
-              <div className="grid grid-cols-5 gap-2">
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.dim, textWrap: "pretty" }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
+              {/* ruled-out creatures stay pressable at 35%: the signs are the
+                  player's own reading, and the game never decides for them */}
+              <div style={{ marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
                 {gameMonsters(s).map((mm) => {
                   const struckM = s.struck.includes(mm.id);
                   const dim = struckM || !compatM(mm);
                   const sel = accuseType === mm.id;
                   return (
                     <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
-                      style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
-                      <MonsterArt id={mm.id} size={44} light />
-                      <span style={{ fontSize: 10, color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
+                      <MonsterArt id={mm.id} size={42} light />
+                      <span style={{ fontSize: 9.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
                     </button>
                   );
                 })}
               </div>
               {accuseType && (
-                <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-                  <p style={{ fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.85)" }}>
+                <div style={{ marginTop: 14, marginBottom: 2, padding: "13px 15px", background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12 }}>
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.85)", textWrap: "pretty" }}>
                     Put <strong style={{ color: C.parch }}>{npcById(s, accusePick).name}</strong> to the rite of the <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>, by {ritePreparer(s, accusePick)}'s hand.
                   </p>
                 </div>
@@ -9462,14 +9467,14 @@ function MonsterVillage() {
             </>
           ) : (
             <>
-              <p style={{ fontSize: 13, color: C.dim }} className="mb-3">The village hangs whoever you circle, and no verdict is read out. An innocent dead on your word emboldens the thing, and a second is the end of you.</p>
-              <div className="grid grid-cols-4 gap-2">
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.dim, textWrap: "pretty" }}>The village hangs whoever you circle, and no verdict is read out. An innocent dead on your word emboldens the thing, and a second is the end of you.</p>
+              <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8 }}>
                 {aliveNpcs(s).map((n) => {
                   const struckP = s.struckNpcs.includes(n.id);
                   return (
-                    <button key={n.id} onClick={() => setAccusePick(n.id)} className="flex flex-col items-center gap-1" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, opacity: struckP ? 0.4 : 1 }}>
+                    <button key={n.id} onClick={() => setAccusePick(n.id)} className="mv-btn flex flex-col items-center" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, opacity: struckP ? 0.4 : 1 }}>
                       <Portrait id={n.id} size={48} turnedKnown={n.turned && n.known} />
-                      <span style={{ fontSize: 10, color: C.dim, textDecoration: struckP ? "line-through" : "none" }}>{n.name}</span>
+                      <span style={{ fontSize: 10, lineHeight: 1.15, textAlign: "center", color: C.dim, textDecoration: struckP ? "line-through" : "none" }}>{n.name}</span>
                     </button>
                   );
                 })}
@@ -9477,17 +9482,19 @@ function MonsterVillage() {
             </>
           )}
         </div>
-        <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#1E1218,#150C0F)", borderTop: "1px solid rgba(194,68,80,0.3)", paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
+        <Dock tone="bruise">
           {accusePick ? (
             <div className="grid grid-cols-2 gap-2">
-              <Btn onClick={() => { setAccusePick(null); setAccuseType(null); }}>Back</Btn>
-              <Btn kind="red" disabled={!accuseType} onClick={() => { const id = accusePick, ty = accuseType; setModal(null); setAccusePick(null); setAccuseType(null); setS(actAccuse(s, id, ty)); }}>Say it aloud</Btn>
+              <DockBtn kind="quietBruise" onClick={() => { setAccusePick(null); setAccuseType(null); }}>BACK</DockBtn>
+              <DockBtn kind="destroy" disabled={!accuseType} onClick={() => { const id = accusePick, ty = accuseType; setModal(null); setAccusePick(null); setAccuseType(null); setS(actAccuse(s, id, ty)); }}>SAY IT ALOUD</DockBtn>
             </div>
           ) : (
-            <Btn full onClick={() => { setModal(null); setAccusePick(null); setAccuseType(null); }}>Step back</Btn>
+            <DockBtn kind="quietBruise" onClick={() => { setModal(null); setAccusePick(null); setAccuseType(null); }}>STEP BACK</DockBtn>
           )}
-        </div>
+        </Dock>
       </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
     </div>
   );
 
