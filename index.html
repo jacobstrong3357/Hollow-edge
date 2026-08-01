@@ -6516,6 +6516,39 @@ function NightChoice({ children, onClick, quiet }) {
   );
 }
 
+/* THE FOUR DRAWERS behind the title - deeds, secrets, the tally, how to play.
+   All the same furniture: a gilt kicker with its count at the right, the
+   drawer's name in display type, and one CLOSE bar at the foot. No hero card:
+   these are pages of a book, not places you have been. */
+function DrawerShell({ kicker, count, title, sub, bar, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: "#08070C", color: C.parch, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+        <div className="mvGrain" />
+        <div className="relative" style={{ flexShrink: 0, padding: "0 20px", paddingTop: "calc(max(env(safe-area-inset-top),18px) + 26px)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 3.5, color: C.amber }}>{kicker}</span>
+            {count && <span className="mv-display" style={{ marginLeft: "auto", fontSize: 9.5, letterSpacing: 2, color: C.dim, whiteSpace: "nowrap" }}>{count}</span>}
+          </div>
+          <h1 className="mv-display" style={{ margin: "5px 0 0", fontSize: 30, lineHeight: 1, color: C.parch, textShadow: "0 2px 10px #000" }}>{title}</h1>
+          {sub && <p style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.45, color: C.dim }}>{sub}</p>}
+          {bar !== undefined && (
+            <div style={{ height: 4, borderRadius: 2, background: "#241F30", marginTop: 11, overflow: "hidden" }}>
+              <div style={{ width: `${bar}%`, height: "100%", background: "linear-gradient(90deg,#B8863A,#D9A441)" }} />
+            </div>
+          )}
+        </div>
+        <div className="relative flex-1 min-h-0 overflow-y-auto" style={{ padding: "14px 20px 0", WebkitOverflowScrolling: "touch" }}>
+          {children}
+        </div>
+        <Dock><DockBtn kind="commit" onClick={onClose}>CLOSE</DockBtn></Dock>
+      </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
+    </div>
+  );
+}
+
 /* The shrouded shape that sits low on a death-scene hero: a covered body at
    the edge of the frame, never the subject of the picture. */
 function ShroudH() {
@@ -7491,15 +7524,8 @@ function MonsterVillage() {
             parchment bottom sheets. A fixed CLOSE tray replaces
             tap-the-backdrop-to-dismiss. */}
         {showHowTo && (
-          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
-            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
-                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#AEB6D8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(174,182,216,0.3)" }}>BEFORE YOU BEGIN</div>
-                  <div className="left-4 bottom-2.5 relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>How to Play</div>
-                </div>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+          <DrawerShell kicker="BEFORE YOU BEGIN" title="How to Play" onClose={() => setShowHowTo(false)}>
+
                 <div className="rounded-xl p-4" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
                   {HOW_TO_PLAY.map((sec, i) => (
                     <div key={i} className={i === 0 ? "" : "mt-3"}>
@@ -7508,12 +7534,7 @@ function MonsterVillage() {
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-                <Btn full center kind="amber" onClick={() => setShowHowTo(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
-              </div>
-            </div>
-          </div>
+          </DrawerShell>
         )}
         {showBestiaryHome && meta && (
           <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
@@ -7602,15 +7623,9 @@ function MonsterVillage() {
           </div>
         )}
         {showStatsHome && meta && (
-          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
-            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
-                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{meta.wins}–{meta.losses} DAWNS</div>
-                  <div className="relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>Your Record</div>
-                </div>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+          <DrawerShell kicker="THE TALLY" count={`${meta.wins}\u2013${meta.losses} DAWNS`}
+            title="Your Record" onClose={() => setShowStatsHome(false)}>
+
                 {/* the horror you have met most, with your personal record
                     against it. Named only once it has been ended at least
                     once, to keep the Black Book's slow reveal intact. */}
@@ -7657,23 +7672,13 @@ function MonsterVillage() {
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-                <Btn full center kind="amber" onClick={() => setShowStatsHome(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
-              </div>
-            </div>
-          </div>
+          </DrawerShell>
         )}
-        {showSecretsHome && meta && (
-          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
-            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
-                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)} OF {Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)} KNOWN</div>
-                  <div className="relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>Secrets Kept</div>
-                </div>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
+        {showSecretsHome && (
+          <DrawerShell kicker="WHAT THEY CARRY" count={`${Object.values((meta && meta.secretsFound) || {}).reduce((a2, arr) => a2 + arr.length, 0)} OF ${Object.values(SECRET_POOL).reduce((a2, arr) => a2 + arr.length, 0)} KNOWN`}
+            title="Secrets Kept" sub="Every human secret you have drawn out of a neighbour, across every game. Each carries one per run."
+            onClose={() => setShowSecretsHome(false)}>
+
                 <p style={{ fontSize: 12.5, color: C.dim }}>Every human secret you've drawn out of a neighbour, across every game. Each villager carries one per game - it can take a few playthroughs to hear them all.</p>
                 <div className="mt-2 flex flex-col gap-2">
                   {NPC_DEFS.map((n) => {
@@ -7699,30 +7704,21 @@ function MonsterVillage() {
                     );
                   })}
                 </div>
-              </div>
-              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-                <Btn full center kind="amber" onClick={() => setShowSecretsHome(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
-              </div>
-            </div>
-          </div>
+          </DrawerShell>
         )}
         {showAch && (
-          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
-            <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-              <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-                <div className="rounded-2xl overflow-hidden relative flex items-end" style={{ height: 88, border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
-                  <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.55)", border: `1px solid ${C.amber}55` }}>{meta ? meta.ach.length : 0} OF {ACH.length} EARNED</div>
-                  <div className="relative mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000", padding: "0 0 10px 16px" }}>Deeds of the Watcher</div>
-                </div>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-6">
-                <div className="rounded-xl p-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+          <DrawerShell kicker="THE WATCHER" count={`${meta ? meta.ach.length : 0} OF ${ACH.length} EARNED`}
+            title="Deeds" bar={Math.round(((meta ? meta.ach.length : 0) / ACH.length) * 100)} onClose={() => setShowAch(false)}>
+
+                <div style={{ display: "flex", flexDirection: "column" }}>
                   {ACH.map((a, i) => {
                     const got = meta && meta.ach.includes(a.id);
                     const sealed = a.hidden && !got;
                     return (
-                      <div key={a.id} className={"flex gap-2.5 items-baseline py-2" + (i === 0 ? "" : "")} style={{ borderTop: i === 0 ? "none" : `1px solid ${C.line}`, opacity: got ? 1 : 0.55 }}>
-                        <span className="shrink-0" style={{ width: 14, textAlign: "center", color: got ? C.redBright : C.dim }}>{got ? "✠" : sealed ? "🔒" : "·"}</span>
+                      /* a deed is a line in a ledger, not a card: a dagger
+                         where it is done, a dot where it is not */
+                      <div key={a.id} className="flex items-baseline" style={{ gap: 10, padding: "9px 0", borderBottom: "1px solid #22203A", opacity: got ? 1 : 0.55 }}>
+                        <span className="shrink-0" style={{ width: 14, textAlign: "center", fontSize: 12, color: got ? C.redBright : C.dim }}>{got ? "\u271D" : sealed ? "\uD83D\uDD12" : "\u00B7"}</span>
                         <div className="min-w-0">
                           <div className="mv-display" style={{ fontSize: 13, color: C.parch, letterSpacing: sealed ? 1.5 : 0 }}>{sealed ? "??????" : a.name}</div>
                           <div style={{ fontSize: 12.5, color: "rgba(233,223,200,0.75)", lineHeight: 1.35, fontStyle: sealed ? "italic" : "normal" }}>
@@ -7734,12 +7730,7 @@ function MonsterVillage() {
                     );
                   })}
                 </div>
-              </div>
-              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-                <Btn full center kind="amber" onClick={() => setShowAch(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE</span></Btn>
-              </div>
-            </div>
-          </div>
+          </DrawerShell>
         )}
       </div>
     );

@@ -77,11 +77,34 @@ does not change, so these stay valid.
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **done** — *"Redesign the offer"* + *"Bring the rite in line with the accusation"* |
 | 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | **done** — *"Give the endings a plate"* |
+| — | **The four drawers** | `t4` 4a-4d | 2914 | `showAch` / `showSecretsHome` / `showStatsHome` / `showHowTo` | **PARTIAL** — shared `DrawerShell` + 4a's rows done in *"Give the four drawers a masthead"*. 4b/4c/4d inner content still todo, see below |
 
-Unmapped canvas sections: `t4` (offset 2913) and `t10` (offset 2041) were not
-identified. There is no `t5`, `t6` or `t9` despite the README citing "5a-5c".
-Whoever touches the journal or interview should check `t4`/`t10` for an earlier
-pass and record what they are here.
+**`t4` and `t10` are now identified.** `t10` is "The night walk, full bleed", a
+superseded earlier pass at §9 — reference only. **`t4` is "The four drawers
+behind the title screen"** (4a Deeds, 4b Secrets Kept, 4c Your Record, 4d How
+to Play) and it is *real, unbuilt design*. It was missed for a long time
+because **the README's numbered "Screens" list has 16 entries and does not
+mention the drawers** — the canvas carries content the README does not
+enumerate. There is no `t5`, `t6` or `t9`.
+
+### The four drawers (`t4`) — what is left
+
+All four now share `DrawerShell` (module level, near `ShroudH`): gilt kicker
+with its count at the right, the drawer's name at 30px, an optional sub and
+progress bar, and one `CLOSE` bar. No hero card — these are pages, not places.
+
+- **4a Deeds** — done. Rows are ledger lines on the ground with a dagger where
+  earned and a dot where not, `borderBottom: 1px solid #22203A`.
+- **4b Secrets Kept** — chrome only. Still needs the per-villager block: 36px
+  portrait, a **bone nameplate** reading `NAME · THE ROLE`, and `N OF 3` at the
+  right.
+- **4c Your Record** — chrome only. The nemesis card wants
+  `background #141830, border-top: 2px solid C.amber, radius 2`, and the tiles
+  below want the same shape with `C.parchLine` rules (`C.red` on *villages
+  lost*), 8.5px `letter-spacing: 1.5` labels over 18px figures. They are still
+  rounded panels.
+- **4d How to Play** — chrome only. The body wants numbered `I / II / III`
+  markers in `C.redBright` beside `C.redBright` section rubrics.
 
 ### §4, and the stats it could not have
 
