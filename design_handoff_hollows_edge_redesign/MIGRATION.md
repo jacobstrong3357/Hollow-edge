@@ -62,7 +62,7 @@ does not change, so these stay valid.
 |---|---|---|---|---|---|
 | 11 | **Daylight search** | `t20` 20a-20c | 368 | `searchModal`, `runSearchScene`, `dayLocBtn` | **done** — `bac0533` |
 | — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — *"Lift the four recurring objects out of the search screen"* |
-| 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749, 653 | walk render, `watchModal` | todo |
+| 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749 | walk render (`watchModal` already deleted by §8) | **todo — the last row. Read "§9: how to do it" below first.** |
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | **done** — *"Redesign nightfall, and build the night shell"* |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | **done** — *"Strip nightfall down for the siege"*. 16b was already covered by §7's night card |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
@@ -72,7 +72,7 @@ does not change, so these stay valid.
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | **done** — *"Merge the journal's three logs into one record"* |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | **done** — *"Turn the interview violet when it is no longer them"* |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
-| 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
+| 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | **done** — *"Make the Black Book a book"* |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **done** — *"Redesign the offer"* + *"Bring the rite in line with the accusation"* |
@@ -82,6 +82,35 @@ Unmapped canvas sections: `t4` (offset 2913) and `t10` (offset 2041) were not
 identified. There is no `t5`, `t6` or `t9` despite the README citing "5a-5c".
 Whoever touches the journal or interview should check `t4`/`t10` for an earlier
 pass and record what they are here.
+
+### §9: how to do it
+
+**This is the only row left, and it is not one sitting.** `walkModal` is
+**~1194 lines** — the queue state machine's UI with every side scene
+(`followed`, `hailed`, `chased`, `listened`, `hidden`, `vigil`, `found`,
+`mingled`). Do not try to migrate it in one pass; migrate it in slices, one
+commit each, ticking them here:
+
+1. **Give `NightShell` a `danger` prop** — scene `filter: saturate(.6)
+   brightness(.75)`, moon warmed to `#FBF1EA` with a pink glow, `.mvEdgeRed` +
+   `.mvHeart` on the 2.4s beat, kicker in `C.redBright`. Nothing else changes.
+   Testable on its own by forcing the prop.
+2. **The main walk stages** (`depart → lane → event → sound → approach →
+   return`) onto `NightShell` + `NightChoice`, keeping every existing
+   `nextStage` call site untouched. The place + weather line goes on the ruled
+   line, the atmosphere in the italic rule, the event sentence at 19px.
+3. **The sighting stages** (`hide`, `hidden`, `fate`, `chased`, and `approach`
+   when `facts.active && facts.huntLoc === walk.loc`) — these pass
+   `danger`, the rubric reads "SOMETHING IS CLOSE", and the choices collapse
+   to two with the committing one **filled** `C.red`.
+4. **The side scenes** one at a time.
+5. **The door watch and its two ends** (18a-18c, 19a) — an empty watch has
+   **one** thing to press and sends you home with rumours.
+
+The walk's logic must not move. It is a queue advanced by `nextStage(walk,
+fromType)`, and everything shown live is passed through `mods.*` and only
+settled in `resolveNight`. **Change what the stages look like, never when they
+fire or what they roll.**
 
 ### Why this order
 
