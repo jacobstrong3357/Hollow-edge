@@ -73,7 +73,7 @@ does not change, so these stay valid.
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | todo |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
-| 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | todo |
+| 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | todo |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | todo |
 | 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | todo |
@@ -252,6 +252,15 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Built to the README: status and record became plaques, foot matches the day
   screen. **Where a canvas option says it is only recreating the build, read the
   README entry as the intent.**
+
+- **§7 night cards** — the mock adds a `STILL LIVING` count to the night card,
+  and a naive `aliveNpcs(s).length` there **leaks tonight's death before the
+  dawn reveal**: state has already applied the kill while the village has not
+  found the body. The mock is innocent — it shows 8 on a night Rosa died, which
+  is the pre-death count — but the obvious implementation is not. The card now
+  counts anyone taken *this* night as still living (`livingTonight`). **Any new
+  counter on a night-phase screen has this hazard; check it against what the
+  village knows, not what `s` knows.**
 
 ## Findings banked for later rows
 

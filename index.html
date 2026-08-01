@@ -4734,6 +4734,9 @@ const C = {
 /* Full-bleed art never hard-cuts: every strip that runs off the top of a
    screen fades out through this ramp instead of ending on a line. */
 const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 52%, rgba(0,0,0,0.6) 74%, rgba(0,0,0,0.2) 90%, transparent 100%)";
+/* the night card holds its art longer before letting go, so the dark below
+   reads as the same dark rather than as the end of a picture */
+const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 62%, rgba(0,0,0,0.5) 88%, transparent 100%)";
 
 function Scene({ loc, kind, height = 150 }) {
   const win = (x, y, w = 8, h = 12, arch) => (
@@ -7600,47 +7603,72 @@ function MonsterVillage() {
     }
     const won = s.over && s.over.win;
     const heroAccent = beatsFirst ? "#C24450" : won ? C.amber : "#AEB6D8";
+    /* A night is a title card, not a card of choices: the village name of
+       the hour in display type, the beats dealt into the dark under it, and
+       one thing to press. The beats brighten as they go, so the night
+       closes in rather than simply continuing. */
+    const title = s.beatTitle || `NIGHT ${s.nightNum}`;
+    const beatColor = (i) => (i === beats.length - 1
+      ? "#F1E4C6"
+      : `rgba(233,223,200,${(0.5 + (beats.length > 1 ? i / (beats.length - 1) : 1) * 0.34).toFixed(2)})`);
+    /* The count is what the VILLAGE knows at this hour, not what the state
+       knows: a body is not found until dawn, so anyone taken tonight is still
+       counted here. Decrementing it now would tell the player someone died
+       before the dawn reveal gets to. */
+    const livingTonight = s.npcs.filter((n) => !n.fled && (n.alive
+      || s.deaths.some((d) => d.id === n.id && d.night === s.nightNum && d.kind !== "turned"))).length;
     return (
-      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
-        <style>{CSS_ALL}</style>
-        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.6)" }}>
-              <div className="relative">
-                {/* the night's ending, seen as well as read: the rite
-                    consuming the thing on a won night. Ordinary and
-                    JUDGMENT nights get the moonlit village and let the
-                    words work. */}
-                {won ? (
-                  <div className="flex justify-center items-center" style={{ height: 168, background: "linear-gradient(180deg,#241B1E,#161014)" }}>
-                    <MonsterDeath id={m.id} method={m.method} size={128} light />
-                  </div>
-                ) : (
-                  <NightScene height={168} />
-                )}
-                <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(20,16,20,0) 60%, rgba(20,16,20,0.85))" : "linear-gradient(rgba(10,14,32,0) 55%, rgba(10,14,32,0.82))", pointerEvents: "none" }} />
-                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: heroAccent, background: "rgba(8,10,18,0.55)", border: `1px solid ${heroAccent}55` }}>
-                  {beatsFirst ? "THE RITE UNRAVELS" : won ? "THE RECKONING" : `THE NIGHT · DAY ${s.dayNum} GIVES WAY`}
+        <div className="fixed inset-0 mv-body flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
+          <style>{CSS_ALL}</style>
+          <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+            {/* the night itself, full bleed and fading out rather than cut:
+                the rite consuming the thing on a won night, the moonlit
+                village on every other */}
+            <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
+              {won ? (
+                <div className="flex justify-center items-center" style={{ height: 228, background: "linear-gradient(180deg,#241B1E,#161014)" }}>
+                  <MonsterDeath id={m.id} method={m.method} size={150} light />
                 </div>
-                <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 17, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>{s.beatTitle || `NIGHT ${s.nightNum}`}</div>
-                <button onClick={advance} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: heroAccent, fontSize: 12, cursor: "pointer", padding: "3px 9px" }}>skip ≫</button>
+              ) : <NightScene height={228} />}
+              <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(20,16,20,0) 44%, rgba(20,16,20,0.6) 84%, rgba(20,16,20,0.88) 100%)" : "linear-gradient(rgba(5,6,12,0) 44%, rgba(5,6,12,0.55) 84%, rgba(5,6,12,0.85) 100%)" }} />
+            </div>
+            <div className="mvFog" style={{ position: "absolute", left: "-10%", right: "-10%", top: 150, height: 180, background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(180,196,224,0.09), transparent 70%)", pointerEvents: "none" }} />
+            <div className="mvGrain" />
+            <button onClick={advance} className="mv-btn mv-body absolute" style={{ top: "max(env(safe-area-inset-top),18px)", right: 18, padding: "4px 10px", border: "none", borderRadius: 3, background: "rgba(8,10,18,0.55)", color: heroAccent, fontSize: 12, cursor: "pointer", zIndex: 2 }}>skip ≫</button>
+            <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),18px) + 30px)" }}
+              onClick={() => setBeatsRevealed(true)}>
+              <span className="mv-display block" style={{ fontSize: 10.5, letterSpacing: 3.4, whiteSpace: "nowrap", color: "#AEB6D8" }}>
+                {beatsFirst ? "THE RITE UNRAVELS" : won ? "THE RECKONING" : `DAY ${s.dayNum} GIVES WAY`}
+              </span>
+              <h1 className="mv-display" style={{ margin: "8px 0 0", fontSize: title.length > 12 ? 30 : 40, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{title}</h1>
+              <div className="flex flex-col" style={{ flex: 1, minHeight: 0, justifyContent: "space-evenly", gap: 14, marginTop: 16, paddingBottom: 6, overflowY: "auto" }}>
+                {beats.map((b, i) => (
+                  <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 19, lineHeight: 1.5, color: beatColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
+                ))}
+                {!beatsRevealed && <p className="mvBeat" style={{ margin: 0, fontSize: 14, letterSpacing: 4, textAlign: "center", color: "rgba(233,223,200,0.35)", animationDelay: `${total}s` }}>· · ·</p>}
+              </div>
+              {/* what the night cost, and what is left of the village */}
+              <div className="flex items-baseline" style={{ gap: 26, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
+                <span className="flex items-baseline" style={{ gap: 8 }}>
+                  <span className="mv-display" style={{ fontSize: 22, lineHeight: 1, color: C.parch }}>{s.nightNum}</span>
+                  <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.45)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
+                </span>
+                <span className="flex items-baseline" style={{ gap: 8, marginLeft: "auto" }}>
+                  <span className="mv-display" style={{ fontSize: 22, lineHeight: 1, color: C.amber }}>{livingTonight}</span>
+                  <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.45)" }}>STILL LIVING</span>
+                </span>
+              </div>
+            </div>
+            <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),22px)", boxShadow: "none" }}>
+              <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
+                <DockBtn kind={beatsFirst ? "destroy" : "commit"} onClick={advance}>{beatsFirst ? "AND THEN →" : "ONWARD →"}</DockBtn>
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 pt-5" onClick={() => setBeatsRevealed(true)} style={{ minHeight: 0, cursor: beatsRevealed ? "default" : "pointer" }}>
-            {beats.map((b, i) => (
-              <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.5, textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
-            ))}
-            {!beatsRevealed && <p className="mt-5" style={{ fontSize: 14, color: C.dim, letterSpacing: 4, textAlign: "center" }}>· · ·</p>}
-          </div>
-          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),16px)" }}>
-            <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
-              <Btn full center kind={beatsFirst ? "red" : "amber"} onClick={advance}><span className="mv-display" style={{ letterSpacing: 2 }}>{beatsFirst ? "AND THEN →" : "ONWARD →"}</span></Btn>
-            </div>
-          </div>
+          <div className="mvVignette" />
+          <div className="mvGrainF" />
         </div>
-      </div>
-    );
+      );
   }
 
   /* ---------- Pass G2: the offer ----------
