@@ -62,7 +62,7 @@ does not change, so these stay valid.
 |---|---|---|---|---|---|
 | 11 | **Daylight search** | `t20` 20a-20c | 368 | `searchModal`, `runSearchScene`, `dayLocBtn` | **done** — `bac0533` |
 | — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — *"Lift the four recurring objects out of the search screen"* |
-| 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749 | walk render (`watchModal` already deleted by §8) | **todo — the last row. Read "§9: how to do it" below first.** |
+| 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749 | walk render (`watchModal` already deleted by §8) | **done** — sighting state, then *"Put the walk in the night's own furniture"* |
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | **done** — *"Redesign nightfall, and build the night shell"* |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | **done** — *"Strip nightfall down for the siege"*. 16b was already covered by §7's night card |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
@@ -83,44 +83,31 @@ identified. There is no `t5`, `t6` or `t9` despite the README citing "5a-5c".
 Whoever touches the journal or interview should check `t4`/`t10` for an earlier
 pass and record what they are here.
 
-### §9: how to do it
+### §9, as it turned out
 
-**This is the only row left, and it is not one sitting.** `walkModal` is
-**~1194 lines** — the queue state machine's UI with every side scene
-(`followed`, `hailed`, `chased`, `listened`, `hidden`, `vigil`, `found`,
-`mingled`). Do not try to migrate it in one pass; migrate it in slices, one
-commit each, ticking them here:
+Budgeted as the hard row and it was not. `walkModal`'s ~1194 lines are **one
+shared shell plus ~30 per-stage blocks**, so:
 
-1. ~~**Give `NightShell` a `danger` prop**~~ — **DONE**, *"Give the night shell
-   a sighting state"*. Pass `danger` and the scene desaturates, the moon warms
-   to `#FBF1EA` with a pink glow, `.mvEdgeRed` breathes on the 2.4s beat and the
-   kicker goes `C.redBright`. Note `.mvEdgeRed`/`.mvHeart` **did not exist** —
-   the handoff named them as if they were in the build; they are now, next to
-   `.mvFogBank`. To see the state, force `danger = true` in the signature in a
-   *test copy*.
-2. ~~**The main walk stages**~~ — **DONE**, *"Put the walk in the night's own
-   furniture"*. This was **much smaller than it looked**: `walkModal`'s ~1194
-   lines are one shared shell plus ~30 per-stage blocks, so moving the shell
-   onto `NightShell` moved every stage at once, and the shared `beat()` helper
-   took the 19px event line everywhere in one edit. The per-stage blocks were
-   not touched and no `nextStage` call site moved.
-   - Still per-stage: the choice buttons are still `Btn` (they read correctly
-     as amber outlines, but slice 3 wants two of them **filled** `C.red` under
-     `danger`).
-3. **The sighting stages** — `tense` already computes them and already drives
-   `danger` on the shell; what is left is the choice collapse.
-   **The old detail:** (`hide`, `hidden`, `fate`, `chased`, and `approach`
-   when `facts.active && facts.huntLoc === walk.loc`) — these pass
-   `danger`, the rubric reads "SOMETHING IS CLOSE", and the choices collapse
-   to two with the committing one **filled** `C.red`.
-4. **The side scenes** one at a time.
-5. **The door watch and its two ends** (18a-18c, 19a) — an empty watch has
-   **one** thing to press and sends you home with rumours.
+1. **The `danger` prop on `NightShell`** — the sighting state. `.mvEdgeRed` and
+   `.mvHeart` had to be written; the handoff lists them as already in the build
+   and they were not.
+2. **The shell swap** moved every stage at once, and restyling the shared
+   `beat()` helper carried the 19px event line everywhere. No stage block was
+   edited and no `nextStage` call site moved.
+3. **The sighting stages needed no code** — `tense` already computed them, and
+   the committing action in each was already filled red. Verified live.
+4. **The side scenes** came along with the shell.
+5. **The door watch** was already right: an empty watch already had exactly one
+   thing to press.
 
-The walk's logic must not move. It is a queue advanced by `nextStage(walk,
-fromType)`, and everything shown live is passed through `mods.*` and only
-settled in `resolveNight`. **Change what the stages look like, never when they
-fire or what they roll.**
+Tested by walking the full queue under four `Math.random` seeds and the watch
+under three, covering depart / followed / mingled / sound / chased / search /
+return / flee / follow / empty-watch. Zero page errors.
+
+**If you extend the walk:** it is a queue advanced by `nextStage(walk,
+fromType)`; everything shown live passes through `mods.*` and settles only in
+`resolveNight`. Change what the stages look like, never when they fire or what
+they roll.
 
 ### Why this order
 
@@ -301,6 +288,15 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§9 sighting stages** — **the design is wrong and index.html wins.** The
+  handoff says the choices "collapse to two with the committing one filled
+  `C.red`". They do not collapse: `approach`-under-danger offers **three**
+  (press / hold to the shadows / turn for home) and `hide` offers **four**
+  (doorway / shadow / stand still / back away). Cutting to two would delete
+  real player choices at the most consequential moment in the game. Kept all of
+  them; the committing one was already filled red in both, so the intent was
+  already met. **"Collapse to two" is a layout observation about the mock, not
+  an instruction.**
 - **§9 slice 1** — the handoff's "Interactions & behaviour" section lists
   `.mvEdgeRed` and `.mvHeart` as *"already implemented in the build — keep it"*.
   They were not in the build at all. **Do not trust the handoff's claims about
