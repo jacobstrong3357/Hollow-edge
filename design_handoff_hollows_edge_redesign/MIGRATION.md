@@ -69,14 +69,14 @@ does not change, so these stay valid.
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **done** — 20d in *"Redesign the examination"*, 20e closed by §3 |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; `ShroudH` folded in | **done** — *"Finish the death scene"* |
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | **done** — *"Redesign the dawn reveal"* |
-| 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | **done** — *"Merge the journal's three logs into one record"* |
+| 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | **done** — tabs in *"Merge the journal's three logs into one record"*, **7a itself only in** *"Stamp the evidence signs, and deal the epilogue as a deck"* |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | **done** — *"Turn the interview violet when it is no longer them"* |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | **done** — 3b in *"Make the Black Book a book"*, then 3a + 3d in *"Finish the title screen and the book entry"* |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **done** — *"Redesign the offer"* + *"Bring the rite in line with the accusation"* |
-| 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | **done** — *"Give the endings a plate"* |
+| 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | **done** — plates in *"Give the endings a plate"*, **11c itself only in** *"Stamp the evidence signs, and deal the epilogue as a deck"* |
 | — | **The four drawers** | `t4` 4a-4d | 2914 | `showAch` / `showSecretsHome` / `showStatsHome` / `showHowTo` | **done** — masthead in *"Give the four drawers a masthead"*, insides in *"Finish the drawers' insides"* |
 
 **`t4` and `t10` are now identified.** `t10` is "The night walk, full bleed", a
@@ -217,6 +217,35 @@ if the sky is ever added to that screen, it hands the player their odds.
   the plate"*. `newAch` already held the deeds earned this run; they moved from
   the epilogue onto the plate as gilt-ruled plaques with the running total, and
   are no longer said twice.
+
+### A row is not done until every option under it is
+
+**This has now bitten three times, the same way each time.** A row gets ticked
+because the *container* landed, while an option inside it was never built:
+
+- **§4** ticked on 3b (the Black Book); 3a and 3d were unbuilt.
+- **§5** ticked on the tab merge; **7a**, the Evidence page itself, kept its old
+  checkbox rows instead of the mock's stamped tiles.
+- **§16** ticked on the ending plates; **11c**, the epilogue as a deck, was
+  still the old stacked wall of eight villagers.
+
+All three were caught by the owner, not by this page. **Before ticking a row,
+open every `NNa`/`NNb`/`NNc` under its turn and screenshot the built screen
+beside the mock.** "The screen it lives in was redesigned" is not the same
+claim as "this screen was redesigned", and the commit subject naming the row
+is not evidence either — the §5 commit is honestly named for what it did (the
+tabs) and says nothing false; the ledger row is what over-claimed.
+
+**A full option-by-option sweep was then run over all 58 `NNx` ids**, matching
+each mock's display-type labels against the build and screenshotting every
+option that looked thin. Everything else is genuinely built. Three that read as
+suspect and are not: `7b` (bestiary — creature, rite in red, its three signs
+with the matched one bolded, lore, dimmed when struck), `7c` (the record, with
+its Everything/Nights/Days/Testimony filter), and `4c` (the tally's sixteen
+tiles). Their "missing" labels were the canvas's own option titles and its
+sample villager names, which the build generates from state. `11b`'s DEEDS
+DONE is likewise present — `newAch.length > 0` is not gated on a win, that run
+had simply earned none.
 
 ### §4, and the stats it could not have
 
