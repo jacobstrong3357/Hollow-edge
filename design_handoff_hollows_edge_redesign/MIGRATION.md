@@ -96,7 +96,9 @@ a README section except `t4`. Two things are **designed and not built**:
   superseded draft after all: its intent ("the night's weather and its wounds
   carried by the art rather than announced... one screen for each state the
   walk can be in") is exactly §9, and `10d`-`10f` are the weather states, which
-  the walk does carry. But `10g`-`10k` are **the church burning, the bread
+  the walk carries as a word only (see the section below — this page previously
+  claimed it carried them, and that was wrong). But `10g`-`10k` are **the
+  church burning, the bread
   riot, the well fouled, the tavern shut, the mill flooded**, and the walk
   showed none of them: `Scene({ loc, kind, height })` took no affliction state,
   unlike `DawnScene`. `NightShell` had a `scorched` prop covering burned only.
@@ -130,22 +132,80 @@ a README section except `t4`. Two things are **designed and not built**:
   Watching Liesel's door gets this free: `HOME_LOC.liesel === "Tavern"`, and the
   watch already resolves `sceneLoc` through `HOME_LOC`, so `nightWound` sees it.
 
-  **Still to build: `10g` church burning, `10h` bread riot, `10i` well fouled,
-  `10k` mill flooded.** All four are `NIGHT_WOUNDS` entries plus a `nightWound`
-  clause. Notes from the canvas: 10g wants fire behind the nave, orange across
-  the lane and **no moon showing through** (`moon` well under 1) with embers
-  climbing — it should also replace, not sit beside, the existing `scorched`
-  tint; 10h wants the moon halved behind cloud and embers off a crowd with **no
-  lanterns** (`unlit`); 10i wants a green miasma over the well and calls it "the
-  only place in the whole walk that is not bone, amber or red"; 10k wants black
-  standing water below the mill race, holding the moonlight flat, silhouette
-  kept.
+  **All five wounds are built.** `10g`/`10h`/`10i`/`10k` followed in
+  *"Show the other four wounds on the night walk"*, where `NIGHT_WOUNDS` grew
+  from one flat entry into a table whose `art(veil)` returns JSX, so a wound can
+  breathe more than a single gradient. The entries:
 
-  **Also found, and deliberately not built here:** every one of the twelve `10x`
-  mocks — the plain weather states included — carries an `mvCloud` bank drifting
-  at the left of the sky (48s linear) that the shell does not have. That is a
-  gap in the **base** night shell, not a wound, so it was left out of a
-  wound-scoped commit rather than smuggled in.
+  | key | flag | moon | what it adds |
+  |---|---|---|---|
+  | `burn` | `s.burned` has the loc | **0** | fire behind the nave, glow pulse, two climbing smoke plumes, four embers |
+  | `shut` | `s.tavernShut` | 1.6 | `unlit`, and the press that darkens everything but the moon |
+  | `flood` | `s.burned` has `Old Mill` | 1.3 | a flat band of black standing water below the race |
+  | `fouled` | `s.wellFouled` | 0.85 | the green miasma breathing over the well |
+  | `riot` | `s.breadRiot` | 0.85 | `unlit` and nothing else — no lanterns is the whole point |
+
+  **`s.burned` is the build's list of ruined ground, not burned ground.** The
+  *flooded* mill is pushed onto it too (`resolveNight`, the `millFlood` branch),
+  and there is no `s.millFlood`. They are told apart by which place it is —
+  nothing else can put either of those two there — which is exactly what
+  `DawnScene` already does. `nightWound` also matches `DawnScene`'s precedence
+  at the Square (fouled before riot), so the night and the morning after it can
+  never disagree about a place.
+
+  **`Scene` needed `moonless` as well as `unlit`.** It has its own moon baked
+  into the SVG at `cx=330 cy=42`, which normally hides under the shell's moon;
+  with the shell's moon gone for `burn`, it showed straight through a sky that
+  was supposed to be nothing but smoke.
+
+  **Three departures from the mock**, all because the mock draws over a frame it
+  does not fully control:
+  1. **10g's moon-blot is dropped.** It is `rgba(20,17,22,…)`, *lighter* than
+     this game's `#070910` night, so over a genuinely moonless sky it read as a
+     pale blob rather than as smoke. The mock needed it because its shell always
+     draws a moon; ours doesn't draw one at all for `burn`, so there is nothing
+     left to blot.
+  2. **`.mvScorch` comes off the burning church on the walk** (the day cards
+     keep it). It is a flat `rgba(10,6,4,0.72)` wash that killed the silhouette
+     the fire is meant to stand behind. 10g's own art replaces it.
+  3. **The miasma moved onto the well and came up a stop** (`left: 49%` not
+     `34%`, core `0.55` not `0.42`). The mock's `34%` is left of where this
+     build's well actually stands, and at the mock's alpha the colour did not
+     read — and "the only place in the whole walk that is not bone, amber or
+     red" has to read as a colour or it is not the thing it says it is.
+
+  **One discrepancy left alone:** 10h's caption promises "embers going up from a
+  crowd" and 10h's markup contains no embers. Followed the markup. Embers at the
+  square with nothing burning would read as fire, and the caption's real claim —
+  "no lanterns: the square is lit by the same night as everywhere else, which is
+  the point of it" — is carried by `unlit`.
+
+  **`mvCloud` was a base-shell gap, and is now built** — *"Put one cloud in the
+  walk's sky"*, its own commit. Every one of the twelve `10x` mocks carries it,
+  the plain weather states included, so it belongs to every night equally rather
+  than to any wound.
+
+### The sky the walk is under (`10d`-`10f`) — still unbuilt
+
+Found while building the wounds, and it corrects a claim made earlier on this
+page. The walk carries the weather as a **word** on the ruled line
+(`wxWord`, `FOG` / `STORM COMING` / `HARD FROST` / `CLEAR`) and as **nothing
+else**. The mocks put it in the sky, and none of these classes exist in
+`index.html`:
+
+- `10e` **storm**: a bigger, darker, higher cloud (`top:6px`, 300×110,
+  `rgba(12,14,26,.92)`) in place of the base one, `.mvRainB` at 10% over the top
+  120px, and `.mvFlash` — a 9s cycle that fires a double lightning flash across
+  the top 300px and is dark the rest of the time.
+- `10f` **frost**: `.mvFrost`, a pale wash over the top 300px breathing on 13s,
+  plus four `.mvMoteS` (2px, `#DCE6FA`) drifting up off the ground.
+- `10d` **fog**: the base shell as built.
+
+All the keyframes are in the canvas's own `<style>` block near the top of the
+file. The mechanism is the one the wounds now use — a table feeding `NightShell`
+— so this wants a `NIGHT_SKIES` table beside `NIGHT_WOUNDS` and a `wx` prop,
+with the wound's `art` drawn over the sky's. **`NightShell` does not currently
+receive the weather at all**; `walk.facts.wx` is read by the caller only.
 - ~~**`12c` — DEEDS STRUCK on the win.**~~ **DONE**, *"Strike the run's deeds on
   the plate"*. `newAch` already held the deeds earned this run; they moved from
   the epilogue onto the plate as gilt-ruled plaques with the running total, and
