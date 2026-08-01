@@ -6514,6 +6514,11 @@ const EXTRA_CSS = `
 .mvDangerPulse { background: radial-gradient(ellipse at 50% 100%, rgba(158,48,57,0.5), rgba(158,48,57,0.05) 72%); animation: mvdpulse 1.5s ease-in-out infinite alternate; pointer-events: none; }
 @keyframes mvdpulse { from { opacity: 0.25; } to { opacity: 0.85; } }
 @media (prefers-reduced-motion: reduce) { .mvDangerPulse { animation: none; opacity: 0.5; } }
+/* the thing that is already holding you does not lunge: it hangs, and
+   breathes, and waits for an answer */
+.mvDrift { animation: mvdrift 11s ease-in-out infinite alternate; }
+@keyframes mvdrift { from { transform: translateY(-8px) scale(0.99); } to { transform: translateY(8px) scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .mvDrift { animation: none; } }
 .mvLoom { animation: mvloom 6s ease forwards; transform-origin: 50% 100%; }
 @keyframes mvloom { from { opacity: 0; transform: scale(0.82) translateY(10px); filter: blur(4px); } to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
 @media (prefers-reduced-motion: reduce) { .mvLoom { animation: none; opacity: 1; } }
@@ -7712,27 +7717,36 @@ function MonsterVillage() {
       setDeathShown(true); setBeatsRevealed(false);
     };
     return (
-      <div className="min-h-screen mv-body relative overflow-hidden" style={{ background: "linear-gradient(#3E3450, #B4623E 72%, #6E2530)", color: C.parch }}>
+      /* It already has you. The screen says so: the thing fills it, close and
+         unhurried, and the words arrive from inside that rather than from a
+         card laid on top of it. Two ways out and no third. */
+      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: "#070508", color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
-        <div className="absolute inset-0 mvNightFade" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})` }} />
-        <div className="mvMoon absolute" style={{ right: "14%", top: "10%", width: 34, height: 34, borderRadius: "50%", background: C.parch, boxShadow: "0 0 40px 12px rgba(233,223,200,0.15)" }} />
-        <div className="relative max-w-md mx-auto px-6 pt-14 pb-8 min-h-screen flex flex-col">
-          <div className="flex items-baseline justify-between">
-            <span className="mv-display" style={{ fontSize: 16, letterSpacing: 3, color: C.redBright, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>IT MAKES AN OFFER</span>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+          <div className="mvDrift absolute" style={{ left: "50%", top: 96, width: 330, height: 330, marginLeft: -165, opacity: 0.5 }}>
+            <MonsterArt id={monsterOf(s).id} size={330} light />
           </div>
-          <div className="flex justify-center mt-3 mvLoom">
-            <MonsterArt id={monsterOf(s).id} size={104} light />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 74% 44% at 50% 26%, rgba(120,26,33,0.26) 0%, rgba(7,5,8,0.92) 62%, #070508 100%)" }} />
+          <div className="mvGlowPulse absolute inset-0" style={{ pointerEvents: "none", boxShadow: "inset 0 0 90px rgba(158,48,57,0.5), inset 0 0 0 1px rgba(194,68,80,0.45)" }} />
+          <div className="mvGrain" />
+          <div className="relative text-center" style={{ flexShrink: 0, padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),18px) + 32px)" }}>
+            <span className="mv-display mvTitleGlow" style={{ fontSize: 15, letterSpacing: 4.5, whiteSpace: "nowrap", color: C.redBright }}>IT MAKES AN OFFER</span>
           </div>
-          <div className="mt-6 flex-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
+          <div className="relative flex-1 min-h-0 flex flex-col justify-end" style={{ gap: 16, padding: "0 26px 26px", overflowY: "auto" }}
+            onClick={() => setBeatsRevealed(true)}>
             {offerBeats.map((b, i) => (
-              <p key={i} className={beatsRevealed ? "mt-4" : "mvBeat mt-4"} style={{ fontSize: 16, lineHeight: 1.45, animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s`, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{b}</p>
+              <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 16.5, lineHeight: 1.5, color: i === offerBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.6 + (offerBeats.length > 1 ? i / (offerBeats.length - 1) : 1) * 0.18).toFixed(2)})`, textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.7)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
             ))}
           </div>
-          <div className={beatsRevealed ? "mt-6 flex flex-col gap-2" : "mvBeat mt-6 flex flex-col gap-2"} style={{ animationDelay: beatsRevealed ? undefined : `${offerTotal}s` }}>
-            <Btn full kind="red" onClick={joinIt}>Take its hand</Btn>
-            <Btn full onClick={refuseIt}>Refuse. Whatever comes next, comes</Btn>
+          <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),22px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
+            <button onClick={joinIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
+              style={{ borderRadius: 3, padding: "13px 0", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8", fontSize: 15, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal}s` }}>Take its hand</button>
+            <button onClick={refuseIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
+              style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: "1px solid #2B2536", color: C.text, fontSize: 15, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal + 0.2}s` }}>Refuse. Whatever comes next, comes</button>
           </div>
         </div>
+        <div className="mvVignette" />
+        <div className="mvGrainF" />
       </div>
     );
   }

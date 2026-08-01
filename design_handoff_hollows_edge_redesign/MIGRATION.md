@@ -75,7 +75,7 @@ does not change, so these stay valid.
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | todo |
-| 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | todo |
+| 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **15a done** — *"Redesign the offer"*. `riteModal` still todo |
 | 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | todo |
 
 Unmapped canvas sections: `t4` (offset 2913) and `t10` (offset 2041) were not
@@ -261,6 +261,15 @@ Where a mock implied a mechanic the code does not have, and what was done.
   counts anyone taken *this* night as still living (`livingTonight`). **Any new
   counter on a night-phase screen has this hazard; check it against what the
   village knows, not what `s` knows.**
+
+- **§15 offer (15a)** — none. **Not visually verified**: the offer is a rare
+  path (`monsterFancies` 0.40, then a specific trigger) and three attempts to
+  force it into view failed, because the `s.phase === "night"` render branch
+  sits above the offer branch and wins. It compiles clean with no page errors,
+  and the smoke suite is green, but nobody has seen it render. **If you touch
+  this screen, look at it first** — to force it, patch the *test copy* so the
+  night branch is `if (false)` and the offer branch is `if (true)` with
+  `offerBeats` defaulted to `OFFER_SCENES.wraith("<name>")`.
 
 ## Findings banked for later rows
 
