@@ -7784,14 +7784,16 @@ function MonsterVillage() {
           <div className="mvGrainF" />
           <div className="relative max-w-md mx-auto px-6 pt-12 pb-8 h-full flex flex-col">
             <div className="mv-display shrink-0 text-center mvIn" style={{ fontSize: 15, letterSpacing: 5, color: C.redBright, textShadow: "0 0 18px rgba(158,48,57,0.6)" }}>YOU DO NOT SEE THE DAWN</div>
-            <div className="flex justify-center mt-4 shrink-0 mvLoom"><MonsterArt id={m.id} size={116} light /></div>
-            <div className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1" onClick={() => setBeatsRevealed(true)} style={{ cursor: beatsRevealed ? "default" : "pointer" }}>
+            <div className="flex justify-center mt-4 shrink-0 mvLoom"><MonsterArt id={m.id} size={132} light /></div>
+            {/* the last thing you read is the biggest thing on the screen, and
+                it brightens as it goes, the way a night card does */}
+            <div className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col justify-center" onClick={() => setBeatsRevealed(true)} style={{ gap: 16, cursor: beatsRevealed ? "default" : "pointer" }}>
               {s.deathBeats.map((b, i) => (
-                <p key={i} className={beatsRevealed ? "mt-4 first:mt-0" : "mvBeat mt-4 first:mt-0"} style={{ fontSize: 16, lineHeight: 1.5, animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 1px 8px rgba(0,0,0,0.7)" }}>{b}</p>
+                <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 21, lineHeight: 1.4, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.62 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.22).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
               ))}
             </div>
             <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
-              <Btn full kind="red" center onClick={toDawn}><span className="mv-display" style={{ letterSpacing: 2 }}>IT IS OVER</span></Btn>
+              <DockBtn kind="destroy" onClick={toDawn}>IT IS OVER</DockBtn>
             </div>
           </div>
         </div>

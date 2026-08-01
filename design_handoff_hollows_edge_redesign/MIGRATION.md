@@ -416,17 +416,23 @@ Beyond that:
 - **The Hollow plate** — seeded `over.reason = "joined"`; fouled-well green,
   the single plaque, still-living counting you.
 
-**Still not verified, and worth knowing:**
+- **The offer screen (15a)** — finally seen, and it was correct all along. It
+  needed no change.
+- **The death screen** — restyled to 21px beats that brighten as they go, in
+  *"Finish the death screen, and see the offer at last"*, and seen live.
 
-- **The offer screen (15a) has never been seen.** It needs `monsterFancies` +
-  `bond >= OFFER_BOND_MIN` + `night >= OFFER_MIN_NIGHT` + being *caught* on a
-  walk, and four attempts to force that failed — seeding the first three still
-  leaves the catch roll, which the walk settles through `mods.fateDeath`. It
-  compiles and throws nothing. **Look at it before you touch it.**
-- **The death screen (`s.deathBeats`) was never restyled.** §16 asks for death
-  beats at 21px; it still renders them at 16px with the old `Btn`. It works and
-  looks fine, but it is the one screen in the endgame still in the old voice.
-- Ending plates were screenshotted **after a 3s settle** — the staged `mvIn`
+**How to force the two rare screens** (in a *test copy*, never committed):
+
+- **The offer**: flipping `monsterFancies`/`bond`/`OFFER_MIN_NIGHT` is not
+  enough — the trigger also needs the walk's catch roll, which settles through
+  `mods.fateDeath`. What works is gating the render: make the `s.phase ===
+  "night"` branch `&& !window.__forceOffer` and the `s.phase === "offer"` branch
+  `|| window.__forceOffer`, **by line number** (both strings appear more than
+  once). And note `s.offerBeats` starts as `[]`, which is **truthy** — a
+  `s.offerBeats || FALLBACK` fixture silently renders no beats and looks like a
+  bug in the screen. Use `(s.offerBeats && s.offerBeats.length) ? ... : ...`.
+- **A loss**: seed `wrongGuesses: 1` so one wrong accusation ends the run.
+- Ending plates need a **3s settle** before screenshotting — the staged `mvIn`
   fades make an immediate capture look broken when it is not.
 
 ## Findings banked for later rows
