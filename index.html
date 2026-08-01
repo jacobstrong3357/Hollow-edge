@@ -4738,11 +4738,15 @@ const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 52%, rgba(0,0,0,0.6) 74%, 
    reads as the same dark rather than as the end of a picture */
 const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 62%, rgba(0,0,0,0.5) 88%, transparent 100%)";
 
-function Scene({ loc, kind, height = 150 }) {
+/* `unlit` puts every lamp in the picture out. A dark window is drawn at the
+   same value as a doorway, so it reads as a socket rather than as a window
+   somebody forgot to fill in, and nothing flickers because nothing is burning. */
+function Scene({ loc, kind, height = 150, unlit }) {
+  const lit = unlit ? C.ink : C.amber;
   const win = (x, y, w = 8, h = 12, arch) => (
     <g key={`w${x}${y}`}>
-      <rect x={x} y={y} width={w} height={h} fill={C.amber} opacity="0.8" className="mvFlick" />
-      {arch && <circle cx={x + w / 2} cy={y} r={w / 2} fill={C.amber} opacity="0.8" className="mvFlick" />}
+      <rect x={x} y={y} width={w} height={h} fill={lit} opacity="0.8" className={unlit ? "" : "mvFlick"} />
+      {arch && <circle cx={x + w / 2} cy={y} r={w / 2} fill={lit} opacity="0.8" className={unlit ? "" : "mvFlick"} />}
     </g>
   );
   const pine = (x, sc = 1) => (
@@ -4782,7 +4786,7 @@ function Scene({ loc, kind, height = 150 }) {
     <rect x="178" y="118" width="24" height="42" fill={C.ink} />
     {win(130, 100, 12, 16)}{win(240, 100, 12, 16)}
     <rect x="282" y="88" width="26" height="4" fill={C.sil} />
-    <rect x="296" y="92" width="16" height="20" fill={C.amber} opacity="0.75" />
+    <rect x="296" y="92" width="16" height="20" fill={lit} opacity="0.75" />
     <ellipse cx="80" cy="152" rx="14" ry="10" fill={C.sil} /></g>);
   else if (loc === "Old Mill") elems = (<g>
     <rect x="118" y="92" width="92" height="68" fill={C.sil} />
@@ -6465,25 +6469,45 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
 const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
 /* the ordinary dark, and the dark once it has stopped pretending */
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
-function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, scorched, children }) {
+/* THE VILLAGE'S WOUNDS, as the night sees them. A wound is never a different
+   screen: it is this same dark with one thing wrong in it. An entry says how
+   much moon the sky has left (a multiplier on the glow the shell already
+   draws), whether anything down there is still burning, and any one extra
+   layer the wound breathes over the place. Nothing here reads or changes
+   state - the wound is chosen by `nightWound` from flags already set. */
+const NIGHT_WOUNDS = {
+  /* the absence of light as an event. With no lamp left anywhere in Hollow's
+     Edge the moon is the only one burning, and reads brighter for it: high,
+     and no use at all to a village with nowhere warm to be. */
+  shut: {
+    unlit: true, moon: 1.6,
+    layer: (v) => ({ top: 0, height: 300, background: `linear-gradient(rgba(${v},0.35), rgba(${v},0.62) 72%, rgba(${v},0))` }),
+  },
+};
+/* which wound, if any, this place is wearing tonight */
+const nightWound = (s, loc) => (s.tavernShut && loc === "Tavern") ? "shut" : null;
+function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, scorched, wound, children }) {
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
+  const wd = NIGHT_WOUNDS[wound] || null;
+  const mo = (a) => Math.min(0.85, +(a * ((wd && wd.moon) || 1)).toFixed(3));
   return (
     <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
         <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
-          <Scene loc={loc} kind="quiet" height={190} />
+          <Scene loc={loc} kind="quiet" height={190} unlit={wd && wd.unlit} />
           {scorched && <div className="mvScorch" />}
         </div>
         <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
         <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
-          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,0.44) 0%, rgba(226,150,150,0.16) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,0.42) 0%, rgba(220,230,255,0.14) 38%, rgba(${tn.veil},0) 72%)` }} />
+          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,${mo(0.44)}) 0%, rgba(226,150,150,${mo(0.16)}) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,${mo(0.42)}) 0%, rgba(220,230,255,${mo(0.14)}) 38%, rgba(${tn.veil},0) 72%)` }} />
           <div className="absolute" style={{ left: 342, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: danger ? "radial-gradient(circle at 36% 30%, #FBF1EA 0%, #F3E2DA 42%, #D9C4C4 72%, #B09A9E 100%)" : "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: danger ? "0 0 34px rgba(226,160,168,0.5), inset -6px -5px 14px rgba(140,110,116,0.45)" : "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
             {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
               <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
             ))}
           </div>
         </div>
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,0.16) 0%, rgba(214,224,255,0.05) 42%, rgba(${tn.veil},0) 74%)` }} />
+        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,${mo(0.16)}) 0%, rgba(214,224,255,${mo(0.05)}) 42%, rgba(${tn.veil},0) 74%)` }} />
+        {wd && wd.layer && <div className="absolute" style={{ left: 0, right: 0, pointerEvents: "none", ...wd.layer(tn.veil) }} />}
         <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
         <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
         <div className="mvGrain" />
@@ -8426,7 +8450,7 @@ function MonsterVillage() {
     const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
     const wxWord = walk.facts.wx ? { fog: "FOG", storm: "STORM COMING", frost: "HARD FROST" }[walk.facts.wx] : "CLEAR";
     return (
-      <NightShell loc={sceneLoc} danger={tense} scorched={(s.burned || []).includes(sceneLoc)}
+      <NightShell loc={sceneLoc} danger={tense} scorched={(s.burned || []).includes(sceneLoc)} wound={nightWound(s, sceneLoc)}
         kicker={`NIGHT ${s.nightNum + 1} · ${isWatch ? "THE WATCH" : "THE LANES"}`}>
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
           {/* where you are and what the sky is doing, on one line */}

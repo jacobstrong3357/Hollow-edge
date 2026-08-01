@@ -97,12 +97,55 @@ a README section except `t4`. Two things are **designed and not built**:
   carried by the art rather than announced... one screen for each state the
   walk can be in") is exactly §9, and `10d`-`10f` are the weather states, which
   the walk does carry. But `10g`-`10k` are **the church burning, the bread
-  riot, the well fouled, the tavern shut, the mill flooded**, and the walk shows
-  none of them: `Scene({ loc, kind, height })` takes no affliction state, unlike
-  `DawnScene`. `NightShell` has a `scorched` prop that covers burned only.
-  10i wants a green miasma over the well and calls it "the only place in the
-  whole walk that is not bone, amber or red"; 10k wants black standing water
-  below the mill race. **This needs `Scene` to learn afflictions.**
+  riot, the well fouled, the tavern shut, the mill flooded**, and the walk
+  showed none of them: `Scene({ loc, kind, height })` took no affliction state,
+  unlike `DawnScene`. `NightShell` had a `scorched` prop covering burned only.
+
+  **The seam now exists**, built with `10j` — *"Put out every lamp when the
+  tavern shuts"*. Three pieces, and the remaining four wounds are variations
+  on them rather than new machinery:
+  1. `Scene` takes an **`unlit`** prop. Every lamp in the picture goes out at
+     once: `win()` draws at `C.ink` instead of `C.amber` and drops `mvFlick`,
+     and the tavern's bracket lamp uses the same `lit` value. A dark window is
+     drawn at the doorway's value, so it reads as a socket rather than as a
+     window somebody forgot to fill in.
+  2. **`NIGHT_WOUNDS`** (module level, beside `NIGHT_TONES`) is the table. An
+     entry says how much moon the sky has left (`moon`, a multiplier the shell
+     applies to the glow and the moonlight ellipse it already draws), whether
+     anything down there is still burning (`unlit`), and one extra `layer(veil)`
+     the wound breathes over the place. `NightShell` gained a **`wound`** prop
+     that looks the entry up; every moon alpha now runs through `mo()`.
+  3. **`nightWound(s, loc)`** picks the wound from flags already set, and the
+     walk passes `wound={nightWound(s, sceneLoc)}`. Grow this one-liner as each
+     wound lands — nothing else needs to change to add one.
+
+  `shut` is `{ unlit: true, moon: 1.6, layer: press }`. The 1.6 is not decoration:
+  the press layer (`0.35 → 0.62` over the top 300px, the mock's own numbers) sits
+  **above** the moon, so without the boost the wound would dim the one light it
+  is supposed to leave standing. Net effect is a moon at roughly its ordinary
+  brightness over a village that has gone several stops darker — which is the
+  correct read of "high and useless", the moon dominating by being the only
+  thing left burning rather than by being brighter.
+
+  Watching Liesel's door gets this free: `HOME_LOC.liesel === "Tavern"`, and the
+  watch already resolves `sceneLoc` through `HOME_LOC`, so `nightWound` sees it.
+
+  **Still to build: `10g` church burning, `10h` bread riot, `10i` well fouled,
+  `10k` mill flooded.** All four are `NIGHT_WOUNDS` entries plus a `nightWound`
+  clause. Notes from the canvas: 10g wants fire behind the nave, orange across
+  the lane and **no moon showing through** (`moon` well under 1) with embers
+  climbing — it should also replace, not sit beside, the existing `scorched`
+  tint; 10h wants the moon halved behind cloud and embers off a crowd with **no
+  lanterns** (`unlit`); 10i wants a green miasma over the well and calls it "the
+  only place in the whole walk that is not bone, amber or red"; 10k wants black
+  standing water below the mill race, holding the moonlight flat, silhouette
+  kept.
+
+  **Also found, and deliberately not built here:** every one of the twelve `10x`
+  mocks — the plain weather states included — carries an `mvCloud` bank drifting
+  at the left of the sky (48s linear) that the shell does not have. That is a
+  gap in the **base** night shell, not a wound, so it was left out of a
+  wound-scoped commit rather than smuggled in.
 - ~~**`12c` — DEEDS STRUCK on the win.**~~ **DONE**, *"Strike the run's deeds on
   the plate"*. `newAch` already held the deeds earned this run; they moved from
   the epilogue onto the plate as gilt-ruled plaques with the running total, and
