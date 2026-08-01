@@ -76,7 +76,7 @@ does not change, so these stay valid.
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **done** — *"Redesign the offer"* + *"Bring the rite in line with the accusation"* |
-| 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | todo |
+| 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | **done** — *"Give the endings a plate"* |
 
 Unmapped canvas sections: `t4` (offset 2913) and `t10` (offset 2041) were not
 identified. There is no `t5`, `t6` or `t9` despite the README citing "5a-5c".
@@ -262,6 +262,12 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§16 endings** — none. The three endings are one plate with the colour
+  changed: amber for a win, red for a loss, and the fouled-well green
+  `#8FA678` on ground `#080C0A` for taking the offer, spent there and nowhere
+  else. The long epilogue was not thrown away — it sits behind WHAT BECAME OF
+  THEM, which is what the mock's dock asks for. The `s.deathBeats` screen is
+  untouched and still plays first: the plate follows it, never replaces it.
 - **§5 journal** — none, and the invariants were checked deliberately because
   this is the row most able to break them. Evidence was **already** correct:
   signs are ticked only by the player, a witnessed sign gets a red dot that
