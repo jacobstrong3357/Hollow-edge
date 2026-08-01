@@ -742,90 +742,92 @@ const MOB_ULTIMATUM = [
    tight beats per horror, so a death reads in a breath, not a page. */
 const DEATH_SCENES = {
   werewolf: (nm, w) => [
-    `Breathing behind you, enormous and patient, timed to your own steps. It has been pacing you for a hundred yards, and it has tired of the game.`,
-    `You turn. The moon shows you shoulders too broad for any coat in the village, knees that bend the wrong way, and in the ruin of the face, patient as a debt: ${nm}'s eyes.`,
-    `It takes you at the shoulder first, and it does not stop at the kill. They will carry you home in two sacks, and none of it fit for the children to watch pass.`,
+    `Breathing behind you, enormous and patient, timed to your own steps. It has tired of the game.`,
+    `You turn. Shoulders too broad for any coat in the village, knees that bend the wrong way, and in the ruin of the face, ${nm}'s eyes.`,
+    `It takes you at the shoulder first, and does not stop at the kill. They carry you home in two sacks.`,
   ],
   vampire: (nm, w) => [
-    `Your name, said softly from ahead on the path, in a voice that already sounds fond of you. It has been standing there a while.`,
+    `Your name, said softly from ahead on the path, in a voice already fond of you.`,
     `${nm}'s face in the thin light, pale as candle-fat. "Out again," ${nm} says, warm as a blanket. "You do make it easy."`,
-    `Two clean punctures find your throat, and the cold spreads to your fingers. At dawn they find you laid out neat at the ${w}, drained past white, not a hair out of place.`,
+    `Two clean punctures, and the cold spreads to your fingers. At dawn they find you laid out neat at the ${w}, drained past white.`,
   ],
   wraith: (nm, w) => [
-    `The ${w} goes quiet in the wrong way: every small living thing nearby stops breathing at once.`,
-    `Your lantern gutters with no wind to gutter it, and something that is mostly absence stands on the path, wearing ${nm}'s shape the way fog wears a fence.`,
-    `A cold hand passes through your ribs and closes on the warmest thing inside you. Your lantern burns beside the road until dawn, the only warm thing left at the ${w}.`,
+    `Everything at the ${w} goes quiet in the wrong way: every small living thing nearby stops breathing at once.`,
+    `Your lantern gutters with no wind to gutter it, and something mostly absence stands on the path, wearing ${nm}'s shape the way fog wears a fence.`,
+    `A cold hand passes through your ribs and closes on the warmest thing inside you. Your lantern burns beside the road until dawn.`,
   ],
   ghoul: (nm, w) => [
-    `A wet, busy sound ahead at the ${w}: digging, or chewing, the sound of something with all night and no reason to rush.`,
-    `It looks up before it could have heard you. Under the grave-dirt there is enough of ${nm} left to recognise, and a grin that goes back too far.`,
-    `It is on you before your knife clears your belt, and it does not wait for you to finish dying. The graves nearby never stayed settled. Now you know why.`,
+    `A wet, busy sound ahead at the ${w}: digging, or chewing, from something with all night and no reason to rush.`,
+    `It looks up before it could have heard you. Under the grave-dirt, enough of ${nm} to recognise, and a grin that goes back too far.`,
+    `It is on you before your knife clears your belt, and does not wait for you to finish dying. Now you know why the graves never settle.`,
   ],
   witch: (nm, w) => [
-    `A voice rides the wind at the ${w}, soft and rhythmic in no language you know, and your feet stop obeying you on the last syllable.`,
+    `A voice rides the wind at the ${w}, soft and rhythmic in no language you know, and your feet stop obeying on the last syllable.`,
     `${nm} steps out at a stroll, working a small knot of hair and thorn. "There you are," ${nm} says, kindly. "Hold still. You already are."`,
-    `The knot draws tight around your own heartbeat, one slow pull at a time. They find you at the ${w} without a scratch, and Doctor Falk has no entry in his ledger for what killed you.`,
+    `The knot draws tight around your own heartbeat, one pull at a time. They find you without a scratch, and Falk has no entry for what killed you.`,
   ],
   demon: (nm, w) => [
-    `Candles die in order across the village behind you, one, then the next: a countdown you can watch from the ${w} and cannot stop.`,
+    `Candles die in order across the village behind you, one, then the next: a countdown you can watch and cannot stop.`,
     `Between one blink and the next, ${nm} is standing in front of you, the smell of struck matches arriving a half-second late.`,
-    `It reaches past your body and pulls something loose that does not bleed. What walks home afterward wears your boots badly, answers to your name, and smiles wrong at your own table come morning.`,
+    `It reaches past your body and pulls something loose that does not bleed. What walks home wears your boots badly, and smiles wrong at your own table by morning.`,
   ],
   shifter: (nm, w) => [
     `Footsteps at the ${w} matching your pace exactly, half a beat behind, learning your gait before it needs it.`,
     `Someone stands with their back to you, the shape unmistakably ${nm}'s, and then, without appearing to move at all, it is not.`,
-    `Four claws open your side with a tailor's economy, and it studies your face while you die. It will wear you to your own wake by morning, and grieve you in your own coat.`,
+    `Four claws open your side with a tailor's economy, and it studies your face while you die. It will wear you to your own wake by morning.`,
   ],
   banshee: (nm, w) => [
-    `The wail does not arrive from the ${w}. It arrives from inside your own skull, a grief that is not yours pouring in.`,
+    `The wail does not arrive from the ${w}. It arrives from inside your skull, a grief that is not yours pouring in.`,
     `Through streaming eyes: a thin shape trailing torn linen, and its face, when it lifts, is ${nm}'s, already mourning you.`,
-    `The sound has always been a name, and the name is yours. Your heart simply stops arguing. They find you at the ${w} without a mark, wearing an expression nobody calls peaceful twice.`,
+    `The sound has always been a name, and the name is yours. Your heart stops arguing. They find you unmarked, wearing an expression nobody calls peaceful twice.`,
   ],
   lich: (nm, w) => [
-    `The cold reaches you before anything else does, a cold that comes from inside, as if your own warmth were being called away toward the ${w}.`,
-    `${nm} is simply there, unhurried, one hand open, and where the hand passes the years go with it: your legs, your breath, the strength to lift your own head.`,
-    `"It does not hurt," ${nm} says, almost kindly, in a voice that has outlived a dozen names. "It never does. Everything you were will keep a while longer in the vessel with the rest." They find you at first light, cold, and small, and older than you ever lived to be.`,
+    `The cold reaches you first, a cold from inside, as if your own warmth were being called away toward the ${w}.`,
+    `${nm} is simply there, unhurried, one hand open, and where the hand passes the years go with it: your legs, your breath, the strength to lift your head.`,
+    `"It does not hurt," ${nm} says, almost kindly. "Everything you were will keep in the vessel with the rest." At first light they find you cold, and small, and older than you lived to be.`,
   ],
   revenant: (nm, w) => [
-    `Slow, dragging steps behind you on the ${w}, patient as a funeral march, and however fast you walk, the gap never changes.`,
+    `Slow, dragging steps behind you, patient as a funeral march, and however fast you walk the gap never changes.`,
     `Hands close on your shoulders, grave-cold, unmistakably ${nm}'s, with the strength of ground that cannot tire.`,
-    `It does not strike. It simply closes its hands, and carries you to the crossroads, where the earth has stood open for nights. By dawn it is closed again, and so are you.`,
+    `It does not strike. It carries you to the crossroads, where the earth has stood open for nights. By dawn it is closed, and so are you.`,
   ],
   doppel: (nm, w) => [
-    `Someone comes the other way down the lane, matching your stride exactly, hitch and habit and all, until there is enough moon to see the face.`,
-    `It is your own face, looking back with ${nm}'s eyes, and it is very slightly, unbearably better at wearing your expression than you are.`,
-    `"Goodnight," it says, in your own voice, and the knife goes in exactly where you would have flinched, because it knows. By morning, something wearing your face is seen leaving the ${w}, and no one who greets it suspects a thing.`,
+    `Someone comes the other way down the lane, matching your stride exactly, hitch and habit and all, until there is moon enough to see the face.`,
+    `It is your own face, looking back with ${nm}'s eyes, and very slightly better at wearing your expression than you are.`,
+    `"Goodnight," it says, in your own voice, and the knife goes exactly where you would have flinched, because it knows. By morning something wearing your face leaves the ${w}, greeted by name.`,
   ],
   hag: (nm, w) => [
-    `Tiredness hits you all at once and wrong, like a dropped sack, and you are down at the ${w} without ever feeling yourself fall.`,
+    `Tiredness hits you all at once and wrong, like a dropped sack, and you are down at the ${w} without feeling yourself fall.`,
     `A weight settles onto your chest, joint by joint, and ${nm}'s face lowers into yours, upside down, delighted.`,
-    `"There you are," it whispers, and rides you down, each breath shallower than the last, until the last one does not come back in. Your face keeps the scream your mouth never got to make.`,
+    `"There you are," it whispers, and rides you down, each breath shallower, until the last does not come back in. Your face keeps the scream your mouth never made.`,
   ],
   necromancer: (nm, w) => [
-    `Someone waits in the road ahead at the ${w}. You know the coat before the face: you helped carry it, and the man in it, to the churchyard.`,
+    `Someone waits in the road ahead. You know the coat before the face: you helped carry it, and the man in it, to the churchyard.`,
     `You say the buried name, and it is ${nm}'s voice that answers, from behind you, pleased: "Good. You remember them. They all remember YOU."`,
-    `Grave-cold hands hold you, more of them than one body should own, while ${nm} takes its time. Afterward you are walked home on your own dead legs, to knock at a door you knew in life.`,
+    `Grave-cold hands hold you, more than one body should own, while ${nm} takes its time. Afterward you walk home on your own dead legs, to knock at a door you knew in life.`,
   ],
   mimic: (nm, w) => [
-    `You have matched every death in Hollow's Edge to a page. What comes out of the dark at the ${w} matches none of them, and then, horribly, several in turn.`,
-    `${nm}'s face is the only fixed thing on it, worn crooked, like a mask pushed up for comfort. "Which of them frightened you most?" it asks, trying several voices on the way through. "I take requests."`,
-    `At dawn the searchers argue: the wounds say claws, the ground says frost, the fence post says teeth. Every one of them is right, and nobody at your graveside knows to hear it.`,
+    `You have matched every death in Hollow's Edge to a page. What comes out of the dark at the ${w} matches none, then several in turn.`,
+    `${nm}'s face is the only fixed thing on it, worn crooked. "Which of them frightened you most?" it asks, trying voices on the way through. "I take requests."`,
+    `At dawn the searchers argue: the wounds say claws, the ground says frost, the fence post says teeth. Every one of them is right, and nobody knows to hear it.`,
   ],
   succubus: (nm, w) => [
-    `Between one step and the next, you stop wanting to go home. The night is suddenly warmer in the direction of the ${w}, and your feet will not be argued with.`,
+    `Between one step and the next you stop wanting to go home. The night is warmer toward the ${w}, and your feet will not be argued with.`,
     `${nm} is waiting there, gladder to see you than anyone has looked in years, and takes your face in both hands, kindly.`,
-    `What it takes does not grow back, and the horror is that you help. They find you at first light, sat peaceful against the stones, empty as a drained cup. Nobody says the word "smiling".`,
+    `What it takes does not grow back, and the horror is that you help. They find you at first light, sat peaceful against the stones, empty as a drained cup.`,
   ],
   hollowed: (nm, w) => [
-    `"There you are." The voice arrives from directly above, conversational, delighted, far too high off the ground, and something unfolds out of the dark of the ${w} like a doorway learning to walk.`,
-    `"I have so looked forward to this colloquy," it says, in ${nm}'s voice worn like a borrowed glove, and where the face should be there is only a courteous smoothness, inclining to listen. "You will forgive the exuberance of what follows. I am an aesthete, and you have been such an attentive audience."`,
-    `What it does then is unhurried, ornate, and narrated throughout, in vocabulary no one in this valley was ever taught. The searchers find the composition at dawn, arranged with terrible care, and the man who describes it uses the only word that survives the telling: signed.`,
+    `"There you are." The voice comes from directly above, delighted, far too high off the ground, and something unfolds out of the dark of the ${w} like a doorway learning to walk.`,
+    `"I have so looked forward to this colloquy," it says, in ${nm}'s voice worn like a borrowed glove, and where the face should be there is a courteous smoothness, inclining to listen.`,
+    `What it does then is unhurried, ornate, and narrated throughout. The searchers find the composition at dawn, and the word that survives the telling is: signed.`,
   ],
 };
 
 /* Two wrong names is one too many: on the second, the thing stops feeding on
    the village and comes for the one who kept naming it wrong. Appends a death
    scene to the given beats and sets the loss. */
+/* `where` is a bare place noun: every DEATH_SCENES beat writes "the ${w}",
+   so anything passed here must NOT carry its own article. */
 function monsterKillsAccuser(s, beats, intro, where) {
   const m = monsterOf(s);
   const mn = npcById(s, s.monster.vid);
@@ -836,7 +838,7 @@ function monsterKillsAccuser(s, beats, intro, where) {
      (whose encounter was already lived in the lanes), this one is NOT shown
      immediately; the JUDGMENT beats run, then the dark. */
   s.deathAfterBeats = true;
-  s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "your own door");
+  s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "square");
   s.over = { win: false, reason: "slain", text: `Twice you named it wrong, and the second time was one too many. It stopped feeding on the village and came for you the same night, and the neighbours whose trust you had spent did not come when you called.` };
 }
 
@@ -847,84 +849,84 @@ function monsterKillsAccuser(s, beats, intro, where) {
    temperament its lore already establishes, never generic. (name) => beats */
 const OFFER_SCENES = {
   werewolf: (nm) => [
-    `It has you before the moon lets you see it coming: jaws a hand's width from your throat, breath enormous and close, and for once it does not close them.`,
-    `It could finish this in the time it takes you to flinch, and you both know it, and still the bite does not come down. It only watches you not-run, the way it has watched you not-run for nights now, patient as an animal that has already decided something about you.`,
-    `"You keep coming back out," it says, ${nm}'s voice dragged rough through a throat not built for words anymore. "Not fleeing. Looking. Nobody looks at what I am and stays to look twice. Run at my side instead of ahead of my teeth, and I will never once turn on you for it. Refuse, and I finish the bite I started."`,
+    `It has you before the moon lets you see it coming: jaws a hand's width from your throat, and for once it does not close them.`,
+    `It could finish this in the time it takes you to flinch, and you both know it. Instead it watches you not-run, the way it has for nights now.`,
+    `"You keep coming back out," it says, ${nm}'s voice dragged through a throat not built for words. "Nobody looks at what I am and stays to look twice. Run at my side instead of ahead of my teeth. Refuse, and I finish the bite."`,
   ],
   vampire: (nm) => [
-    `Cold fingers find your jaw before you hear anything move, tilting your throat to what little light there is with a tenderness that is somehow worse than force would have been.`,
-    `The mouth hovers a breath above the vein, close enough that you feel it deliberately not close, the way a gift is deliberately not given yet.`,
-    `"Out again," ${nm} murmurs, warm-voiced as ever, cold-handed as never. "You do make it easy, and easy stopped being reason enough some nights ago. I have watched a great many years go by, alone in very good company. Walk them with me instead of ending here in the road, and nothing else will ever touch you again. Say no, and I finish what easy started."`,
+    `Cold fingers find your jaw before you hear anything move, tilting your throat to the light with a tenderness worse than force.`,
+    `The mouth hovers a breath above the vein, close enough that you feel it deliberately not close.`,
+    `"Out again," ${nm} murmurs, warm-voiced as ever. "You do make it easy, and easy stopped being reason enough some nights ago. Walk the years with me instead of ending here in the road. Say no, and I finish what easy started."`,
   ],
   wraith: (nm) => [
     `The cold closes around your chest, exact as a hand, and the last of your breath simply does not come back to you.`,
-    `It could let the rest of you go out with it into that absence, and no one would ever find enough of you left to bury. Instead the cold holds, and holds, and does not finish closing.`,
-    `It has no mouth to make an offer with, and does not need one: the wanting arrives directly, the way its cold always has, wordless and unmistakable - stay, and walk the empty places at its side, and never again be one more warm thing it has to take. Refuse it, and the held breath is let go the only way it knows how.`,
+    `It could let the rest of you go out with it into that absence. Instead the cold holds, and holds, and does not finish closing.`,
+    `It has no mouth to offer with, and needs none. The wanting arrives directly: stay, walk the empty places at its side, and never again be one more warm thing it has to take. Refuse, and the held breath is let go.`,
   ],
   ghoul: (nm) => [
-    `It has your arm between its teeth before your knife clears the sheath, grave-dirt and old meat close enough to taste, and does not pull.`,
-    `Its jaw could open you to the bone with the next motion, the way it has opened every grave it was ever too craven to leave hungry. It does not make the motion.`,
-    `"Enough for two, this ground," it says around your own sleeve, in a voice still trying, underneath the grave-rot, to be ${nm}'s. "I have not shared a meal since before I stopped being buried. Stay. Dig beside me instead of ending up dug for. Say no, and I finish the bite already started."`,
+    `It has your arm between its teeth before your knife clears the sheath, grave-dirt close enough to taste, and does not pull.`,
+    `Its jaw could open you to the bone with the next motion. It does not make the motion.`,
+    `"Enough for two, this ground," it says around your sleeve, in a voice still trying to be ${nm}'s. "I have not shared a meal since I stopped being buried. Dig beside me instead of ending up dug for. Say no, and I finish the bite."`,
   ],
   witch: (nm) => [
     `The knot of hair and thorn closes tight around something behind your ribs and stops, one pull short of the pull that would finish you.`,
-    `"There you are," ${nm} says, working the knot slower now, almost fond of the shape of you held on the end of it. "Caught, and not gone. I could finish the working in less time than it takes to say so."`,
-    `"But I find I would rather not," she says. "Apprentice yourself to what I actually am, instead of what the village has decided I am, and I will teach you every working I own except the one that would end you. Refuse, and this thread simply finishes pulling."`,
+    `"There you are," ${nm} says, working the knot slower now, almost fond of the shape of you on the end of it. "Caught, and not gone."`,
+    `"But I find I would rather not," she says. "Apprentice yourself to what I am, rather than what the village decided I am, and I will teach you every working but the one that would end you. Refuse, and this thread finishes pulling."`,
   ],
   demon: (nm) => [
     `Something reaches past your ribs and takes hold of the wanting and the fearing both at once, and simply waits there, mid-pull.`,
-    `Whatever would walk home afterward wearing your boots is a decision it has not yet finished making. It could finish it in the space of one more heartbeat.`,
-    `"Walls were never the issue," it says, in the voice with a second voice underneath it. "Neither, if we are honest, was your soul; I have taken finer. What I want is older and simpler: someone who kept searching for the truth of me instead of flinching from it. Sign nothing. Only come. Refuse, and I take payment the ordinary way."`,
+    `Whatever would walk home afterward wearing your boots is a decision it has not finished making. It could finish it in one more heartbeat.`,
+    `"Walls were never the issue," it says, in the voice with a second voice underneath. "Nor your soul; I have taken finer. I want the one who kept searching for the truth of me instead of flinching. Sign nothing. Only come. Refuse, and I take payment the ordinary way."`,
   ],
   shifter: (nm) => [
     `Claws rest, unclosed, against your side: four points of pressure that have not yet decided to become four wounds.`,
-    `It studies your face at this close a range the way it studies every face before committing to wearing one, patient, professional, and - for the first time you have seen - undecided.`,
-    `"I could be wearing you home by morning," it says, in a voice already halfway to being yours. "But borrowed faces bore me faster than they used to. Teach me to be looked at the way you are looking at me right now, honestly, and I will teach you every face I have ever worn. Refuse, and I finish the fitting."`,
+    `It studies your face the way it studies every face before committing to wearing one, patient, professional, and for the first time undecided.`,
+    `"I could be wearing you home by morning," it says, in a voice already halfway to being yours. "But borrowed faces bore me now. Teach me to be looked at the way you are looking at me, and I will teach you every face I have worn. Refuse, and I finish the fitting."`,
   ],
   banshee: (nm) => [
-    `The wail inside your skull stops just short of the note that would stop your heart along with it, and hangs there, unfinished.`,
+    `The wail inside your skull stops just short of the note that would stop your heart with it, and hangs there, unfinished.`,
     `It could let the grief finish what it started. Grief, for once in its long patient career, hesitates.`,
-    `"I have mourned every one of them before they ever died," it says, in a voice made of everyone it has grieved, ${nm}'s somewhere underneath all the others. "You are the first who ever heard me and came closer instead of bolting a door. Grieve beside me, instead of being grieved for. Refuse, and the wail finishes reaching your name."`,
+    `"I have mourned every one of them before they died," it says, in a voice made of everyone it grieved. "You are the first who heard me and came closer. Grieve beside me instead of being grieved for. Refuse, and the wail reaches your name."`,
   ],
   lich: (nm) => [
-    `The cold closes over you and stops, one breath short of the breath it would take for good, held there like a hand around a candle it has decided not to pinch out.`,
-    `You can feel the pull of it, your own life leaning toward the open hand, and you can feel, too, that the hand is waiting on a word.`,
-    `"I have drunk this whole village dry, a sip at a time, and forgotten every name before the cup was cold," ${nm} says, in a voice with too many years stacked behind it. "Yours I have not forgotten. Learn what I know and you need never grey and fail like the rest. Refuse, and I take you the slow way, and keep you the way I keep them all."`,
+    `The cold closes over you and stops, one breath short of the breath it would take for good, held like a hand around a candle it has decided not to pinch out.`,
+    `You can feel your own life leaning toward the open hand, and feel, too, that the hand is waiting on a word.`,
+    `"I have drunk this village dry a sip at a time, and forgotten every name," ${nm} says. "Yours I have not. Learn what I know and you need never grey and fail. Refuse, and I keep you the way I keep them all."`,
   ],
   revenant: (nm) => [
-    `Grave-cold hands close on your shoulders and simply hold there, one slow pull short of the pull that empties a chest for good.`,
+    `Grave-cold hands close on your shoulders and simply hold there, one pull short of the pull that empties a chest for good.`,
     `It has an errand, and you were going to be the errand, and for the first time in however long it has walked, the errand waits.`,
-    `"I have carried a great many people to that ground alone," it says, ${nm}'s voice dragged up through a cold that should have stopped it working long ago. "None of them ever came willingly. Walk to the crossroads at my side instead of being carried there, and you need never be carried anywhere again. Refuse, and these hands finish closing."`,
+    `"I have carried a great many people to that ground," it says, ${nm}'s voice dragged up through a cold that should have stopped it. "None came willingly. Walk to the crossroads at my side instead of being carried. Refuse, and these hands finish closing."`,
   ],
   doppel: (nm) => [
-    `The knife stops a hair's breadth from exactly where you would have flinched, because it knows precisely where that is, and, for once, does not finish the motion.`,
+    `The knife stops a hair's breadth from exactly where you would have flinched, because it knows precisely where that is, and does not finish the motion.`,
     `It is still wearing your face, studying yours from a hand's width away: two expressions doing the same terrible arithmetic.`,
-    `"I have worn so many people better than they wore themselves," it says, in your own voice, correcting nothing this time. "You are the first face I have ever wanted kept matched to its own name, instead of taken. Come with me and be seen, truly, by the one thing that has ever looked at you closely enough to get it right. Refuse, and I finish becoming you instead."`,
+    `"I have worn so many people better than they wore themselves," it says, in your own voice. "You are the first face I wanted kept to its own name. Come and be seen by the one thing that ever looked closely enough. Refuse, and I finish becoming you."`,
   ],
   hag: (nm) => [
-    `The weight settles onto your chest, joint by joint, and simply stays there, one shallow pull short of the pull that never comes back in.`,
-    `${nm}'s face hangs upside down over yours, delighted, patient, in no hurry at all now to finish what delight usually finishes quickly.`,
-    `"There you are," it says, in the rusted-hinge voice, almost tender. "I have ridden a great many sleepers down and never once been asked to stay. Ride the nights beside me instead of under me, and you will wake from every one of them. Refuse, and this scream finishes reaching your mouth."`,
+    `The weight settles onto your chest, joint by joint, and stays there, one shallow pull short of the pull that never comes back in.`,
+    `${nm}'s face hangs upside down over yours, delighted, patient, in no hurry now to finish what delight usually finishes quickly.`,
+    `"There you are," it says, in the rusted-hinge voice, almost tender. "I have ridden sleepers down for years and never once been asked to stay. Ride the nights beside me instead of under me. Refuse, and this scream finishes reaching your mouth."`,
   ],
   necromancer: (nm) => [
-    `The dead hands close on your arms and simply hold, grave-cold, unhurried, while ${nm} walks over at leisure, and does not give the order they were raised to carry out.`,
-    `"I have a village full of servants who had to die first," it says, studying you with a scholar's disappointment in its own collection. "Obedient. Tireless. And no conversation in a single one of them."`,
-    `"Stay above the ground and talk with me. Learn what I know: there is so much of it, and the dead are wasted on it. Keep me company on this side of the soil and I will never once have a use for yours. Refuse, and these hands finish what they were sent to start."`,
+    `The dead hands close on your arms and simply hold, grave-cold, unhurried, while ${nm} walks over at leisure and does not give the order.`,
+    `"I have a village full of servants who had to die first," it says, with a scholar's disappointment in its own collection. "Obedient. Tireless. And no conversation in a single one."`,
+    `"Stay above the ground and talk with me. Learn what I know: the dead are wasted on it. Keep me company this side of the soil and I will never have a use for yours. Refuse, and these hands finish what they started."`,
   ],
   mimic: (nm) => [
     `It stops mid-change with your death half-decided: claws on one hand, frost on its breath, and none of it committed to yet.`,
-    `"I have killed a hundred ways," it says, in a voice built of several. "I could make yours the most interesting one yet. I find I do not want to."`,
-    `"You are the only soul in this village who looked at my work and tried to READ it. Come with me and watch me perform, town after town, and I will never once perform on you. Refuse, and I will finish choosing."`,
+    `"I have killed a hundred ways," it says, in a voice built of several. "I could make yours the most interesting yet. I find I do not want to."`,
+    `"You are the only soul here who looked at my work and tried to READ it. Come and watch me perform, town after town, and I will never once perform on you. Refuse, and I will finish choosing."`,
   ],
   succubus: (nm) => [
     `The call is already in you, and your feet already answered it, and now it stands close enough to finish what the calling started, and does not.`,
     `"Everyone comes when I call," it says, ${nm}'s face tilted, genuinely curious. "You are the first to come ANGRY. Do you know how long it has been since anything surprised me?"`,
-    `"Walk with me willingly, eyes open, knowing what I am, and I will never once sing at you. It would be the first honest company I have kept in three hundred years. Refuse, and the song finishes, and you will smile like all the others did."`,
+    `"Walk with me willingly, eyes open, knowing what I am, and I will never sing at you. It would be my first honest company in three hundred years. Refuse, and the song finishes, and you will smile like all the others."`,
   ],
   hollowed: (nm) => [
     `It has you by the collar, one long hand, effortless, your boots clear of the ground, and it does not begin. It holds you up to where a face should be, the way a reader holds a page to the light.`,
-    `"Every soul in this parish converses in bread and weather," it says, aggrieved, erudite, wearing ${nm}'s voice like a signet ring. "You alone ask INTERESTING questions. Do you know what a famine that is, for a creature of my conversation?"`,
-    `"Walk with me, and talk with me, and I shall compose nothing further in this valley: you have my word, and my word is older than the alphabet it is given in. Refuse, and our little colloquy concludes the way all my compositions do. Signed."`,
+    `"Every soul in this parish converses in bread and weather," it says, aggrieved, erudite, wearing ${nm}'s voice like a signet ring. "You alone ask INTERESTING questions."`,
+    `"Walk with me, and talk with me, and I shall compose nothing further in this valley. My word is older than the alphabet it is given in. Refuse, and our colloquy concludes the way all my compositions do. Signed."`,
   ],
 };
 const COERCE_NOTE_BOND_MIN = 1;
@@ -2474,7 +2476,7 @@ function resolveNight(prev, planIn, preEvents) {
       s.wrongGuesses += 1;
       beats.push(`It comes out of the dark, walks to the very edge of the circle, and stops. The rite means nothing to it.`);
       if (s.wrongGuesses >= 2) {
-        monsterKillsAccuser(s, beats, "It does not take a neighbour this time. It steps across the dead circle, unhurried, straight to you, and the village that stood here on your word steps back and lets it.", "the square");
+        monsterKillsAccuser(s, beats, "It does not take a neighbour this time. It steps across the dead circle, unhurried, straight to you, and the village that stood here on your word steps back and lets it.", "square");
         s.nightBeats = beats; s.beatTitle = `NIGHT ${n} \u00b7 UNDER SIEGE`; s.phase = "night"; s.dawn = dawn;
         s.nightLogs.push({ night: n, active: true, huntLoc: null, outMap: {}, wail: false, weather: null, event: null });
         return s;
@@ -7112,72 +7114,72 @@ const ACH = [
    its own death or its own enslavement, dealt without repeats. */
 const LOSS_DEATHS = {
   werewolf: [
-    (nm) => `${nm} tried the road at the wrong hour, and the moon was already high overhead. What they found in the ditch had been fed on where it lay, and the search stopped, by unspoken agreement, after the second gully over.`,
+    (nm) => `${nm} tried the road at the wrong hour, with the moon already high. What they found in the ditch had been fed on where it lay, and the search stopped after the second gully.`,
     (nm) => `What the werewolf left of ${nm} was gathered from three gardens in a sack too small for the job. The men who did the gathering will not eat meat again this season.`,
-    (nm) => `${nm} barred every door in the house, and it made no difference in the end. Something that size does not need the door. It only needs the wall to be old enough, and this village's walls are old.`,
+    (nm) => `${nm} barred every door in the house, and it made no difference. Something that size does not need a door. It needs the wall to be old enough, and these walls are old.`,
   ],
   vampire: [
-    (nm) => `${nm} stopped answering the door on the third knock, and stopped answering anything at all by the fourth night. What let itself in afterward left them white as tallow, folded neatly into the good bed, not one drop spared for the sheets.`,
-    (nm) => `They drained ${nm} slowly, over three visits, the way a patient man empties a good bottle: a little each night, savoured, never enough at once to be noticed until there was nothing left to notice.`,
-    (nm) => `${nm} was found smiling, which was the worst part of it. Whatever it told them in that last hour, they believed it enough to die peacefully, and the village has never quite forgiven that particular mercy.`,
+    (nm) => `${nm} stopped answering the door on the third knock, and stopped answering anything by the fourth night. What let itself in left them white as tallow, folded neatly into the good bed.`,
+    (nm) => `They drained ${nm} over three visits, the way a patient man empties a good bottle: never enough at once to be noticed, until there was nothing left to notice.`,
+    (nm) => `${nm} was found smiling, which was the worst of it. Whatever it told them in that last hour, they believed enough to die peacefully, and the village has never forgiven that mercy.`,
   ],
   wraith: [
-    (nm) => `${nm} stepped outside for air, just for a moment, and did not come back in. They found the body sitting upright against the churchyard wall, eyes open, frost already forming on lashes that would never blink again.`,
+    (nm) => `${nm} stepped outside for air and did not come back in. They found the body upright against the churchyard wall, eyes open, frost already forming on the lashes.`,
     (nm) => `${nm} went out after curfew once. Just once. What the cold left of them was still shaped like a person, kneeling, frozen mid-step, a breath held that never got let out.`,
-    (nm) => `The wraith took ${nm} without a mark, without a struggle the neighbours heard, without so much as a dropped candle. One moment there was a name on the night watch. Then there was only the cold where the name had been.`,
+    (nm) => `The wraith took ${nm} without a mark, without a struggle anyone heard, without a dropped candle. One moment a name on the night watch. Then only the cold where it had been.`,
   ],
   ghoul: [
-    (nm) => `${nm} went out to the graves looking for signs of it, and found something already at its meal that did not care to share the discovery. What came back was buried in a box built for someone half the size.`,
-    (nm) => `What the ghoul left of ${nm} was found half-buried near the stones, worked over in a way Old Tobias would not describe twice, and would not let anyone younger than himself help carry.`,
-    (nm) => `${nm} passed the churchyard gate at the wrong hour. The thing crouched among the graves had not eaten well that week, and made very sure it would not go hungry again so soon.`,
+    (nm) => `${nm} went out to the graves looking for signs, and found something at its meal that did not care to share. What came back was buried in a box built for half the size.`,
+    (nm) => `What the ghoul left of ${nm} was found half-buried near the stones, worked over in a way Old Tobias would not describe twice, nor let anyone younger help carry.`,
+    (nm) => `${nm} passed the churchyard gate at the wrong hour. The thing among the graves had not eaten well that week, and made sure it would not go hungry again so soon.`,
   ],
   witch: [
-    (nm) => `${nm} simply stopped walking one evening, mid-stride, at the edge of the trees, and did not start again. There was not a mark on them anywhere, only a face gone the wrong kind of still.`,
-    (nm) => `They found ${nm} kneeling in the garden as if in prayer, quite dead, quite untouched, a knot of hair and thorn caught in one fist clenched so tight it had to be cut free finger by finger.`,
-    (nm) => `${nm} came apart from the inside without a wound the doctor could name, without a struggle the neighbours heard. The witch does not need to be near a thing to be thorough with it, and thoroughness is the only mercy she offers.`,
+    (nm) => `${nm} stopped walking one evening, mid-stride, at the edge of the trees, and did not start again. Not a mark on them, only a face gone the wrong kind of still.`,
+    (nm) => `They found ${nm} kneeling in the garden as if in prayer, quite dead, quite untouched, a knot of hair and thorn in one fist clenched too tight to open.`,
+    (nm) => `${nm} came apart from the inside without a wound the doctor could name. The witch need not be near a thing to be thorough with it, and thoroughness is her only mercy.`,
   ],
   demon: [
-    (nm) => `Every candle ${nm} owned went out in the same breath, one night, and what walked out wearing their coat the next morning smiled with their mouth, answered to their name, and was, in every way that mattered, no longer them.`,
-    (nm) => `${nm} was found in a locked room with no other door and no window wide enough for a cat, hollowed out from the inside, breathing, and utterly, permanently gone from behind their own eyes.`,
-    (nm) => `They say ${nm} did not scream, because by the time there was reason to, there was no longer enough of ${nm} left inside to do the screaming. The smell of struck matches lingered in that room for a week.`,
+    (nm) => `Every candle ${nm} owned went out in the same breath, and what walked out wearing their coat next morning smiled with their mouth, answered to their name, and was no longer them.`,
+    (nm) => `${nm} was found in a locked room with no other door and no window wide enough for a cat, hollowed out, breathing, and gone from behind their own eyes.`,
+    (nm) => `They say ${nm} did not scream, because by the time there was reason to there was not enough of ${nm} left inside to do it. Struck matches lingered in that room for a week.`,
   ],
   shifter: [
-    (nm) => `${nm} met someone wearing a familiar face on the road home, and never lived long enough to work out whose face it actually was. What was left had been studied first, closely, the way a tailor studies cloth before the first cut.`,
+    (nm) => `${nm} met a familiar face on the road home, and never lived to work out whose. What was left had been studied first, the way a tailor studies cloth before the cut.`,
     (nm) => `${nm} trusted a face they had known their whole life, right up until the claws underneath it opened their throat in one motion and changed their mind for them.`,
     (nm) => `Something wearing ${nm}'s exact walk, exact laugh, exact way of clearing its throat, was seen at their own funeral, grieving convincingly, in their own coat.`,
   ],
   banshee: [
-    (nm) => `${nm} heard the wailing three nights running and told no one. On the fourth night it did not stop at their door. It came inside, and their heart simply stopped listening to itself, mid-beat.`,
-    (nm) => `They found ${nm} without a mark on them, face frozen somewhere between grief and recognition, as if they had been mourned to death by someone who knew and loved them, which, in its way, they had.`,
+    (nm) => `${nm} heard the wailing three nights running and told no one. On the fourth it did not stop at their door, and their heart stopped listening to itself, mid-beat.`,
+    (nm) => `They found ${nm} unmarked, face caught between grief and recognition, as if mourned to death by someone who knew and loved them. Which, in its way, they had.`,
     (nm) => `${nm}'s heart stopped mid-sentence, and the last sound anyone heard through the wall was a wail that already knew their name, and had known it for some time.`,
   ],
   lich: [
-    (nm) => `${nm} went grey over a handful of nights, and cold, and quiet, and the village told itself it was a wasting sickness right up until ${nm} was found in bed one morning, unmarked, shrunken, emptied of every year they had.`,
-    (nm) => `Whatever came for ${nm} did not tear or bite. It drank, a little each night, patient as a man with a good bottle, until there was nothing left in the cup and ${nm} simply stopped, husk-light and old beyond counting.`,
-    (nm) => `${nm} opened a barred door to no one anyone ever saw, and paid for it slowly. By the end there was less of ${nm} each dawn, until one dawn there was none, and only the cold stayed behind in the room.`,
+    (nm) => `${nm} went grey over a handful of nights, and cold, and quiet, and the village called it a wasting sickness until ${nm} was found one morning unmarked, shrunken, emptied of every year.`,
+    (nm) => `Whatever came for ${nm} did not tear or bite. It drank a little each night until there was nothing left in the cup, and ${nm} stopped, husk-light and old beyond counting.`,
+    (nm) => `${nm} opened a barred door to no one anyone saw, and paid for it slowly. There was less of ${nm} each dawn, until one dawn there was none, and only the cold stayed.`,
   ],
   revenant: [
-    (nm) => `${nm} was caught outdoors on its exact night, and the revenant does not rage or hurry. It closed its grave-cold hands around them and simply did not let go until the letting go no longer mattered.`,
+    (nm) => `${nm} was caught outdoors on its exact night, and the revenant does not rage or hurry. It closed its grave-cold hands and did not let go until letting go no longer mattered.`,
     (nm) => `They found ${nm} on the road toward the crossroads, carried there and set down with a gentleness that made the finding worse, cold as the stone the thing itself once slept under.`,
     (nm) => `${nm} tried to outrun something that cannot tire and will not be reasoned with. The distance never mattered. The patience did, and the patience always wins.`,
   ],
   doppel: [
     (nm) => `${nm} let someone wearing a dead neighbour's face in through the door one night, because the voice was exactly, perfectly right, right up until the moment it very deliberately was not.`,
-    (nm) => `Whatever wore ${nm}'s face afterward had studied them a long while first: the mouth, the eyes, the last expression, filed away for later use, and worn since with an accuracy that unsettles everyone who loved them.`,
+    (nm) => `Whatever wore ${nm}'s face afterward had studied them a long while: the mouth, the eyes, the last expression, worn since with an accuracy that unsettles everyone who loved them.`,
     (nm) => `${nm} is gone, and for a little while afterward there were two of somebody else walking the lanes, and only one of them remembered what it felt like to actually be alive.`,
   ],
   hag: [
-    (nm) => `${nm} went to bed tired, the way everyone is tired now, and did not wake. Whatever rode them down into that sleep left no mark but the scream caught behind their own face, twisted mid-cry and never released.`,
-    (nm) => `They found ${nm} in bed, sheets barely disturbed, expression almost peaceful except around the eyes, and utterly, permanently gone. The hag does not leave a struggle to clean up after; she prefers her work tidy.`,
+    (nm) => `${nm} went to bed tired, the way everyone is tired now, and did not wake. Whatever rode them down left no mark but the scream caught behind their own face, never released.`,
+    (nm) => `They found ${nm} in bed, sheets barely disturbed, almost peaceful except around the eyes, and permanently gone. The hag leaves no struggle to clean up after; she prefers her work tidy.`,
     (nm) => `${nm}'s heart stopped somewhere in the deepest part of the night, ridden down by something delighted, and patient, and far heavier than it looked, that took its time about finishing.`,
   ],
   necromancer: [
-    (nm) => `${nm} answered a knock in the small hours, because the voice through the door was one they had wept over at a graveside, and love does not check the tread for grave-mud. The door was found open. ${nm} was not found at all, until the ground by the churchyard wall would not stop being freshly turned.`,
-    (nm) => `${nm} was taken by hands the village had folded and buried itself, and the worst of it came after: ${nm} seen at other doors in the nights that followed, knocking, patient, saying the names of the people inside.`,
-    (nm) => `${nm} barred the door against monsters and opened it to a dead friend, which by then was the same mistake. What walked them out into the dark walked slowly, because nothing that serves the necromancer has ever needed to hurry.`,
+    (nm) => `${nm} answered a knock in the small hours, because the voice through the door was one they had wept over at a graveside, and love does not check the tread for grave-mud. The door was found open. ${nm} was not found at all.`,
+    (nm) => `${nm} was taken by hands the village had folded and buried itself, and the worst came after: ${nm} seen at other doors since, knocking, patient, saying the names of those inside.`,
+    (nm) => `${nm} barred the door against monsters and opened it to a dead friend, which by then was the same mistake. What walked them out into the dark walked slowly. It had no need to hurry.`,
   ],
   mimic: [
-    (nm) => `${nm} died in a way that matched nothing in anyone's grandmother's stories, and the argument over what did it outlived every soul who took a side. It killed them a new way on purpose. By then it was performing.`,
+    (nm) => `${nm} died in a way that matched nothing in anyone's grandmother's stories, and the argument over what did it outlived everyone who took a side. It killed them a new way on purpose.`,
     (nm) => `What was done to ${nm} carried every sign the village had learned to dread, all at once: claw and frost and grave-dirt together, evidence of everything, proof of nothing. The searchers stopped reading the ground after that. There was no sense left in it to read.`,
     (nm) => `${nm} was found surrounded by the marks of six different horrors, and by then the village finally understood the joke, and there was nobody left in a state to laugh.`,
   ],
@@ -7194,19 +7196,19 @@ const LOSS_DEATHS = {
   ],
 };
 const LOSS_ENSLAVED = [
-  (nm) => `${nm} still answers to their name, when it uses it. They set its table, wind its clocks, warm its bed, and somewhere very deep down, in a place that gets smaller every year, they know exactly what they have become.`,
-  (nm) => `${nm} walks the lanes still, smiles when smiled at, says the right words in the right order. There is no one left inside to mean any of it, and the village has stopped being able to tell the difference, which is its own kind of horror.`,
-  (nm) => `${nm} will grow old, or something that only looks like growing old, in service to the thing that took them: hollow, patient, and perfectly, permanently obedient, long after everyone who might have grieved them is gone too.`,
-  (nm) => `Somewhere behind ${nm}'s familiar face there is a small cold room where the real ${nm} still stands, knocking, forever, on a door that will never again open from this side. Some nights, if you stand close enough, you can almost hear it.`,
+  (nm) => `${nm} still answers to their name, when it uses it. They set its table, wind its clocks, and somewhere very deep down they know exactly what they have become.`,
+  (nm) => `${nm} walks the lanes still, smiles when smiled at, says the right words in the right order. There is no one left inside to mean any of it, and the village can no longer tell.`,
+  (nm) => `${nm} will grow old, or something that looks like it, in service to the thing that took them: hollow, patient, and permanently obedient, long after everyone who might have grieved them is gone.`,
+  (nm) => `Somewhere behind ${nm}'s familiar face is a small cold room where the real ${nm} still stands, knocking on a door that will never open from this side. Some nights you can almost hear it.`,
 ];
 /* Pass G2: the "joined" ending. The village's fates are no longer things
    that simply happened while the player searched; they are things the
    player will now deliver, or witness, from the other side of it. */
 const JOINED_FATES = [
-  (nm) => `${nm} does not know yet what has already been decided. You will be there when it comes for them, close enough to warn them, and you will not.`,
+  (nm) => `${nm} does not know yet what has been decided. You will be there when it comes for them, close enough to warn them, and you will not.`,
   (nm) => `${nm} still bars the door every night, still trusts the shape that knocks. You know better now. You may be the one who lets it in.`,
   (nm) => `${nm} will go on a little while yet, unwarned. You have already chosen not to be the one who tells them.`,
-  (nm) => `Someday it will be ${nm}'s turn, and you will be standing just behind the thing that takes them, closer than anyone in this village has ever stood to it and lived to say so.`,
+  (nm) => `Someday it will be ${nm}'s turn, and you will be standing just behind the thing that takes them, closer than anyone here has stood to it and lived.`,
 ];
 function seededShuffle(arr, seedStr) {
   let h = 0;
@@ -7264,7 +7266,7 @@ function epilogueLine(s, x) {
   if (!x.alive) {
     const d = s.deaths.find((dd) => dd.id === x.id);
     if (!d) return null;
-    if (d.kind === "executed") return `${x.name} was innocent, and hanged on your word. Their name is the one part of this that no dawn will come clean of.`;
+    if (d.kind === "executed") return `${x.name} was innocent, and hanged on your word. No dawn comes clean of that name.`;
     if (d.kind === "mobbed") return `${x.name} was hanged by the mob while the truth waited. The square is quieter for it, and worse.`;
     if (x.turned) return `${x.name} died already changed, which the village calls a mercy, in the voice people use when they are not sure.`;
     const buriedIdx = Math.max(0, s.deaths.filter((dd) => dd.kind === "slain").findIndex((dd) => dd.id === x.id));
@@ -7276,11 +7278,11 @@ function epilogueLine(s, x) {
      fate. They were taken once, and brought back, and that does not wash out. */
   if (x.cured) return win
     ? `${x.name} came back from what took them, and is never quite the same for it. Wakes screaming some nights, but wakes. That is more than this village once thought possible.`
-    : `${x.name} came back from what took them, one of the only mercies bought before the end. Wakes screaming some nights, in a village that may not survive to hear it.`;
+    : `${x.name} came back from what took them, one of the few mercies bought before the end. Wakes screaming some nights, in a village that may not survive to hear it.`;
   if (x.turned) return win
     ? (x.known
         ? `${x.name} woke at dawn as if from a long fever, remembering nothing. Their hands are still cold. Their hands will always be cold.`
-        : `${x.name} was quieter in the weeks after, and colder to the touch than seemed right, and once or twice looked at you as though trying to place where they had seen you in the dark. Whether the thing had reached them and you simply never saw, or whether it is only your own suspicion talking now, no one will ever be able to say.`)
+        : `${x.name} was quieter in the weeks after, and colder to the touch than seemed right, and once looked at you as though placing where they had seen you in the dark. Whether it reached them, or whether that is only your own suspicion talking, no one will ever say.`)
     : joined ? joinedFate(s, x) : lossFate(s, x, "enslaved");
   if (!win) return joined ? joinedFate(s, x) : lossFate(s, x, m.attack === "turn" ? "enslaved" : "dead");
   /* secretKnown only ever means the PLAYER learned it. Whether it stayed
@@ -7288,10 +7290,10 @@ function epilogueLine(s, x) {
      owner's own ears (s.secretSpread[x.id].reached), are very different
      endings and must not both read as "kept it". */
   if (x.secretKnown && s.secretSpread && s.secretSpread[x.id] && s.secretSpread[x.id].reached) {
-    return `${x.name} knows their secret went further than you. It was all the village could talk of for a day, and ${x.name} has a fair idea whose mouth it came out of. There is a loyalty this village might have offered you. It is not yours.`;
+    return `${x.name} knows their secret went further than you, and has a fair idea whose mouth it came out of. There is a loyalty this village might have offered you. It is not yours.`;
   }
   if (x.secretKnown) return `${x.name} knows you learned their secret, and kept it. There is a loyalty in this village now that was not there before, and it is yours.`;
-  if (s.hardCleared.includes(x.id)) return `${x.name} knows their neck was saved by a night you spent in the cold watching their door, and has never once said thank you out loud. Bread appears on your step anyway.`;
+  if (s.hardCleared.includes(x.id)) return `${x.name} knows their neck was saved by a night you spent in the cold watching their door, and has never said thank you out loud. Bread appears on your step anyway.`;
   if (x.offendedExam) return `${x.name} survived, and has not forgiven the glass you put to their chest. Survival, they would tell you, is not the same as thanks.`;
   if (x.sawYouWatching) return `${x.name} survived. They still glance at the shadow opposite their door before sleeping, and they still know it was you standing in it.`;
   return pickFreshIdx(`plainEpilogue:${s.gameId}`, [
