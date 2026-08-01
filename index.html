@@ -8000,6 +8000,29 @@ function MonsterVillage() {
               {stat(`${trueSigns} / 3`, "SIGNS FOUND")}
               {stat(aliveNpcs(s).length, "STILL LIVING", joined ? tone.ink : undefined)}
             </div>
+            {/* what the run earned, struck here rather than in the epilogue.
+                Only what was earned appears: a deed you did not do is not a
+                gap on this page, it simply is not on it. */}
+            {newAch.length > 0 && (
+              <div className="mvIn" style={{ marginTop: 22, animationDelay: "1.4s" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2.5, color: C.dim }}>DEEDS STRUCK</span>
+                  <span className="mv-display" style={{ marginLeft: "auto", fontSize: 9.5, letterSpacing: 2, color: C.dim }}>{meta ? meta.ach.length : newAch.length} OF {ACH.length} EARNED</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                  {newAch.map((id) => {
+                    const a2 = ACH.find((aa) => aa.id === id);
+                    if (!a2) return null;
+                    return (
+                      <div key={id} style={{ padding: "10px 13px", background: C.sky, borderTop: `2px solid ${C.amber}`, borderRadius: 2, textAlign: "left" }}>
+                        <div className="mv-display" style={{ fontSize: 13, letterSpacing: 0.8, color: C.parch }}>✝ {a2.name}</div>
+                        <div style={{ marginTop: 2, fontSize: 12, lineHeight: 1.35, color: C.dim }}>{a2.desc}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),22px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
             <button onClick={() => setEpiOpen(true)} className="mv-btn mv-display w-full"
@@ -8083,15 +8106,6 @@ function MonsterVillage() {
               ))}
             </div>
           </div>
-
-          {newAch.length > 0 && (
-            <div className="mvIn mt-4 rounded-lg p-3" style={{ animationDelay: "2.8s", background: "rgba(217,164,65,0.08)", border: `1px solid ${C.amber}` }}>
-              <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>DEEDS EARNED</div>
-              {newAch.map((id) => { const a = ACH.find((aa) => aa.id === id); return (
-                <p key={id} className="mt-1" style={{ fontSize: 14 }}><span style={{ color: C.amber }}>✠ {a.name}</span> <span style={{ color: C.dim }}>: {a.desc}</span></p>
-              ); })}
-            </div>
-          )}
 
           <p className="mvIn mt-3" style={{ animationDelay: "3s", color: C.dim, fontSize: 13 }}>
             {s.nightNum} night{s.nightNum === 1 ? "" : "s"} survived · {Math.min(3, s.foundSigns.filter((sg) => m.signs.includes(sg)).length)}/3 true signs surfaced · {s.deaths.filter((d) => d.kind === "executed").length} executed on your word{mobbed.length ? ` · ${mobbed.map((d) => d.name).join(", ")} hanged by the mob` : ""}

@@ -103,11 +103,10 @@ a README section except `t4`. Two things are **designed and not built**:
   10i wants a green miasma over the well and calls it "the only place in the
   whole walk that is not bone, amber or red"; 10k wants black standing water
   below the mill race. **This needs `Scene` to learn afflictions.**
-- **`12c` — DEEDS STRUCK on the win.** README §16 says "Win in amber with deeds
-  struck on plaques" and the win plate does not show them. 12c wants the deeds
-  earned *this run* on gilt-ruled plaques with the running total above, before
-  the epilogue, and **only what was earned** — unstruck deeds stay out of the
-  run report entirely.
+- ~~**`12c` — DEEDS STRUCK on the win.**~~ **DONE**, *"Strike the run's deeds on
+  the plate"*. `newAch` already held the deeds earned this run; they moved from
+  the epilogue onto the plate as gilt-ruled plaques with the running total, and
+  are no longer said twice.
 
 ### §4, and the stats it could not have
 
