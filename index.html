@@ -6507,6 +6507,9 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
           </div>
         </div>
         <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,${mo(0.16)}) 0%, rgba(214,224,255,${mo(0.05)}) 42%, rgba(${tn.veil},0) 74%)` }} />
+        {/* one cloud, crossing the whole sky in the time nobody watches it for.
+            The only thing up there that ever passes in front of the moon. */}
+        <div className="mvCloud absolute" style={{ left: 0, top: 52, width: 240, height: 88, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%, rgba(16,19,33,0.82) 0%, rgba(16,19,33,0.46) 46%, rgba(16,19,33,0) 74%)" }} />
         {wd && wd.layer && <div className="absolute" style={{ left: 0, right: 0, pointerEvents: "none", ...wd.layer(tn.veil) }} />}
         <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
         <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
@@ -6659,6 +6662,8 @@ const EXTRA_CSS = `
 @keyframes mvfogA { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
 @keyframes mvfogB { from { transform: translateX(20px); } to { transform: translateX(-16px); } }
 .mvMoonGlow { animation: mvglowpulse 9s ease-in-out infinite alternate; }
+.mvCloud { animation: mvcloud 48s linear infinite; }
+@keyframes mvcloud { from { transform: translateX(-16%); } to { transform: translateX(116%); } }
 /* the possession sweep on the title screen: a dark comes up over one face
    at a time and passes on, so the promise is made by the picture and not
    only by the sentence under it */
@@ -6680,7 +6685,7 @@ const EXTRA_CSS = `
 .mvHeart { animation: mvheart 2.4s ease-in-out infinite; }
 @keyframes mvheart { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mvEdgeRed, .mvHeart { animation: none; opacity: 0.8; } }
-@media (prefers-reduced-motion: reduce) { .mvFogA, .mvFogB, .mvMoonGlow { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mvFogA, .mvFogB, .mvMoonGlow, .mvCloud { animation: none; } }
 /* the thing that is already holding you does not lunge: it hangs, and
    breathes, and waits for an answer */
 .mvDrift { animation: mvdrift 11s ease-in-out infinite alternate; }
