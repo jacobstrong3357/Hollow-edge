@@ -27,11 +27,9 @@ must name both WHO and WHAT before the village runs out of people.
   **`MIGRATION.md` in that folder is the ledger for this work** — status of all
   17 rows, the order, established conventions, the test recipe, and how to
   resume cold. Read it before touching a redesign screen, and update it in the
-  same commit as the screen. **16 of 17 rows are done**; §4 is partial (the
-  Black Book is rebuilt, the first-run title screen and the per-monster book
-  entry are not). The ledger records what each row changed, and eleven findings
-  where the mock was innocent but the obvious implementation would have changed
-  the game.
+  same commit as the screen. **All 17 rows are done** — the ledger records what
+  each one changed, and the findings where the mock was innocent but the
+  obvious implementation would have changed the game.
 
 ## How the file is organized (top to bottom)
 

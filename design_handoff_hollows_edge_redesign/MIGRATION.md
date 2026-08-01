@@ -72,7 +72,7 @@ does not change, so these stay valid.
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | **done** — *"Merge the journal's three logs into one record"* |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | **done** — *"Turn the interview violet when it is no longer them"* |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
-| 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | **PARTIAL** — only **3b** (the Black Book ledger) was built, in *"Make the Black Book a book"*. **3a and 3d are still todo**, see below |
+| 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | **done** — 3b in *"Make the Black Book a book"*, then 3a + 3d in *"Finish the title screen and the book entry"* |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **done** — *"Redesign the offer"* + *"Bring the rite in line with the accusation"* |
@@ -83,21 +83,25 @@ identified. There is no `t5`, `t6` or `t9` despite the README citing "5a-5c".
 Whoever touches the journal or interview should check `t4`/`t10` for an earlier
 pass and record what they are here.
 
-### §4 is not finished — read this
+### §4, and the stats it could not have
 
-The row was ticked in error and has been corrected. §4 covers **three** screens
-and only one was built:
+3a and 3d were missed on the first pass because the row was ticked after
+building only the Black Book. All three screens exist now.
 
-- **3b — the Black Book as a bound ledger.** Done.
-- **3a — the first-run title screen**, "possession sweep across the eight
-  faces". **Not started.** The first-run branch (`!veteran`, in the `if (!s)`
-  block) still shows the old greyscale portrait grid with the
-  "THE FACES YOU KNOW · ONE YOU DO NOT" caption. Nothing about it was touched.
-- **3d — the book entry**: per-monster stats, `MonsterArt` silhouette, lore,
-  signs, rite. **Not started.** That is the `showBestiaryHome` screen the Black
-  Book ledger opens into; it still wears its old styling.
+**3d asks for stats the build does not keep.** The mock's record panel wants
+`FASTEST` and `LAST MET` per monster, and there is no per-monster fastest or
+last-met in `meta` — only `faced{}` and `defeated{}`. Adding them would be new
+persisted state, which the handoff's own "State" section rules out. Both were
+dropped.
 
-Both are self-contained and neither blocks anything else.
+The third tile is labelled **IT GOT AWAY** (`faced - defeated`), not the mock's
+"IT ENDED YOU". That number is every run where you met it and did not end it,
+which includes deaths *and* abandoned runs. Calling it "it ended you" would
+state something the save does not know.
+
+Small known nit: several `mm.lore` strings end by naming the rite, so the amber
+rite plaque under them repeats it. Left alone rather than doing string surgery
+on the lore pool.
 
 ### §9, as it turned out
 
