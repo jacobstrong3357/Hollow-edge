@@ -6021,7 +6021,7 @@ function IvIcon({ k }) {
   );
 }
 
-function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview }) {
+function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, free }) {
   const n = npcById(s, iv.id);
   const nights = s.nightLogs.filter((lg) => lg.outMap[iv.id] !== undefined).map((lg) => lg.night).slice(-3);
   const done = iv.left <= 0;
@@ -6040,6 +6040,13 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const openers = iv.transcript.filter((t) => !t.q);
   const qa = iv.transcript.filter((t) => t.q);
   const mood = n.turned && n.known ? { word: "no longer themselves", color: C.turn } : IV_MOOD[dispTier(n.disp)];
+  /* Talking to something that is no longer wholly the person turns the room's
+     chrome violet: the same "changed" the examination uses, so a raving
+     interview reads the same whether the glass found it or you already knew.
+     Death red never appears here - what is in front of you is changed, not
+     dead. Your own actions stay amber, because amber means it costs you. */
+  const changed = n.turned && n.known;
+  const chrome = changed ? { rule: C.turn, ink: "#C0A6E0", fill: "rgba(122,95,160,0.16)" } : { rule: C.line, ink: C.amber, fill: "transparent" };
   /* arrival first, questions second: the room and the reception get the
      screen to themselves until the player chooses to begin */
   const begun = iv.begun || asked;
@@ -6092,7 +6099,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
         {/* ---- the room card: the full painting on arrival, a sliver
              once the questions begin and the words need the space ---- */}
         <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-          <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+          <div className="overflow-hidden" style={{ borderRadius: 16, border: `1px solid ${chrome.rule}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
             <div className="relative">
               <InterviewScene id={n.id} height={begun ? 30 : 92} afflicted={ivAff} />
               <div className="absolute inset-0" style={{ background: begun ? "linear-gradient(rgba(20,24,41,0.25), rgba(20,24,41,0.72))" : "linear-gradient(rgba(20,24,41,0) 52%, rgba(20,24,41,0.88))" }} />
@@ -6164,7 +6171,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             )}
           {begun && !asked && !done && (
-            <p className="mv-display text-center mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.dim }}>· CHOOSE A LINE OF QUESTIONING ·</p>
+            <p className="mv-display text-center mt-4" style={{ fontSize: 10.5, letterSpacing: 2.5, color: changed ? chrome.ink : C.dim }}>· CHOOSE A LINE OF QUESTIONING ·</p>
           )}
           {qa.map((t, i) => {
             const isLast = i === qa.length - 1;
@@ -6199,10 +6206,10 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           })}
           {lastFollowUps.length > 0 && (
             <div className="mvIvIn mt-2 flex flex-col items-start gap-1.5" style={{ marginLeft: 38 }}>
-              <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2, color: C.dim }}>PRESS FURTHER · COSTS NO QUESTION</span>
+              <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 2, color: changed ? chrome.ink : C.dim }}>PRESS FURTHER · COSTS NO QUESTION</span>
               {lastFollowUps.map((fu, fi) => (
                 <button key={fi} onClick={() => askFollowUp(fu)} className="mv-btn mvIvChip mv-body rounded-full px-3.5 py-1.5"
-                  style={{ fontSize: 13, background: "transparent", border: `1px solid ${C.amber}`, color: C.amber, cursor: "pointer", textAlign: "left" }}>
+                  style={{ fontSize: 13, background: chrome.fill, border: `1px solid ${chrome.rule === C.line ? C.amber : chrome.rule}`, color: chrome.ink, cursor: "pointer", textAlign: "left" }}>
                   ↳ {fu.label}
                 </button>
               ))}
@@ -6225,7 +6232,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                 </button>
               ))}
               <span className="ml-auto inline-flex items-center gap-1.5">
-                <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 1.5, color: C.dim }}>QUESTIONS</span>
+                <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 1.5, color: free ? chrome.ink : C.dim }}>{free ? "QUESTIONS · FREE" : "QUESTIONS"}</span>
                 {pips}
               </span>
             </div>
@@ -9191,7 +9198,7 @@ function MonsterVillage() {
       return (
         <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
           openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
-          askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endExamInterview} />
+          askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endExamInterview} free />
       );
     }
     const noHours = s.ap < 1;

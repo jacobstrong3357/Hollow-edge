@@ -66,11 +66,11 @@ does not change, so these stay valid.
 | 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | **done** — *"Redesign nightfall, and build the night shell"* |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | **done** — *"Strip nightfall down for the siege"*. 16b was already covered by §7's night card |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
-| 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
+| 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **done** — 20d in *"Redesign the examination"*, 20e closed by §3 |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; `ShroudH` folded in | **done** — *"Finish the death scene"* |
 | 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | **done** — *"Redesign the dawn reveal"* |
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | todo |
-| 3 | Interview | `t2` 2d | 3546 | `InterviewView` | todo |
+| 3 | Interview | `t2` 2d | 3546 | `InterviewView` | **done** — *"Turn the interview violet when it is no longer them"* |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |
 | 4 | Title + Black Book | `t3` 3a/3b/3d | 3229 | title branch | todo |
 | 7 | Night cards | `t14` 14a/14b | 1493 | night cinematic, `N1_*` pools | **done** — *"Redesign the night card"* |
@@ -262,6 +262,14 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§3 interview / §13's 20e** — screen 20e is not a screen: it is
+  `InterviewView` wearing violet, and the violet does **not** need a prop. It
+  derives from `n.turned && n.known`, the same condition the mood word already
+  used, so a raving interview looks the same whether the glass just found it or
+  you already knew. The category tray deliberately **stays amber**: those are
+  the player's own actions and amber means it costs you, which outranks
+  violet-means-changed. Only `free` is passed, so the exam's interview can say
+  its questions cost nothing.
 - **§14 accusation** — none, and one invariant deliberately kept: creatures
   your signs rule out render at 35% but **stay pressable**. The game never
   decides for the player, and the ticks driving `compatM` are their own theory,
