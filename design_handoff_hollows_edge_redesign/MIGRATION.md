@@ -185,27 +185,34 @@ a README section except `t4`. Two things are **designed and not built**:
   the plain weather states included, so it belongs to every night equally rather
   than to any wound.
 
-### The sky the walk is under (`10d`-`10f`) — still unbuilt
+### The sky the walk is under (`10d`-`10f`) — DONE
 
-Found while building the wounds, and it corrects a claim made earlier on this
-page. The walk carries the weather as a **word** on the ruled line
-(`wxWord`, `FOG` / `STORM COMING` / `HARD FROST` / `CLEAR`) and as **nothing
-else**. The mocks put it in the sky, and none of these classes exist in
-`index.html`:
+Found while building the wounds, and it corrected a claim made earlier on this
+page: the walk was carrying the weather as a **word** on the ruled line
+(`wxWord`, `FOG` / `STORM COMING` / `HARD FROST` / `CLEAR`) and as nothing else.
+Built in *"Put the weather in the sky, not only on the line"*, as **`NIGHT_SKIES`**
+beside `NIGHT_WOUNDS` on the same mechanism, keyed by `walk.facts.wx`, reached
+through a new `wx` prop on `NightShell`. A sky entry may override the shell's
+`cloud` and supply `art`; the wound's `art` draws over the sky's.
 
-- `10e` **storm**: a bigger, darker, higher cloud (`top:6px`, 300×110,
-  `rgba(12,14,26,.92)`) in place of the base one, `.mvRainB` at 10% over the top
-  120px, and `.mvFlash` — a 9s cycle that fires a double lightning flash across
-  the top 300px and is dark the rest of the time.
-- `10f` **frost**: `.mvFrost`, a pale wash over the top 300px breathing on 13s,
-  plus four `.mvMoteS` (2px, `#DCE6FA`) drifting up off the ground.
-- `10d` **fog**: the base shell as built.
+- `10e` **storm**: the drifting bank swapped for a bigger, darker, higher one
+  (`top:6`, 300×110, `rgba(12,14,26,0.92)`), `.mvRainB` on the slant, and
+  `.mvFlash` — a 9s cycle that fires a double lightning flash and is dark the
+  rest of the time. Verified firing (peak sampled at 0.37 of a 0.5 crest).
+- `10f` **frost**: `.mvFrost`, a pale wash breathing on 13s, plus four
+  `.mvMoteS` drifting up off the ground.
+- `10d` **fog**: the shell as it stands.
 
-All the keyframes are in the canvas's own `<style>` block near the top of the
-file. The mechanism is the one the wounds now use — a table feeding `NightShell`
-— so this wants a `NIGHT_SKIES` table beside `NIGHT_WOUNDS` and a `wx` prop,
-with the wound's `art` drawn over the sky's. **`NightShell` does not currently
-receive the weather at all**; `walk.facts.wx` is read by the caller only.
+**One departure:** the mock hangs the rain in the top 120px at a tenth opacity,
+where it falls in front of nothing and cannot be seen at all. Dropped to 200px
+and 0.22 so it has silhouettes to fall past. Same call as the miasma — a layer
+that is invisible is not the thing the caption says it is.
+
+**Nightfall deliberately does not get the `wx` prop.** The weather sets the
+daylight find odds (frost 0.55 / storm 0.22 / base 0.4) and the player commits
+to going out *before* they are allowed to know it. This is the same invariant
+that took the weather line off the nightfall screen earlier in this migration —
+if the sky is ever added to that screen, it hands the player their odds.
 - ~~**`12c` — DEEDS STRUCK on the win.**~~ **DONE**, *"Strike the run's deeds on
   the plate"*. `newAch` already held the deeds earned this run; they moved from
   the epilogue onto the plate as gilt-ruled plaques with the running total, and
