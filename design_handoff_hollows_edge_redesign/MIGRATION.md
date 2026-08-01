@@ -68,7 +68,7 @@ does not change, so these stay valid.
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
 | 12 | Death scene | `t21` 21a/21b | 257 | `investModal`, `INVEST_ACTS`; needs `ShroudH` folded in | todo |
-| 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | todo |
+| 6 | Dawn reveal | `t8` 8a/8b | 2479 | dawn branch, `DawnCarousel` | **done** — *"Redesign the dawn reveal"* |
 | 5 | Journal | `t7` 7a-7c (+ any `t5`) | 2561 | `journal` block | todo |
 | 3 | Interview | `t2` 2d | 3546 | `InterviewView` | todo |
 | 2 | Villager page | `t2` 2c | 3546 | `profileModal` | **done** — *"Redesign the villager page"* |

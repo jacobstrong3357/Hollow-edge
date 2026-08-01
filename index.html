@@ -6642,17 +6642,17 @@ function Carousel({ items, renderItem, minHeight = 120, onDone, doneLabel = "Don
       <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ minHeight }}>
         {renderItem(items[idx], idx)}
       </div>
-      <div className="flex items-center justify-between mt-1">
-        {navBtn("‹", () => go(-1), idx === 0)}
-        <div className="flex gap-1.5">
-          {items.map((_, i) => (
-            <span key={i} style={{ width: 6, height: 6, borderRadius: 3, display: "inline-block", background: i === idx ? C.amber : C.line }} />
-          ))}
+      {/* one card is its own length: pips and chevrons for a deck of one are
+          noise, and the dock already says what to press */}
+      {items.length > 1 && (
+        <div className="flex items-center justify-between" style={{ marginTop: 12 }}>
+          {navBtn("‹", () => go(-1), idx === 0)}
+          <Pips n={items.length} live={idx} />
+          {atLast && onDone
+            ? <button onClick={onDone} className="mv-display" style={{ background: "transparent", border: "none", color: C.amber, fontSize: 12, letterSpacing: 1, cursor: "pointer", padding: "4px 10px" }}>{doneLabel}</button>
+            : navBtn("›", () => go(1), atLast)}
         </div>
-        {atLast && onDone
-          ? <button onClick={onDone} className="mv-display" style={{ background: "transparent", border: "none", color: C.amber, fontSize: 12, letterSpacing: 1, cursor: "pointer", padding: "4px 10px" }}>{doneLabel}</button>
-          : navBtn("›", () => go(1), atLast)}
-      </div>
+      )}
     </div>
   );
 }
@@ -6665,7 +6665,9 @@ function DawnCarousel({ items, s, onOpen, onDone }) {
       minHeight={104}
       onDone={onDone}
       renderItem={(e) => (
-        <div className="flex gap-3 items-start">
+        /* the morning's news is a report, so every card takes the daylight
+           rule: a body and a find are the same kind of news here */
+        <Plaque rule="amber" style={{ display: "flex", gap: 12, alignItems: "flex-start", minHeight: 104, padding: "14px 14px 15px" }}>
           {e.pid && (() => {
             const npc = npcById(s, e.pid);
             const face = <Portrait id={npc.id} size={40} dead={!npc.alive} turnedKnown={npc.turned && npc.known} />;
@@ -6673,8 +6675,8 @@ function DawnCarousel({ items, s, onOpen, onDone }) {
               ? <button className="shrink-0" onClick={() => onOpen(npc.id)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>{face}</button>
               : <div className="shrink-0">{face}</div>;
           })()}
-          <p style={{ fontSize: 16, lineHeight: 1.45 }}>{e.t}</p>
-        </div>
+          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.45, color: C.parch, textWrap: "pretty" }}>{e.t}</p>
+        </Plaque>
       )}
     />
   );
@@ -9489,33 +9491,36 @@ function MonsterVillage() {
   if (s.dawn.length > 0 && !dawnDone) {
     const dloc = (s.dawnScene && s.dawnScene.loc) || "Cottage";
     return (
-      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
+      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         {profileModal}
-        <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-              <div className="relative">
-                <DawnScene loc={dloc} s={s} height={180} />
-                <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(20,24,41,0) 62%, rgba(20,24,41,0.9))", pointerEvents: "none" }} />
-                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#F5D9A0", background: "rgba(8,10,18,0.5)", border: "1px solid rgba(245,217,160,0.3)" }}>
-                  THE NIGHT HAS PASSED · DAY {s.dayNum}
-                </div>
-                <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 15, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>AT DAWN · THE {dloc.toUpperCase()}</div>
-              </div>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+          <div className="mvGrain" />
+          <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),16px)" }}>
+            <div className="overflow-hidden relative" style={{ borderRadius: 14, border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <DawnScene loc={dloc} s={s} height={210} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(20,24,41,0) 62%, rgba(20,24,41,0.92))", pointerEvents: "none" }} />
+              <span className="mv-display absolute" style={{ top: 10, left: 12, fontSize: 10.5, letterSpacing: 2.5, color: "#F5D9A0", background: "rgba(8,10,18,0.5)", border: "1px solid rgba(245,217,160,0.3)", borderRadius: 3, padding: "2px 8px" }}>
+                THE NIGHT HAS PASSED · DAY {s.dayNum}
+              </span>
+              <span className="mv-display absolute" style={{ left: 15, bottom: 10, fontSize: 15, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>AT DAWN · THE {dloc.toUpperCase()}</span>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4" style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}>
-            {s.dawn.length > 1
-              ? <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={() => setDawnDone(true)} />
-              : s.dawn.map((e, i) => (<EventLine key={i} e={e} s={s} onOpen={setProfile} />))}
-            {s.enraged && <p className="mt-3" style={{ color: C.redBright, fontSize: 13.5, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
-            {s.wrongGuesses === 1 && <p className="mt-3" style={{ color: C.redBright, fontSize: 13 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
+          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", WebkitOverflowScrolling: "touch" }}>
+            {/* every morning is the same deck, whether it carries a body or
+                only what the night turned up: one is not bigger news */}
+            <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={() => setDawnDone(true)} />
+            {(s.enraged || s.wrongGuesses === 1) && (
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 9 }}>
+                {s.enraged && <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.45, color: C.redBright, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+                {s.wrongGuesses === 1 && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: C.redBright }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
+              </div>
+            )}
           </div>
-          <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
-            <Btn full center kind="amber" onClick={() => setDawnDone(true)}><span className="mv-display" style={{ letterSpacing: 2 }}>FACE THE DAY</span></Btn>
-          </div>
+          <Dock><DockBtn kind="commit" onClick={() => setDawnDone(true)}>FACE THE DAY</DockBtn></Dock>
         </div>
+        <div className="mvVignette" />
+        <div className="mvGrainF" />
       </div>
     );
   }
