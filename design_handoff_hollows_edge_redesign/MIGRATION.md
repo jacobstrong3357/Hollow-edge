@@ -113,6 +113,24 @@ Set by the daylight search (`bac0533`). Reuse these; do not reinvent them.
   examination (20d) and the day screen use the same one.
 - **The dock** is now the `<Dock>` / `<DockBtn>` pair — see the next section.
   Do not hand-roll one.
+- **`<NightShell loc kicker onClose closeLabel>`** + **`<NightChoice quiet>`**
+  (module level, near `ShroudH`) are **the night furniture, and §9 and §10 must
+  build on them rather than restate them**. The shell owns the `#070910` ground,
+  the drifting `Scene` at 190px under `NIGHT_SCENE_MASK`, the moon (76px disc at
+  342,34 with craters, glow and the moonlight ellipse), the two fog banks
+  (`.mvFogA`/`.mvFogB` on `.mvFogBank`), the grain and vignette, and the
+  kicker line with its close/back affordance. A screen supplies only its own
+  words, pinned to the bottom with `marginTop: "auto"`. Nightfall (§8) is the
+  reference implementation.
+  - Still to add for §9: the **sighting state** — scene
+    `filter: saturate(.6) brightness(.75)`, moon warmed to `#FBF1EA`/pink glow,
+    `.mvEdgeRed` + `.mvHeart` on the 2.4s beat, place line `C.redBright`,
+    rubric "SOMETHING IS CLOSE", choices collapsing to two with the committing
+    one **filled** `C.red`. Add it as a `danger` prop on `NightShell`; the
+    hooks are already in the component's structure.
+- **No modal-on-modal.** Nightfall picks its target inline via a `planStage`
+  state on the same sheet. `watchModal` and `nightWalkModal` were deleted, not
+  orphaned — if you need a picker, do it as a stage, not a second sheet.
 - **Content sits against the dock, not under the header**: the scrolling middle
   is `flex-1 min-h-0` and its choice group carries `marginTop: "auto"`. This is
   what stops the half-empty screens the first drafts had.
