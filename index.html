@@ -6450,6 +6450,60 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
   );
 }
 
+/* THE NIGHT SHELL - the most reused layout in the game. Nightfall, the walk,
+   the door watch and the siege are all this: the place behind the moon, two
+   banks of fog, the hour on a line at the top, and whatever the night is
+   asking pinned to the bottom where the thumb is. A screen supplies only its
+   own words; the dark is the same dark every time. */
+const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
+function NightShell({ loc, kicker, onClose, closeLabel = "close", children }) {
+  return (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: "#070910", color: C.parch, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
+        <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 44, height: 190, transformOrigin: "50% 30%", WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK }}>
+          <Scene loc={loc} kind="quiet" height={190} />
+        </div>
+        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: "linear-gradient(rgba(7,9,16,0.55) 0%, rgba(7,9,16,0.06) 26%, rgba(7,9,16,0.66) 70%, #070910 100%)" }} />
+        <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
+          <div className="mvMoonGlow absolute" style={{ left: 342, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: "radial-gradient(circle, rgba(244,242,232,0.42) 0%, rgba(220,230,255,0.14) 38%, rgba(7,9,16,0) 72%)" }} />
+          <div className="absolute" style={{ left: 342, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
+            {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
+              <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
+            ))}
+          </div>
+        </div>
+        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: "radial-gradient(ellipse 290px 250px at 342px 90px, rgba(226,234,255,0.16) 0%, rgba(214,224,255,0.05) 42%, rgba(7,9,16,0) 74%)" }} />
+        <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
+        <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
+        <div className="mvGrain" />
+        <div className="relative flex items-baseline" style={{ flexShrink: 0, gap: 10, padding: "0 22px", paddingTop: "calc(max(env(safe-area-inset-top),18px) + 26px)" }}>
+          <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.6, whiteSpace: "nowrap", color: "rgba(233,223,200,0.62)" }}>{kicker}</span>
+          {onClose && (
+            <button onClick={onClose} className="mv-btn mv-body" style={{ padding: "2px 0", background: "transparent", border: "none", borderBottom: "1px solid rgba(138,143,168,0.4)", color: C.dim, fontSize: 12, cursor: "pointer" }}>{closeLabel}</button>
+          )}
+        </div>
+        <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 22px 40px", overflowY: "auto" }}>
+          {children}
+        </div>
+      </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
+    </div>
+  );
+}
+/* A night choice is a sentence, not a command: amber when it takes you out
+   of doors, quiet when it keeps you behind one. */
+function NightChoice({ children, onClick, quiet }) {
+  return (
+    <button onClick={onClick} className="mv-btn mv-body" style={{
+      borderRadius: 4, padding: "12px 16px", textAlign: "left", fontSize: 15, cursor: "pointer",
+      background: quiet ? "rgba(10,12,24,0.55)" : "rgba(217,164,65,0.1)",
+      border: `1px solid ${quiet ? C.line : C.amber}`,
+      color: quiet ? C.text : C.amber,
+    }}>{children}</button>
+  );
+}
+
 /* The shrouded shape that sits low on a death-scene hero: a covered body at
    the edge of the frame, never the subject of the picture. */
 function ShroudH() {
@@ -6525,6 +6579,15 @@ const EXTRA_CSS = `
 .mvDangerPulse { background: radial-gradient(ellipse at 50% 100%, rgba(158,48,57,0.5), rgba(158,48,57,0.05) 72%); animation: mvdpulse 1.5s ease-in-out infinite alternate; pointer-events: none; }
 @keyframes mvdpulse { from { opacity: 0.25; } to { opacity: 0.85; } }
 @media (prefers-reduced-motion: reduce) { .mvDangerPulse { animation: none; opacity: 0.5; } }
+/* the walk's weather: two banks of fog crossing at different speeds, and a
+   moon that breathes. Nothing else moves out there. */
+.mvFogBank { background: radial-gradient(ellipse 58% 52% at 50% 50%, rgba(180,196,224,0.11), transparent 72%); }
+.mvFogA { animation: mvfogA 38s ease-in-out infinite alternate; }
+.mvFogB { animation: mvfogB 52s ease-in-out infinite alternate; }
+@keyframes mvfogA { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
+@keyframes mvfogB { from { transform: translateX(20px); } to { transform: translateX(-16px); } }
+.mvMoonGlow { animation: mvglowpulse 9s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .mvFogA, .mvFogB, .mvMoonGlow { animation: none; } }
 /* the thing that is already holding you does not lunge: it hangs, and
    breathes, and waits for an answer */
 .mvDrift { animation: mvdrift 11s ease-in-out infinite alternate; }
@@ -7013,6 +7076,9 @@ function MonsterVillage() {
   /* the rope notice states the sentence at all times; what you can do about
      it folds away, because it is the same four options every morning */
   const [ropeOpen, setRopeOpen] = useState(false);
+  /* nightfall asks its whole question on one screen: null = what will you do,
+     then "watch"/"search" for who or where, with no second sheet on top */
+  const [planStage, setPlanStage] = useState(null);
   const [factPage, setFactPage] = useState(-1);
   const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const [clueSeen, setClueSeen] = useState(0);
@@ -8904,15 +8970,6 @@ function MonsterVillage() {
     );
   })();
 
-  const nightWalkModal = modal === "nightwalk" && pickerShell(`NIGHT ${s.nightNum + 1}`, "Search where tonight?", (
-    <div>
-      <div className="grid grid-cols-2 gap-2">
-        {LOCS.map((l) => locBtn(l, () => startWalk(l), 56))}
-      </div>
-      {s.nightNum <= 2 && <p className="mt-2" style={{ color: C.dim, fontSize: 12 }}>Out in the dark you may find fresh signs, see who wanders, or meet the thing itself{s.enraged ? ", and it is angry with you" : ""}. Every place holds its own signs, and its own risks. What hunts by night notices being hunted.</p>}
-    </div>
-  ), () => setModal(null), null, <NightScene height={96} />);
-
   /* --- interview --- */
   const startInterview = (id) => {
     const s2 = JSON.parse(JSON.stringify(s));
@@ -9197,41 +9254,95 @@ function MonsterVillage() {
     );
   })();
 
-  const planModal = modal === "plan" && (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#0A0C18, ${C.sky} 70%, ${C.bg})`, color: C.parch }}>
-      <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-        <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-          <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-            <NightScene height={120} />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(10,12,24,0.1) 45%, rgba(10,12,24,0.85))", pointerEvents: "none" }} />
-            <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 2.5, color: "#AEB6D8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(174,182,216,0.3)" }}>
-              {s.fled ? "UNDER SIEGE" : `NIGHT ${s.nightNum + 1}`}
+  /* Nightfall is the walk's own screen one step early, and it asks its whole
+     question here: what you will do, and then who or where, without stacking
+     a second sheet on top of the first. The italic carries a dusk line, never
+     tonight's weather - the night is not sampled until you have chosen, and
+     naming the weather first would let the player pick their odds. */
+  const planModal = modal === "plan" && (() => {
+    const duskLine = DUSK_LINES[stableIdx(`${s.gameId}:dusk:${s.nightNum}`, DUSK_LINES.length)];
+    const kicker = s.fled ? `NIGHT ${s.nightNum + 1} · UNDER SIEGE`
+      : planStage === "watch" ? `NIGHT ${s.nightNum + 1} · WHOSE DOOR`
+      : planStage === "search" ? `NIGHT ${s.nightNum + 1} · WHERE`
+      : `NIGHT ${s.nightNum + 1} · NIGHTFALL`;
+    const back = planStage ? () => setPlanStage(null) : () => setModal(null);
+    return (
+      <NightShell loc={planStage === "search" ? "Village Square" : "Village Square"} kicker={kicker} onClose={back} closeLabel={planStage ? "back" : "close"}>
+        {planStage === "watch" ? (
+          <>
+            <div style={{ marginTop: "auto" }}>
+              <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.2, color: "rgba(233,223,200,0.5)" }}>WHOSE DOOR WILL YOU WATCH</span>
+              {s.nightNum <= 2 && <p style={{ margin: "10px 0 0", fontSize: 13.5, lineHeight: 1.45, color: "rgba(233,223,200,0.62)" }}>If they stay in on a night of killing, they are cleared beyond doubt. If they leave, you follow.</p>}
             </div>
-            <button onClick={() => setModal(null)} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: "#AEB6D8", fontSize: 12, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>
-            <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 16, letterSpacing: 2.5, color: C.parch, textShadow: "0 1px 8px #000" }}>Where will you be?</div>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
-          {s.fled ? (
-            <div className="flex flex-col gap-2">
-              <Btn full kind="amber" onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</Btn>
-              <Btn full kind="red" onClick={() => setModal("rite")}>Perform the rite at dusk</Btn>
-              <p style={{ color: C.dim, fontSize: 12.5 }} className="mt-1">It comes back every night now. Every rite performed with the wrong name costs a life, and the village will not stand in the circle for a third mistake. The right one ends this.</p>
+            {/* the dead stay in the grid, greyed and struck: the village does
+                not quietly stop counting the people it has lost */}
+            <div style={{ flexShrink: 0, marginTop: 18, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+              {s.npcs.filter((n) => !n.fled).map((n) => (
+                <button key={n.id} disabled={!n.alive} onClick={n.alive ? () => { setPlanStage(null); startWatchWalk(n.id); } : undefined}
+                  className="mv-btn mv-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 4px 10px", background: "rgba(10,12,24,0.55)", border: `1px solid ${C.line}`, borderRadius: 8, cursor: n.alive ? "pointer" : "default", opacity: n.alive ? 1 : 0.4 }}>
+                  <Portrait id={n.id} size={38} dead={!n.alive} turnedKnown={n.turned && n.known} />
+                  <span style={{ fontSize: 10, lineHeight: 1.15, textAlign: "center", color: C.text, textDecoration: n.alive ? "none" : "line-through" }}>{n.name}</span>
+                </button>
+              ))}
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <Btn full kind="amber" onClick={() => setModal("watch")}>Watch a villager's door</Btn>
-              <Btn full kind="amber" onClick={() => setModal("nightwalk")}>Search an area</Btn>
-              {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 12.5 }} className="mt-1">Watching a door reveals where one person truly goes. Searching may find signs, or the thing itself. Behind a barred door you are safest, but you learn nothing.</p>}
-              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
-                <Btn full kind="ghost" onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</Btn>
+          </>
+        ) : planStage === "search" ? (
+          <>
+            <div style={{ marginTop: "auto" }}>
+              <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.2, color: "rgba(233,223,200,0.5)" }}>WHERE WILL YOU SEARCH</span>
+              {s.nightNum <= 2 && <p style={{ margin: "10px 0 0", fontSize: 13.5, lineHeight: 1.45, color: "rgba(233,223,200,0.62)" }}>Every place holds its own signs, and its own risks. What hunts by night notices being hunted.</p>}
+            </div>
+            <div style={{ flexShrink: 0, marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+              {LOCS.map((l) => (
+                <button key={l} onClick={() => { setPlanStage(null); startWalk(l); }} className="mv-btn mv-body"
+                  style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "hidden", background: "rgba(10,12,24,0.55)", border: `1px solid ${C.line}`, borderRadius: 4, color: C.parch, cursor: "pointer" }}>
+                  <span style={{ display: "block", position: "relative", width: "100%", height: 74, overflow: "hidden" }}>
+                    <Scene loc={l} kind="quiet" height={74} />
+                    {(s.burned || []).includes(l) && <span className="mvScorch" />}
+                    <span style={{ position: "absolute", inset: 0, background: "linear-gradient(rgba(7,9,16,0) 40%, rgba(7,9,16,0.85))" }} />
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", width: "100%", padding: "8px 11px 9px", textAlign: "left" }}>
+                    <span className="mv-display" style={{ fontSize: 13, letterSpacing: 0.6, color: C.parch }}>{l}{locAffSuffix(l)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginTop: "auto" }}>
+              <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.2, color: "rgba(233,223,200,0.5)" }}>HOLLOW'S EDGE</span>
+              <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: "2px solid rgba(233,223,200,0.22)" }}>
+                <p style={{ margin: 0, fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.7)" }}>{duskLine}</p>
               </div>
+              <p style={{ margin: "12px 0 0", fontSize: 16, lineHeight: 1.45, color: "rgba(233,223,200,0.9)", textWrap: "pretty", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
+                {s.fled
+                  ? "It is loose in the village and it knows your face. There is no walking abroad tonight."
+                  : "Doors are going on the bar down the lane. You have until the last of them."}
+              </p>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+            <div style={{ flexShrink: 0, marginTop: 22, display: "flex", flexDirection: "column", gap: 8 }}>
+              {s.fled ? (
+                <>
+                  <NightChoice onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</NightChoice>
+                  <NightChoice onClick={() => setModal("rite")}>Perform the rite at dusk</NightChoice>
+                  <p style={{ margin: "6px 0 0", fontSize: 12.5, lineHeight: 1.45, color: C.dim }}>Every rite performed with the wrong name costs a life, and the village will not stand in the circle for a third mistake. The right one ends this.</p>
+                </>
+              ) : (
+                <>
+                  <NightChoice onClick={() => setPlanStage("watch")}>Watch a villager's door</NightChoice>
+                  <NightChoice onClick={() => setPlanStage("search")}>Search an area</NightChoice>
+                  <div style={{ marginTop: 6, paddingTop: 12, borderTop: "1px solid rgba(233,223,200,0.12)", display: "flex", flexDirection: "column" }}>
+                    <NightChoice quiet onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</NightChoice>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </NightShell>
+    );
+  })();
 
   const riteModal = modal === "rite" && (
     <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch }}>
@@ -9276,13 +9387,6 @@ function MonsterVillage() {
       </div>
     </div>
   );
-
-  const watchModal = modal === "watch" && pickerShell(`NIGHT ${s.nightNum + 1}`, "Whose door will you watch?", (
-    <div className="flex flex-col gap-2">
-      {s.nightNum <= 2 && <p style={{ color: C.dim, fontSize: 13 }}>If they stay in on a night of killing, they are cleared beyond doubt, and that proof can later stand between them and a rope. If they leave, you follow. Follow the wrong figure too far into the dark, and you may not come back.</p>}
-      {aliveNpcs(s).map((n) => villagerBtn(n, () => startWatchWalk(n.id)))}
-    </div>
-  ), () => setModal(null), null, <NightScene height={96} />);
 
   const unbindModal = modal === "unbind" && pickerShell("DAY " + s.dayNum, "Unbind whom of what holds them?", (
     <div className="flex flex-col gap-2">
@@ -9595,7 +9699,7 @@ function MonsterVillage() {
   return (
     <div className="min-h-screen mv-body" style={{ background: C.bg, color: C.text }}>
       <style>{CSS_ALL}</style>
-      {journal}{searchModal}{daySceneModal}{nightWalkModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{watchModal}{unbindModal}{accuseModal}{profileModal}{resultSheet}
+      {journal}{searchModal}{daySceneModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{unbindModal}{accuseModal}{profileModal}{resultSheet}
 
       {/* the masthead: the day named the way the village would say it, over the
           skyline, with the nights it has already survived under the title and
@@ -9801,7 +9905,7 @@ function MonsterVillage() {
               style={{ width: 104, borderRadius: 2, padding: "12px 0", background: "transparent", border: `1px solid ${C.red}`, color: C.redBright, fontSize: 12, letterSpacing: 2.5, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
               {s.fled ? "UNMASKED" : "ACCUSE"}
             </button>
-            <button className="mv-btn mv-display text-center" onClick={() => setModal("plan")}
+            <button className="mv-btn mv-display text-center" onClick={() => { setPlanStage(null); setModal("plan"); }}
               style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: "linear-gradient(#D9A441,#B8863A)", border: "none", color: "#1A1408", fontSize: 13, letterSpacing: 3, cursor: "pointer" }}>
               NIGHTFALL ☾
             </button>

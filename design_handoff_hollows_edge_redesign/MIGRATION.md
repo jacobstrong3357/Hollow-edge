@@ -63,7 +63,7 @@ does not change, so these stay valid.
 | 11 | **Daylight search** | `t20` 20a-20c | 368 | `searchModal`, `runSearchScene`, `dayLocBtn` | **done** — `bac0533` |
 | — | Recurring objects as helpers | — | — | `Plaque` / `StampChip` / `Pips` / `Dock` + `DockBtn` | **done** — *"Lift the four recurring objects out of the search screen"* |
 | 9 | Night walk, watch, follow | `t18` 18a-18d, `t19` 19a/19b | 749, 653 | walk render, `watchModal` | todo |
-| 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | todo |
+| 8 | Nightfall | `t17` 17a-17c | 953 | `planModal` | **done** — *"Redesign nightfall, and build the night shell"* |
 | 10 | Under siege | `t16` 16a/16b | 1166 | `s.fled` branch of the plan modal | todo |
 | 1 | Day screen | `t2` 2a/2b | 3546 | day screen render, `actCard`, ACCUSE/NIGHTFALL foot | **done** — *"Redesign the day screen"* |
 | 13 | Examination | `t20` 20d/20e | 368 | `examineModal`, `runExamine` | **mostly** — *"Redesign the examination"*. 20d and the reading are done; 20e's violet interview waits on §3, see below |
@@ -244,6 +244,13 @@ Where a mock implied a mechanic the code does not have, and what was done.
   Check before you cut something for breaking an invariant — it may already be
   the shipped behaviour the mock was drawn from.
 
+- **§8 nightfall** — **a real one.** 17a puts the night's weather in the italic
+  rule. The weather does not exist yet at nightfall: `sampleNight()` runs inside
+  `nightfall(plan)`, *after* the player chooses. Sampling it earlier to fill the
+  line would hand the player tonight's find odds (frost 0.55 / storm 0.22)
+  before they decide whether to go out — a straight reweighting of the choice.
+  The rule now carries a `DUSK_LINES` beat instead, which has the same shape and
+  leaks nothing. **The weather belongs to the walk, not to the decision.**
 - **§2 villager page** — the canvas and the README disagree, and the README
   wins. Screen 2c's own caption says *"the existing villager page, recreated as
   it is in the build. No redesign"*, but README §2 asks for "what you have on
