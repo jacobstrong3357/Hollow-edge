@@ -77,7 +77,7 @@ does not change, so these stay valid.
 | 14 | Accusation | `t22` 22a/22b | 97 | `accuseModal` | **done** — *"Redesign the accusation"* |
 | 15 | Offer and rite | `t15` 15a-15c | 1273 | `OFFER_SCENES`, `riteModal` — **15b/15c are superseded by 22a/22b, reference only** | **done** — *"Redesign the offer"* + *"Bring the rite in line with the accusation"* |
 | 16 | Endings | `t11`, `t12`, `t13` | 1843, 1708, 1588 | death / offer / win branches, `DEATH_SCENES` | **done** — *"Give the endings a plate"* |
-| — | **The four drawers** | `t4` 4a-4d | 2914 | `showAch` / `showSecretsHome` / `showStatsHome` / `showHowTo` | **PARTIAL** — shared `DrawerShell` + 4a's rows done in *"Give the four drawers a masthead"*. 4b/4c/4d inner content still todo, see below |
+| — | **The four drawers** | `t4` 4a-4d | 2914 | `showAch` / `showSecretsHome` / `showStatsHome` / `showHowTo` | **done** — masthead in *"Give the four drawers a masthead"*, insides in *"Finish the drawers' insides"* |
 
 **`t4` and `t10` are now identified.** `t10` is "The night walk, full bleed", a
 superseded earlier pass at §9 — reference only. **`t4` is "The four drawers
@@ -87,24 +87,27 @@ because **the README's numbered "Screens" list has 16 entries and does not
 mention the drawers** — the canvas carries content the README does not
 enumerate. There is no `t5`, `t6` or `t9`.
 
-### The four drawers (`t4`) — what is left
+### Still unbuilt, found by sweeping the canvas
 
-All four now share `DrawerShell` (module level, near `ShroudH`): gilt kicker
-with its count at the right, the drawer's name at 30px, an optional sub and
-progress bar, and one `CLOSE` bar. No hero card — these are pages, not places.
+The canvas was swept option-by-option against what is built. Every turn maps to
+a README section except `t4`. Two things are **designed and not built**:
 
-- **4a Deeds** — done. Rows are ledger lines on the ground with a dagger where
-  earned and a dot where not, `borderBottom: 1px solid #22203A`.
-- **4b Secrets Kept** — chrome only. Still needs the per-villager block: 36px
-  portrait, a **bone nameplate** reading `NAME · THE ROLE`, and `N OF 3` at the
-  right.
-- **4c Your Record** — chrome only. The nemesis card wants
-  `background #141830, border-top: 2px solid C.amber, radius 2`, and the tiles
-  below want the same shape with `C.parchLine` rules (`C.red` on *villages
-  lost*), 8.5px `letter-spacing: 1.5` labels over 18px figures. They are still
-  rounded panels.
-- **4d How to Play** — chrome only. The body wants numbered `I / II / III`
-  markers in `C.redBright` beside `C.redBright` section rubrics.
+- **`10g`-`10k` — the village's wounds on the night walk.** Turn 10 is not a
+  superseded draft after all: its intent ("the night's weather and its wounds
+  carried by the art rather than announced... one screen for each state the
+  walk can be in") is exactly §9, and `10d`-`10f` are the weather states, which
+  the walk does carry. But `10g`-`10k` are **the church burning, the bread
+  riot, the well fouled, the tavern shut, the mill flooded**, and the walk shows
+  none of them: `Scene({ loc, kind, height })` takes no affliction state, unlike
+  `DawnScene`. `NightShell` has a `scorched` prop that covers burned only.
+  10i wants a green miasma over the well and calls it "the only place in the
+  whole walk that is not bone, amber or red"; 10k wants black standing water
+  below the mill race. **This needs `Scene` to learn afflictions.**
+- **`12c` — DEEDS STRUCK on the win.** README §16 says "Win in amber with deeds
+  struck on plaques" and the win plate does not show them. 12c wants the deeds
+  earned *this run* on gilt-ruled plaques with the running total above, before
+  the epilogue, and **only what was earned** — unstruck deeds stay out of the
+  run report entirely.
 
 ### §4, and the stats it could not have
 

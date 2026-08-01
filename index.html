@@ -6516,6 +6516,7 @@ function NightChoice({ children, onClick, quiet }) {
   );
 }
 
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 /* THE FOUR DRAWERS behind the title - deeds, secrets, the tally, how to play.
    All the same furniture: a gilt kicker with its count at the right, the
    drawer's name in display type, and one CLOSE bar at the foot. No hero card:
@@ -7526,11 +7527,16 @@ function MonsterVillage() {
         {showHowTo && (
           <DrawerShell kicker="BEFORE YOU BEGIN" title="How to Play" onClose={() => setShowHowTo(false)}>
 
-                <div className="rounded-xl p-4" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+                {/* numbered the way the book would number them, on the
+                    ground rather than inside a panel */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 17 }}>
                   {HOW_TO_PLAY.map((sec, i) => (
-                    <div key={i} className={i === 0 ? "" : "mt-3"}>
-                      <div className="mv-display" style={{ fontSize: 12, letterSpacing: 1.5, color: C.redBright }}>{sec.h}</div>
-                      <p className="mt-1" style={{ fontSize: 14, color: "rgba(233,223,200,0.85)" }}>{sec.b}</p>
+                    <div key={i} style={{ display: "flex", gap: 12 }}>
+                      <span className="mv-display" style={{ flexShrink: 0, width: 16, fontSize: 12, color: C.redBright, paddingTop: 2 }}>{ROMAN[i] || i + 1}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="mv-display" style={{ fontSize: 12, letterSpacing: 2.5, color: C.redBright }}>{sec.h}</div>
+                        <p style={{ margin: "4px 0 0", fontSize: 13.5, lineHeight: 1.5, color: "rgba(233,223,200,0.85)", textWrap: "pretty" }}>{sec.b}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -7637,17 +7643,17 @@ function MonsterVillage() {
                   const beaten = !!meta.defeated[nemId];
                   const met = meta.faced[nemId], ended = meta.defeated[nemId] || 0;
                   return (
-                    <div className="rounded-xl p-3 mb-3 flex gap-3 items-center" style={{ background: C.panel2, border: `1px solid ${beaten ? C.amber + "66" : C.line}` }}>
+                    <div className="flex gap-3 items-center" style={{ padding: "11px 13px", background: C.sky, borderTop: `2px solid ${beaten ? C.amber : C.parchLine}`, borderRadius: 2 }}>
                       <div className="shrink-0" style={{ opacity: beaten ? 1 : 0.5 }}><MonsterArt id={nemId} size={46} light /></div>
                       <div className="min-w-0">
-                        <div style={{ fontSize: 11, color: C.dim, letterSpacing: 1 }}>YOUR NEMESIS</div>
+                        <div className="mv-display" style={{ fontSize: 9, letterSpacing: 2.5, color: C.dim }}>YOUR NEMESIS</div>
                         <div className="mv-display" style={{ fontSize: 17, color: beaten ? C.parch : C.dim }}>{beaten ? nem.name : "A nameless horror"}</div>
                         <div style={{ fontSize: 12, color: "rgba(233,223,200,0.7)" }}>Met {met}×{ended ? ` · ended ${ended}×` : " · never ended"}</div>
                       </div>
                     </div>
                   );
                 })()}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2" style={{ gap: 8, marginTop: 12 }}>
                   {[
                     ["Games played", meta.games],
                     ["Win rate", meta.games ? `${Math.round((meta.wins / meta.games) * 100)}%` : "-"],
@@ -7666,9 +7672,11 @@ function MonsterVillage() {
                     ["Horrors ended", `${defeatedCount} of ${MONSTERS.length}`],
                     ["Deeds earned", `${meta.ach.length} of ${ACH.length}`],
                   ].map(([label, val]) => (
-                    <div key={label} className="rounded-xl p-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-                      <div style={{ fontSize: 11, color: C.dim }}>{label}</div>
-                      <div className="mv-display" style={{ fontSize: 18, color: C.parch }}>{val}</div>
+                    /* a tally is a plaque: bone on the rule, red only where
+                       the number is a loss */
+                    <div key={label} style={{ background: C.sky, borderTop: `2px solid ${label === "Villages lost" ? C.red : C.parchLine}`, borderRadius: 2, padding: "9px 11px" }}>
+                      <div className="mv-display" style={{ fontSize: 8.5, letterSpacing: 1.5, color: C.dim }}>{String(label).toUpperCase()}</div>
+                      <div className="mv-display" style={{ fontSize: 18, lineHeight: 1.1, color: label === "Villages lost" ? C.redBright : C.parch }}>{val}</div>
                     </div>
                   ))}
                 </div>
@@ -7679,19 +7687,22 @@ function MonsterVillage() {
             title="Secrets Kept" sub="Every human secret you have drawn out of a neighbour, across every game. Each carries one per run."
             onClose={() => setShowSecretsHome(false)}>
 
-                <p style={{ fontSize: 12.5, color: C.dim }}>Every human secret you've drawn out of a neighbour, across every game. Each villager carries one per game - it can take a few playthroughs to hear them all.</p>
-                <div className="mt-2 flex flex-col gap-2">
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {NPC_DEFS.map((n) => {
                     const pool = SECRET_POOL[n.id] || [];
-                    const found = (meta.secretsFound && meta.secretsFound[n.id]) || [];
+                    const found = ((meta && meta.secretsFound) || {})[n.id] || [];
                     return (
-                      <div key={n.id} className="rounded-xl p-3" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
-                        <div className="flex items-center gap-3">
-                          <Portrait id={n.id} size={38} />
-                          <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="mv-display" style={{ fontSize: 14, color: C.parch }}>{n.name} {n.role}</span>
-                            <span style={{ fontSize: 11, color: C.dim }}>{found.length} of {pool.length} known</span>
+                      /* the neighbour wears the same bone plate the day gives
+                         them, and what they carry is listed under it */
+                      <div key={n.id}>
+                        <div className="flex items-center" style={{ gap: 10 }}>
+                          <Portrait id={n.id} size={36} />
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span className="mv-display" style={{ display: "inline-block", background: C.parch, color: C.ink, fontSize: 9, letterSpacing: 0.8, padding: "3px 8px", borderBottom: `2px solid ${C.parchLine}` }}>
+                              {n.name.toUpperCase()} · {String(n.role || "").toUpperCase()}
+                            </span>
                           </div>
+                          <span className="mv-display" style={{ flexShrink: 0, fontSize: 9, letterSpacing: 1.5, color: C.dim }}>{found.length} OF {pool.length}</span>
                         </div>
                         <div className="mt-2 flex flex-col gap-1.5">
                           {pool.map((sec, i) => (
