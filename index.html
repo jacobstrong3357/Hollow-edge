@@ -1694,7 +1694,7 @@ const PERSONA = {
   liesel: { patience: 4, craftLabel: "What has the tavern heard?",
     refusal: [`"Even I run dry, love. Come back with better manners or better gossip."`, `"Bar's closed, love, and so am I. Try me when the kettle's on."`],
     whereOut: [(l) => `"The ${l}, if you must know, and yes, alone, and no, I won't say why. A woman keeps one secret or she keeps none."`, (l) => `"Out. The ${l}. Even an innkeeper needs air that hasn't been breathed twice."`],
-    whereHome: [() => `"Behind my own bar counting cups. The takings are honest even if the customers aren't."`, () => `"Home above the taproom. I hear every board in this house creak, and last night they minded their manners."`],
+    whereHome: [() => `"Behind my own bar counting cups. The takings are honest even if the customers aren't."`, () => `"Home above the taproom. I hear every board in this house creak, and that night they minded their manners."`],
     annoyed: [`"Asked, answered, and poured. Keep up, love."`, `"You're repeating yourself, love. Men who repeat themselves buy two drinks. House rule."`] },
   falk: { patience: 3, craftLabel: "His opinion of the wounds",
     refusal: [`"I am old, I am tired, and you are repeating yourself. Good day."`, `"My surgery hours are over and so is my patience. Good day to you."`],
@@ -2054,6 +2054,40 @@ function dispChance(p, disp) {
   const adj = d >= 1 ? p * 1.25 : d <= -1 ? p * 0.6 : p;
   return Math.random() < Math.min(0.92, adj);
 }
+/* ---------- when they cannot stand you ----------
+   Disposition has quietly moved the odds of a volunteered extra since the
+   start, but it never came out of anyone's mouth: a neighbour who loathed you
+   answered in the same measured voice as one who owed you their life. Someone
+   you have had examined like cattle, marched into the square, or named in
+   front of the village now answers you shortly, or turns the question round
+   on you, and spends the question doing it.
+
+   Keyed on DISPOSITION ALONE, monster included: the thing wearing a hated
+   face is exactly as rude as the face would be, so a mouthful is never a
+   tell. Never fired on the first question of a visit, so no visit is wholly
+   wasted, and never on `talk` - sitting a while is the one move that is
+   SUPPOSED to work on someone who hates you. */
+const HOSTILE_BARB = [
+  `"No."`,
+  `"Ask the village. They talk about me plenty. Save yourself the walk next time."`,
+  `"I've said all I mean to say to you. Write that down, if you're writing."`,
+  `"That's a question for someone who owes you an answer."`,
+  `"You'll get nothing here. Not because I've anything to hide. Because it's you asking."`,
+  `"Get out of my doorway."`,
+];
+const HOSTILE_TURN = [
+  `"What gives you the right? Nobody voted you anything. You started asking and we all started answering, and look where it has got us. It could be YOU. Has that occurred to you, even once?"`,
+  `"Funny, isn't it. Every one of us has been stood in front of you and made to account for our nights. Not one of us has ever heard you account for yours."`,
+  `"You're always where the questions are. Never where the bodies are. Some of us have noticed which of those is harder to arrange."`,
+  `"Whoever it is walks about in daylight asking after everyone else's nights. Sit with that a moment, then ask me again."`,
+];
+/* the shorter, colder version: they still answer, they just make you feel it */
+const COOL_PREFIX = [
+  `"Quickly, then."`,
+  `"If it gets you off my step."`,
+  `"Once. Then we're done for today."`,
+  `"You have a nerve, but go on."`,
+];
 const GOSSIP_LOVER_ID = "liesel";
 const DISCREET_ID = "ansel";
 /* the one secret whose exposure is genuinely life-or-death for its keeper */
@@ -2317,6 +2351,11 @@ function isActive(s, m, n) {
   if (m.rhythm.kind === "strict") return (n - 1) % m.rhythm.n === 0;
   if (n === s.embolden) return true;
   if (n - s.lastActive <= m.rhythm.gap) return false;
+  /* Left to the dice alone a loose horror can go six or seven nights without
+     touching anyone, and a village nothing is happening to is not a game.
+     Past its gap plus three it moves, whatever the roll says. The strict
+     kinds are untouched above: their count is a promise the lore makes. */
+  if (n - s.lastActive > m.rhythm.gap + 3) return true;
   return chance(m.rhythm.p);
 }
 
@@ -2328,7 +2367,7 @@ function isActive(s, m, n) {
    player sees in the lanes is always the same night the dawn reports on. */
 function sampleNight(s, m, n) {
   const active = isActive(s, m, n);
-  const wx = chance(0.3) ? pick(["fog", "storm", "frost"]) : null;
+  const wx = chance(0.45) ? pick(["fog", "storm", "frost"]) : null;
 
   /* A lasting affliction may fall on the village tonight. It is decided HERE,
      before the walk, so it can be lived on-screen in the lanes (see the
@@ -3622,22 +3661,33 @@ function investLook(prev, catKey) {
   return { s, line };
 }
 
-function actLookOver(prev, targetId) {
-  const s = JSON.parse(JSON.stringify(prev));
-  s.ap -= 1;
-  const target = npcById(s, targetId);
+/* Falk reads the change best. If the village loses him, Greta's herb-lore
+   serves at worse odds - and she is the end of the line: lose them both and
+   no one left can tell the changed from the grieving. Nobody reads their own
+   body, so asking to have the reader looked over falls to the next in line,
+   and past the last of them there is no reading to be had. */
+function examinerFor(s, targetId) {
+  const avail = (x) => x && x.alive && !x.fled;
   const falk = npcById(s, "falk");
   const greta = npcById(s, "greta");
-  const avail = (x) => x && x.alive && !x.fled;
-  /* Falk reads the change best. If the village loses him, Greta's herb-lore
-     serves at worse odds - and she is the end of the line: lose them both
-     and no one left can tell the changed from the grieving. */
-  const examiner = targetId !== "falk" && avail(falk) ? falk : (targetId !== "greta" && avail(greta) ? greta : null);
+  if (targetId !== "falk" && avail(falk)) return falk;
+  if (targetId !== "greta" && avail(greta)) return greta;
+  return null;
+}
+
+function actLookOver(prev, targetId) {
+  const s = JSON.parse(JSON.stringify(prev));
+  const target = npcById(s, targetId);
+  const examiner = examinerFor(s, targetId);
   const exName = examiner ? examiner.name : "";
+  /* Nobody can read this particular body - most often because the body IS the
+     reader. The hour is NOT spent: an examination that cannot be held is not
+     an examination, and the screen should not have offered it. */
   if (!examiner) {
-    s.dayEvents.push(ev("There is no one left with the knowledge to make such an examination."));
+    s.dayEvents.push(ev(`There is no one left in Hollow's Edge who could look ${target.name} over. The reading of a changed body was ${targetId === "falk" ? "Doctor Falk's own art, and a physician cannot hold a glass to his own chest" : targetId === "greta" ? "Greta's, after the doctor, and she cannot examine herself" : "a knowledge this village no longer has"}.`));
     return s;
   }
+  s.ap -= 1;
   /* being examined like cattle costs trust, whatever the result */
   s.npcs = s.npcs.map((x) => (x.id === targetId ? { ...x, disp: clampDisp((x.disp || 0) - 2) } : x));
   /* An examiner who serves the thing (a thrall, OR the creature itself
@@ -3727,12 +3777,24 @@ function actSearch(prev, loc) {
   } else if (lastWx === "storm") {
     s.dayEvents.push(ev(`The storm did the ${loc} no favours: mud over everything, the ground churned and rinsed, every mark scoured down to guesses. If it knew the rain was coming, it chose its night well.`));
   } else {
-    s.dayEvents.push(ev(pickFreshIdx("daySearchNothing", [
-      `You search the ${loc} in daylight and find nothing. Whatever the night left there, the sun and the foot traffic have already taken it.`,
-      `An hour combing the ${loc} turns up nothing worth writing down. If something passed through, it covered its going.`,
-      `The ${loc} by daylight looks like any ordinary morning. That is all it gives you.`,
-      `You go over the ${loc} in good light and find only the prints of everyone who has walked it since dawn, your own among them.`,
-    ])));
+    /* A place can hold a mark you have already written down elsewhere. That is
+       not a new sign and it is never ticked twice, but it is not nothing
+       either: it says this ground carries it too, which is exactly the kind of
+       thing a hunting ground does. Odds are untouched - this only ever runs
+       where the search was going to report nothing at all. */
+    const again = s.locEvidence[loc].filter((sg) => sg !== "wail" && s.foundSigns.includes(sg));
+    if (again.length && chance(0.5)) {
+      const sg = pick(again);
+      s.dayEvents.push(evPlaque(ev(`Nothing new at the ${loc}. But it is here too, the same as where you first wrote it down: ${senseFor(sg, 0)} You add the place to the entry, not the entry to the book.`), "bone", sg));
+      s.clues.push(`Day ${s.dayNum}: ${SIGNS[sg]} at the ${loc} as well. Nothing new, but the ground here carries it.`);
+    } else {
+      s.dayEvents.push(ev(pickFreshIdx("daySearchNothing", [
+        `You search the ${loc} in daylight and find nothing. Whatever the night left there, the sun and the foot traffic have already taken it.`,
+        `An hour combing the ${loc} turns up nothing worth writing down. If something passed through, it covered its going.`,
+        `The ${loc} by daylight looks like any ordinary morning. That is all it gives you.`,
+        `You go over the ${loc} in good light and find only the prints of everyone who has walked it since dawn, your own among them.`,
+      ])));
+    }
   }
   /* --- and now and then, last of all, the thing lets you know it noticed:
      a hum, a giggle, a small mark. Never a sign, never proof - a whisper
@@ -3934,7 +3996,21 @@ function craftAnswer(s, id) {
   return { quote, foundSign, clue, mentions };
 }
 
+/* A cool neighbour still answers you. They just make you feel it first: the
+   barb goes in front of the real answer, so nothing is lost but your welcome.
+   Applied out here because the answer machinery below assigns `quote` in a
+   dozen branches and would overwrite a prefix set inside it. */
 function computeAnswer(s, id, night, q, targetId) {
+  const r = answerFor(s, id, night, q, targetId);
+  const who = npcById(s, id);
+  if (r && !r.refused && !r.repeat && q !== "talk" && who && dispTier(who.disp) === "cool"
+      && typeof r.quote === "string" && r.quote.trim().startsWith('"') && chance(0.2)) {
+    return { ...r, quote: pickFreshIdx(`coolPrefix:${id}`, COOL_PREFIX) + " " + r.quote };
+  }
+  return r;
+}
+
+function answerFor(s, id, night, q, targetId) {
   const m = monsterOf(s);
   const npc = npcById(s, id);
   const per = PERSONA[id];
@@ -3971,6 +4047,17 @@ function computeAnswer(s, id, night, q, targetId) {
 
   if ((s.patience[id] || 0) <= 0 && !isMonster && q !== "talk") {
     return { quote: pickFreshIdx(`refusal:${id}`, per.refusal), mentions, claim, flag: null, foundSign, clue, refused: true, followUps: [] };
+  }
+
+  /* how they feel about you, said out loud. See HOSTILE_BARB above for why
+     this is keyed on disposition and nothing else. */
+  const hostileTier = dispTier(npc.disp);
+  const opened = (s.askedLog[id] || []).length > 1;
+  if (q !== "talk" && opened) {
+    if (hostileTier === "hate" && chance(0.4)) {
+      return { quote: chance(0.35) ? pickFreshIdx(`hostileTurn:${id}`, HOSTILE_TURN) : pickFreshIdx(`hostileBarb:${id}`, HOSTILE_BARB),
+        mentions, claim: null, flag: null, foundSign, clue, refused: true, followUps: [] };
+    }
   }
 
   const monsterClaim = () => {
@@ -6070,9 +6157,13 @@ function IvIcon({ k }) {
   );
 }
 
-function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, free }) {
+function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, openNotes, free }) {
   const n = npcById(s, iv.id);
-  const nights = s.nightLogs.filter((lg) => lg.outMap[iv.id] !== undefined).map((lg) => lg.night).slice(-3);
+  /* Every night this neighbour was in the village for is fair to ask about,
+     not merely the last three: on Day 7 the interesting night is often Night
+     2. The row scrolls sideways rather than wrapping, so the questions below
+     it keep their place. */
+  const nights = s.nightLogs.filter((lg) => lg.outMap[iv.id] !== undefined).map((lg) => lg.night);
   const done = iv.left <= 0;
   const craftUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:craft`);
   const suspectUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:suspect:`);
@@ -6182,6 +6273,14 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                       <span style={{ fontSize: 10.5, color: C.dim }}>{mood.word}</span>
                     </div>
                   </div>
+                  {/* what you already have on them, without leaving the room:
+                      their page opens over the interview and closes back into
+                      it, and the questions you have spent are still spent. */}
+                  {openNotes && (
+                    <button onClick={openNotes} className="mv-btn mv-body" style={{ marginLeft: "auto", flexShrink: 0, padding: "3px 9px", borderRadius: 3, background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}`, color: C.parch, fontSize: 11, cursor: "pointer" }}>
+                      your notes
+                    </button>
+                  )}
                 </div>
               )
               : (
@@ -6272,15 +6371,17 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
         {/* ---- the tray ---- */}
         <div className="mvIvDock px-4 pt-3" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom), 19px)", maxHeight: "46vh", overflowY: "auto" }}>
           {begun && !done && (
-            <div className="flex items-center gap-2 flex-wrap mb-2.5">
-              {nights.length > 0 && <span className="mv-display" style={{ fontSize: 10, letterSpacing: 2, color: C.dim }}>ASKING ABOUT</span>}
+            <div className="flex items-center gap-2 mb-2.5">
+              {nights.length > 0 && <span className="mv-display" style={{ flexShrink: 0, fontSize: 10, letterSpacing: 2, color: C.dim }}>ASKING ABOUT</span>}
+              <span className="flex items-center gap-2" style={{ minWidth: 0, overflowX: "auto", overflowY: "hidden", padding: "1px 0", scrollbarWidth: "none" }}>
               {nights.map((nn) => (
                 <button key={nn} onClick={() => setIv({ ...iv, night: nn })} className="mv-display mv-btn px-2.5 py-1 rounded-full"
-                  style={{ fontSize: 11.5, background: iv.night === nn ? C.amber : "transparent", color: iv.night === nn ? C.ink : C.dim, border: `1px solid ${iv.night === nn ? C.amber : C.line}`, cursor: "pointer" }}>
+                  style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 11.5, background: iv.night === nn ? C.amber : "transparent", color: iv.night === nn ? C.ink : C.dim, border: `1px solid ${iv.night === nn ? C.amber : C.line}`, cursor: "pointer" }}>
                   NIGHT {nn}
                 </button>
               ))}
-              <span className="ml-auto inline-flex items-center gap-1.5">
+              </span>
+              <span className="ml-auto inline-flex items-center gap-1.5" style={{ flexShrink: 0 }}>
                 <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 1.5, color: free ? chrome.ink : C.dim }}>{free ? "QUESTIONS · FREE" : "QUESTIONS"}</span>
                 {pips}
               </span>
@@ -6509,7 +6610,7 @@ const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
 /* Where the moon hangs. 342px is the composition the shell was drawn to at
    its full 448px width; the percentage takes over on any phone narrow enough
    that 342px would push the disc off the right edge. */
-const MOON_X = "min(342px, 83%)";
+const MOON_X = "min(342px, 100% - 86px)";
 /* the ordinary dark, and the dark once it has stopped pretending */
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
 /* THE SKY THE WALK IS UNDER. The same three words the ruled line already says,
@@ -6517,8 +6618,27 @@ const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#0
    `art` is whatever else is falling. This is only ever shown once you are
    already out of doors - the weather changes what a daylight search finds, so
    nightfall must never let you see it before you choose whether to go. */
+/* What the sky is doing tonight, drawn over the village. `moon` multiplies
+   the glow the shell already draws, the way a wound does: a storm has cloud
+   between you and it, and a real fog swallows it to a smear. Fog used to have
+   no entry here at all, which is why a fogged night looked exactly like a
+   clear one - the two drifting banks the shell always draws are atmosphere,
+   not weather. */
 const NIGHT_SKIES = {
+  fog: {
+    moon: 0.45,
+    cloud: { top: 30, width: 340, height: 150, background: "radial-gradient(ellipse at 50% 50%, rgba(150,164,196,0.2) 0%, rgba(150,164,196,0.1) 52%, rgba(150,164,196,0) 76%)" },
+    art: () => (<React.Fragment>
+      {/* fog does not hang in the sky, it stands in the lanes: two more banks
+          over the ones the shell always draws, low and slow and thick enough
+          to take the far houses out of the picture */}
+      <div className="mvFogA mvFogBank absolute" style={{ left: "-20%", right: "-20%", top: 118, height: 200, pointerEvents: "none", opacity: 0.9 }} />
+      <div className="mvFogB mvFogBank absolute" style={{ left: "-24%", right: "-24%", top: 166, height: 220, pointerEvents: "none", opacity: 0.8 }} />
+      <div className="absolute" style={{ left: 0, right: 0, top: 60, height: 300, pointerEvents: "none", background: "linear-gradient(rgba(168,180,208,0) 0%, rgba(168,180,208,0.14) 42%, rgba(168,180,208,0) 100%)" }} />
+    </React.Fragment>),
+  },
   storm: {
+    moon: 0.3,
     cloud: { top: 6, width: 300, height: 110, background: "radial-gradient(ellipse at 50% 50%, rgba(12,14,26,0.92) 0%, rgba(12,14,26,0.55) 46%, rgba(12,14,26,0) 74%)" },
     art: () => (<React.Fragment>
       {/* the mock hangs its rain in the top 120px at a tenth opacity, where it
@@ -6529,6 +6649,7 @@ const NIGHT_SKIES = {
     </React.Fragment>),
   },
   frost: {
+    moon: 1.15,
     art: () => (<React.Fragment>
       <div className="mvFrost absolute" style={{ left: 0, right: 0, top: 0, height: 300, pointerEvents: "none", WebkitMaskImage: "linear-gradient(#000 55%, rgba(0,0,0,0))", maskImage: "linear-gradient(#000 55%, rgba(0,0,0,0))" }} />
       {[["18%", 194, 0.5], ["44%", 212, 3.1], ["66%", 186, 5.4], ["82%", 216, 7.2]].map(([l, t, d]) => (
@@ -6608,7 +6729,12 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   const wd = NIGHT_WOUNDS[wound] || null;
   const sky = NIGHT_SKIES[wx] || null;
-  const moonMul = wd && wd.moon !== undefined ? wd.moon : 1;
+  /* a wound in the village and a sky over it can both take the moon away;
+     the darker of the two wins, so a storm over a burning church is not
+     somehow brighter than either. */
+  const woundMoon = wd && wd.moon !== undefined ? wd.moon : 1;
+  const skyMoon = sky && sky.moon !== undefined ? sky.moon : 1;
+  const moonMul = Math.min(woundMoon, skyMoon);
   const hasMoon = moonMul > 0;
   const mo = (a) => Math.min(0.85, +(a * moonMul).toFixed(3));
   return (
@@ -6619,16 +6745,26 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
             is night rather than the shell's black, so the scene reads as a
             window on the village and not as a picture with its top cut off. */}
         <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 0, height: 234, transformOrigin: "50% 24%", background: C.sky, WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
+          {/* The shell hangs its OWN moon over this scene, so the little one
+              baked into the art is always suppressed here. They used to sit on
+              top of each other at the shell's full 448px and pass for one
+              moon; on a 360px phone the art is scaled and offset differently,
+              they come apart, and the second disc reads as the first one cut
+              off at the edge of the picture. */}
           <div style={{ marginTop: 44 }}>
-            <Scene loc={loc} kind="quiet" height={190} unlit={wd && wd.unlit} moonless={!hasMoon} />
+            <Scene loc={loc} kind="quiet" height={190} unlit={wd && wd.unlit} moonless />
           </div>
         </div>
         <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
         {/* the moon hangs off the RIGHT of the frame, not off a fixed 342px:
             a 360px-wide phone used to slice a third of it away at the edge. */}
-        {hasMoon && <div className="absolute" style={{ left: 0, right: 0, top: 56, height: 250, overflow: "hidden", pointerEvents: "none" }}>
-          <div className="mvMoonGlow absolute" style={{ left: MOON_X, top: 34, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,${mo(0.44)}) 0%, rgba(226,150,150,${mo(0.16)}) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,${mo(0.42)}) 0%, rgba(220,230,255,${mo(0.14)}) 38%, rgba(${tn.veil},0) 72%)` }} />
-          <div className="absolute" style={{ left: MOON_X, top: 34, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: danger ? "radial-gradient(circle at 36% 30%, #FBF1EA 0%, #F3E2DA 42%, #D9C4C4 72%, #B09A9E 100%)" : "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: danger ? "0 0 34px rgba(226,160,168,0.5), inset -6px -5px 14px rgba(140,110,116,0.45)" : "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
+        {/* The clipper starts well above the moon's centre now. It used to
+            start at 56 with the disc centred 34 into it - and the disc has a
+            38px radius, so its top four pixels fell outside their own
+            overflow:hidden and came off flat. The centre is unmoved at 90. */}
+        {hasMoon && <div className="absolute" style={{ left: 0, right: 0, top: 40, height: 266, overflow: "hidden", pointerEvents: "none" }}>
+          <div className="mvMoonGlow absolute" style={{ left: MOON_X, top: 50, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,${mo(0.44)}) 0%, rgba(226,150,150,${mo(0.16)}) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,${mo(0.42)}) 0%, rgba(220,230,255,${mo(0.14)}) 38%, rgba(${tn.veil},0) 72%)` }} />
+          <div className="absolute" style={{ opacity: Math.min(1, 0.45 + moonMul * 0.55), left: MOON_X, top: 50, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: danger ? "radial-gradient(circle at 36% 30%, #FBF1EA 0%, #F3E2DA 42%, #D9C4C4 72%, #B09A9E 100%)" : "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: danger ? "0 0 34px rgba(226,160,168,0.5), inset -6px -5px 14px rgba(140,110,116,0.45)" : "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
             {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
               <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
             ))}
@@ -8135,15 +8271,25 @@ function MonsterVillage() {
     const fates = s.npcs.map((x) => ({ x, line: epilogueLine(s, x) })).filter((f) => f.line);
     /* one word for what the village will say happened to them. Read off the
        same state the line was written from, never re-decided here. */
+    const joined = !s.over.win && s.over.reason === "joined";
     const fateWord = (x) => {
-      if (x.alive) return x.turned && x.known ? "CHANGED" : "SURVIVED";
+      if (x.alive) {
+        if (x.cured) return "UNBOUND";
+        /* On a loss this page is the AFTER-story: the village falls, and the
+           people who lived through your last night do not live through what
+           came next. Saying SURVIVED over a line that reads "is dead" was the
+           page arguing with itself - the word states the same end the line
+           does. */
+        if (s.over.win) return x.turned && x.known ? "CHANGED" : "SURVIVED";
+        if (joined) return "LEFT TO IT";
+        return x.turned || m.attack === "turn" ? "TAKEN INTO SERVICE" : "LOST IN THE FALL";
+      }
       const d = s.deaths.find((dd) => dd.id === x.id);
       return d && d.kind === "executed" ? "HANGED ON YOUR WORD"
         : d && d.kind === "mobbed" ? "HANGED BY THE MOB"
           : x.turned ? "CHANGED, THEN LOST" : "TAKEN";
     };
     const planted = (s.planted || []);
-    const joined = !s.over.win && s.over.reason === "joined";
 
     /* Win and loss are the same ritual with the colour changed. Taking the
        offer is neither, so it gets the fouled-well green, spent here and
@@ -8288,6 +8434,16 @@ function MonsterVillage() {
 
           <div className="mvIn mt-4" style={{ animationDelay: "2.3s" }}>
             <div className="mv-display" style={{ color: C.amber, fontSize: 12, letterSpacing: 2 }}>{s.over.win ? "WHAT BECAME OF THEM" : joined ? "WHAT YOU LEAVE BEHIND" : "THE FALL OF HOLLOW'S EDGE"}</div>
+            {/* These are not the night you just played. They are the months
+                after it, and on a loss that difference is the whole page:
+                somebody who was breathing at the end of your last day is
+                still dead by the end of this one. */}
+            <p style={{ margin: "5px 0 0", fontSize: 11.5, lineHeight: 1.5, color: C.dim, fontStyle: "italic" }}>
+              {s.over.win
+                ? "What the years after made of the ones who lived through it."
+                : joined ? "What becomes of them once you have stopped being one of them."
+                  : "Not the night you have just lived. What came after it, to a village with nothing left to stop the thing inside it."}
+            </p>
             {/* A deck, not a wall. Eight lives read as eight lives when you
                 have to turn each one over; stacked, they read as a list of
                 names you are already scrolling past. The pips carry the count,
@@ -9235,7 +9391,7 @@ function MonsterVillage() {
      rather than over it, and carries no affliction suffix: DawnScene already
      bakes burned/riot/fouled/shut into the art, so the word would only say
      twice what the picture says once. */
-  const dayLocBtn = (l, onClick, h = 84) => (
+  const dayLocBtn = (l, onClick, h = 74) => (
     <button key={l} onClick={onClick} className="mv-btn mv-body"
       style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "hidden", background: C.sky, border: `1px solid ${C.line}`, borderRadius: 4, color: C.parch, cursor: "pointer" }}>
       <span style={{ display: "block", position: "relative", width: "100%", height: h, overflow: "hidden" }}>
@@ -9504,7 +9660,8 @@ function MonsterVillage() {
   const interviewModal = iv && !(examRes && examRes.interview) && (
     <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
       openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
-      askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endInterview} />
+      askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endInterview}
+      openNotes={() => setProfile(iv.id)} />
   );
 
   /* --- death scene investigation --- */
@@ -9667,11 +9824,16 @@ function MonsterVillage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8, marginTop: 12 }}>
                     {aliveNpcs(s).map((n) => {
                       const changed = n.turned && n.known;
+                      /* nobody reads their own body: if the only reader left
+                         IS this person, the tile goes dark rather than
+                         spending an hour to be told so. */
+                      const reader = examinerFor(s, n.id);
                       return (
-                        <button key={n.id} onClick={() => runExamine(n.id)} disabled={noHours} className="mv-btn mv-body mvIvChip"
+                        <button key={n.id} onClick={() => reader && runExamine(n.id)} disabled={noHours || !reader} className="mv-btn mv-body mvIvChip"
                           style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 4px 10px", background: C.sky, border: `1px solid ${changed ? C.turn : C.line}`, borderRadius: 8, cursor: noHours ? "default" : "pointer", opacity: noHours ? 0.4 : 1 }}>
                           <Portrait id={n.id} size={38} turnedKnown={changed} disp={n.disp} />
                           <span style={{ fontSize: 10, lineHeight: 1.15, textAlign: "center", color: changed ? "#C0A6E0" : C.text }}>{n.name}</span>
+                          {!reader && <span className="mv-display" style={{ fontSize: 7.5, letterSpacing: 1, textAlign: "center", color: C.dim }}>NO READER</span>}
                         </button>
                       );
                     })}
@@ -10344,7 +10506,16 @@ function MonsterVillage() {
           </div>
           <div className="grid grid-cols-1" style={{ gap: 8, marginTop: 8 }}>
             {s.mob && mobT && mobT.alive && sideActCard("⚖", `Speak for ${mobT.name} in the Square`, defendLabel(s, mobT), () => doAction((x) => actDefend(x)), s.ap < 1 || s.defendedToday)}
-            {eligibleUnbind.length > 0 && sideActCard("✝", "The Rite of Unbinding", "Try to call one of them back from the change", () => setModal("unbind"), s.ap < 1)}
+            {/* Always shown once there is a changed neighbour to try it on, and
+                it says out loud why it cannot be run: a card that is simply
+                dark and silent reads as a tap that did nothing. */}
+            {eligibleUnbind.length > 0 && sideActCard("✝", "The Rite of Unbinding",
+              s.ap < 1 ? "No hours left today. The rite takes all of them" : `Call ${eligibleUnbind.length === 1 ? eligibleUnbind[0].name : "one of them"} back from the change. Takes the whole day, one attempt each`,
+              () => setModal("unbind"), s.ap < 1)}
+            {/* and once every changed neighbour has had their one attempt, the
+                card stays, spent, rather than vanishing without explanation */}
+            {eligibleUnbind.length === 0 && s.npcs.some((x) => x.alive && x.turned && x.known && x.unbindTried) &&
+              sideActCard("✝", "The Rite of Unbinding", "Already attempted on everyone it could be attempted on", () => {}, true)}
           </div>
           {armedGuess && !s.fled && (() => {
             /* the journal has been worked down to a single possible creature:
