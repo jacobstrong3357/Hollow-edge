@@ -637,23 +637,30 @@ const DAY_TRACES = [
   (l) => `In the dust low on a wall of the ${l}, in a fine small hand: "STILL LOOKING?" The morning's rain-spots have not touched it.`,
   (l) => `A whistle starts up somewhere past the ${l}, the kind a man uses to call a dog. No dog comes. It goes on a while, unbothered, and you never find the mouth it belongs to.`,
 ];
-/* Gore is told through the village's mouths, mostly committing to one grim,
-   specific detail; one or two entries keep the contradictory-accounts device
-   in reserve, where fear does its own butchery and none of it names the creature. */
+/* Gore reaches you the way everything else in this village does: through
+   somebody's mouth, at the well, before anyone qualified has looked. Every
+   entry is ATTRIBUTED for that reason - it is what is being said, not what
+   the body says. The body is examined separately (investLook), and where the
+   two disagree the examination is the one that is right, and says so.
+
+   Attribution is also what keeps the pool honest: rumour may describe a small
+   deliberate wound on a night the creature tore its victim apart, because
+   frightened people describe what they expect, and none of it may narrow the
+   field to any of the fifteen. */
 const BRUTAL_DETAILS = [
-  (v) => `${v}'s throat is opened to the bone, and whatever did it did not stop there. The men who carried the body will not say what else.`,
+  (v) => `The men who carried ${v} say the throat was opened to the bone, and that whatever did it did not stop there. They will not say what else, and nobody presses them twice.`,
   (v) => `Drained white, says the baker. Torn apart, says the smith. Untouched but for the face, says the boy. Same body. Fear does its own butchery.`,
-  (v) => `An arm was found forty feet from the rest of ${v}. Nothing dragged it there. It was set down, deliberately, pointing back at the village.`,
-  (v) => `Something was taken out of ${v}, cleanly, between the ribs, the way a butcher takes the best cut first. Falk shuts his bag and does not open it again.`,
-  (v) => `There was laughter over the body, high and delighted, from no fixed direction. Everyone heard it the same. No one will imitate it twice.`,
-  (v) => `Whatever was done to ${v} was not quick. The wounds nearest the heart came last, and slowest, and the ground shows how long that took.`,
-  (v) => `The blood is in the wrong places: pooled where there is no wound, gone where the wounds gape. Someone says the ground drank it. No one argues.`,
-  (v) => `${v}'s face was left whole, almost peaceful. Not a mercy: it was left so on purpose, so the village would know exactly who to grieve.`,
-  (v) => `${v}'s face has been taken, whole, and Falk says it was done first, before the wounds that killed. When they ask how he knows, he stops them asking.`,
-  (v) => `What was done to ${v} was hunter's work, but no hunter is that slow, and none folds the skin after and leaves it on the doorstep like washing.`,
-  (v) => `${v} drowned on dry land, in their own blood, through a wound made small and low so it would take a long time. It wanted to watch.`,
+  (v) => `The story going round by noon is that an arm was found forty feet from the rest of ${v}, set down deliberately, pointing back at the village. Three people swear they saw it. None of them agree where.`,
+  (v) => `Somebody who helped lift ${v} has been telling it that something was taken out cleanly, between the ribs, the way a butcher takes the best cut first. Falk will not confirm a word of it.`,
+  (v) => `They say there was laughter over the body, high and delighted, from no fixed direction. Everyone claims to have heard it the same. No one will imitate it twice.`,
+  (v) => `The talk is that it was not quick: that the wounds nearest the heart came last and slowest, and that the ground shows how long that took. The talk is very sure of itself.`,
+  (v) => `The blood is in the wrong places, they say: pooled where there is no wound, gone where the wounds gape. Someone at the well says the ground drank it. Nobody argues, which tells you where the village is now.`,
+  (v) => `It is being said that ${v}'s face was left whole, almost peaceful, and left so on purpose, so the village would know exactly who to grieve. The version told to the children leaves that part out.`,
+  (v) => `By evening half the village has ${v}'s face taken whole, and Falk saying it was done before the wounds that killed. Falk, asked, says he said no such thing to anybody.`,
+  (v) => `They are calling it hunter's work, and saying in the same breath that no hunter is that slow, and none folds the skin afterward and leaves it on a doorstep like washing.`,
+  (v) => `The account that has taken hold is a single wound, made small and low so it would take a long time. It wanted to watch, they say, and shiver, and repeat it to the next person.`,
   (v) => `Words are cut in ${v}, neat across the shoulders: "SLOWER NEXT TIME." Falk covers it too late. By noon the whole village knows it can write.`,
-  (v) => `${v} was opened below the ribs and what should be inside was laid out in a line, in order. Nothing eaten. Not hunger. Inventory.`,
+  (v) => `The story is that ${v} was opened below the ribs and what should be inside was laid out in a line, in order. Nothing eaten. Not hunger, they keep saying. Inventory.`,
 ];
 
 const KILLER_MESSAGES = [
@@ -2068,12 +2075,14 @@ function dispChance(p, disp) {
    wasted, and never on `talk` - sitting a while is the one move that is
    SUPPOSED to work on someone who hates you. */
 const HOSTILE_BARB = [
-  `"No."`,
-  `"Ask the village. They talk about me plenty. Save yourself the walk next time."`,
-  `"I've said all I mean to say to you. Write that down, if you're writing."`,
-  `"That's a question for someone who owes you an answer."`,
-  `"You'll get nothing here. Not because I've anything to hide. Because it's you asking."`,
-  `"Get out of my doorway."`,
+  `"No. Not that, not the next one, not to you. Try the well - they'll tell you anything there, and half of it might even be true."`,
+  `"I'm not answering that. Not because it's a hard question. Because of who's stood in front of me asking it."`,
+  `"Ask the village. They talk about me plenty, and they'll do it without making me look at you while it happens."`,
+  `"I've said all I mean to say to you. Write that down, if you're writing. Underline it, if it helps you remember."`,
+  `"That's a question for someone who owes you an answer. Go and find one of those. There must be one left."`,
+  `"You'll get nothing here. Not because I've anything to hide - because it's you asking, and you've spent whatever you had with me."`,
+  `"Get out of my doorway. You can stand in the lane and ask it again from there, if it means that much to you."`,
+  `"I answered you once, when I thought it might help somebody. Look how that went. So: no."`,
 ];
 const HOSTILE_TURN = [
   `"What gives you the right? Nobody voted you anything. You started asking and we all started answering, and look where it has got us. It could be YOU. Has that occurred to you, even once?"`,
@@ -3266,7 +3275,11 @@ function resolveNight(prev, planIn, preEvents) {
              pure atmosphere, so the five-card cap sheds it first. */
           const nd = NIGHT_ONE_DAWN(victim, victimWhere); // [bell (who), place (where), witness]
           dawn.push(ev(`${nd[0]} ${nd[1]}`, victim.id, 2));
-          if (chance(0.55)) dawn.push(ev(chance(0.5) ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id, 0));
+          if (chance(0.55)) {
+            const useNd = chance(0.5);
+            if (!useNd) { const dr = s.deaths.find((d) => d.id === victim.id && d.night === n); if (dr) dr.rumoured = true; }
+            dawn.push(ev(useNd ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id, 0));
+          }
         } else {
           dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id, 2));
           /* one flourish only, in priority order: the sent-dead or the call
@@ -3290,6 +3303,7 @@ function resolveNight(prev, planIn, preEvents) {
               ? ev(`Doctor Falk looks at the wounds a long time and writes nothing down. "Whatever did this," he says at last, "was not hungry. It was signing its name."`, "falk")
               : ev("Whoever examines the wounds says the same thing the last one did, in fewer words: this was not hunger. This was a signature."));
           } else if (chance(0.7)) {
+            { const dr = s.deaths.find((d) => d.id === victim.id && d.night === n); if (dr) dr.rumoured = true; }
             dawn.push(ev(pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id));
           }
         }
@@ -3662,6 +3676,13 @@ function investLook(prev, catKey) {
      preamble eating a line; only an empty result names the approach that
      came up short, so the log stays compact after you find things */
   s.dayEvents.push(ev(found ? line : `${act.label}: ${line}`));
+  /* The village has been describing this body since dawn, and the village
+     was not there. Where a real finding contradicts what everyone has been
+     saying, the game says outright which of the two to believe, rather than
+     leaving a rumour and a reading on the same page arguing. */
+  if (found && dRec && dRec.rumoured) {
+    s.dayEvents.push(ev(`Whatever has been going round the village about how ${dRec.name} died, the body itself says this, and the body was there.`, dRec.id, 2));
+  }
   return { s, line };
 }
 
@@ -4834,6 +4855,17 @@ function answerFor(s, id, night, q, targetId) {
 
   return { quote, mentions, claim, flag, foundSign, clue, followUps };
 }
+
+/* The questions that are about a NIGHT rather than about the day you are
+   standing in. The record and the villager's page both label a statement with
+   its night from this list; the free follow-up "did you see anyone at the X"
+   (q: "sawAt") was filed against a night like the rest and then displayed
+   without one, which made the most useful answer in the game look undated.
+   `press` belongs here too: catching a lie is a fact about the night that was
+   lied about. `strange`, `mobwhy` and `mobview` do not - the answer key files
+   them against a night because that is its fallback, but the questions are
+   about the day you are standing in, and dating them would be a lie. */
+const NIGHT_QS = ["where", "saw", "sawAt", "about", "press"];
 
 const Q_LABELS = {
   where: "Where were you that night?",
@@ -9441,7 +9473,7 @@ function MonsterVillage() {
                       <div style={{ minWidth: 0 }}>
                         <div className="flex items-baseline justify-between gap-3">
                           <span style={{ fontWeight: 700 }}>{st.name}</span>
-                          <span style={{ fontSize: 13.5, color: C.inkDim }}>Day {st.day}{st.q === "where" || st.q === "saw" || st.q === "about" ? ` · about Night ${st.night}` : ""}</span>
+                          <span style={{ fontSize: 13.5, color: C.inkDim }}>Day {st.day}{NIGHT_QS.includes(st.q) ? ` · about Night ${st.night}` : ""}</span>
                         </div>
                         <p style={{ fontSize: 13.5, lineHeight: 1.5, fontStyle: "italic" }}>{st.quote}</p>
                         {st.flag && <p style={{ fontSize: 14.5, color: C.red, fontWeight: 700 }}>✕ {st.flag}</p>}
@@ -10298,7 +10330,15 @@ function MonsterVillage() {
     const facts = [];
     s.playerSaw.filter((f) => f.id === n.id).forEach((f) => facts.push({ o: f.night * 10, t: `Night ${f.night}: you saw them near the ${f.loc}.` }));
     (n.sawYouOut || []).forEach((e2) => facts.push({ o: e2.night * 10 + 2, t: `Night ${e2.night}: they ${e2.met ? "met you in the lanes, and will remember it" : `saw YOU abroad, near the ${e2.loc}. The village talks`}.` }));
-    s.statements.filter((st) => st.id === n.id && st.q === "where").forEach((st) => facts.push({ o: (st.night || 0) * 10 + 5, t: `Day ${st.day}: claimed they were ${st.claim === "home" ? "home all night" : `at the ${st.claim}`} on Night ${st.night}.`, flag: st.flag }));
+    /* every night-scoped answer they have given you, filed under the night it
+       was about - not only where they claim they were. What they say they saw
+       is at least as useful, and it used to be nowhere on this page. */
+    s.statements.filter((st) => st.id === n.id && NIGHT_QS.includes(st.q)).forEach((st) => facts.push({
+      o: (st.night || 0) * 10 + 5,
+      t: st.q === "where"
+        ? `Night ${st.night}: claimed they were ${st.claim === "home" ? "home all night" : `at the ${st.claim}`} (told to you Day ${st.day}).`
+        : `Night ${st.night}: ${st.q === "sawAt" ? "asked who else was there" : st.q === "saw" ? "asked who they saw" : st.q === "press" ? "pressed on the lie" : "asked about someone else's night"}, and said: ${st.quote} (told to you Day ${st.day}).`,
+      flag: st.flag }));
     s.statements.forEach((st) => (st.mentions || []).forEach((mn) => {
       if (mn.id !== n.id) return;
       /* a mention about a NIGHT is filed under that night, with the teller
