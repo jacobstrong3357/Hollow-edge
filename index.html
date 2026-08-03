@@ -6299,6 +6299,55 @@ function IvIcon({ k }) {
   );
 }
 
+/* ---------- one villager, presented the same way twice ----------
+   The interview and the villager's page are the same subject from two angles,
+   and they had drifted into two layouts: one put the face in the room and the
+   readings under it, the other put the face in the room and then loose
+   unlabelled prose. Both use these now, so learning to read one teaches you
+   the other. */
+function PersonHero({ n, chip, accent, onClose, height = 112, afflicted }) {
+  return (
+    <div className="overflow-hidden relative" style={{ borderRadius: 16, border: `1px solid ${accent}55`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+      <InterviewScene id={n.id} height={height} afflicted={afflicted} />
+      <div className="absolute inset-0" style={{ background: !n.alive ? "linear-gradient(rgba(20,16,20,0.35), rgba(20,16,20,0.92))" : "linear-gradient(rgba(20,24,41,0) 42%, rgba(20,24,41,0.9))", pointerEvents: "none" }} />
+      {onClose && (
+        <button onClick={onClose} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: accent, fontSize: 13.5, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>
+      )}
+      {chip && (
+        <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: accent, background: "rgba(8,10,18,0.55)", border: `1px solid ${accent}55` }}>{chip}</div>
+      )}
+      <div className="absolute left-4 bottom-2.5 flex items-center gap-2.5">
+        <div className="shrink-0"><Portrait id={n.id} size={40} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} /></div>
+        <div className="min-w-0">
+          <div className="mv-display" style={{ fontSize: 19, letterSpacing: 1, color: C.parch, textShadow: "0 1px 8px #000" }}>{n.name}</div>
+          <div style={{ fontSize: 13, color: "rgba(233,223,200,0.95)", textShadow: "0 1px 6px #000" }}>{n.role}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* What you can see of them, as three plain readings. The build row carries
+   whatever the nights have settled about the shape - the same sentence the
+   page used to print in loose prose underneath. */
+function PersonReadings({ s, n, mood }) {
+  const rows = [
+    ["BUILD", `${BUILD_WORD[n.build] || `${n.build} of build`}${n.alive && s.knownBuild === n.build ? ", like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ", and could be the shape in the dark" : ""}`, C.parch],
+    ["DEMEANOUR", IV_BEARING[n.id], C.parch],
+    ["DISPOSITION", mood.word.charAt(0).toUpperCase() + mood.word.slice(1), mood.color],
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      {rows.map(([label, text, ink]) => (
+        <div key={label} style={{ display: "flex", gap: 9, alignItems: "baseline" }}>
+          <span className="mv-display" style={{ flexShrink: 0, width: 88, fontSize: 10, letterSpacing: 1.4, color: C.dim }}>{label}</span>
+          <span style={{ minWidth: 0, fontSize: 13.5, lineHeight: 1.4, color: ink }}>{text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, openNotes, free }) {
   const n = npcById(s, iv.id);
   /* Every night this neighbour was in the village for is fair to ask about,
@@ -6395,83 +6444,54 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
     <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
 
-        {/* ---- the room card: the full painting on arrival, a sliver
-             once the questions begin and the words need the space ---- */}
+        {/* ---- who you are stood in front of ----
+             On arrival: the same hero card and the same three readings the
+             villager's page shows, so the two screens teach each other. Once
+             the questions begin it collapses to a sliver, because the words
+             need the room. ---- */}
         <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-          <div className="overflow-hidden" style={{ borderRadius: 16, border: `1px solid ${chrome.rule}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-            <div className="relative">
-              <InterviewScene id={n.id} height={begun ? 30 : 92} afflicted={ivAff} />
-              <div className="absolute inset-0" style={{ background: begun ? "linear-gradient(rgba(20,24,41,0.25), rgba(20,24,41,0.72))" : "linear-gradient(rgba(20,24,41,0) 52%, rgba(20,24,41,0.88))" }} />
-              {begun
-                ? (
-                  <div className="absolute mv-display" style={{ top: 7, left: 12, fontSize: 10.5, letterSpacing: 2.5, color: C.amber, textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>
-                    DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
+          {begun ? (
+            <div className="overflow-hidden" style={{ borderRadius: 16, border: `1px solid ${chrome.rule}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+              <div className="relative">
+                <InterviewScene id={n.id} height={30} afflicted={ivAff} />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(20,24,41,0.25), rgba(20,24,41,0.72))", pointerEvents: "none" }} />
+                <div className="absolute mv-display" style={{ top: 7, left: 12, fontSize: 10.5, letterSpacing: 2.5, color: C.amber, textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>
+                  DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
+                </div>
+              </div>
+              <div className="px-3 py-2 flex items-center gap-2.5">
+                <div style={{ flexShrink: 0, borderRadius: 9, overflow: "hidden", border: `2px solid ${mood.color}` }}>
+                  <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <span className="mv-display" style={{ fontSize: 17.5, color: C.parch }}>{n.name}</span>{" "}
+                    <span style={{ fontSize: 13.5, fontStyle: "italic", color: C.amber }}>{n.role}</span>
                   </div>
-                )
-                : (
-                  <>
-                    <div className="absolute top-2 left-2.5 mv-display rounded px-2 py-0.5" style={{ fontSize: 12, letterSpacing: 2.5, color: C.amber, background: "rgba(8,10,18,0.6)", border: "1px solid rgba(217,164,65,0.25)" }}>
-                      DAY {s.dayNum} · {IV_ROOM_NAME[n.id] || "THE INTERVIEW"}
-                    </div>
-                  </>
+                  <div className="flex items-center gap-1.5" style={{ marginTop: 2 }}>
+                    <span className="inline-block rounded-full" style={{ width: 5, height: 5, background: mood.color }} />
+                    <span style={{ fontSize: 12, color: C.dim }}>{mood.word}</span>
+                  </div>
+                </div>
+                {/* what you already have on them, without leaving the room:
+                    their page opens over the interview and closes back into
+                    it, and the questions you have spent are still spent. */}
+                {openNotes && (
+                  <button onClick={openNotes} className="mv-btn mv-body" style={{ marginLeft: "auto", flexShrink: 0, padding: "3px 9px", borderRadius: 3, background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}`, color: C.parch, fontSize: 12.5, cursor: "pointer" }}>
+                    your notes
+                  </button>
                 )}
+              </div>
             </div>
-            {begun
-              ? (
-                <div className="px-3 py-2 flex items-center gap-2.5">
-                  <div style={{ flexShrink: 0, borderRadius: 9, overflow: "hidden", border: `2px solid ${mood.color}` }}>
-                    <Portrait id={n.id} size={38} turnedKnown={n.turned && n.known} disp={n.disp} />
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      <span className="mv-display" style={{ fontSize: 17.5, color: C.parch }}>{n.name}</span>{" "}
-                      <span style={{ fontSize: 13.5, fontStyle: "italic", color: C.amber }}>{n.role}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5" style={{ marginTop: 2 }}>
-                      <span className="inline-block rounded-full" style={{ width: 5, height: 5, background: mood.color }} />
-                      <span style={{ fontSize: 12, color: C.dim }}>{mood.word}</span>
-                    </div>
-                  </div>
-                  {/* what you already have on them, without leaving the room:
-                      their page opens over the interview and closes back into
-                      it, and the questions you have spent are still spent. */}
-                  {openNotes && (
-                    <button onClick={openNotes} className="mv-btn mv-body" style={{ marginLeft: "auto", flexShrink: 0, padding: "3px 9px", borderRadius: 3, background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}`, color: C.parch, fontSize: 12.5, cursor: "pointer" }}>
-                      your notes
-                    </button>
-                  )}
-                </div>
-              )
-              : (
-                /* The person stands IN their room, the way the day screen's
-                   faces stand in theirs, rather than on a blank shelf under
-                   it - and what you can see of them is stated as three plain
-                   readings instead of one paragraph of prose. */
-                <div className="px-3.5 pb-3" style={{ marginTop: -30 }}>
-                  <div className="flex items-end gap-3">
-                    <div style={{ flexShrink: 0, borderRadius: 11, overflow: "hidden", border: `2px solid ${mood.color}`, boxShadow: "0 6px 18px rgba(0,0,0,0.7)" }}>
-                      <Portrait id={n.id} size={62} turnedKnown={n.turned && n.known} disp={n.disp} />
-                    </div>
-                    <div className="pb-1" style={{ minWidth: 0 }}>
-                      <div style={{ lineHeight: 1.1, textShadow: "0 1px 8px #000" }}>
-                        <span className="mv-display" style={{ fontSize: 22.5, color: C.parch }}>{n.name}</span>{" "}
-                        <span style={{ fontSize: 16, fontStyle: "italic", color: C.amber }}>{n.role}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
-                    {[["BUILD", BUILD_WORD[n.build] || n.build, C.parch],
-                      ["DEMEANOUR", IV_BEARING[n.id], C.parch],
-                      ["DISPOSITION", mood.word.charAt(0).toUpperCase() + mood.word.slice(1), mood.color]].map(([label, text, ink]) => (
-                      <div key={label} style={{ display: "flex", gap: 9, alignItems: "baseline" }}>
-                        <span className="mv-display" style={{ flexShrink: 0, width: 92, fontSize: 10.5, letterSpacing: 1.6, color: C.dim }}>{label}</span>
-                        <span style={{ minWidth: 0, fontSize: 13.5, lineHeight: 1.4, color: ink }}>{text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </div>
+          ) : (
+            <>
+              <PersonHero n={n} accent={mood.color} height={112} afflicted={ivAff}
+                chip={`DAY ${s.dayNum} · ${IV_ROOM_NAME[n.id] || "THE INTERVIEW"}`} />
+              <div style={{ marginTop: 12 }}>
+                <PersonReadings s={s} n={n} mood={mood} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* ---- the talk ---- */}
@@ -8594,7 +8614,7 @@ function MonsterVillage() {
           </div>
 
           <div className="mvIn mt-4" style={{ animationDelay: "2.3s" }}>
-            <div className="mv-display" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>{s.over.win ? "WHAT BECAME OF THEM" : joined ? "WHAT YOU LEAVE BEHIND" : "THE FALL OF HOLLOW'S EDGE"}</div>
+            <div className="mv-display" style={{ color: C.amber, fontSize: 11.5, letterSpacing: 2 }}>{s.over.win ? "WHAT BECAME OF THEM" : joined ? "WHAT YOU LEAVE BEHIND" : "THE FALL OF HOLLOW'S EDGE"}</div>
             {/* These are not the night you just played. They are the months
                 after it, and on a loss that difference is the whole page:
                 somebody who was breathing at the end of your last day is
@@ -9309,10 +9329,12 @@ function MonsterVillage() {
   const journal = tab && (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setTab(null)}>
       <div className="mt-auto rounded-t-xl p-4 max-h-[85vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex gap-2 flex-wrap" style={{ paddingBottom: 8, marginBottom: 12, borderBottom: `1px solid ${C.parchLine}` }}>
+        {/* four tabs, one row. These are labels in a fixed strip, not prose:
+            they are sized to fit the strip and do not follow the body up. */}
+        <div className="flex gap-1.5" style={{ paddingBottom: 8, marginBottom: 12, borderBottom: `1px solid ${C.parchLine}` }}>
           {[["evidence", "Evidence"], ["bestiary", "Bestiary"], ["record", "Record"], ["help", "Help"]].map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)} className="mv-display px-3 py-1 rounded"
-              style={{ fontSize: 14.5, letterSpacing: 1, background: tab === k ? C.ink : "transparent", color: tab === k ? C.parch : C.inkDim, border: `1px solid ${tab === k ? C.ink : C.parchLine}` }}>
+            <button key={k} onClick={() => setTab(k)} className="mv-display px-2.5 py-1 rounded"
+              style={{ fontSize: 12.5, letterSpacing: 0.6, background: tab === k ? C.ink : "transparent", color: tab === k ? C.parch : C.inkDim, border: `1px solid ${tab === k ? C.ink : C.parchLine}` }}>
               {label}
             </button>
           ))}
@@ -9327,7 +9349,7 @@ function MonsterVillage() {
                 states rather than two separate signals. */}
             <div className="flex items-baseline" style={{ gap: 10 }}>
               <span className="mv-display" style={{ fontSize: 19, letterSpacing: 0.6, whiteSpace: "nowrap" }}>Signs</span>
-              <span className="mv-display" style={{ marginLeft: "auto", fontSize: 13, letterSpacing: 1.4, whiteSpace: "nowrap", color: "#8A6E32" }}>TAP TO STAMP</span>
+              <span className="mv-display" style={{ marginLeft: "auto", fontSize: 11.5, letterSpacing: 1.2, whiteSpace: "nowrap", color: "#8A6E32" }}>TAP TO STAMP</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, marginTop: 7 }}>
               {Object.entries(SIGNS).map(([k, label]) => {
@@ -9338,7 +9360,9 @@ function MonsterVillage() {
                     className="mv-btn flex items-center" title={witnessed ? "you have witnessed this" : undefined}
                     style={{ gap: 7, minHeight: 27, padding: "3px 9px", textAlign: "left", cursor: "pointer",
                       background: ticked ? C.ink : "#F1E8D4", border: `1px solid ${ticked ? C.ink : C.parchLine}` }}>
-                    <span className="mv-display" style={{ minWidth: 0, flex: 1, fontSize: 13, letterSpacing: 1.2, lineHeight: 1.15, color: ticked ? C.parch : "rgba(43,36,22,0.7)" }}>{label.toUpperCase()}</span>
+                    {/* "UNEARTHLY WAILING" and "BLIGHTED PLANTS" have to fit a
+                        half-width chip on a 360px phone: sized to the box. */}
+                    <span className="mv-display" style={{ minWidth: 0, flex: 1, fontSize: 11, letterSpacing: 0.8, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: ticked ? C.parch : "rgba(43,36,22,0.7)" }}>{label.toUpperCase()}</span>
                     {witnessed && <span style={{ flexShrink: 0, width: 6, height: 6, borderRadius: 3, background: C.red, opacity: ticked ? 1 : 0.85 }} />}
                   </button>
                 );
@@ -9348,18 +9372,20 @@ function MonsterVillage() {
             <div style={{ marginTop: 14, borderTop: `1px solid ${C.parchLine}` }} />
             <div className="flex items-baseline" style={{ gap: 10, marginTop: 18 }}>
               <span className="mv-display" style={{ fontSize: 19, letterSpacing: 0.6, whiteSpace: "nowrap" }}>Your reckoning</span>
-              <span className="mv-display" style={{ marginLeft: "auto", fontSize: 13, letterSpacing: 1.4, whiteSpace: "nowrap", color: "#8A6E32" }}>STRIKE TO RULE OUT</span>
+              <span className="mv-display" style={{ marginLeft: "auto", fontSize: 11.5, letterSpacing: 1.2, whiteSpace: "nowrap", color: "#8A6E32" }}>STRIKE TO RULE OUT</span>
             </div>
             {/* 15 creatures sit 5x3; the year The Hollowed walks, 16 sit 4x4 */}
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "12px 6px", marginTop: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "12px 3px", marginTop: 10 }}>
               {gameMonsters(s).map((mm) => {
                 const struckM = s.struck.includes(mm.id);
                 const ok = !struckM && compatM(mm);
                 return (
                   <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
                     className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
-                    <MonsterArt id={mm.id} size={48} flat />
-                    <span style={{ fontSize: 13, lineHeight: 1.25, color: C.ink, textAlign: "center", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
+                    <MonsterArt id={mm.id} size={44} flat />
+                    {/* five to a row: "Doppelganger" and "Necromancer" have to
+                        stand clear of their neighbours at 360px wide */}
+                    <span style={{ width: "100%", padding: "0 3px", fontSize: 9, lineHeight: 1.2, color: C.ink, textAlign: "center", overflowWrap: "anywhere", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
                   </button>
                 );
               })}
@@ -10141,7 +10167,11 @@ function MonsterVillage() {
         <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "14px 16px 0", WebkitOverflowScrolling: "touch" }}>
           {/* ruled-out creatures stay pressable here too: the rite is the same
               naming as an accusation, and the game still does not decide */}
-          <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
+          {/* z-7 lifts the faces above the screen vignette (z-6), which darkens the
+              lower half by up to half and made the bottom row of the grid read
+              dimmer than the top - atmosphere over prose, a handicap over the
+              wall you have to pick the creature out of. */}
+          <div style={{ position: "relative", zIndex: 7, marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
             {gameMonsters(s).map((mm) => {
               const struckM = s.struck.includes(mm.id);
               const dim = struckM || !compatM(mm);
@@ -10251,7 +10281,7 @@ function MonsterVillage() {
               <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.dim, textWrap: "pretty" }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
               {/* ruled-out creatures stay pressable at 35%: the signs are the
                   player's own reading, and the game never decides for them */}
-              <div style={{ marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
+              <div style={{ position: "relative", zIndex: 7, marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
                 {gameMonsters(s).map((mm) => {
                   const struckM = s.struck.includes(mm.id);
                   const dim = struckM || !compatM(mm);
@@ -10371,28 +10401,19 @@ function MonsterVillage() {
       <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
           <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-            <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${heroAccent}55`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
-              <InterviewScene id={n.id} height={112} afflicted={nAff} />
-              <div className="absolute inset-0" style={{ background: !n.alive ? "linear-gradient(rgba(20,16,20,0.35), rgba(20,16,20,0.92))" : "linear-gradient(rgba(20,24,41,0) 42%, rgba(20,24,41,0.9))", pointerEvents: "none" }} />
-              <button onClick={() => setProfile(null)} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: heroAccent, fontSize: 13.5, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>
-              <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 11, letterSpacing: 2, color: heroAccent, background: "rgba(8,10,18,0.55)", border: `1px solid ${heroAccent}55` }}>
-                {troubled ? (n.fled ? "IN HIDING" : "GONE") : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"}
-              </div>
-              <div className="absolute left-4 bottom-2.5 flex items-center gap-2.5">
-                <div className="shrink-0"><Portrait id={n.id} size={40} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} /></div>
-                <div className="min-w-0">
-                  <div className="mv-display" style={{ fontSize: 19, letterSpacing: 1, color: C.parch, textShadow: "0 1px 8px #000" }}>{n.name}</div>
-                  <div style={{ fontSize: 13, color: "rgba(233,223,200,0.95)", textShadow: "0 1px 6px #000" }}>{n.role}</div>
-                </div>
-              </div>
-            </div>
+            <PersonHero n={n} accent={heroAccent} height={112} afflicted={nAff}
+              onClose={() => setProfile(null)}
+              chip={troubled ? (n.fled ? "IN HIDING" : "GONE") : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
             {/* who they are to this village. The build line under it already
                 says the physical part, and lore.body said it again in prose -
                 the page told you twice that Ansel is tall. */}
             <p style={{ fontSize: 13, lineHeight: 1.5, fontStyle: "italic", color: "rgba(233,223,200,0.9)" }}>{lore.who || lore.body}</p>
-            <p className="mt-1.5" style={{ fontSize: 13.5, color: C.dim }}>{BUILD_WORD[n.build] || `${n.build} of build`}{n.alive && s.knownBuild === n.build ? ", like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ", and could be the shape in the dark" : ""}</p>
+            {/* the same three readings the interview shows. Build and
+                demeanour used to be loose unlabelled prose here and a
+                labelled block there. */}
+            <div className="mt-3"><PersonReadings s={s} n={n} mood={n.turned && n.known ? { word: "no longer themselves", color: C.turn } : IV_MOOD[dispTier(n.disp)]} /></div>
             {/* the same courtesy the build line gets: the page says what fits
                 and stays quiet about what does not - the missing ring on the
                 day screen is the village's way of saying the rest. */}
