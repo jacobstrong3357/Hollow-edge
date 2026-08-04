@@ -164,6 +164,14 @@ must name both WHO and WHAT before the village runs out of people.
 - Text style: second person, present tense, dread over gore, em-dash-free,
   "the ${loc}" phrasing. Beats are full paragraphs; morning dawn cards are
   capped at 5 (ranked by `pri`).
+- **Line length is a budget, not a preference** — this is a phone game and
+  every one of these pools competes with art and a choice stack for one
+  screen. Match the house medians when adding to a pool: **night beats ~140
+  chars** (cap ~215), **dawn cards ~150** (cap ~235), **interview answers
+  ~170** (cap ~200; only `PAST_LINES`, asked once ever, runs to ~315). A new
+  pool that reads 20% long will not look wrong in the file and will push the
+  buttons off an iPhone. Where a stage stacks beats (the close pass shows
+  six), only the current beat plus the last two stay on screen.
 
 ## Daylight search & the exam
 
