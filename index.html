@@ -1854,7 +1854,7 @@ const FATAL_KINDS = ["slain", "drained", "executed", "mobbed"];
    Guilt and grief do not sound alike, and both make a person hard to read. */
 const grievingFor = (s, id) => {
   const recent = (s.deaths || [])
-    .filter((d) => FATAL_KINDS.includes(d.kind) && d.id !== id && d.night >= s.nightNum - 2)
+    .filter((d) => FATAL_KINDS.includes(d.kind) && d.id !== id && d.night >= s.nightNum - 2 && !(npcById(s, d.id) || {}).alive)
     .sort((x, y) => y.night - x.night);
   for (const d of recent) { const b = tieIn(BONDS, id, d.id); if (b) return { dead: d, tie: b.tie, kind: "close" }; }
   for (const d of recent) { const f = tieIn(FRICTIONS, id, d.id); if (f) return { dead: d, tie: f.tie, kind: "friction" }; }
@@ -1935,6 +1935,39 @@ const GRIEF_OFF = [
 const GRIEF_TURNED = [
   (d) => `"${d} is dead," they agree, and nod, and go on nodding a beat longer than the sentence needs, as though waiting to see whether anything else arrives. Nothing does.`,
   (d) => `"It is sad." They say it the way you would read it off a page in a language you have only just learned. Their hands stay exactly where they were.`,
+];
+
+/* ---------- the errand grief sends people on ----------
+   A neighbour who has just lost someone they loved goes out, alone, after
+   dark, to the Graveyard. It is the most human thing in the game and from
+   any doorway in Hollow's Edge it looks precisely like the other thing:
+   out late, no lantern, and the ground where the dead are.
+   The MONSTER takes this errand too, on nights it is not hunting, wearing a
+   face that had every reason to go. So following someone to a grave tells
+   you what they did and never what they are. (mourner, dead) => beat. */
+const GRIEF_WALK = [
+  (nm, d) => `${nm} does not go to the ${'Graveyard'} so much as arrive at it, and stops at one plot, and stands. No lantern. No words you can hear. An hour of that, and then home the long way.`,
+  (nm, d) => `You find ${nm} sitting on the wall by ${d}'s plot with their coat open to the cold, doing nothing whatever, in the manner of somebody who has run out of places to put it.`,
+  (nm, d) => `${nm} has brought something small and is arranging it on the turned earth over ${d}, twice, and then a third time, until it is right. Then they stand there and let it be right.`,
+  (nm, d) => `${nm} talks to ${d}'s grave for a long while, quietly and steadily, the way you would talk to somebody in the next room. Once, they laugh. That is the part you take home with you.`,
+];
+/* hailed at the graveside: no reason to lie, and it helps them not at all */
+const GRIEF_HAIL = [
+  (nm, d) => `${nm} does not startle and does not apologise. "I know how this looks. I know what hour it is." A long breath. "Come or go. I am not finished."`,
+  (nm, d) => `"You may as well say it," ${nm} says, without turning round. "Out after dark, at the graves, on my own. If you have a better use for the night than ${d}, I would like to hear it."`,
+  (nm, d) => `"They put ${d} in the ground at noon with half the village watching," ${nm} says. "This is the first hour I have had that was only mine. Do not take it, and do not tell them."`,
+];
+/* asked about it by daylight. Admitting it is the truth, and a terrible
+   alibi, and the monster can say it just as easily. */
+const GRIEF_WHERE_TRUE = [
+  (nm, d) => `"The Graveyard." Steady, and daring you to make something of it. "At that hour, on my own, at ${d}'s plot. I am aware of how that sounds and I would do it again tonight."`,
+  (nm, d) => `"Where do you think." A pause. "The graves. I sat with ${d} a while. You may write it down, and it will look exactly as bad written down as it does said."`,
+  (nm, d) => `"I went to ${d}." No shame in it, and no comfort either. "Yes, in the dark. Grief keeps poor hours and it does not ask permission."`,
+];
+/* or keeping it: private, and it makes them look worse than the truth would */
+const GRIEF_WHERE_LIE = [
+  (nm, d) => `"Home." It arrives too quickly, and they know it, and they let it stand anyway. Some things a person will look guilty rather than share.`,
+  (nm, d) => `"At home, abed." Their hands are perfectly still on the table, which is not where their hands usually are. "Where else would anyone be."`,
 ];
 
 /* The morning's account of who is bearing it badly. (mourner, dead) => card. */
@@ -2752,6 +2785,9 @@ function sampleNight(s, m, n) {
   const huntsCrowd = active && !!evn && m.reach !== "home" && chance(0.5);
   const outMap = {};
   const secretOut = {};
+  /* who is out tonight because somebody they loved is in the ground. Keyed
+     to the dead, so the walk and the morning tell the same story. */
+  const griefOut = {};
   const sc = s.searchCount || {};
   for (const npc of s.npcs) {
     /* the fled are gone from the village: they hold no place in the night's
@@ -2764,7 +2800,19 @@ function sampleNight(s, m, n) {
         const [a, b] = m.hunts;
         outMap[npc.id] = (sc[a] || 0) !== (sc[b] || 0) && chance(0.7) ? ((sc[a] || 0) < (sc[b] || 0) ? a : b) : pick(m.hunts);
       } else if (evn && chance(0.55)) outMap[npc.id] = eventLoc;
-      else outMap[npc.id] = "home";
+      else {
+        /* On a night it is not hunting, the thing goes where the face it is
+           wearing would go. If that face has just lost someone, it stands at
+           the grave like anybody else would, and it is very good at it. This
+           is the whole reason a grief errand can never clear a suspect. */
+        const mg = grievingFor(s, npc.id);
+        if (mg && mg.kind === "close" && chance(0.4)) { griefOut[npc.id] = mg.dead.id; outMap[npc.id] = "Graveyard"; }
+        else outMap[npc.id] = "home";
+      }
+    } else if (!npc.turned && (() => { const g = grievingFor(s, npc.id); if (g && g.kind === "close" && chance(0.4)) { griefOut[npc.id] = g.dead.id; return true; } return false; })()) {
+      /* grief outranks the gathering and the ordinary errand both: nobody
+         goes dancing three nights after burying the person they sat up with */
+      outMap[npc.id] = "Graveyard";
     } else if (evn) {
       if (npc.turned) outMap[npc.id] = chance(0.5) ? eventLoc : "home";
       else if (chance(0.75)) outMap[npc.id] = eventLoc;
@@ -2813,7 +2861,7 @@ function sampleNight(s, m, n) {
      secrets should be a payoff, not a nightly harvest. */
   const secretCatch = {};
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.35);
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, huntLoc, affliction };
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, griefOut, huntLoc, affliction };
 }
 
 function resolveNight(prev, planIn, preEvents) {
@@ -2906,7 +2954,7 @@ function resolveNight(prev, planIn, preEvents) {
   const watching = plan.kind === "watch" ? plan.id : null;
   const exposed = out || !!watching;
   const f = plan.facts || sampleNight(s, m, n);
-  const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch = {}, huntLoc, affliction } = f;
+  const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch = {}, griefOut = {}, huntLoc, affliction } = f;
   if (active) s.lastActive = n;
   const dawn = [...(preEvents || [])];
   const beats = [...preBeats];
@@ -3025,7 +3073,7 @@ function resolveNight(prev, planIn, preEvents) {
   };
 
   const finish = () => {
-    s.nightLogs.push({ night: n, active, huntLoc, outMap, secretOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, odd: evOdd, fight: evFight, pair: evPair } : null });
+    s.nightLogs.push({ night: n, active, huntLoc, outMap, secretOut, griefOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, odd: evOdd, fight: evFight, pair: evPair } : null });
     /* Cap the morning at five cards, keeping the most important: rank by pri
        (deaths, a villager marked, the note first), stable within a tier so the
        night still reads in order, and drop trailing atmosphere. */
@@ -3180,6 +3228,15 @@ function resolveNight(prev, planIn, preEvents) {
         ? "You carried what you saw the rest of the night, and it made every shadow between there and home a little heavier."
         : "You slip away with what you know, and what you know follows you home.");
       dawn.push(ev(`What you watched ${fw.name} do in the night was not the act of a living neighbour. You are certain now: they are changed.${helped ? " You tried to reach them. Whatever answered was not quite them yet." : ""}`, fw.id));
+    } else if (griefOut[fw.id]) {
+      const gd = npcById(s, griefOut[fw.id]);
+      const gname = gd ? gd.name : "the dead";
+      beats.push(`You leave without being seen. Some nights are only grief, and it is nobody's business but theirs.`);
+      /* the fact, and only the fact. Standing at a grave says what somebody
+         DID with their night; it has never said what they are, and the thing
+         wearing a mourner's face does this too on the nights it does not hunt */
+      s.clues.push(`Night ${n}: ${fw.name}'s night accounted for. They went to the Graveyard, to ${gname}, and stayed an hour. That is where they were. It is not what they are.`);
+      dawn.push(ev(`${fw.name}'s night is accounted for: the Graveyard, alone, at ${gname}'s plot. Grief keeps the same hours as the other thing, and the ground is the same ground.`, fw.id));
     } else if (secretOut[fw.id] && secretCatch[fw.id]) {
       const sec = secretOf(s, fw.id);
       s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, secretKnown: true } : x));
@@ -4791,6 +4848,23 @@ function answerFor(s, id, night, q, targetId) {
         s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
         quote = `"The ${playerWitnessed.loc}. You saw me yourself. Sleep and I have parted ways, that is all."`;
         witnessedHandled = true;
+      } else if (log.griefOut && log.griefOut[id]) {
+        /* it spent a quiet night at the grave of somebody it buried, wearing
+           the face that had every reason to be there. It answers about it in
+           exactly the proportions an honest mourner does, admitting it six
+           times in ten, because a monster whose alibi PATTERN differed from
+           grief's would be a tell, and grief is not allowed to be one. */
+        const mgd = npcById(s, log.griefOut[id]);
+        const mgname = mgd ? mgd.name : "the dead";
+        if (chance(0.6)) {
+          claim = "Graveyard";
+          s.monsterClaims[night] = { loc: "Graveyard", admitOut: true };
+          quote = pickFreshIdx(`griefWhereTrue:${id}`, GRIEF_WHERE_TRUE)(npc.name, mgname);
+        } else {
+          claim = "home";
+          s.monsterClaims[night] = { loc: "home", admitOut: false };
+          quote = pickFreshIdx(`griefWhereLie:${id}`, GRIEF_WHERE_LIE)(npc.name, mgname);
+        }
       } else if (mc.loc === "home" && actual === "home") quote = pickFreshIdx(`whereHome:${id}`, per.whereHome)();
       else if (evn && mc.loc === evn.loc && actual === evn.loc) quote = `"At the ${evn.name}, with half the village. Ask anyone there."`;
       else if (mc.loc === "home") quote = `"Home, with the door barred, like any sane soul."`;
@@ -4804,6 +4878,20 @@ function answerFor(s, id, night, q, targetId) {
       } else {
         claim = "home";
         quote = `"Home. Asleep. Why do you ask me this?"`;
+      }
+    } else if (log && log.griefOut && log.griefOut[id]) {
+      const gd = npcById(s, log.griefOut[id]);
+      const gname = gd ? gd.name : "the dead";
+      if (playerWitnessed) {
+        claim = playerWitnessed.loc;
+        quote = `"You know where. The ${playerWitnessed.loc}. You saw me there, and you know who is buried in it."`;
+        witnessedHandled = true;
+      } else if (chance(0.6)) {
+        claim = "Graveyard";
+        quote = pickFreshIdx(`griefWhereTrue:${id}`, GRIEF_WHERE_TRUE)(npc.name, gname);
+      } else {
+        claim = "home";
+        quote = pickFreshIdx(`griefWhereLie:${id}`, GRIEF_WHERE_LIE)(npc.name, gname);
       }
     } else if (log && log.secretOut && log.secretOut[id] && !npc.secretKnown) {
       /* an innocent hiding a human secret lies too: badly, unless the lie is already dead on arrival */
@@ -9471,6 +9559,10 @@ function MonsterVillage() {
        allows: otherwise the tail sees an ordinary errand and nothing more,
        so a follow is a good bet, never a harvest */
     if (walk.facts.secretOut[wid] && (walk.facts.secretCatch || {})[wid]) return { kind: "secret", dest, text: secretOf(s, wid).walk(w.name) };
+    /* no catch roll on grief: there is nothing to decode about somebody
+       standing at a grave, and it proves nothing either way */
+    const gid = (walk.facts.griefOut || {})[wid];
+    if (gid) return { kind: "grief", dest, text: pickFreshIdx("griefWalk", GRIEF_WALK)(w.name, (npcById(s, gid) || {}).name || "them") };
     return { kind: "plain", dest, text: pickFreshIdx("followPlain", FOLLOW_PLAIN_SCENES)(w.name, dest) };
   };
 
@@ -9480,6 +9572,8 @@ function MonsterVillage() {
     if (wid === s.monster.vid && walk.facts.active) return pickFreshIdx("hailMonster", HAIL_MONSTER_LINES)(w.name, dest);
     if (w.turned) return pickFreshIdx("hailTurned", HAIL_TURNED_LINES)(w.name);
     if (walk.facts.secretOut[wid]) return secretOf(s, wid).hail(w.name);
+    const gh = (walk.facts.griefOut || {})[wid];
+    if (gh) return pickFreshIdx("griefHail", GRIEF_HAIL)(w.name, (npcById(s, gh) || {}).name || "them");
     return pickFreshIdx("hailPlain", HAIL_PLAIN_LINES)(w.name, dest);
   };
 
@@ -9710,6 +9804,10 @@ function MonsterVillage() {
                   {fsc.kind === "turned" && (<>
                     <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You back away from what ${fw2.name} has become, one careful step at a time, and force your feet on toward the ${walk.loc}.`] })}>Carry it with you. On to the {walk.loc}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Slip away home with what you know</Btn>
+                  </>)}
+                  {fsc.kind === "grief" && (<>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You leave ${fw2.name} to it. Whatever else is true of tonight, that part was not yours to watch.`] })}>Leave them their hour. On to the {walk.loc}</Btn>
+                    <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Enough for one night. Head home</Btn>
                   </>)}
                   {fsc.kind === "secret" && (<>
                     <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`Some secrets are only secrets. You leave ${fw2.name} to theirs and keep to your own errand, toward the ${walk.loc}.`] })}>Leave them to it. On to the {walk.loc}</Btn>

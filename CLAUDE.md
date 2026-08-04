@@ -254,6 +254,21 @@ must name both WHO and WHAT before the village runs out of people.
   their bonded kin −2 disposition (the heaviest single move in the game),
   the mob hanging them costs −1 for your standing by, and saving them earns
   their kin +1.
+- **The grief errand** (`facts.griefOut`, sampled in `sampleNight`, logged on
+  `nightLogs` so the interview can read it): a close mourner goes out alone
+  to the Graveyard at 0.4, which outranks the gathering and the ordinary
+  errand both. From any doorway that is indistinguishable from the other
+  thing — out late, no lantern, and the ground where the dead are — and the
+  mob will hang them for it.
+  **The monster takes this errand too**, on nights it is not hunting, wearing
+  a face that had every reason to go (see the `else` in its `sampleNight`
+  branch). So `followScene`'s `"grief"` kind resolves the same for both, with
+  no catch roll (there is nothing to decode about someone at a grave), and
+  the clue is written as fact, never clearance: *"That is where they were. It
+  is not what they are."* The monster's `where` answer on a grave night is
+  drawn from the **same** `GRIEF_WHERE_TRUE`/`LIE` pools at the **same** 60/40
+  split as an honest mourner — an alibi pattern that differed from grief's
+  would be exactly the tell grief is not allowed to be.
 - **Tell noise is load-bearing**: the monster's person-question tells
   (talk/howare/past) fire only ~45% — otherwise it answers from the borrowed
   villager's own human pools (a fine actor). Innocents give scared/rude
