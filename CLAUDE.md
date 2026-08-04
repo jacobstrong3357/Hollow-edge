@@ -123,6 +123,25 @@ must name both WHO and WHAT before the village runs out of people.
   (`BRUSH_BOLT`), then the commit. It always sets `s.monsterSawYou`, and a
   brushed night skips the whole ground-search settle in `resolveNight`
   (`!mods.brush`) because the player spent it running.
+- **Watching it happen** (`witness` stage) — the only place the player sees a
+  kill. Opens from `rollApproachFate` **only after the player's own fate has
+  rolled survival**, so it can never be a way to die and never touches
+  `outDeathChance`: the thing picks you first at the odds it always had, and
+  only if it passes do you get to watch it pick a neighbour. That is also why
+  the NPC is the likelier victim, which is the intent, not a separate weight.
+  Needs `facts.active && facts.huntLoc === walk.loc` and a living, untainted,
+  non-host villager whose `outMap` is that same place (`witnessPool`).
+  Everything shown is settled in the walk and passed in `mods.witnessKill`
+  (victim, `kind`, `sign`) and re-used verbatim: it **overrides `doomedId`**,
+  supplies `victimKind` instead of a second roll, and suppresses the generic
+  scream beat, the glimpse block and the whole ground-search settle.
+  **No shape is ever described.** The one thing you carry off is the mark
+  (`WITNESS_KILL`, keyed by sign, wail excluded as always), subject to the
+  usual one-tell-a-night (`signGivenTonight()`).
+  Shouting cannot kill you (the night already spared you) — it costs
+  `s.monsterSawYou`, saves them at 0.35, and a successful save clears
+  `doomedId` entirely and sets `s.embolden = n + 1`, so the village pays for
+  your courage the following night.
 - **`mods.quarry` is the walk's one promise to the next morning**: the
   animal that bolted and drew it off you. Set by the close pass and by a
   hide that resolves `distracted` on a tread that really was the monster

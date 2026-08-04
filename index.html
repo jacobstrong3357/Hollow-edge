@@ -1546,6 +1546,58 @@ const TENSION_FLEE = [
 const FATE_LIVE = "Then it moves off about its own business, at its own pace, and the night gives you back.";
 const FATE_DIE = "It stops moving. Everything stops.";
 
+/* ---------- watching it happen ----------
+   The one thing the walk could never show you: a neighbour, at the hunting
+   ground, on a night it hunts, while you are lying twenty feet away in the
+   dark. Only ever reached AFTER the night has already decided you live (see
+   rollApproachFate), so it can never be the way you die: it is the shape a
+   survival takes when somebody else does not.
+   Nothing here describes a shape. You learn exactly one thing, the mark it
+   leaves, which is the same honest and ambiguous evidence as every mark in
+   the mud. What kind of thing did it is not on offer at any distance.
+   Wail is excluded from the sign draw here as it is everywhere else: it is
+   heard on a wailing night through the wailTonight path, never studied off
+   a body. (victim-name, place) => beat. */
+const WITNESS_OPEN = [
+  (nm, l) => `You are flat behind cold stone before you know why. Then you see why: ${nm} is out here too, crossing the ${l} at an easy pace. And something at the far edge of it is not crossing anything.`,
+  (nm, l) => `${nm} is here. Twenty feet of open ground, an unhooded lantern, no idea at all. And between them and the road home, something that has stopped moving because it no longer needs to.`,
+  (nm, l) => `You see ${nm} first and the other thing second, which is the wrong order. They are closing on the same patch of the ${l}, and neither of them is hurrying.`,
+];
+/* the kill itself, keyed by sign, so what you carry away is a mark and never
+   a silhouette */
+const WITNESS_KILL = {
+  claw: (nm, l) => `Something opens ${nm} from shoulder to hip in one motion, four lines at once. The sound is not the one you were braced for. It is quieter. It is very much quieter.`,
+  bite: (nm, l) => `Whatever reaches ${nm} takes the throat first, and the whole of it is over inside a second, and the second does not contain a scream.`,
+  cold: (nm, l) => `The cold arrives before anything else does. ${nm} stops mid-step, frost goes over them like a hand closing, and they are down before you understand they have stopped.`,
+  tracks: (nm, l) => `${nm} is there. Then ${nm} is not, and the ground where they were standing is printed deep, twice, by something that has never worn a boot.`,
+  graves: (nm, l) => `Something comes up out of the dark, low and wrong, and takes ${nm} down into it. What rolls over you afterward is turned earth and long burial.`,
+  flora: (nm, l) => `${nm} goes down without a word, and the grass around them browns and curls outward in a ring while you watch, faster than any season does it.`,
+  hex: (nm, l) => `${nm} stops as though a hand were laid flat on their chest, and cannot move, and something scratches a shape into the ground beside them before it finishes.`,
+};
+/* and the taking, for the kinds that do not kill outright */
+const WITNESS_TAKEN = [
+  (nm, l) => `${nm} does not fall. ${nm} is lifted, still moving, still shaping a word, and carried off the ${l} at a walking pace. That was not a killing, and you cannot say which is worse.`,
+  (nm, l) => `It does not finish ${nm}. It gathers them almost carefully, the way you lift someone asleep, and walks off into the dark with their feet trailing.`,
+];
+const WITNESS_DRAG = [
+  (nm, l) => `Then it takes ${nm} by an ankle and draws them off toward the edge of the ${l}, unhurried, the way a man carries in firewood. The sound goes on after you cannot see it.`,
+  (nm, l) => `And then ${nm} is being carried away across the ${l}, without hurry, and you lie in your dark and let it happen, because there is nothing else on this earth you can do.`,
+];
+/* shouting cannot kill you: the night settled that before this stage opened.
+   It costs you the one thing you had left, which is not being known. */
+const WITNESS_SHOUT_SAVED = [
+  (nm, l) => `You shout. Not a word, just noise, and the loudest thing in the parish. ${nm} runs, and keeps running, and the ${l} is left to you and the thing you have just introduced yourself to.`,
+  (nm, l) => `"RUN." Your own voice, and you barely know it. ${nm} asks no questions at all. Boots, a gate, then nothing, and something out there turning toward where the shout came from.`,
+];
+const WITNESS_SHOUT_LOST = [
+  (nm, l) => `You shout. ${nm} turns toward you, which is the wrong way, and that is the last decision ${nm} makes. It was always too close. Knowing that will not help you.`,
+  (nm, l) => `You shout, and it is half a second late, and half a second is the whole of it. What you bought was not ${nm}'s life. It was being certain, forever, that you tried.`,
+];
+const WITNESS_AFTER = [
+  (l) => `You stay where you are long after the ${l} is quiet again. Then you go home, carefully, and are ashamed of how careful you are.`,
+  (l) => `You do not remember leaving the ${l}. You remember your own door, and your hands not working the bolt, and trying it three times.`,
+];
+
 /* ---------- the close pass ----------
    The night's rarest mercy. It does not take you, and it does not simply
    wander off either: it comes close enough to be smelled, close enough to
@@ -2983,6 +3035,15 @@ function resolveNight(prev, planIn, preEvents) {
     else if (m.reach !== "home" && huntLoc) { const hp = dp.filter((x) => outMap[x.id] === huntLoc); if (hp.length && chance(0.65)) dp = hp; }
     if (dp.length) doomedId = pick(dp).id;
   }
+  /* -- the walk showed this happening. Whoever it took in front of the
+     player is who it took, and a warning that got them clear means it went
+     home hungry: no substitute victim, because the player watched it lose
+     this one. It comes out again the very next night for it (embolden),
+     which is the price of the shout and is paid by the whole village. -- */
+  if (mods.witnessKill && !s.over) {
+    if (mods.witnessKill.saved) { doomedId = null; s.embolden = n + 1; }
+    else doomedId = mods.witnessKill.id;
+  }
 
   /* event incidents */
   let evFight = null, evPair = null, evWander = null, evOdd = [], evSweepFind = null, evSweepSense = null;
@@ -3332,7 +3393,7 @@ function resolveNight(prev, planIn, preEvents) {
     } else if (mods.approach === "back") {
       beats.push(`Short of the ${plan.loc}, your nerve makes the decision for you. You turn for home, skin prickling, and do not run only because running invites the chase.`);
       dawn.push(ev(`You turned back before the ${plan.loc} last night. Whatever was there kept what it knows, and so did you. But you are alive to be careful again.`));
-    } else if (active && plan.loc === huntLoc && mods.follow !== s.monster.vid) {
+    } else if (active && plan.loc === huntLoc && mods.follow !== s.monster.vid && !mods.witnessKill) {
       const press = mods.approach === "press";
       /* a hunt playing out at the edge of an event's own firelight/crowd gives
          cover: lower odds of being caught, higher odds of a glimpse in the
@@ -3421,7 +3482,7 @@ function resolveNight(prev, planIn, preEvents) {
     /* A night that ended in a close pass never got its search: the player
        spent it running. Whatever the errand was, it is not what the morning
        has to report. */
-    if (!wentHome && mods.approach !== "back" && !mods.brush) {
+    if (!wentHome && mods.approach !== "back" && !mods.brush && !mods.witnessKill) {
       const unfound = s.locEvidence[plan.loc].filter((sg) => !s.foundSigns.includes(sg));
       if (plan.facts && mods.searchRoll) {
         /* the interactive walk already rolled and SHOWED this result live;
@@ -3692,7 +3753,11 @@ function resolveNight(prev, planIn, preEvents) {
          not settle into pure collecting: after first blood they kill or change
          from night to night, so a body is never proof it does not also change. */
       const firstBlood = (m.attack === "turn" || m.attack === "both") && !s.deaths.some((d) => d.kind === "slain");
-      victimKind = firstBlood ? "kill" : (m.attack === "both" ? (chance(0.5) ? "kill" : "turn") : m.attack);
+      /* the interactive walk settled this on screen (mods.witnessKill.kind)
+         using this same formula: reuse it rather than roll a second answer */
+      victimKind = (mods.witnessKill && mods.witnessKill.id === victim.id && mods.witnessKill.kind)
+        ? mods.witnessKill.kind
+        : firstBlood ? "kill" : (m.attack === "both" ? (chance(0.5) ? "kill" : "turn") : m.attack);
       /* the succubus never kills at home: it calls its victims OUT, to its
          own ground, and the bodies are found there come morning */
       if (m.id === "succubus" && victimKind === "kill") victimWhere = huntLoc || pick(m.hunts);
@@ -3704,7 +3769,10 @@ function resolveNight(prev, planIn, preEvents) {
         if (n === 1) {
           beats.push(...NIGHT_ONE_SCENE(victim, victimWhere));
         } else {
-          beats.push(m.id === "necromancer" && necroDead
+          if (mods.witnessKill && mods.witnessKill.id === victim.id) {
+            /* lived on screen, in full, twenty feet away. The recap does not
+               get to tell it again in the third person. */
+          } else beats.push(m.id === "necromancer" && necroDead
             ? pickFreshIdx("necroKill", NECRO_KILL)(victim.name, necroDead.name)
             : m.id === "succubus"
             ? pickFreshIdx("succKill", SUCCUBUS_KILL)(victim.name, victimWhere)
@@ -4072,6 +4140,32 @@ function resolveNight(prev, planIn, preEvents) {
     dawn.push(ev(pick(EXEC_AFTERMATH)(ropeDeath.name)));
     const stained = ropeDeath.kind === "mobbed" && s.ropeStain ? npcById(s, s.ropeStain) : null;
     if (stained && stained.alive && chance(0.8)) dawn.push(ev(pick(ROPE_SUSPICION)(stained.name, ropeDeath.name), stained.id));
+  }
+
+  /* --- what you saw from behind the stones ---
+     The kill itself was lived on screen. Here we only settle the ledger: the
+     mark it left, which is the one thing twenty feet of dark will give you,
+     and never a face or a shape. Shouting costs you being unknown to it.
+     One tell a night, as everywhere: if the ground or the body already gave
+     something up tonight, the sight of it does not hand over a second. --- */
+  if (!s.over && mods.witnessKill) {
+    const wk = mods.witnessKill;
+    const wv = npcById(s, wk.id);
+    const wname = wv ? wv.name : "someone";
+    if (wk.shouted) s.monsterSawYou = true;
+    if (wk.saved) {
+      s.clues.push(`Night ${n}: you shouted, at the ${plan.loc}, and ${wname} got clear. It went hungry. It will not be patient about that.`);
+      dawn.push(ev(`${wname} is alive this morning because somebody screamed at the ${plan.loc} in the night, and half the village has worked out it was you. It took nobody. Nobody expects it to be gracious about that.`, wk.id, 2));
+    } else if (wk.sign && !signGivenTonight()) {
+      s.foundSigns.push(wk.sign);
+      const ws = senseFor(wk.sign);
+      s.clues.push(`Night ${n}: you watched it take ${wname} at the ${plan.loc} from twenty feet away. You never saw a shape. You saw what it left. ${ws}`);
+      dawn.push(evPlaque(ev(`You were there when it took ${wname}, close enough to hear it and too far to matter, and you never once saw what it was. Only what it does. ${ws}`, wk.id, 3), "amber", wk.sign));
+    } else {
+      s.clues.push(`Night ${n}: you watched it take ${wname} at the ${plan.loc}. Twenty feet, and not one thing about the shape of it that you could swear to in daylight.`);
+      dawn.push(ev(`You were there when it took ${wname}, and you have nothing to give the village but that: that you saw it happen, and that you cannot describe a single thing about what did it.`, wk.id, 2));
+    }
+    if (wk.shouted && !wk.saved) dawn.push(ev(`You shouted. It did not save ${wname}, and it did tell the dark exactly where you were lying. You will be paying that off for a while.`, undefined, 1));
   }
 
   /* --- the close pass, and what it cost ---
@@ -9651,6 +9745,31 @@ function MonsterVillage() {
     };
     /* the close pass is the rare shape of a reprieve, not the usual one */
     const BRUSH_P = 0.45;
+    /* ---- watching it take somebody else ----
+       Opened only where the night has already spared the player, so nothing
+       decided here can kill them. What IS decided here is the victim, the
+       manner, and the mark left behind, all three passed to resolveNight in
+       mods.witnessKill and used verbatim rather than re-rolled. The kill or
+       taking is worked out with the same formula resolveNight uses, so a
+       collecting kind still opens with blood and still collects after. */
+    const startWitness = (victim, approach) => {
+      const m2 = monsterOf(s);
+      const firstBlood = (m2.attack === "turn" || m2.attack === "both") && !s.deaths.some((d) => d.kind === "slain");
+      const kind = firstBlood ? "kill" : (m2.attack === "both" ? (chance(0.5) ? "kill" : "turn") : m2.attack);
+      /* the mark it leaves, and the only thing you come away with. Never
+         wail: that is heard on a wailing night, never taken off a body. */
+      const pool = m2.signs.filter((sg) => sg !== "wail" && WITNESS_KILL[sg]);
+      Snd.danger();
+      setWalk({
+        ...walk, stage: "witness", pre: [], witnessAct: null, approachUsed: approach,
+        witness: { id: victim.id, kind, sign: pool.length ? pick(pool) : null },
+        witnessOpen: pickFreshIdx("witnessOpen", WITNESS_OPEN)(victim.name, walk.loc),
+        /* whether a shout could have got them clear was settled before you
+           opened your mouth, so the choice is real and the dice are not
+           waiting to punish it */
+        witnessSaveable: chance(0.35),
+      });
+    };
     const runFate = () => {
       const a = walk.fate.action;
       if (a.type === "brush") startBrush(a.loc, a.after);
@@ -9658,12 +9777,28 @@ function MonsterVillage() {
       else if (a.type === "commitWatch") commitWatch(a.extra);
       else goReturn(a.extra);
     };
+    /* Who else is standing on the hunting ground tonight. The monster's own
+       face is excluded (it is the one doing this) and so are the changed (it
+       does not eat its own). If this is empty there is nobody to lose and
+       the witness stage cannot open. */
+    const witnessPool = () => (walk.facts.active && walk.facts.huntLoc === walk.loc)
+      ? s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && walk.facts.outMap[x.id] === walk.loc)
+      : [];
+    const WITNESS_P = 0.5;
     const rollApproachFate = (approach) => {
       const died = chance(outDeathChance(s, walk.facts, walk.mods, approach));
+      /* The night takes somebody else, in front of you. Rolled only on the
+         far side of the player's own fate, so this can never change the odds
+         of dying out here: the thing picks you first, at the odds it always
+         had, and only if it does not do you get to watch it pick a
+         neighbour. Which is also why the NPC is the likelier victim. */
+      const wPool = died ? [] : witnessPool();
+      const witnessed = !died && wPool.length > 0 && chance(WITNESS_P);
       /* it does not take you: sometimes it comes the whole way in first. The
          player ran, so the night's searching is over, and the walk ends at
          the door rather than falling back into the ground-search stages. */
-      const brushed = !died && chance(BRUSH_P);
+      const brushed = !died && !witnessed && chance(BRUSH_P);
+      if (witnessed) { startWitness(pick(wPool), approach); return; }
       startFate(
         TENSION_APPROACH,
         died ? FATE_DIE : brushed ? null : FATE_LIVE,
@@ -9709,13 +9844,14 @@ function MonsterVillage() {
     /* the close pass keeps the frame red until the beat you are allowed to
        breathe on, and tightens the kicker as the distance closes */
     const brushAt = walk.stage === "brush" ? Math.min(walk.brushIdx || 0, (walk.brushLines || []).length) : -1;
-    const tense = walk.stage === "fate" || walk.stage === "hide"
+    const tense = walk.stage === "fate" || walk.stage === "hide" || walk.stage === "witness"
       || (walk.stage === "approach" && danger)
       || (brushAt >= 0 && brushAt < (walk.brushLines || []).length)
       || ((walk.stage === "chased" || walk.stage === "listened") && walk.facts.active)
       || (walk.stage === "company" && walk.thrallId && !walk.thrallLooking)
       || ((walk.stage === "followed" || walk.stage === "reveal") && walk.followScene && walk.followScene.kind === "monster");
-    const tenseLabel = brushAt >= 4 ? "IT IS SPEAKING TO YOU" : brushAt >= 2 ? "IT IS AN ARM'S LENGTH AWAY" : "SOMETHING IS CLOSE";
+    const tenseLabel = walk.stage === "witness" ? (walk.witnessAct ? "DO NOT LOOK AWAY" : "SOMETHING IS CLOSE")
+      : brushAt >= 4 ? "IT IS SPEAKING TO YOU" : brushAt >= 2 ? "IT IS AN ARM'S LENGTH AWAY" : "SOMETHING IS CLOSE";
     const sceneLoc = walk.stage === "brush" ? ((walk.brushQuarry || {}).loc || walk.loc)
       : (walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")) ? walk.followScene.dest
       : isWatch ? (HOME_LOC[walk.targetId] || "Cottage") : walk.loc;
@@ -9955,6 +10091,55 @@ function MonsterVillage() {
                 <div className="flex flex-col gap-2">
                   {beat(walk.thrallText, C.turn)}
                   <Btn full kind="amber" onClick={() => goReturn({ thrallId: walk.thrallId, thrallLooked: true })}>Back away, sickened, before it minds you →</Btn>
+                </div>
+              );
+            })()}
+            {walk.stage === "witness" && (() => {
+              /* WATCHING IT HAPPEN. The player's own survival was settled
+                 before this opened, so neither choice here can kill them.
+                 What the choice buys is a neighbour's life at 0.35, and what
+                 it costs is never being unknown to it again. */
+              const wv = npcById(s, walk.witness.id);
+              const act = walk.witnessAct;
+              const commitWitness = (extra) => commitWalk({
+                approach: walk.approachUsed, fateDeath: false,
+                witnessKill: { ...walk.witness, shouted: !!extra.shouted, saved: !!extra.saved },
+              });
+              if (!act) {
+                return (
+                  <div className="flex flex-col gap-2">
+                    {beat(walk.witnessOpen, C.redBright)}
+                    <Btn full onClick={() => setWalk({ ...walk, witnessAct: "hide", pre: [] })}>Stay down. Do not move</Btn>
+                    <Btn full kind="red" onClick={() => setWalk({ ...walk, witnessAct: "shout", pre: [] })}>Shout. Warn them</Btn>
+                    <p style={{ fontSize: 14, lineHeight: 1.5, color: C.dim }}>Keep still and {wv.name} does not know you are here. Shout, and it will know exactly where the noise came from, for the rest of this.</p>
+                  </div>
+                );
+              }
+              const saved = act === "shout" && walk.witnessSaveable;
+              const lines = saved
+                ? [pickFreshIdx("witnessSaved", WITNESS_SHOUT_SAVED)(wv.name, walk.loc)]
+                : [
+                    ...(act === "shout" ? [pickFreshIdx("witnessLost", WITNESS_SHOUT_LOST)(wv.name, walk.loc)] : []),
+                    walk.witness.kind === "kill" && walk.witness.sign
+                      ? WITNESS_KILL[walk.witness.sign](wv.name, walk.loc)
+                      : pickFreshIdx("witnessTaken", WITNESS_TAKEN)(wv.name, walk.loc),
+                    ...(walk.witness.kind === "kill" ? [pickFreshIdx("witnessDrag", WITNESS_DRAG)(wv.name, walk.loc)] : []),
+                  ];
+              const idx = Math.min(walk.witnessIdx || 0, lines.length);
+              const done = idx >= lines.length;
+              return (
+                <div className="flex flex-col gap-2">
+                  {/* same two-deep window as the close pass: this stage runs
+                      to four beats and the choices must stay on the screen */}
+                  {lines.slice(Math.max(0, idx - 2), idx).map((t, i) => (
+                    <p key={i} style={{ fontSize: 15.5, lineHeight: 1.5, color: "rgba(233,223,200,0.62)", textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{t}</p>
+                  ))}
+                  <p style={{ fontSize: 15.5, lineHeight: 1.5, color: done ? C.parch : C.redBright, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                    <SpokenText text={done ? pickFreshIdx("witnessAfter", WITNESS_AFTER)(walk.loc) : lines[idx]} speed={38} />
+                  </p>
+                  {done
+                    ? <Btn full kind="amber" onClick={() => commitWitness({ shouted: act === "shout", saved })}>Home, and bar the door →</Btn>
+                    : <Btn full kind="red" onClick={() => setWalk({ ...walk, witnessIdx: idx + 1 })}>{idx === lines.length - 1 ? "Do not look away →" : "And then →"}</Btn>}
                 </div>
               );
             })()}
