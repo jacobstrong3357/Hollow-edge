@@ -110,9 +110,29 @@ must name both WHO and WHAT before the village runs out of people.
   `depart → affliction? → lane? → event? → sound? → hide? → approach →
   company? → return`, advanced by `nextStage(walk, fromType)`. Side scenes
   (`followed`, `hailed`, `chased`, `listened`, `hidden`, `vigil`, `found`,
-  `mingled`) branch off and re-enter via `nextStage`/`goReturn`/
+  `brush`, `mingled`) branch off and re-enter via `nextStage`/`goReturn`/
   `advanceAfterSearch`. `commitWalk`/`commitWatch` end the night via
   `nightfall(plan)` → `resolveNight`.
+- **The close pass** (`brush`) is the rare shape a survival can take. It is
+  only ever reached *after* the night has already decided in your favour, so
+  it can never kill: `rollApproachFate` and `startFollowFate` pre-roll the
+  outcome (`mods.fateDeath` / `mods.followFate`, both re-used verbatim by
+  `resolveNight` instead of re-rolling), and only a survival can route
+  through `{ type: "brush" }`. The stage is pure reveal: five escalating
+  beats (`BRUSH_NOTICE/NEARER/CLOSE/TAUNT/QUARRY`), then the bolt for home
+  (`BRUSH_BOLT`), then the commit. It always sets `s.monsterSawYou`, and a
+  brushed night skips the whole ground-search settle in `resolveNight`
+  (`!mods.brush`) because the player spent it running.
+- **`mods.quarry` is the walk's one promise to the next morning**: the
+  animal that bolted and drew it off you. Set by the close pass and by a
+  hide that resolves `distracted` on a tread that really was the monster
+  (`walk.hideIsMonster`; a phantom tread kills nothing, so it owes nothing).
+  `resolveNight` pays it: the body is found at dawn killed in the manner of
+  its killer (`QUARRY_DAWN`, keyed by sign exactly like `ANIMAL_SIGN`), and
+  the place keeps the marks of the chase for that one day if the player goes
+  back (`QUARRY_ECHO` in `actSearch`, texture only). It surfaces a NEW tell
+  only when the night has not already given one up (`signLearnedTonight`,
+  `mods.searchRoll.found`): earned, never doubled, and never a plant.
 - **Fled villagers are gone**: `sampleNight` skips them (no `outMap` entry),
   they cannot be victims, met, or rumored about. Keep `!x.fled` filters when
   adding new pools of villagers.

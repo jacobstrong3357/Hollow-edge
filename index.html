@@ -1422,11 +1422,17 @@ const HIDE_RESOLVE_PASS = [
   (l) => `It goes by, unhurried, and the last of it - a hem, a shadow - is gone around the corner. You go on toward the ${l}.`,
   (l) => `The tread reaches you, holds level a long moment, and moves on without pausing. You go on toward the ${l} on legs that do not quite trust the ground yet.`,
 ];
+/* Something else moves first, and the tread goes after it instead of you.
+   Where that something else is an animal (`a`), the night owes it a body:
+   the walk records mods.quarry and the morning accounts for it, but ONLY on
+   a hide that was really the thing (walk.hideIsMonster). A phantom tread
+   kills nothing, so a phantom tread leaves nothing to find. */
 const HIDE_RESOLVE_DISTRACT = [
-  (l) => `Something else moves first: a cat off a wall, a loose slate, a fox breaking cover. The tread breaks toward the sound instead. You go on toward the ${l}.`,
-  (l) => `A dog starts up two doors down, frantic, and the tread peels off toward it instead of coming on. You go on toward the ${l}.`,
-  (l) => `A shutter bangs somewhere behind you, and whatever was closing on you changes course toward the noise, in no hurry. You go on toward the ${l}.`,
-  (l) => `Out past the last wall, something else moves, too loud to be it, and draws the tread away at an angle. You use the gift and go on toward the ${l}.`,
+  { a: null, line: (l) => `Something else moves first: a loose slate, a latch, a noise with no owner at all. The tread breaks toward it instead. You go on toward the ${l}.` },
+  { a: "dog", line: (l) => `A dog starts up two doors down, frantic, and the tread peels off toward it instead of coming on. You go on toward the ${l}.` },
+  { a: null, line: (l) => `A shutter bangs somewhere behind you, and whatever was closing on you changes course toward the noise, in no hurry. You go on toward the ${l}.` },
+  { a: "cat", line: (l) => `A cat comes off a wall behind you, indignant and loud, and the tread turns after it with an eagerness that makes you very glad it is a cat. You go on toward the ${l}.` },
+  { a: "fox", line: (l) => `Out past the last wall a fox breaks cover, too loud to be careful, and draws the tread away at an angle. You use the gift and go on toward the ${l}.` },
 ];
 const HIDE_RESOLVE_SPARE = [
   (l) => `It stops. It knows exactly where you are, and does not reach for you. A voice comes instead, warped past recognizing, almost gentle: "You shouldn't be out in the dark, little one." Then it is simply gone.`,
@@ -1457,6 +1463,77 @@ const TENSION_FLEE = [
 ];
 const FATE_LIVE = "Then it moves off about its own business, at its own pace, and the night gives you back.";
 const FATE_DIE = "It stops moving. Everything stops.";
+
+/* ---------- the close pass ----------
+   The night's rarest mercy. It does not take you, and it does not simply
+   wander off either: it comes close enough to be smelled, close enough to
+   speak, and it speaks. Then something small and living bolts out of the
+   dark and buys your life with its own.
+   Lived one beat at a time in the walk's "brush" stage, and paid for the
+   following morning by whatever is left of the animal (mods.quarry, settled
+   in resolveNight, found in the dawn cards and again at the place itself if
+   the player goes back by daylight).
+   Nothing in these pools is diagnostic. No beat names a kind, no taunt could
+   only be one mouth, and the smell of old cloth and turned earth would fit
+   any of the fifteen. The only honest evidence the sequence yields is the
+   dead animal in the morning, and that carries a sign the thing really
+   leaves, never a plant. */
+const BRUSH_NOTICE = [
+  (l) => `It stops what it is doing. The head comes up and turns, unhurried, until it is facing your piece of the dark, and then it draws the air in through its nose: once, twice, the way a man tests milk that has stood too long.`,
+  (l) => `Whatever it was busy with, it stops being busy. It lifts its face and tastes the air over the ${l} in long slow pulls, and each one turns it another inch toward you.`,
+  (l) => `It goes still in the middle of its work. Then it tips its head back and smells the night thoroughly, the way you would read a page, and somewhere on that page it finds your line.`,
+];
+const BRUSH_NEARER = [
+  (l) => `It comes on. Not fast. A pace, then a pause, then another pace, and the pauses are worse than the paces.`,
+  (l) => `It starts toward you across the ${l}, taking its time about it, stopping now and then to be certain it still has you. Nothing in a hurry was ever that certain.`,
+  (l) => `Closer. Then closer. It sets its feet down one after another with great care, as though the noise of walking were a courtesy it is extending to you.`,
+];
+const BRUSH_CLOSE = [
+  (l) => `Close enough now to smell: wool that has not been washed in a long season, wet earth, and under both of those something sweet that has no business being sweet. You stop breathing. You decide, calmly, never to breathe again.`,
+  (l) => `It halts an arm's length from the dark you are pressed into. You can hear it breathing. Worse, you can hear how little it needs to. The smell that comes with it is old cloth and turned ground and a sweetness with something spoiled at the bottom.`,
+  (l) => `It is near enough that you could count the threads of the coat, if your eyes would hold still long enough to count. The air it pushes ahead of itself is cellar air: cold, close, and used.`,
+];
+const BRUSH_TAUNT = [
+  `Then it laughs, quietly, delighted, and speaks into the dark without troubling to look at you. "Who is the little spy in my dark?"`,
+  `Then it laughs, low, like a man enjoying a joke told to him by somebody else. "Usually I have to go and fetch my supper," it says. "You have saved me the walk."`,
+  `And then it says, conversationally, to nobody at all, "Breathe, then. Everyone breathes eventually." And laughs, as though it has said something kind.`,
+  `Then it makes a sound that is very nearly a laugh. "I know that heart," it says. "I have heard it in the square, in the daylight, being polite to me."`,
+  `Then, gently, in a voice with a neighbour's warmth badly fitted over it: "You can come out. I never mind the company." The worst of it is how much of that is a real invitation.`,
+  `Then it crouches, unhurried, and speaks at the height your face would be if you were braver. "You have been writing things down," it says, fondly. "I do hope I am spelled properly."`,
+];
+/* the break: something smaller than you runs first. `a` is the animal the
+   morning has to account for. */
+const BRUSH_QUARRY = [
+  { a: "hare", line: (l) => `And then the scrub across the ${l} comes apart and a hare goes out of it like a thrown stone, mad with terror, straight over the open ground. The thing turns its whole body after it and is gone, and the noise the two of them make going away is not a noise you will ever describe to another soul.` },
+  { a: "dog", line: (l) => `Then a farm dog somewhere behind it loses its nerve entirely, breaks its rope, and bolts across the ${l} screaming the way dogs scream when they are long past barking. The thing goes after it gladly, without a word, the way a boy goes after a stone he has thrown.` },
+  { a: "goat", line: (l) => `Then a goat blunders out of the dark on the far side of the ${l}, tethered and terrified and dragging its post out of the ground, and everything that was interested in you is instantly and completely interested in that instead.` },
+  { a: "fox", line: (l) => `Then a fox breaks cover at the edge of the ${l}, low and quick and gone, and the thing forgets you between one heartbeat and the next and pours itself after the fox instead.` },
+];
+const BRUSH_BOLT = [
+  (l) => `You do not remember deciding to run. You come back to yourself somewhere near your own door with your legs still going and no memory at all of the lanes between here and there.`,
+  (l) => `You run home faster than your legs can carry you, which is how you arrive at your own door on your knees, with the bolt thrown and both hands still flat against it.`,
+  (l) => `You leave the ${l} at a dead run and do not stop, do not look, do not think, until your own door is shut and your back is against it and the shaking is allowed to start.`,
+];
+/* The morning after a close pass: the animal that bought your night, found
+   again by daylight, killed in the manner of the thing that killed it. Keyed
+   by sign so the tell is honest, exactly like ANIMAL_SIGN. (animal, loc). */
+const QUARRY_DAWN = {
+  bite: (a, l) => `You go back to the ${l} in the morning light and find the ${a} that bought your night, thirty paces from where the chase went through, barely marked at all: two deep punctures at the throat, paired and clean. Nothing eaten. It was simply stopped.`,
+  claw: (a, l) => `The ${a} that bought your night is lying at the ${l} in the morning, opened along one flank in four long parallel tears, evenly spaced and far too wide. Nothing eaten there either. Whatever caught it did that, and then lost interest.`,
+  tracks: (a, l) => `You find the ${a} at the ${l} by daylight, dead and hardly marked, and around it in the soft ground a single line of prints too large and too deep for anything that hunts a ${a}, coming in fast and stopping dead where the ${a} did.`,
+  cold: (a, l) => `The ${a} is at the ${l} in the morning, stiff as a board and furred white with a frost that has touched nothing else in the field: not the grass beside it, not the stones. The morning is mild. Your breath clouds when you lean over it, and nowhere else.`,
+  graves: (a, l) => `The ${a} is at the ${l} by daylight, half pressed into fresh-turned earth that nobody in this village turned, grave dirt worked deep into its coat as though it had been carried some way in something's arms before it was put down.`,
+  flora: (a, l) => `You find the ${a} at the ${l} in the morning, dead at the centre of a ring of grass gone grey and brittle from the root up, out of all season, a circle you could lay a cartwheel inside.`,
+  hex: (a, l) => `The ${a} lies at the ${l} in the morning inside marks scored deliberately into the ground around it, cut with intent, meaning nothing and unsettling anyway. Whatever ran it down stopped afterwards to do that.`,
+};
+/* when the morning has no new tell to give: the debt, and nothing else. */
+const QUARRY_PLAIN = (a, l) => `You go back to the ${l} in the morning light and find the ${a} that bought your night, dead where the chase ended and not one mouthful of it eaten. Nothing in this village kills like that and then walks away hungry. You stand over it a while. You owe it something you cannot pay.`;
+/* and the ground itself keeps the evidence of the chase for a day */
+const QUARRY_ECHO = [
+  (a, l) => `The grass at the ${l} is still flattened where the chase went through it last night, two lines of it, one panicked and one not.`,
+  (a, l) => `Children have found the dead ${a} at the ${l} before you and are daring each other to touch it. You send them off with more temper than they deserve.`,
+  (a, l) => `Somebody has moved the ${a} off the path at the ${l} and laid stones over it, the way you would for something you did not want to look at twice.`,
+];
 
 const VIGIL_LINES = [
   (l) => `A figure crosses the far side of the ${l}, indistinct, there and then not quite gone. Hold your vantage, or shift for a better look?`,
@@ -2295,6 +2372,18 @@ function outDeathChance(s, f, mods, approach) {
   return Math.min(0.92, Math.max(0.05, p));
 }
 
+/* The same arrangement for a tail that ends with the thing dropping its
+   borrowed face in front of you: one formula, used by resolveNight for the
+   roll and by the walk to pre-roll it (mods.followFate) so the reprieve can
+   be lived on-screen as a close pass instead of arriving as a night card.
+   The odds are the ones that were always here: staying to LEARN it costs
+   more than backing away from it. */
+function followDeathChance(s, act) {
+  let p = act === "confront" ? 0.6 : act === "watch" ? 0.35 : 0.15;
+  if (s.monsterProtects) p = Math.max(0.02, p - 0.15);
+  return p;
+}
+
 /* Build sightings are uncertain: each yields the true build plus one plausible
    decoy. Sightings intersect across nights: a second look can settle it. */
 const BUILDS = ["slight", "stooped", "tall", "stout"];
@@ -2334,7 +2423,7 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0, quarry: null,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -2705,6 +2794,11 @@ function resolveNight(prev, planIn, preEvents) {
     return s;
   };
 
+  /* one night, at most one new tell out of the thing itself: set where a
+     sign is learned off the changing body, and read by the close-pass quarry
+     below so a single night cannot hand over two. */
+  let signLearnedTonight = false;
+
   /* -- follow consequences: the reveal was LIVED in the walk; here we settle
      the ledger. Shared by both the "out" walk's lane-follow and the "watch a
      villager" flow: whichever way the player ended up tailing someone, the
@@ -2759,9 +2853,11 @@ function resolveNight(prev, planIn, preEvents) {
           return false;
         }
       }
-      let deathP2 = act === "confront" ? 0.6 : act === "watch" ? 0.35 : 0.15;
-      if (s.monsterProtects) deathP2 = Math.max(0.02, deathP2 - 0.15);
-      if (chance(deathP2)) {
+      /* the interactive walk pre-rolls this so the survival can be lived as a
+         close pass on-screen (mods.followFate); the fallback rolls it here.
+         Same formula either way: see followDeathChance. */
+      const caughtFollowing = mods.followFate !== undefined ? mods.followFate : chance(followDeathChance(s, act));
+      if (caughtFollowing) {
         /* -- Pass G2: the climactic offer, in place of death -- */
         if (s.monsterFancies && s.bond >= OFFER_BOND_MIN && n >= OFFER_MIN_NIGHT && !s.offerMade) {
           s.offerMade = true;
@@ -2786,7 +2882,10 @@ function resolveNight(prev, planIn, preEvents) {
         dawn.push(ev(`The village knows the face now: ${fw.name}. It does not know the name of the thing, and only the cure it answers to will end it. Study the signs. You will not get more than two tries.`, fw.id, 2));
       } else if (act === "watch") {
         if (!s.knownBuild) { s.knownBuild = fw.build; s.buildClues = [...(s.buildClues || []), [fw.build, fw.build]]; }
-        s.monsterSawYou = chance(0.6) ? true : s.monsterSawYou;
+        /* a close pass is not a thing you get away with unnoticed: it stood
+           over your hiding place and talked to you. It knows exactly who was
+           in the lane, and behaves accordingly from here on. */
+        s.monsterSawYou = mods.brush || chance(0.6) ? true : s.monsterSawYou;
         /* Staying to LEARN it is the riskier read (see deathP2 above), so on
            survival it earns more than the face fleeing already gives: pressed
            close enough to watch the change, you come away with one of its true
@@ -2795,19 +2894,29 @@ function resolveNight(prev, planIn, preEvents) {
         const learnable = m.signs.filter((sg) => sg !== "wail" && !s.foundSigns.includes(sg));
         const learned = learnable.length ? pick(learnable) : null;
         if (learned) {
+          signLearnedTonight = true;
           s.foundSigns.push(learned);
           const sense = senseFor(learned);
           beats.push(`You stay, and you watch, and you make yourself memorize all of it: the gait, the build, the stride, and one thing more, the mark of what it truly is showing plain through the borrowed skin. ${sense}`);
           s.clues.push(`Night ${n}: you held your nerve and studied ${fw.name} in the dark until its true nature showed through. ${sense}`);
           dawn.push(evPlaque(ev(`You have seen the face it wears: ${fw.name}, and by staying to watch you learned one of its true tells besides. ${sense} The field narrows.`, fw.id, 3), "amber", learned));
-        } else {
+        } else if (!mods.brush) {
           beats.push(`You stay, and you watch, and you memorize everything: the gait, the build, the length of the stride, until it lifts its head and tastes the air, and you leave before it finishes.`);
           dawn.push(ev(`You have seen the face it wears: ${fw.name}. Whatever kind of thing it is, it goes about in ${fw.name}, and you would swear to it in any court. Now you need only its true nature.`, fw.id, 2));
+        } else {
+          dawn.push(ev(`You have seen the face it wears: ${fw.name}, and last night ${fw.name} stood close enough to speak to you and did. Whatever kind of thing it is, it goes about in that face, and it knows whose face was in the lane.`, fw.id, 2));
         }
+        /* the walk ended at a dead run: the recap picks that up, not a quiet
+           withdrawal it never made */
+        if (mods.brush && mods.brushBolt) beats.push(mods.brushBolt);
       } else {
-        s.monsterSawYou = chance(0.4) ? true : s.monsterSawYou;
-        beats.push(`You go back the way you came, slowly, placing each foot like a debt, and do not breathe properly until your own bolt is thrown.`);
-        dawn.push(ev(`You have seen the face it wears: ${fw.name}. You fled before it saw yours, and carried the certainty home. Now you need only its true nature.`, fw.id, 2));
+        s.monsterSawYou = mods.brush || chance(0.4) ? true : s.monsterSawYou;
+        beats.push(mods.brush && mods.brushBolt
+          ? mods.brushBolt
+          : `You go back the way you came, slowly, placing each foot like a debt, and do not breathe properly until your own bolt is thrown.`);
+        dawn.push(ev(mods.brush
+          ? `You have seen the face it wears: ${fw.name}. You did not get away unseen. It came the whole way in, close enough to be smelled, and spoke to you in the dark, and it knows the shape of whoever was crouched in it.`
+          : `You have seen the face it wears: ${fw.name}. You fled before it saw yours, and carried the certainty home. Now you need only its true nature.`, fw.id, 2));
       }
     } else if (fw.turned) {
       s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, known: true } : x));
@@ -3000,7 +3109,10 @@ function resolveNight(prev, planIn, preEvents) {
       s.over = { win: false, reason: "slain", text: "A cold you had never known closed around you on the road home. The Wraith takes those who wander." };
       return finish();
     }
-    if (!wentHome && mods.approach !== "back") {
+    /* A night that ended in a close pass never got its search: the player
+       spent it running. Whatever the errand was, it is not what the morning
+       has to report. */
+    if (!wentHome && mods.approach !== "back" && !mods.brush) {
       const unfound = s.locEvidence[plan.loc].filter((sg) => !s.foundSigns.includes(sg));
       if (plan.facts && mods.searchRoll) {
         /* the interactive walk already rolled and SHOWED this result live;
@@ -3594,6 +3706,42 @@ function resolveNight(prev, planIn, preEvents) {
     if (stained && stained.alive && chance(0.8)) dawn.push(ev(pick(ROPE_SUSPICION)(stained.name, ropeDeath.name), stained.id));
   }
 
+  /* --- the close pass, and what it cost ---
+     The walk lived the encounter: it came near enough to speak, and something
+     smaller than you ran first and took it away with it. Here we only settle
+     what the morning owes. The animal is real, it is dead, and it is dead in
+     the manner of the thing that killed it, so the body carries a sign the
+     creature really leaves and never a planted one. It surfaces a NEW tell
+     only when the night has not already given one up (the ground, or the
+     changing body itself): earned, but never doubled. --- */
+  if (!s.over && mods.brush) {
+    /* it stood over your hiding place and talked to you: whatever else it
+       did or did not learn, it knows someone was in that lane */
+    s.monsterSawYou = true;
+    s.clues.push(`Night ${n}: it came close enough at the ${mods.brushLoc || plan.loc} to speak to you, and it spoke. Then something else bolted and it went after that instead. You are alive by an accident, and not by any part of your own doing.`);
+    dawn.push(ev(`You did not sleep. It was near enough last night to be smelled and near enough to be heard speaking, and it spoke. You are alive because something smaller than you ran first.`, undefined, 2));
+  }
+  if (!s.over && mods.quarry && mods.quarry.a && LOCS.includes(mods.quarry.loc)) {
+    const qa = mods.quarry.a, qLoc = mods.quarry.loc;
+    const alreadyGiven = signLearnedTonight || !!(mods.searchRoll && mods.searchRoll.found);
+    const qPool = m.signs.filter((sg) => sg !== "wail" && QUARRY_DAWN[sg] && !s.foundSigns.includes(sg));
+    const qSign = !alreadyGiven && qPool.length ? pick(qPool) : null;
+    if (qSign) {
+      s.foundSigns.push(qSign);
+      const line = QUARRY_DAWN[qSign](qa, qLoc);
+      s.clues.push(`Day ${n}: the ${qa} that drew it off you died for it. ${line}`);
+      dawn.push(evPlaque(ev(line, undefined, 2), "amber", qSign));
+    } else {
+      /* a report, not atmosphere: the animal that bought the night must not
+         be crowded off the morning by weather talk */
+      dawn.push(ev(QUARRY_PLAIN(qa, qLoc), undefined, 2));
+    }
+    /* the place keeps the evidence of the chase for the one day */
+    s.quarry = { a: qa, loc: qLoc, day: n };
+  } else if (s.quarry && s.quarry.day !== n) {
+    s.quarry = null;
+  }
+
   /* --- a mob may form at dawn ---
      Never before night 3: two deaths can land as early as night 2, but a
      rope by day 2 (with the hanging itself landing day 3) gives the player
@@ -3647,7 +3795,12 @@ function resolveNight(prev, planIn, preEvents) {
     if (turnedAlive(s).length >= untainted(s).length && turnedAlive(s).length > 0) {
       s.over = { win: false, reason: "overrun", text: "You look around the square at dawn and count the faces you still trust, and understand, too late, that the changed now outnumber the living. Hollow's Edge belongs to it. Perhaps it always did." };
     } else if (untainted(s).length <= 2) {
-      s.over = { win: false, reason: "lost", text: "Too few remain to bury the dead. The village is finished, and the thing that did it walks away wearing a neighbour's smile." };
+      /* untainted() counts PEOPLE: not the changed, and not the face the
+         thing goes about in. The village tally on the day screen counts
+         everyone still standing, because you are not supposed to know which
+         of them is which. So the two numbers differ by design, and the text
+         has to own that, or the ending reads as a miscount. */
+      s.over = { win: false, reason: "lost", text: "Too few remain to bury the dead. You count the faces left in Hollow's Edge and cannot make three living souls of them, because not every face still standing in the square belongs to a person. The village is finished, and the thing that did it walks away wearing a neighbour's smile." };
     }
   }
   return s;
@@ -3766,6 +3919,13 @@ function actSearch(prev, loc) {
     s.clues.push(`Day ${s.dayNum}: the ${SIGNS[suspect.sg]} at the ${loc} were MADE. Too regular, cut with a tool, meant to be found. Something is salting your trail. Untick it if you ticked it.`);
     s.dayEvents.push(evPlaque(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`), "danger"));
     return s;
+  }
+  /* the ground remembers last night's chase for exactly one day: if the
+     player goes back to where something bolted and died for them, the place
+     says so. Texture only, and never a second sign - the morning card
+     already settled whatever the body had to tell. */
+  if (s.quarry && s.quarry.loc === loc && s.quarry.day === s.dayNum) {
+    s.dayEvents.push(ev(pickFreshIdx("quarryEcho", QUARRY_ECHO)(s.quarry.a, loc), undefined, 0));
   }
   /* --- the village is awake around you while you work: one social beat,
      sometimes, before the ground gives its answer. Texture only - none of
@@ -8834,12 +8994,16 @@ function MonsterVillage() {
     const roll = Math.random();
     const spared = walk.hideIsMonster && roll < 0.12;
     const distracted = !spared && roll < 0.4;
+    const drawnOff = distracted ? pickFreshIdx("hideResolveDistract", HIDE_RESOLVE_DISTRACT) : null;
     const resolve = spared
       ? pickFreshIdx("hideResolveSpare", HIDE_RESOLVE_SPARE)(walk.loc)
       : distracted
-      ? pickFreshIdx("hideResolveDistract", HIDE_RESOLVE_DISTRACT)(walk.loc)
+      ? drawnOff.line(walk.loc)
       : pickFreshIdx("hideResolvePass", HIDE_RESOLVE_PASS)(walk.loc);
-    setWalk({ ...walk, mods: { ...walk.mods, hid: choice, hideSpared: spared }, stage: "hidden", hideResolve: resolve, pre: [pick(HIDE_CHOICES[choice])] });
+    /* a real tread drawn off you by a real animal owes the morning a body;
+       a phantom tread killed nothing, so it leaves nothing to find */
+    const quarry = drawnOff && drawnOff.a && walk.hideIsMonster ? { a: drawnOff.a, loc: walk.loc } : null;
+    setWalk({ ...walk, mods: { ...walk.mods, hid: choice, hideSpared: spared, ...(quarry ? { quarry } : {}) }, stage: "hidden", hideResolve: resolve, pre: [pick(HIDE_CHOICES[choice])] });
   };
 
   const chooseStyle = (style) => {
@@ -8940,20 +9104,69 @@ function MonsterVillage() {
     const w = walk.lane ? npcById(s, walk.lane.wid) : null;
     /* the held-breath beat: suspense lines, then the pre-rolled outcome */
     const startFate = (lines, finale, label, action, kind) => { Snd.danger(); setWalk({ ...walk, stage: "fate", pre: [], fate: { lines, finale, label, action, kind: kind || "red" } }); };
+    /* ---- the close pass ----
+       Reached only where the night has ALREADY been decided in the player's
+       favour: the tension beat has resolved to life, and instead of the
+       thing simply wandering off, it comes the rest of the way in. Nothing
+       here can kill and nothing here rolls an outcome: the sequence is pure
+       reveal, and the one thing it carries forward is mods.quarry, the
+       animal the morning will have to account for. */
+    const startBrush = (bLoc, after) => {
+      const q = pick(BRUSH_QUARRY);
+      Snd.danger();
+      setWalk({
+        ...walk, stage: "brush", pre: [], brushIdx: 0, brushAfter: after,
+        brushQuarry: { a: q.a, loc: bLoc },
+        brushLines: [
+          pickFreshIdx("brushNotice", BRUSH_NOTICE)(bLoc),
+          pickFreshIdx("brushNearer", BRUSH_NEARER)(bLoc),
+          pickFreshIdx("brushClose", BRUSH_CLOSE)(bLoc),
+          pickFreshIdx("brushTaunt", BRUSH_TAUNT),
+          q.line(bLoc),
+        ],
+        brushBolt: pickFreshIdx("brushBolt", BRUSH_BOLT)(bLoc),
+      });
+    };
+    /* the close pass is the rare shape of a reprieve, not the usual one */
+    const BRUSH_P = 0.45;
     const runFate = () => {
       const a = walk.fate.action;
-      if (a.type === "commitWalk") commitWalk(a.extra);
+      if (a.type === "brush") startBrush(a.loc, a.after);
+      else if (a.type === "commitWalk") commitWalk(a.extra);
       else if (a.type === "commitWatch") commitWatch(a.extra);
       else goReturn(a.extra);
     };
     const rollApproachFate = (approach) => {
       const died = chance(outDeathChance(s, walk.facts, walk.mods, approach));
+      /* it does not take you: sometimes it comes the whole way in first. The
+         player ran, so the night's searching is over, and the walk ends at
+         the door rather than falling back into the ground-search stages. */
+      const brushed = !died && chance(BRUSH_P);
       startFate(
         TENSION_APPROACH,
-        died ? FATE_DIE : FATE_LIVE,
-        died ? "It turns →" : "Breathe again →",
-        died ? { type: "commitWalk", extra: { approach, fateDeath: true } } : { type: "goReturn", extra: { approach, fateDeath: false } },
-        died ? "red" : "amber"
+        died ? FATE_DIE : brushed ? null : FATE_LIVE,
+        died ? "It turns →" : brushed ? "It lifts its head →" : "Breathe again →",
+        died ? { type: "commitWalk", extra: { approach, fateDeath: true } }
+          : brushed ? { type: "brush", loc: walk.loc, after: { type: "commitWalk", extra: { approach, fateDeath: false } } }
+          : { type: "goReturn", extra: { approach, fateDeath: false } },
+        died || brushed ? "red" : "amber"
+      );
+    };
+    /* the same arrangement for a tail that has just watched a neighbour stop
+       being one: the outcome is pre-rolled here (mods.followFate) at exactly
+       the odds resolveNight would have used, so a survival can be lived as a
+       close pass instead of arriving as a night card. Confronting it keeps
+       its own resolution untouched: it is never routed through here. */
+    const startFollowFate = (act, extra, lines, label, bLoc, commitType) => {
+      const died = chance(followDeathChance(s, act));
+      const brushed = !died && chance(BRUSH_P);
+      const commit = { type: commitType, extra: { ...extra, followFate: died } };
+      startFate(
+        lines,
+        died ? FATE_DIE : null,
+        died ? "It turns →" : brushed ? "It comes on →" : label,
+        brushed ? { type: "brush", loc: bLoc, after: commit } : commit,
+        died || brushed ? "red" : "amber"
       );
     };
     /* the current beat: typed out in a panel, choices directly under it.
@@ -8971,12 +9184,18 @@ function MonsterVillage() {
     /* the night, seen: a living view of the ground the current beat plays
        out on, going red when something is close - the hero card matching
        the dawn reveal and the interview's room card. */
+    /* the close pass keeps the frame red until the beat you are allowed to
+       breathe on, and tightens the kicker as the distance closes */
+    const brushAt = walk.stage === "brush" ? Math.min(walk.brushIdx || 0, (walk.brushLines || []).length) : -1;
     const tense = walk.stage === "fate" || walk.stage === "hide"
       || (walk.stage === "approach" && danger)
+      || (brushAt >= 0 && brushAt < (walk.brushLines || []).length)
       || ((walk.stage === "chased" || walk.stage === "listened") && walk.facts.active)
       || (walk.stage === "company" && walk.thrallId && !walk.thrallLooking)
       || ((walk.stage === "followed" || walk.stage === "reveal") && walk.followScene && walk.followScene.kind === "monster");
-    const sceneLoc = (walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")) ? walk.followScene.dest
+    const tenseLabel = brushAt >= 4 ? "IT IS SPEAKING TO YOU" : brushAt >= 2 ? "IT IS AN ARM'S LENGTH AWAY" : "SOMETHING IS CLOSE";
+    const sceneLoc = walk.stage === "brush" ? ((walk.brushQuarry || {}).loc || walk.loc)
+      : (walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")) ? walk.followScene.dest
       : isWatch ? (HOME_LOC[walk.targetId] || "Cottage") : walk.loc;
     const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
     const wxWord = walk.facts.wx ? { fog: "FOG", storm: "STORM COMING", frost: "HARD FROST" }[walk.facts.wx] : "CLEAR";
@@ -8989,7 +9208,7 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 12.5, letterSpacing: 3.2, whiteSpace: "nowrap", color: tense ? C.redBright : "rgba(233,223,200,0.75)" }}>{heroLabel}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>{wxWord}</span>
           </span>
-          {tense && <span className="mv-display mvHeart block" style={{ marginTop: 5, fontSize: 10.5, letterSpacing: 2.5, color: C.redBright }}>SOMETHING IS CLOSE</span>}
+          {tense && <span className="mv-display mvHeart block" style={{ marginTop: 5, fontSize: 10.5, letterSpacing: 2.5, color: C.redBright }}>{tenseLabel}</span>}
           {(walk.pre || []).length > 0 && (
             <div style={{ marginTop: 10, paddingLeft: 11, borderLeft: "2px solid rgba(233,223,200,0.22)" }}>
               {(walk.pre || []).map((t, i) => (
@@ -9056,8 +9275,8 @@ function MonsterVillage() {
                   {beat(fsc.text, fsc.kind === "monster" ? C.redBright : undefined)}
                   {fsc.kind === "monster" && (<>
                     {armedGuess && <p style={{ fontSize: 15.5, lineHeight: 1.5, color: C.amber, fontStyle: "italic" }}>One name left in the journal: the {armedGuess.name}. You carry {METHOD_CARRY[armedGuess.method]} tonight. Right, and it ends here before it feeds again; wrong, and so do you.</p>}
-                    <Btn full onClick={() => startFate(TENSION_FLEE, null, "Away, while it is busy →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "flee", loc: fsc.dest } }, "amber")}>Flee, quietly, while it is busy</Btn>
-                    <Btn full kind="amber" onClick={() => startFate(TENSION_WATCH, null, "Hold, and remember everything →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "watch", loc: fsc.dest } }, "amber")}>Stay hidden. Watch it. Learn it</Btn>
+                    <Btn full onClick={() => startFollowFate("flee", { follow: fw2.id, followAct: "flee", loc: fsc.dest }, TENSION_FLEE, "Away, while it is busy →", fsc.dest, "commitWalk")}>Flee, quietly, while it is busy</Btn>
+                    <Btn full kind="amber" onClick={() => startFollowFate("watch", { follow: fw2.id, followAct: "watch", loc: fsc.dest }, TENSION_WATCH, "Hold, and remember everything →", fsc.dest, "commitWalk")}>Stay hidden. Watch it. Learn it</Btn>
                     <Btn full kind="red" onClick={() => startFate(TENSION_CONFRONT, null, armedGuess ? "Say the true name →" : "Say the name →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "confront", loc: fsc.dest } })}>{armedGuess ? "Step out. Name it. End it here" : "Step out and say the name"}</Btn>
                   </>)}
                   {fsc.kind === "turned" && (<>
@@ -9213,6 +9432,37 @@ function MonsterVillage() {
                 </div>
               );
             })()}
+            {walk.stage === "brush" && (() => {
+              /* THE CLOSE PASS. Nothing is decided here: the night already
+                 chose to let you live, and this is the shape that mercy
+                 takes. It comes the whole way in, one beat at a time, says
+                 something, and then something smaller than you runs first.
+                 The last line is the one you are allowed to breathe on. */
+              const lines = walk.brushLines || [];
+              const idx = Math.min(walk.brushIdx || 0, lines.length);
+              const atBolt = idx >= lines.length;
+              const finishBrush = () => {
+                const a = walk.brushAfter || { type: "commitWalk", extra: {} };
+                const bm = { brush: true, brushLoc: (walk.brushQuarry || {}).loc, brushBolt: walk.brushBolt, quarry: walk.brushQuarry };
+                if (a.type === "commitWatch") commitWatch({ ...a.extra, ...bm });
+                else commitWalk({ ...a.extra, ...bm });
+              };
+              return (
+                <div className="flex flex-col gap-2">
+                  {lines.slice(0, idx).map((t, i) => (
+                    <p key={i} style={{ fontSize: 15.5, lineHeight: 1.5, color: "rgba(233,223,200,0.62)", textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{t}</p>
+                  ))}
+                  <p style={{ fontSize: 15.5, lineHeight: 1.5, color: atBolt ? C.parch : C.redBright, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                    <SpokenText text={atBolt ? walk.brushBolt : lines[idx]} speed={atBolt ? 40 : 34} />
+                  </p>
+                  {atBolt
+                    ? <Btn full kind="amber" onClick={finishBrush}>Bar the door. Sit with it until light →</Btn>
+                    : idx === lines.length - 1
+                    ? <Btn full kind="amber" onClick={() => setWalk({ ...walk, brushIdx: idx + 1 })}>Run. Do not look back →</Btn>
+                    : <Btn full kind="red" onClick={() => setWalk({ ...walk, brushIdx: idx + 1 })}>Do not move. Do not breathe →</Btn>}
+                </div>
+              );
+            })()}
             {!isWatch && walk.stage === "company" && !walk.thrallId && (() => {
               /* the plain company: other villagers also out tonight, each
                  about their own business. resolveNight reports only these. */
@@ -9273,8 +9523,8 @@ function MonsterVillage() {
                   {beat(fsc.text, fsc.kind === "monster" ? C.redBright : undefined)}
                   {fsc.kind === "monster" && (<>
                     {armedGuess && <p style={{ fontSize: 15.5, lineHeight: 1.5, color: C.amber, fontStyle: "italic" }}>One name left in the journal: the {armedGuess.name}. You carry {METHOD_CARRY[armedGuess.method]} tonight. Right, and it ends here before it feeds again; wrong, and so do you.</p>}
-                    <Btn full onClick={() => startFate(TENSION_FLEE, null, "Away, while it is busy →", { type: "commitWatch", extra: { follow: walk.targetId, followAct: "flee" } }, "amber")}>Flee, quietly, while it is busy</Btn>
-                    <Btn full kind="amber" onClick={() => startFate(TENSION_WATCH, null, "Hold, and remember everything →", { type: "commitWatch", extra: { follow: walk.targetId, followAct: "watch" } }, "amber")}>Stay hidden. Watch it. Learn it</Btn>
+                    <Btn full onClick={() => startFollowFate("flee", { follow: walk.targetId, followAct: "flee" }, TENSION_FLEE, "Away, while it is busy →", fsc.dest, "commitWatch")}>Flee, quietly, while it is busy</Btn>
+                    <Btn full kind="amber" onClick={() => startFollowFate("watch", { follow: walk.targetId, followAct: "watch" }, TENSION_WATCH, "Hold, and remember everything →", fsc.dest, "commitWatch")}>Stay hidden. Watch it. Learn it</Btn>
                     <Btn full kind="red" onClick={() => startFate(TENSION_CONFRONT, null, armedGuess ? "Say the true name →" : "Say the name →", { type: "commitWatch", extra: { follow: walk.targetId, followAct: "confront" } })}>{armedGuess ? "Step out. Name it. End it here" : "Step out and say the name"}</Btn>
                   </>)}
                   {fsc.kind === "turned" && (<>
