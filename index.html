@@ -9414,7 +9414,12 @@ function MonsterVillage() {
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span className="mv-display block" style={{ fontSize: 19, letterSpacing: 0.6, color: C.parch }}>{x.name}</span>
                       <span className="mv-display block" style={{ marginTop: 2, fontSize: 10, letterSpacing: 1.6, color: C.dim }}>{x.role.replace(/^the /, "THE ").toUpperCase()} · {fateWord(x)}</span>
-                      <p style={{ margin: "8px 0 0", fontSize: 17.5, lineHeight: 1.5, color: "rgba(233,223,200,1)", textWrap: "pretty" }}>{line}</p>
+                      {/* the same body size as the dawn carousel this card is
+                          shaped after, and as the night log directly above it.
+                          It was the only body paragraph in the game set larger
+                          than 15.5, and on a phone it read as a different
+                          screen from the one it is sitting on. */}
+                      <p style={{ margin: "8px 0 0", fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{line}</p>
                     </span>
                   </div>
                   <div className="flex items-center justify-between" style={{ marginTop: 14 }}>
