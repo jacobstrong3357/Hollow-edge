@@ -220,8 +220,16 @@ must name both WHO and WHAT before the village runs out of people.
   interview with the turned villager immediately (free — the exam already
   cost the daylight), opened with a `TURNED_FACED` line; their answers are
   the `TURNED_RAVING` pool.
-- Exams are Falk's (0.65); if he is dead/fled, Greta serves at 0.45, and
-  she is the end of the line — lose both and the exam action goes dark.
+- Exams are Falk's (**0.9**); if he is dead/fled, Greta serves at **0.75**,
+  and she is the end of the line — lose both and the exam action goes dark.
+  These were 0.65/0.45 and were raised deliberately: at 0.45 the action was
+  a bad bet the moment Falk died, since it costs an hour and two steps of
+  the target's trust and a clean result still meant nothing. The gap between
+  the two still says who you want kept alive. **The corrupted examiner is
+  not part of this**: a reader who is turned, or is the thing wearing the
+  physician's face, clears the changed at any skill level and says so in
+  wording you can catch (`"Nothing amiss at all."` versus the honest miss's
+  `"It proves less than you would like."`).
 
 ## Tuning choices (deliberate — don't "fix")
 

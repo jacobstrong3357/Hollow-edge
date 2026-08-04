@@ -4403,7 +4403,15 @@ function actLookOver(prev, targetId) {
     s.dayEvents.push(ev(`${exName} examines ${target.name} at length, listens, peers, hums. "Nothing amiss," ${exName} says, and something in the ease of it does not sit right. "Nothing amiss at all."`, examiner.id));
     return s;
   }
-  const rate = examiner.id === "falk" ? 0.65 : 0.45;
+  /* A reading that failed more than half the time in Greta's hands made the
+     whole action a bad bet the moment Falk was gone: you spent the hour, you
+     spent two steps of the person's trust, and a clean result meant nothing
+     either way. The hour and the trust are cost enough. Falk is now nearly
+     certain and Greta is merely worse than him, so a clean bill from either
+     is worth something and the gap between them still says who you want
+     alive. The lying examiner above is untouched: a corrupted reader clears
+     the changed at any skill, and that is the point of it. */
+  const rate = examiner.id === "falk" ? 0.9 : 0.75;
   if (target.turned && chance(rate)) {
     s.npcs = s.npcs.map((x) => (x.id === targetId ? { ...x, known: true } : x));
     s.clues.push(`Day ${s.dayNum}: ${exName} examined ${target.name} and went pale. ${target.name} is changed.`);
