@@ -133,6 +133,29 @@ must name both WHO and WHAT before the village runs out of people.
   back (`QUARRY_ECHO` in `actSearch`, texture only). It surfaces a NEW tell
   only when the night has not already given one up (`signLearnedTonight`,
   `mods.searchRoll.found`): earned, never doubled, and never a plant.
+- **The village keeps its own journal, and you are in it.** `sawYouOut`
+  (recorded whenever a neighbour shares your location at night) now costs
+  something: a morning card naming the teller and the place, escalating over
+  three tiers by `seenOutNights(s)` (which counts NIGHTS, and never counts a
+  `met` hail), a −1 disposition on the teller only from the second sighting
+  night, floored at −2 so the bottom of the scale stays reserved for things
+  you did *to* someone, an innocent's barb in the "where were you" answer,
+  and your name coming up in the square before the mob settles on its target.
+  The rope never comes for the player: that fail state would make going out
+  unplayable.
+- **It knows which door is yours.** Once `s.monsterSawYou`, an active night
+  can bring it to your threshold (0.35). It never enters and never kills
+  there, whatever its `reach` — the barred door is the promise the game
+  makes. A night spent **at home** gets dread and *nothing else*, and the
+  `DOOR_HOME` pool is deliberately manner-blind (weight, cold, sound, the
+  latch) so staying in cannot leak what kind of thing it is: safe and blind
+  is the whole bargain. A night spent **out** is different — it had your
+  step to itself, so the morning may pay a real tell (`DOOR_MARK`, keyed by
+  sign, so a wraith can only leave cold or prints and never claw marks).
+  `DOOR_MANNER` splits the sixteen 4/8/4 into beast / cunning / haunt: how
+  it stood there, never what it is. The clever kinds sometimes write instead
+  of clawing (`DOOR_NOTE`) — never a bargain, that is the coercion note's
+  job. Same one-tell-a-night rule as the quarry (`signGivenTonight()`).
 - **Fled villagers are gone**: `sampleNight` skips them (no `outMap` entry),
   they cannot be victims, met, or rumored about. Keep `!x.fled` filters when
   adding new pools of villagers.

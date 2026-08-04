@@ -450,6 +450,88 @@ const HOME_NIGHT_MOMENTS = [
   "Under the door, one breath of a smell that doesn't belong: cold earth, or old iron. Then it's gone.",
   "You count the bell's hours and lose the number twice. Every dog in the village goes quiet at once.",
 ];
+/* ---------- it knows which door is yours ----------
+   Only ever after it has had a proper look at you (s.monsterSawYou). It
+   never comes in and it never kills here: a barred door is a bargain this
+   game keeps, and breaking it would make staying home a trap instead of a
+   choice. What changes is that the safe place stops feeling like one.
+   A night spent AT HOME yields the dread and nothing else, ever - safe and
+   blind is the whole of what staying in buys you, and a mark you could read
+   by morning would quietly undo that. A night spent OUT is a different
+   bargain: you were not there, it had your threshold to itself for hours,
+   and the step has something to say by daylight. */
+/* Behind a barred door you never see it, so the home visit is deliberately
+   manner-blind: weight, sound, cold, silence, the latch. Every one of the
+   sixteen can produce all of those from the far side of wood you do not open.
+   That is the bargain kept honestly - staying in buys you your life and not
+   one scrap of anything else, so nothing in this pool may hint at what kind
+   of thing is doing it. */
+const DOOR_HOME = [
+  "Sometime in the small hours the latch moves. Not rattled: lifted, carefully, the way a person lifts a latch they do not want to wake anyone with. It rises as far as the bar allows, and then it simply stays there. So do you. Neither of you says anything for a very long time.",
+  "Three times in the night something leans its weight against your door, slowly, the way you would test ice. It does not knock. Whatever is out there already knows you are in, and is not asking.",
+  "Something is drawn slowly across the outside of your door at the height of a hand, one side to the other, and back. Then nothing, for long enough that you almost sleep. Then once more.",
+  "Something stops outside your door and stays there. You count to four hundred. It is still there at three hundred. At four hundred you cannot hear it at all, and you will never decide which of those two facts is worse.",
+  "Under the door, a breath of cold that is not the night's. It comes and it goes with the patience of something breathing, and it stops the moment you put the knife down.",
+  "A sound at your door in a register that is very nearly a voice, low, going on too long to be the wind and shaped too carefully to be anything else. You do not open the door. You are not able to say, afterward, what stopped you.",
+];
+/* ---- and how it stands at a door it has to itself ----
+   Three ways, drawn from what each kind IS rather than from its signs: the
+   beast puts its weight on the wood, the haunt makes the ground wrong
+   without touching anything, and the clever ones knock, and consider, and
+   leave something behind for you to find. Never proof - four, four and
+   eight kinds share the three manners, and none of it is ever tickable in
+   the journal. Only the sign-keyed mark below is evidence, and that is as
+   ambiguous as every other mark in this village. */
+const DOOR_MANNER = {
+  werewolf: "beast", ghoul: "beast", shifter: "beast", revenant: "beast",
+  wraith: "haunt", banshee: "haunt", hag: "haunt", demon: "haunt",
+  vampire: "cunning", witch: "cunning", lich: "cunning", doppel: "cunning",
+  necromancer: "cunning", mimic: "cunning", succubus: "cunning", hollowed: "cunning",
+};
+const DOOR_OUT_OPEN = {
+  beast: [
+    "You come up your own path and the door is standing crooked on its bottom hinge: shouldered, and let go, and still shut, and no longer anything you would call a door.",
+    "Your own door at last, and the wood of it is wrong under your hand. Worried at. Worked over, at length, the way a byre door goes after a night with something on the wrong side of it.",
+    "You get home before the bell and find your own doorway full of the smell of a big animal that has stood in it a long time, and the step scuffed to bare earth where it shifted its weight.",
+  ],
+  haunt: [
+    "You come up your own path and stop. There is frost on your step in the shape of something standing, only there, and the rest of the ground is wet.",
+    "Your own door at last, and the cold coming off it is worse than the cold you walked home through. The nail-heads have beaded white. The lane behind you has not.",
+    "You get home to a silence around your own house that the rest of the village is not sharing: no rats in your thatch, no dog two doors down, nothing at all within about a stone's throw of your step.",
+  ],
+  cunning: [
+    "You come up your own path and stop. Something has been left on your step, set down square and central where you could not possibly miss it.",
+    "Your own door at last, and everything about it is exactly as you left it except that it is not. It takes you a moment to see it: the things by your step have been tidied. Arranged. Put into an order that is not yours.",
+    "You get home before the bell to find your door shut, your bolt untouched, and your boot-scraper moved to the other side of the step. Nothing else. Somebody stood here long enough to be bored.",
+  ],
+};
+/* the clever kinds leave a message where there is no mark to leave. Never a
+   bargain (that is the coercion note's job, and it is a different animal):
+   only an acknowledgement, from something that has been counting your nights
+   as carefully as you have been counting its. */
+const DOOR_NOTE = [
+  "Weighted flat under a stone on the step, a scrap of paper. One word on it, in a small unhurried hand: your name, spelled correctly. Nothing else on either side. Whoever wrote it took their time over the letters.",
+  "Cut into your doorpost, small and neat and at precisely your eye level, a tally: one stroke for every night you have spent out in the lanes looking for it. You count them twice. The number is right.",
+  "A single flower laid across your step with the stem pointing at the door. It was not picked. It was cut, cleanly, level, by something that had a blade or has never needed one.",
+  "Your own lantern, which you would swear you carried the whole night, is standing on the step, hooded and cold, in the exact spot where you set it down when you leave. It is not warm. It has been there some while.",
+];
+/* the mark it leaves on your threshold: one per sign, so what your own door
+   tells you is as honest and as ambiguous as anything else in the mud */
+const DOOR_MARK = {
+  claw: "Four grooves are drawn down the outside of your door at the height of a hand, deep enough to catch a fingernail in, and they stop dead level with the bar.",
+  bite: "The edge of your door, where a hand would take hold of it, has been bitten: two punctures driven clean through the wood and set wider apart than any jaw has a right to be.",
+  cold: "Your latch is so cold it burns to lift, and the frost on it sits on the inside of the curve where a hand would go, and nowhere else on the whole door.",
+  tracks: "There are prints in the mud of your own step, too large and pressed too deep, and every one of them faces the door. Nothing walked away.",
+  graves: "There is grave dirt on your step: a good double handful of it, dark and wet and heaped where something stood a long while without moving its feet.",
+  flora: "Everything growing by your step has died in the one night, blackened from the root up, in a neat arc the width of a standing man.",
+  hex: "Something has been cut into your doorpost: not letters, not any charm the priest would bless, worked with care and with time to spare.",
+};
+const DOOR_OUT_BARE = [
+  "Nothing is broken. Nothing is taken. The door is shut as you left it, and the ground in front of it has been stood on, at length, by somebody who did not knock.",
+  "There is no mark you can put a name to. Only the certainty, absolute and useless, that this doorway was occupied while you were out, and for a long time.",
+  "Whatever it wanted, it did not want in. It wanted you to come home and know. It has managed that much.",
+];
+
 const OUT_LINES = [
   (l) => `You go over the back wall like a thief in your own village, and the dark closes over you the whole road to the ${l}.`,
   (l) => `The knife, the hooded lantern, a prayer you no longer trust. Thus armed, you make for the ${l}.`,
@@ -2215,6 +2297,27 @@ const GOSSIP_LEAKED_SECRET = [
   (nm, short) => `"Poor ${nm}." They do not sound sorry at all. "${short}. Secrets don't keep in a village this size. Somebody always tells."`,
 ];
 
+/* ---------- the village keeps its own journal, and you are in it ----------
+   Being abroad after dark is the one habit the thing and the hunter share,
+   and Hollow's Edge cannot tell them apart from a doorway. Every neighbour
+   who watches your lantern go past writes it down the way you write down
+   theirs. (witness-name, place) => the morning's version of your night. */
+const SEEN_OUT_FIRST = [
+  (nm, l) => `${nm} saw your lantern out by the ${l} in the small hours and had told the well about it before you got there. Nobody says the obvious thing out loud. Everybody has had the thought.`,
+  (nm, l) => `Talk at the well stops a half-beat when you arrive, which is how you learn that ${nm} has been telling people where your lantern was last night: the ${l}, at an hour no errand explains.`,
+  (nm, l) => `"You were out," ${nm} says to you in the lane, not asking. "By the ${l}. I saw the light." They say it kindly. They still say it.`,
+];
+const SEEN_OUT_AGAIN = [
+  (nm, l) => `Twice now. ${nm} puts it about that you were abroad again in the dark, near the ${l}, and this time nobody troubles to change the subject when you walk up. Conversation simply changes shape around you.`,
+  (nm, l) => `${nm} has counted your nights the way you have been counting theirs: out again, near the ${l}, and no lantern carried openly. Doors you used to be waved through take a moment longer to open today.`,
+  (nm, l) => `You are asked, twice before noon and both times too casually, what takes you out to the ${l} at that hour. ${nm} started it. You do not have an answer that sounds better than the truth, and the truth sounds terrible.`,
+];
+const SEEN_OUT_HABIT = [
+  (nm, l) => `The square has your nights written down as carefully as you have written theirs. ${nm} says it plainly this time, near the ${l}, in front of people: whatever hunts here walks at night, and so, apparently, do you.`,
+  (nm, l) => `${nm} does not lower their voice for it any more. You are the one who is always out, always near the ${l}, always with a reason. The village has begun to find your reasons interesting.`,
+  (nm, l) => `A child is called in off the lane as you pass, quickly, by a mother who does not meet your eye. ${nm} has been talking. The ${l}, and the hour, and how often.`,
+];
+
 const GOSSIP_TRUE_HINT = [
   (t) => `They lean in, voice dropping. "Between us - ${t} has stopped humming while they work. People don't stop humming for no reason. I'd watch them, if I were the watching sort."`,
   (t) => `"I probably shouldn't say this," they say, and say it anyway. "${t} hasn't been right since the killings started. Not wrong exactly. Just not right."`,
@@ -2252,6 +2355,15 @@ const gameMonsters = (s) => MONSTERS.filter((mm) => mm.id !== "hollowed" || (s &
 const npcById = (s, id) => s.npcs.find((n) => n.id === id);
 const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s.monster.vid);
 const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
+/* How many separate nights the village has watched you go by. Counts NIGHTS,
+   not witnesses, so a crowded square costs you no more than one lane does.
+   A hail (`met`) never counts: you both stood in the same road and said so,
+   which is a shared foolishness rather than a story about you. */
+const seenOutNights = (s) => {
+  const nights = new Set();
+  for (const x of s.npcs) for (const e of (x.sawYouOut || [])) if (!e.met) nights.add(e.night);
+  return nights.size;
+};
 const aliveNpcs = (s) => s.npcs.filter((n) => n.alive && !n.fled);
 /* pri ranks a dawn card for the five-card cap: 2 = must-keep (deaths, a
    villager marked for the rope, the note), 1 = normal (your own night's
@@ -2423,7 +2535,7 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0, quarry: null,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0, quarry: null, doorVisits: 0,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -2794,10 +2906,13 @@ function resolveNight(prev, planIn, preEvents) {
     return s;
   };
 
-  /* one night, at most one new tell out of the thing itself: set where a
-     sign is learned off the changing body, and read by the close-pass quarry
-     below so a single night cannot hand over two. */
-  let signLearnedTonight = false;
+  /* One night, at most one new tell. Rather than a flag every discovery has
+     to remember to set, ask the ledger: nothing else removes signs between
+     dusk and dawn, so a longer list than we started with means the night has
+     already given something up. Read by the close pass's quarry and by the
+     door visit, both of which hold their tell back rather than double it. */
+  const signsAtDusk = (prev.foundSigns || []).length;
+  const signGivenTonight = () => s.foundSigns.length > signsAtDusk;
 
   /* -- follow consequences: the reveal was LIVED in the walk; here we settle
      the ledger. Shared by both the "out" walk's lane-follow and the "watch a
@@ -2894,7 +3009,6 @@ function resolveNight(prev, planIn, preEvents) {
         const learnable = m.signs.filter((sg) => sg !== "wail" && !s.foundSigns.includes(sg));
         const learned = learnable.length ? pick(learnable) : null;
         if (learned) {
-          signLearnedTonight = true;
           s.foundSigns.push(learned);
           const sense = senseFor(learned);
           beats.push(`You stay, and you watch, and you make yourself memorize all of it: the gait, the build, the stride, and one thing more, the mark of what it truly is showing plain through the borrowed skin. ${sense}`);
@@ -3316,6 +3430,57 @@ function resolveNight(prev, planIn, preEvents) {
      the QUIET_NIGHT beat below already carries "you got home to nothing", so
      skip this second home-recap then; only bridge to a death/wail report. -- */
   if (plan.facts && !s.over && (active || wailTonight)) beats.push(pickFreshIdx("afterWalk", AFTER_WALK_LINES));
+
+  /* --- it knows which door is yours ---
+     Once it has had a proper look at the person following it around in the
+     dark, it starts returning the visit. It never comes in and it never
+     kills here, whatever its reach: the barred door is the one promise this
+     game makes to a frightened player, and a monster that can take you at
+     home would make staying in a trap rather than a choice.
+     What it costs instead is the feeling that home is somewhere else than
+     the rest of the village. Stay in and you get the dread and NOTHING to
+     write down, because safe and blind is precisely what staying in buys.
+     Go out and it has your threshold to itself for hours, and the step is
+     still there to be read in the morning: an out night, earning what out
+     nights earn, and never a second tell on a night that already gave one. */
+  if (!s.over && active && s.monsterSawYou && chance(0.35)) {
+    s.doorVisits = (s.doorVisits || 0) + 1;
+    if (out || watching) {
+      /* how it stood there is its own nature showing, never its name: a
+         wraith cannot rake your door because a wraith leaves no claw, and a
+         thing that can write will write rather than push */
+      const manner = DOOR_MANNER[m.id] || "haunt";
+      beats.push(pickFreshIdx(`doorOutOpen:${manner}`, DOOR_OUT_OPEN[manner]));
+      const dPool = m.signs.filter((sg) => sg !== "wail" && DOOR_MARK[sg] && !s.foundSigns.includes(sg));
+      const canMark = !signGivenTonight() && dPool.length > 0;
+      /* a thing that can write sometimes writes instead of clawing, even
+         when there was a mark in it to leave: the message is the point, and
+         a clever kind that only ever gouged wood would stop reading clever */
+      const useNote = manner === "cunning" && (!canMark || chance(0.35));
+      const dSign = !useNote && canMark ? pick(dPool) : null;
+      if (dSign) {
+        s.foundSigns.push(dSign);
+        beats.push(DOOR_MARK[dSign]);
+        s.clues.push(`Night ${n}: it came to YOUR door while you were out looking for it. ${DOOR_MARK[dSign]}`);
+        dawn.push(evPlaque(ev(`Something stood at your door in the night, while you were away looking for it. ${DOOR_MARK[dSign]} It has your house now, the way you have its ground.`, undefined, 3), "amber", dSign));
+      } else if (useNote) {
+        /* nothing left to find in the wood, so it leaves a message instead.
+           Not evidence and never ticked: what it tells you is that the thing
+           wearing a neighbour's face can read, write and wait, which is true
+           of half the things in the book. */
+        const note = pickFreshIdx("doorNote", DOOR_NOTE);
+        beats.push(note);
+        s.clues.push(`Night ${n}: it came to your door while you were out, and left something. ${note}`);
+        dawn.push(ev(`Something came to your door in the night while you were out, and did not force it, and did not need to. ${note}`, undefined, 2));
+      } else {
+        beats.push(pickFreshIdx("doorOutBare", DOOR_OUT_BARE));
+        dawn.push(ev(`Something stood a long time at your door in the night while you were out. Nothing is broken and nothing is taken. It only wanted you to come home and know it had been.`, undefined, 2));
+      }
+    } else {
+      /* stayed in: the dread, and not one thing more */
+      beats.push(pickFreshIdx("doorHome", DOOR_HOME));
+    }
+  }
   nightSounds();
 
   /* --- the monster's attack --- */
@@ -3723,7 +3888,7 @@ function resolveNight(prev, planIn, preEvents) {
   }
   if (!s.over && mods.quarry && mods.quarry.a && LOCS.includes(mods.quarry.loc)) {
     const qa = mods.quarry.a, qLoc = mods.quarry.loc;
-    const alreadyGiven = signLearnedTonight || !!(mods.searchRoll && mods.searchRoll.found);
+    const alreadyGiven = signGivenTonight();
     const qPool = m.signs.filter((sg) => sg !== "wail" && QUARRY_DAWN[sg] && !s.foundSigns.includes(sg));
     const qSign = !alreadyGiven && qPool.length ? pick(qPool) : null;
     if (qSign) {
@@ -3740,6 +3905,37 @@ function resolveNight(prev, planIn, preEvents) {
     s.quarry = { a: qa, loc: qLoc, day: n };
   } else if (s.quarry && s.quarry.day !== n) {
     s.quarry = null;
+  }
+
+  /* --- the village keeps its own journal, and you are in it ---
+     Every night you spend in the lanes, somebody watches your lantern go by
+     and files it exactly as you file theirs. The first time is a neighbour
+     with a story. After that it is a habit, and habits in a village this
+     frightened get names put to them: the witnesses cool toward you, and
+     the square starts asking what takes you out there at that hour.
+     A hail in the lane is exempt (see seenOutNights): you were both out and
+     both know it, and the shared foolishness is what makes it harmless. --- */
+  if (!s.over) {
+    const witnessed = s.npcs.filter((x) => x.alive && !x.fled && (x.sawYouOut || []).some((e2) => e2.night === n && !e2.met));
+    if (witnessed.length) {
+      const nightsSeen = seenOutNights(s);
+      const teller = pick(witnessed);
+      const where = (teller.sawYouOut || []).filter((e2) => e2.night === n && !e2.met).map((e2) => e2.loc)[0] || plan.loc;
+      /* One night out is ordinary enough to be forgiven; a pattern is not.
+         The cost lands on the one who did the telling, never on every
+         witness at once: a whole square cooling by a step each time you
+         take a walk would close the interviews down inside a week, and the
+         interviews are the game. It also stops at -2, because the bottom of
+         the scale belongs to things you actually did TO someone. */
+      if (nightsSeen >= 2 && chance(0.5)) {
+        s.npcs = s.npcs.map((x) => (x.id === teller.id ? { ...x, disp: Math.max(-2, clampDisp((x.disp || 0) - 1)) } : x));
+      }
+      const pool = nightsSeen >= 4 ? SEEN_OUT_HABIT : nightsSeen >= 2 ? SEEN_OUT_AGAIN : SEEN_OUT_FIRST;
+      const key = pool === SEEN_OUT_HABIT ? "seenOutHabit" : pool === SEEN_OUT_AGAIN ? "seenOutAgain" : "seenOutFirst";
+      /* a report, not weather talk: what the village thinks of you is not
+         atmosphere, and the filler cap was quietly eating the first one */
+      dawn.push(ev(pickFreshIdx(key, pool)(teller.name, where), teller.id, 2));
+    }
   }
 
   /* --- a mob may form at dawn ---
@@ -3764,6 +3960,14 @@ function resolveNight(prev, planIn, preEvents) {
       const mobReason = pickFreshIdx("mobReasons", MOB_REASONS)(target.name);
       s.mob = { accuser: accuser.id, target: target.id, deadline: n + 1, reason: mobReason };
       dawn.push(ev(pick(MOB_ULTIMATUM)(accuser.name, target.name, mobReason), target.id, 2));
+      /* a village that has been counting your nights considers you out loud
+         before it settles on someone else. The rope never comes for you: the
+         game is not that, and a fail state you cannot argue with would make
+         going out unplayable. But you hear your name said in that tone once,
+         and you do not forget how the square sounded while it happened. */
+      if (seenOutNights(s) >= 3) {
+        dawn.push(ev(`Before ${target.name}'s name went up in the square, yours did. It did not stay up. It did not go away either, and you know now exactly what it sounds like when a room full of neighbours considers you properly.`, undefined, 2));
+      }
     }
   }
 
@@ -4462,6 +4666,14 @@ function answerFor(s, id, night, q, targetId) {
         quote += ` "But then, you know that already. You were there yourself. I saw your lantern."`;
       } else if ((isMonster || npc.turned) && claim === "home" && (npc.sawYouOut || []).some((e2) => e2.night === night) && chance(0.5)) {
         quote += ` A pause, one beat too long. "Strange question, though, from you. I could swear I saw YOU abroad that night. What is it you do out there, in the dark, while honest folk sleep?"`;
+      } else if (!isMonster && !npc.turned && (npc.sawYouOut || []).some((e2) => e2.night === night && !e2.met) && chance(0.55)) {
+        /* an honest neighbour brings it up too, and that is the point: the
+           barb was never proof of anything about THEM, and it is not proof
+           of anything about you either. Everyone out after dark looks the
+           same from a doorway. */
+        quote += seenOutNights(s) >= 3
+          ? ` Then, evenly, without dropping their voice for it: "I saw your light that night, same as every other night. I have stopped pretending I didn't. You'll want to think about how that looks."`
+          : ` Then, not quite meeting your eye: "I saw your lantern out that night myself, mind. I've not mentioned it to anyone who matters."`;
       }
     }
   }
