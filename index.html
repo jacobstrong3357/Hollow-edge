@@ -1815,6 +1815,144 @@ const NPC_DEFS = [
   { id: "rosa", name: "Rosa", role: "the Seamstress", build: "tall", sex: "f" },
 ];
 
+/* ---------- who was close to whom ----------
+   Eight people who have lived in one another's pockets their whole lives.
+   Authored rather than rolled, and the same every game, because these ties
+   come straight out of the bios and because a village you can learn is worth
+   more than a village that reshuffles: knowing that Tobias and Ansel have
+   buried this parish together for forty years is knowledge you earn once and
+   keep, like knowing what a wraith leaves behind.
+   Every tie is symmetrical, and `tie` is the sentence the survivor reaches
+   for when the other one is gone. Greta sits in one bond and two frictions
+   on purpose: half the village owes her their children's lives and the other
+   half crosses the road, and her own bio says so. */
+const BONDS = [
+  { a: "tobias", b: "ansel", tie: "forty years of the same funerals, one man at the graveside and one at the book" },
+  { a: "wilhelm", b: "greta", tie: "three nights she sat up with his wife, and lost, and every winter since keeping his boys' chests clear" },
+  { a: "marta", b: "liesel", tie: "two women short one husband apiece, and the only two in this village who never ask each other about it" },
+  { a: "falk", b: "rosa", tie: "a pot of tea on Thursdays, and no questions asked in either direction" },
+  { a: "tobias", b: "marta", tie: "he dug her husband's grave with his own hands and would not take the coin for it" },
+  { a: "liesel", b: "wilhelm", tie: "the corner of the tavern that is his, and his boys fed at her bar more nights than he knows about" },
+];
+/* And who could not stand each other. Bad blood matters as much as love
+   here: it gives an innocent an honest reason to be dry-eyed over a
+   neighbour's body, which is exactly the noise that keeps grief from ever
+   being a tell. */
+const FRICTIONS = [
+  { a: "greta", b: "ansel", tie: "a pulpit that has used the word witch, and a garden that has quietly healed half the people who heard it said" },
+  { a: "falk", b: "greta", tie: "two people who both know what ails you, and disagree about it, loudly, in front of you" },
+  { a: "rosa", b: "marta", tie: "two springs is not long enough to be from here, and both of them know exactly how long it is" },
+];
+const tieIn = (list, a, b) => list.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+const bondedTo = (id) => BONDS.filter((x) => x.a === id || x.b === id).map((x) => (x.a === id ? x.b : x.a));
+/* Deaths that leave somebody to grieve. A turned neighbour is still walking
+   about, so nobody mourns them until the village knows what happened. */
+const FATAL_KINDS = ["slain", "drained", "executed", "mobbed"];
+/* What this villager is still carrying, if anything: the most recent death
+   of someone they were tied to, inside the last three nights. A bond outranks
+   a friction, because if you both loved and fought them, you are grieving.
+   Guilt and grief do not sound alike, and both make a person hard to read. */
+const grievingFor = (s, id) => {
+  const recent = (s.deaths || [])
+    .filter((d) => FATAL_KINDS.includes(d.kind) && d.id !== id && d.night >= s.nightNum - 2)
+    .sort((x, y) => y.night - x.night);
+  for (const d of recent) { const b = tieIn(BONDS, id, d.id); if (b) return { dead: d, tie: b.tie, kind: "close" }; }
+  for (const d of recent) { const f = tieIn(FRICTIONS, id, d.id); if (f) return { dead: d, tie: f.tie, kind: "friction" }; }
+  if (recent.length) return { dead: recent[0], tie: null, kind: "distant" };
+  return null;
+};
+
+/* ---------- grief, and how badly it reads as evidence ----------
+   One bespoke answer per villager for the death of someone they loved: their
+   own voice, their own work, their own way of not coping. (dead-name) => line.
+   These are the lines the MONSTER speaks too, most of the time, because it is
+   wearing that face and has had months to learn how it grieves. */
+const GRIEF_CLOSE = {
+  marta: [
+    (d) => `"I baked for the wake." She says it as though reporting a fact about someone else. "Four dozen. Nobody asked me to. I was up at two doing it and I could not tell you now what I was thinking about the whole time, except that it was not ${d}." Her hands are on the table, still.`,
+    (d) => `"You want the truth? I set the second cup out again this morning, and it was not for Klaus." A long breath. "That is what ${d} was to me. I did not know until the hand did it on its own."`,
+  ],
+  tobias: [
+    (d) => `"I dug it myself. I dig them all myself." He works something out of the tread of his boot with great attention. "Difference is I have been putting this parish in the ground forty years and this is the first one I have had to stop halfway through and sit down for. Do not tell anybody that."`,
+    (d) => `"There is a right depth and a right shape and I gave ${d} both, and it is not enough, and it has never once been enough." He looks up. "Forty years and I have only just noticed."`,
+  ],
+  ansel: [
+    (d) => `"I have said the words over ${d}." He turns the cup a full circle without drinking. "I have said those words four hundred times in this parish. This is the first occasion on which I have listened to them, and they are thin. God forgive me, they are very thin."`,
+    (d) => `"The ledger has a line for ${d} now, in my hand, and my hand did not want to make it." A pause, entirely still. "You may ask me your questions. I would rather be asked things than left alone with the book."`,
+  ],
+  greta: [
+    (d) => `"I have a shelf of things that mend people and not one of them is any use for this." She strips a stem clean, then another, then stops. "I keep going to the shelf anyway. Habit is a stupid animal."`,
+    (d) => `"Do not do the face." Flat, not unkind. "I sat with ${d} more than most and I will do my crying in my own garden, thank you, where nobody can price it."`,
+  ],
+  wilhelm: [
+    (d) => `He works the bellows once, for nothing. "The boys asked whether ${d} was coming for supper. I said no. They asked why." The iron ticks as it cools. "I have got very good at lying to them this month and I hated every word of that one."`,
+    (d) => `"Forge does not care." He does not look up from it. "You put the heat in, you take the shape out, and if you keep at it long enough the day passes. That is what I have got for ${d}. It is not enough and it is what I have got."`,
+  ],
+  liesel: [
+    (d) => `"I have not touched their chair." She laughs, and it does not last. "Fifteen years I have been shifting furniture round drunks and I cannot make myself move one chair. Do not you dare sit in it, love."`,
+    (d) => `"I count them out the door every night now. Every night." She polishes a spot that needs nothing. "I counted ${d} out that night as well. That is the bit I keep coming back to. I counted them out."`,
+  ],
+  falk: [
+    (d) => `"There is a small box on the certificate for the cause." He raps his cane once, softly. "I have filled that box in for this village for eleven years, and for ${d} I sat with the pen over it for the better part of an hour, and then I wrote nothing at all."`,
+    (d) => `"I am the physician. I am supposed to have the useful thing to say." The old eyes go nowhere pleasant. "${d} was one of the few people who ever asked how I was. I did not appreciate it properly. One does not."`,
+  ],
+  rosa: [
+    (d) => `The needle does not move. "I sewed the shroud. I have sewn four now." A stitch, finally. "I did not know any of the others. I knew ${d}. It turns out that changes the work entirely, and nobody warns you."`,
+    (d) => `"I came here with nothing and ${d} was the first person who behaved as though that was ordinary." She looks at the cloth rather than at you. "I have been here two springs and I have exactly enough people to lose. Had."`,
+  ],
+};
+/* the death of somebody you had not spoken to in a year: not grief, and
+   worse than grief, and just as hard to read from the outside */
+const GRIEF_FRICTION = {
+  marta: [(d) => `"${d} and I were not friends. I will not stand in the square and pretend." Her jaw works. "But I put bread by their door twice this winter and took it back off the step twice, and I would give a great deal to be able to go and do it a third time."`],
+  tobias: [(d) => `"We had words. Years back, and worth having." He shoulders the spade. "I still gave ${d} a straight grave and a proper depth. You do not take a quarrel down there with you. Only the living can afford one."`],
+  ansel: [(d) => `"${d} and I disagreed about a great many things, most of them mine." He does not turn the cup this time. "I find I would like the argument back. That is my whole confession and I would thank you not to make me improve on it."`],
+  greta: [(d) => `"I know what the village thinks I thought of ${d}." She snaps a stem. "The village is right and it is still not the whole of it. There is nobody left to be wrong with now, is there."`],
+  wilhelm: [(d) => `"Never got on. Never pretended to." The hammer goes down on the anvil harder than the work needs. "And I have been standing here since first light thinking about the one time we nearly did, and how I let it go past."`],
+  liesel: [(d) => `"I barred ${d} out of this house once, and I was right to." She stops polishing. "That was a good deal easier to be right about last week, love."`],
+  falk: [(d) => `"We disagreed professionally and personally, which in a village this size amounts to the same thing." A long pause. "I have caught myself three times today composing the argument I would have won. There is nobody to send it to."`],
+  rosa: [(d) => `"${d} never once decided I was from here." The needle is very steady. "I had thought I would outlast that. I had rather been counting on outlasting it."`],
+};
+/* nobody they were tied to: real, and general, and no use to you at all */
+const GRIEF_DISTANT = [
+  (d) => `"${d}." They say the name and then nothing for a moment. "I keep doing the sums. Who is left, how many nights, whether the arithmetic comes out. That is what we have all been reduced to. Sums."`,
+  (d) => `"We were not close. I am still not sleeping." A shrug that costs something. "It turns out you do not have to have loved somebody to be undone by how they went."`,
+  (d) => `"There will be a wake and I will go and I will say the thing you say." They meet your eye. "And the whole time I will be counting doors between their house and mine. Everybody will be. Nobody will say so."`,
+];
+/* THE OFF NOTE. Grief that does not sit right - drawn by the monster nearly
+   half the time and by ordinary frightened people about a fifth of the time,
+   which is the entire point: an answer that rings wrong is never proof, and a
+   flawless one is not proof either. Nothing in here names a kind. */
+const GRIEF_OFF = [
+  (d) => `"Terrible business." The words are correct and arrive slightly too quickly, the way a coat comes off a peg. "Terrible, terrible business." Then they look at you, pleasantly, and wait, and it becomes clear they consider the subject dealt with.`,
+  (d) => `"${d}?" A pause with nothing behind it. "Yes. Yes, I was very fond." The sentiment is right. The tense is right. Something in the assembly of it is a half-inch out of true, and you cannot say which part.`,
+  (d) => `They produce grief the way a good host produces a chair: promptly, in the right shape, and entirely for your benefit. It is only afterward that you notice not one detail of it was about ${d} at all.`,
+  (d) => `"One must keep on." Their eyes are dry and steady and they hold yours a beat past where a person usually would. "Grieving is a thing you do afterward. There is no afterward yet." It is either the most sensible thing anyone has said this week or it is not sensible at all.`,
+];
+/* a changed neighbour cannot manage it: the shape is there and the thing that
+   fills the shape is gone. Never diagnostic on its own - the shocked and the
+   exhausted answer this way too. */
+const GRIEF_TURNED = [
+  (d) => `"${d} is dead," they agree, and nod, and go on nodding one beat longer than the sentence needs. They seem to be waiting to see whether anything else is going to arrive. Nothing does.`,
+  (d) => `"It is sad." They say it the way you would read it off a page in a language you have only just learned. Their hands stay exactly where they were.`,
+];
+
+/* The morning's account of who is bearing it badly. (mourner, dead) => card. */
+const GRIEF_DAWN_MOURNER = [
+  (nm, d) => `${nm} has not opened up today, and has not answered the door either. Somebody left food on the step. It was still there at noon, and still there when you went past again.`,
+  (nm, d) => `${nm} got halfway through the ordinary business of the morning and simply stopped, in the middle of the lane, holding whatever they were carrying, until somebody went and took it off them.`,
+  (nm, d) => `They say ${nm} sat with ${d} until they were made to leave, and then stood in the lane outside a good while after that, in the cold, doing nothing at all.`,
+  (nm, d) => `${nm} has been perfectly all right all morning: brisk, useful, first to volunteer for the worst of it. Twice now somebody has found them somewhere quiet afterward with their hands over their face.`,
+];
+/* And the morning's account of who is not. Names anyone NOT tied to the dead,
+   which is most of the village, so it is far more often an innocent being
+   private, or practical, or numb, than it is anything at all. */
+const GRIEF_DAWN_DRY = [
+  (nm, d) => `Talk at the well settles, the way it does, on who is not crying. ${nm}'s name comes up: composed, useful, entirely steady over ${d}. Half the well thinks that is strength. The other half has gone quiet about it.`,
+  (nm, d) => `Somebody notes, not quite quietly enough, that ${nm} ate a full breakfast this morning and asked after the price of wool. People have started keeping a tally of that sort of thing, and the tally is not a kind document.`,
+  (nm, d) => `${nm} was the only one at the graveside who did not want holding, and the village has decided to find that interesting rather than sad. You have seen grief do stranger things than stand up straight.`,
+];
+
 /* Where a villager's own roof already stands. Never offered as their random
    night errand and never phrased as somewhere they went "out" to: Liesel
    sleeps above the taproom, Ansel in the vestry. */
@@ -3713,6 +3851,14 @@ function resolveNight(prev, planIn, preEvents) {
       } else {
         s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
         s.deaths.push({ night: n, id: tgt.id, name: tgt.name, kind: "mobbed" });
+      /* you did not tie the knot, but you did not stop it either, and the
+         people who loved them were counting who spoke up. Half what a rope
+         on your own word costs, because half of this was the village's. */
+      const hangedKin = bondedTo(tgt.id).filter((bid) => { const x = npcById(s, bid); return x && x.alive && !x.fled; });
+      if (hangedKin.length) {
+        s.npcs = s.npcs.map((x) => (hangedKin.includes(x.id) ? { ...x, disp: clampDisp((x.disp || 0) - 1) } : x));
+        dawn.push(ev(`${npcById(s, hangedKin[0]).name} was at the rope's end of the crowd this morning, and is keeping a list of who was at the other. You are on it, for standing there.`, hangedKin[0], 1));
+      }
         if (acc && acc.alive && !tgt.turned) s.ropeStain = acc.id;
         if (!tgt.turned) { s.calmHope = tgt.name; s.calmHopeNight = n; }
         if (tgt.turned) beats.push(`As the rope draws tight, ${tgt.name}'s eyes flash with something that was never theirs. Changed, and hanged too late for it to matter.`);
@@ -3905,6 +4051,32 @@ function resolveNight(prev, planIn, preEvents) {
     s.quarry = { a: qa, loc: qLoc, day: n };
   } else if (s.quarry && s.quarry.day !== n) {
     s.quarry = null;
+  }
+
+  /* --- who took it hardest, and who did not ---
+     The morning after somebody dies, the village watches each other grieve,
+     and reports back. Both halves of that are deliberately unreliable. The
+     mourner card names someone the dead was tied to, which is true and
+     useless: of course they are wrecked. The dry-eyed card names ANYONE
+     still standing who was not tied to them, which on any given morning is
+     most of the village, so it is far more often an innocent with nothing to
+     hide than it is the thing. It waits for night 3 like every other named
+     rumour, so a day-one whisper cannot buy a lucky rope. --- */
+  const freshDead = s.deaths.filter((d) => d.night === n && FATAL_KINDS.includes(d.kind));
+  if (!s.over && freshDead.length) {
+    const dd = pick(freshDead);
+    const mourners = bondedTo(dd.id).map((mid) => npcById(s, mid)).filter((x) => x && x.alive && !x.fled);
+    if (mourners.length && chance(0.6)) {
+      const mo = pick(mourners);
+      dawn.push(ev(pickFreshIdx("griefMourner", GRIEF_DAWN_MOURNER)(mo.name, dd.name), mo.id, 1));
+    } else if (n >= 3 && chance(0.4)) {
+      const tied = new Set([...bondedTo(dd.id), dd.id]);
+      const dry = s.npcs.filter((x) => x.alive && !x.fled && !tied.has(x.id));
+      if (dry.length) {
+        const dc = pick(dry);
+        dawn.push(ev(pickFreshIdx("griefDry", GRIEF_DAWN_DRY)(dc.name, dd.name), dc.id, 1));
+      }
+    }
   }
 
   /* --- the village keeps its own journal, and you are in it ---
@@ -4206,6 +4378,12 @@ function actDefend(prev) {
       ? `You stand in the square and give your evidence: you watched ${tgt.name}'s door yourself on a night of killing, and it never opened. ${acc.name} stares a long time, then throws the coil of rope in the mud and walks away. The mob goes with the rope.`
       : `You speak for ${tgt.name} in the square: loudly, carefully, naming what is known and what is only fear. It is enough, barely. ${acc.name} backs down, hating you a little for it.`, tgt.id));
     s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, disp: clampDisp((x.disp || 0) + 2) } : x));
+    /* the people who love them saw you do it, and the debt is theirs too */
+    const savedKin = bondedTo(tgt.id).filter((bid) => { const x = npcById(s, bid); return x && x.alive && !x.fled; });
+    if (savedKin.length) {
+      s.npcs = s.npcs.map((x) => (savedKin.includes(x.id) ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+      s.dayEvents.push(ev(`${npcById(s, savedKin[0]).name} finds you afterward, says nothing worth repeating, and grips your arm hard enough to hurt before letting go.`, savedKin[0], 0));
+    }
     s.mobSpared = { id: tgt.id, until: s.nightNum + 4 };
     s.mob = null;
   } else {
@@ -4998,7 +5176,33 @@ function answerFor(s, id, night, q, targetId) {
   }
 
   if (q === "howare") {
-    if (isMonster) {
+    /* -- grief first, when there is any: a fresh death in the family the
+       village made of itself outranks the standing answer. The bespoke line
+       for the villager is the TRUE one, and the monster speaks it too, most
+       of the time, because it is wearing that face and has had months to
+       learn how that face grieves. What separates them is only noise: it
+       sits wrong about 45% of the time, and ordinary frightened innocents
+       sit wrong about 18% of the time, so a dry answer is a question and
+       never an answer, in either direction. -- */
+    const grief = grievingFor(s, id);
+    if (grief && grief.kind !== "distant" && !npc.turned) {
+      const truePool = grief.kind === "close" ? GRIEF_CLOSE[id] : GRIEF_FRICTION[id];
+      const trueLine = truePool && truePool.length
+        ? pickFreshIdx(`grief:${grief.kind}:${id}`, truePool)(grief.dead.name)
+        : pickFreshIdx("griefDistant", GRIEF_DISTANT)(grief.dead.name);
+      quote = chance(isMonster ? 0.45 : 0.18)
+        ? pickFreshIdx("griefOff", GRIEF_OFF)(grief.dead.name)
+        : trueLine;
+      /* letting someone talk about their dead is the one kindness the day
+         still has in it, and they remember who asked */
+      if (!isMonster && chance(0.5)) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+    } else if (grief && npc.turned) {
+      quote = pickFreshIdx("griefTurned", GRIEF_TURNED)(grief.dead.name);
+    } else if (grief && grief.kind === "distant" && chance(0.5)) {
+      quote = chance(isMonster ? 0.45 : 0.18)
+        ? pickFreshIdx("griefOff", GRIEF_OFF)(grief.dead.name)
+        : pickFreshIdx("griefDistant", GRIEF_DISTANT)(grief.dead.name);
+    } else if (isMonster) {
       quote = chance(0.45)
         ? pickFreshIdx("howareMonster", [
             `"Holding up?" A small smile. "Better than most, I think. I sleep well." Which is such an ordinary thing to say that it is only on the walk home you notice how few in Hollow's Edge could say it and mean it.`,
@@ -5331,6 +5535,18 @@ function actAccuse(prev, id, typeId) {
   beats.push(`${npc.name} protests to the end, and the rite does nothing: no smoke, no unmasking, no scream but a human one. Whatever ${npc.name} is, it is no ${declared.name}.`);
   beats.push(`It should end there. It does not. ${npc.name} hangs from the beam by the church door, on your word, and afterward no one meets your eye.`);
   s.calmHope = npc.name;
+  /* -- and the people who loved them do not forgive it. The village at large
+     already pays for a wrong rope (patience, wrongExecutions); this is the
+     personal half of that bill, and it is the heaviest single disposition
+     move in the game because it should be. Whoever was tied to the neck you
+     put in the noose is done with you. -- */
+  const kin = bondedTo(id).filter((bid) => { const x = npcById(s, bid); return x && x.alive && !x.fled; });
+  if (kin.length) {
+    s.npcs = s.npcs.map((x) => (kin.includes(x.id) ? { ...x, disp: clampDisp((x.disp || 0) - 2) } : x));
+    const k0 = npcById(s, kin[0]);
+    beats.push(`${k0.name} does not shout, and does not weep where anyone can see it. ${k0.name} simply looks at you, once, for as long as it takes you to understand, and then goes home and bars the door on the whole of Hollow's Edge, you included.`);
+    s.dayEvents.push(ev(`Whatever ${k0.name} was to you before, that is finished. You hanged somebody ${k0.name} loved, and the village saw whose word did it.`, k0.id, 2));
+  }
   /* -- Pass G2: the grim bargain pays off, quietly, without ever announcing
      itself as a reward -- */
   if (s.coerceNote && s.coerceNote.target === id) {

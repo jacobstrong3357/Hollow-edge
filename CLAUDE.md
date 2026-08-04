@@ -225,6 +225,27 @@ must name both WHO and WHAT before the village runs out of people.
   their nights at the same rate regardless (`outP` untouched).
 - `Snd.wail("song")` is the succubus's sweeter night-sound, played only on
   its active nights; everything else gets the grief glide.
+- **Grief is bonds, and grief is never a tell.** `BONDS` (6 ties) and
+  `FRICTIONS` (3) are authored, symmetrical and the same every game — the
+  village is meant to be learnable, like the bestiary. `grievingFor(s, id)`
+  returns the most recent death within 3 nights that this villager was tied
+  to, bond outranking friction, else `"distant"`. It reroutes `howare`:
+  `GRIEF_CLOSE[id]` (2 bespoke lines each, in their own voice), or
+  `GRIEF_FRICTION[id]` (guilt, not grief), or `GRIEF_DISTANT`, or
+  `GRIEF_TURNED` for a thrall.
+  **The monster speaks the villager's own true line** — it wears that face
+  and has learned how that face grieves. All that separates them is noise:
+  it rings wrong 45% of the time (`GRIEF_OFF`), an innocent 18%. Measured
+  over 200k draws that means the monster is the *only* one ringing wrong on
+  just 11% of mornings, it grieves flawlessly on 55%, and some innocent
+  rings wrong on 75%. Do not "tighten" those numbers — a readable grief tell
+  would end the game on day two. `GRIEF_DAWN_DRY` names anyone NOT tied to
+  the dead (usually an innocent) and waits for night 3, same as every other
+  named rumour.
+  Bonds also carry the moral weight: hanging someone on your word costs
+  their bonded kin −2 disposition (the heaviest single move in the game),
+  the mob hanging them costs −1 for your standing by, and saving them earns
+  their kin +1.
 - **Tell noise is load-bearing**: the monster's person-question tells
   (talk/howare/past) fire only ~45% — otherwise it answers from the borrowed
   villager's own human pools (a fine actor). Innocents give scared/rude
