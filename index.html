@@ -9262,12 +9262,21 @@ function MonsterVillage() {
       <div className="fixed inset-0 mv-body flex flex-col" style={{ background: tone.ground, color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
-          <div className="absolute" style={{ left: "50%", top: 150, width: 340, height: 340, marginLeft: -170, opacity: 0.34, filter: "blur(1px)" }}>
-            <MonsterArt id={m.id} size={340} light />
-          </div>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse 74% 46% at 50% 34%, ${tone.glow} 0%, rgba(8,10,10,0.92) 62%, ${tone.ground} 100%)` }} />
           <div className="mvGrain" />
           <div className="relative flex-1 min-h-0 flex flex-col justify-center text-center" style={{ padding: "0 24px", overflowY: "auto" }}>
+           <div className="relative">
+            {/* The looming shape belongs to the plate, not to the frame. Pinned
+                to the frame it stayed put while the plate scrolled over it, so
+                the moment a run earned enough deeds to overflow the screen the
+                face slid out from behind the card and sat across the prose and
+                the stat row: two monsters, one of them apparently a rendering
+                fault. Inside the content it travels with the card it looms
+                behind, and it is softened besides, so it reads as a presence
+                rather than a second picture wherever the page comes to rest. */}
+            <div className="absolute" style={{ left: "50%", top: 10, width: 340, height: 340, marginLeft: -170, opacity: 0.2, filter: "blur(4px)", pointerEvents: "none", zIndex: -1 }}>
+              <MonsterArt id={m.id} size={340} light />
+            </div>
             <span className="mv-display block mvIn" style={{ fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: tone.ink }}>
               {s.over.win ? "DAWN COMES CLEAN" : joined ? "YOU TOOK ITS OFFER" : "HOLLOW'S EDGE FALLS"}
             </span>
@@ -9311,6 +9320,7 @@ function MonsterVillage() {
                 </div>
               </div>
             )}
+           </div>
           </div>
           <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
             <button onClick={() => { setEpiCard(0); setEpiOpen(true); }} className="mv-btn mv-display w-full"
