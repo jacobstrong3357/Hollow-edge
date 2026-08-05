@@ -69,9 +69,13 @@ must name both WHO and WHAT before the village runs out of people.
    variants, chosen from existing state flags), `DayStrip`, `MvIcon`.
 7. **UI helpers** — `Btn`, `SpokenText` (word-by-word typing, click to skip),
    `TensionReveal` (staged suspense before life/death outcomes), `Carousel`,
-   `DawnCarousel`, CSS in `EXTRA_CSS`.
+   `DawnCarousel`, `BeatFlow` (the beat column the night / first-light /
+   death / offer screens share — see the layout invariant below), CSS in
+   `EXTRA_CSS`.
 8. **`MonsterVillage`** — the single component: title screen, night cinematic
-   (`phase === "night"` renders `s.nightBeats`), offer screen, epilogue,
+   (`phase === "night"` renders `s.nightBeats`), **the first-light screen**
+   (`phase === "firstlight"` renders `s.dawnBeats` under `s.dawnTitle`),
+   offer screen, epilogue,
    the interactive night walk (see below), journal, the dawn screen (a
    full-screen reveal gated on `dawnDone`; FACE THE DAY drops into the
    day), day screen (morning strip header, action cards, fixed
@@ -80,6 +84,29 @@ must name both WHO and WHAT before the village runs out of people.
 
 ## Core invariants (do not break)
 
+- **A centred column that can overflow must be `safe` centred.** Every
+  full-screen beat list (night, first light, death, offer) and the epilogue
+  card centre their content in a scrolling box. `justify-content: center`
+  (or `flex-end`) pushes the START of an overflowing column out through the
+  top edge, where **no scrollbar can reach it** — a seven-beat JUDGMENT lost
+  its opening line under the title, and a five-deed epilogue lost its
+  heading. Use `.mvSafeCenter` / `.mvSafeEnd` (plain keyword first as the
+  fallback, `safe` second), and give a single-child scroll box `shrink-0` so
+  it cannot be squeezed instead of scrolled. `BeatFlow` wraps all of this
+  and also follows the timed reveal down the column, so a beat dealt below
+  the fold is scrolled to on the same clock it fades in on.
+- **First light is not the night.** Anything the village does awake, in the
+  open, together — so far the mob's ultimatum falling due — goes to
+  `firstLight` in `resolveNight`, lands in `s.dawnBeats`/`s.dawnTitle`, and
+  plays on its own screen between the night cinematic and the morning's
+  cards. Never append it to `beats`: a rope thrown over a beam in front of
+  everyone read as a footnote to the small hours. It still owes the dawn a
+  card — every death, whoever caused it, gets one (the hanged, and the
+  accuser the unmasked thing takes in the square).
+- **Never name one of the sixteen in ambient prose.** The mundane
+  explanation a villager reaches for ("a wolf, some will say") is a leak the
+  moment it coincides with the answer. Say what it sounded like, not what it
+  might have been.
 - **"Nothing is ever proof."** No single line of narration may uniquely
   identify the monster; signs/sounds/demeanor always overlap several types.
   Every sign a monster leaves is real; decoys are tracked in `s.planted`.
@@ -113,6 +140,17 @@ must name both WHO and WHAT before the village runs out of people.
   `brush`, `mingled`) branch off and re-enter via `nextStage`/`goReturn`/
   `advanceAfterSearch`. `commitWalk`/`commitWatch` end the night via
   `nightfall(plan)` → `resolveNight`.
+  **Every stage must render at least one button.** Both follow-reveal stages
+  end on a catch-all written as "any kind not handled above", never as
+  `kind === "plain"`: a `followScene` kind nobody wrote a branch for (this
+  is exactly what `"grief"` did in the watch flow) strands the whole run on
+  a screen with no way off it, and there is no back button in the dark.
+  **A find in the lanes stamps.** When the ground or a dead animal gives up
+  a sign, `goReturn` passes it as `walk.foundSign` and the `found` stage
+  renders a `StampChip` under the prose; the morning's card for the same
+  find is an amber `evPlaque`, so a night find reads exactly like a day one.
+  Only ever set from a roll made on that screen — the settle in
+  `resolveNight` files it unconditionally, so the chip never lies.
 - **The close pass** (`brush`) is the rare shape a survival can take. It is
   only ever reached *after* the night has already decided in your favour, so
   it can never kill: `rollApproachFate` and `startFollowFate` pre-roll the
@@ -162,6 +200,16 @@ must name both WHO and WHAT before the village runs out of people.
   and your name coming up in the square before the mob settles on its target.
   The rope never comes for the player: that fail state would make going out
   unplayable.
+  **And it knows who you were with.** Crossing paths with someone in the
+  lanes on the night they die used to be a private fact ("the village does
+  not know that. You do."). It stays private only while nobody saw you: if
+  any living neighbour has a `sawYouOut` entry for that same night, the
+  village does the arithmetic out loud and `s.lastWith` records it — a
+  morning card naming the teller, −1 on the dead's bonded kin (same −2
+  floor), the barb said to your face when you ask anyone where they were
+  *that* night (it replaces the ordinary lantern barb rather than stacking
+  with it), and your name in the square the next time the mob forms. Still
+  never fatal.
 - **It knows which door is yours.** Once `s.monsterSawYou`, an active night
   can bring it to your threshold (0.35). It never enters and never kills
   there, whatever its `reach` — the barred door is the promise the game

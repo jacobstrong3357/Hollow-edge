@@ -396,7 +396,11 @@ const INVEST_ACTS = [
    the fifteen horrors, with heavy overlap, so a sound narrows the field only
    a little and never on its own. */
 const AMBIENT_SOUNDS = [
-  { m: ["werewolf", "banshee", "hag", "wraith", "ghoul", "mimic"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. A wolf, some will say. The rest say nothing at all." },
+  /* the mundane explanation the village reaches for must never be one of the
+     sixteen answers by name: a card that says "a wolf, some will say" on a
+     werewolf's night is not a clue the player earned, it is the game saying
+     the word out loud and hoping the coincidence goes unnoticed. */
+  { m: ["werewolf", "banshee", "hag", "wraith", "ghoul", "mimic"], t: "A cry rolled down from the tree line, long and rising, answered by nothing. Something in the hills, some will say. The rest say nothing at all." },
   { m: ["ghoul", "revenant", "witch", "lich", "werewolf", "shifter", "necromancer", "mimic"], t: "From out in the dark, a patient working sound. Digging, or chewing. Or both, taking turns." },
   { m: ["revenant", "ghoul", "wraith", "doppel", "hag", "demon", "necromancer", "lich"], t: "Slow footsteps passed down the lane, dragging, patient as a funeral, and paused at no door." },
   { m: ["witch", "doppel", "demon", "banshee", "hag", "vampire", "necromancer", "succubus", "hollowed", "lich"], t: "A voice rode the wind a moment: reciting, or wailing, or one name over and over. Gone before anyone could swear which." },
@@ -2920,6 +2924,10 @@ function resolveNight(prev, planIn, preEvents) {
   const s = JSON.parse(JSON.stringify(prev));
   s.deathBeats = null;
   s.deathAfterBeats = false;
+  /* what happens once it is light and the village is awake and standing in
+     the square together. It is not the night, and it does not belong on the
+     night's card: it gets its own screen between the two (see FIRST LIGHT). */
+  s.dawnBeats = null;
   /* the day that is ending, before s.dayNum gets overwritten below - used to
      file the day's search/exam findings under the right day in the journal */
   const endedDay = prev.dayNum;
@@ -3489,9 +3497,11 @@ function resolveNight(prev, planIn, preEvents) {
            here we only settle the ledger, never re-roll or re-narrate */
         if (mods.searchRoll.found && !s.foundSigns.includes(mods.searchRoll.found)) {
           s.foundSigns.push(mods.searchRoll.found);
-          dawn.push(ev(mods.searchRoll.animal
+          /* a find in the lanes is a find, and the morning stamps it the same
+             way the daylight search does: ruled plaque, sign named under it */
+          dawn.push(evPlaque(ev(mods.searchRoll.animal
             ? `Near the ${plan.loc} in the night you found a dead animal that told you more than the ground did. ${mods.searchRoll.sense}`
-            : `Searching the ${plan.loc} by lantern light, you found something. ${mods.searchRoll.sense}`));
+            : `Searching the ${plan.loc} by lantern light, you found something. ${mods.searchRoll.sense}`), "amber", mods.searchRoll.found));
         } else if (!mods.searchRoll.found && !playerGlimpsed) {
           dawn.push(ev(pickFreshIdx("searchNothing", SEARCH_NOTHING)(plan.loc)));
         }
@@ -3804,7 +3814,24 @@ function resolveNight(prev, planIn, preEvents) {
         } else if (crossedPaths && n > 1) {
           beats.push(`${victim.name}. You were with ${victim.name} in the dark not an hour ago, and left them living. Whatever found them found them almost the moment your back was turned.`);
           s.clues.push(`Night ${n}: ${victim.name} was alive when you left them at ${victimWhere === "home" ? "their own door" : "the " + victimWhere}. It was close behind you both. It chose them.`);
-          dawn.push(ev(`You may have been the last to see ${victim.name} alive. The village does not know that. You do.`, victim.id, 2));
+          /* -- and whether the VILLAGE knows it, which is a different fact.
+             It knows only what somebody saw: a neighbour who marked your
+             lantern that same night can put you and the dead on the same
+             road, and by breakfast that is a sentence people are saying.
+             Kept to what was actually witnessed, and never fatal - the rope
+             does not come for the player - but it costs standing with the
+             people who loved them, and it is said to your face. -- */
+          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n));
+          if (tellers.length) {
+            const teller = tellers[0];
+            s.lastWith = { id: victim.id, name: victim.name, night: n, teller: teller.id };
+            dawn.push(ev(`${teller.name} saw your lantern abroad the same night ${victim.name} died, and has done the arithmetic out loud: whoever else was near ${victim.name} at the end, you were. Nobody says the next part. Everybody has got to it.`, victim.id, 2));
+            /* the people who loved them are the ones who feel it */
+            const kin = bondedTo(victim.id).filter((bid) => { const x = npcById(s, bid); return x && x.alive && !x.fled; });
+            if (kin.length) s.npcs = s.npcs.map((x) => (kin.includes(x.id) ? { ...x, disp: Math.max(-2, clampDisp((x.disp || 0) - 1)) } : x));
+          } else {
+            dawn.push(ev(`You may have been the last to see ${victim.name} alive. The village does not know that. You do.`, victim.id, 2));
+          }
         }
         /* A single death should not be a wall of cards. Give it who + where,
            then AT MOST ONE flourish, so a kill reads in two or three cards,
@@ -3935,7 +3962,14 @@ function resolveNight(prev, planIn, preEvents) {
      on the accused's own door (watching or following them), or came home
      having seen whose face the thing actually wears, that testimony stands
      between the rope and the neck. The promised "day and night to find the
-     truth" must actually be honoured at dawn. ---- */
+     truth" must actually be honoured at dawn.
+
+     These beats go to firstLight, NOT to the night's beats: a rope thrown
+     over a beam in front of the whole village in broad daylight is not
+     something the night did, and reading it as the tail of the night card
+     buried the loudest thing that happens in a run under the small hours
+     that preceded it. It plays on its own screen, after the night. ---- */
+  const firstLight = [];
   if (s.mob && n === s.mob.deadline && !s.fled && !s.over) {
     const tgt = npcById(s, s.mob.target);
     const acc = npcById(s, s.mob.accuser);
@@ -3945,11 +3979,11 @@ function resolveNight(prev, planIn, preEvents) {
       const accName = acc && acc.alive ? acc.name : "The mob";
       if (learnedFaceTonight) {
         const fn = npcById(s, s.faceKnown);
-        beats.push(`First light, and the rope comes up the lane for ${tgt.name}, and you put yourself in front of it with what the night just showed you: the thing wears ${fn ? fn.name : "another"}'s face. You saw it with your own eyes, hours ago, and you say so, plainly, to the whole crowd.`);
-        beats.push(`${accName} looks at you a long moment, then at the coil of rope, and lets it fall in the mud. "Then we watch ${fn ? fn.name : "them"}," someone says, and the crowd that came to hang ${tgt.name} breaks apart into frightened knots of talk.`);
+        firstLight.push(`First light, and the rope comes up the lane for ${tgt.name}, and you put yourself in front of it with what the night just showed you: the thing wears ${fn ? fn.name : "another"}'s face. You saw it with your own eyes, hours ago, and you say so, plainly, to the whole crowd.`);
+        firstLight.push(`${accName} looks at you a long moment, then at the coil of rope, and lets it fall in the mud. "Then we watch ${fn ? fn.name : "them"}," someone says, and the crowd that came to hang ${tgt.name} breaks apart into frightened knots of talk.`);
       } else {
-        beats.push(`First light. ${accName} comes with the rope and the crowd behind, and finds you already at ${tgt.name}'s door, having never left it. You tell them what you watched, hour by hour, and what the night did and did not hold.`);
-        beats.push(`${accName} looks from you to the door and back, a long time. Then the coil of rope drops in the mud. "On your eyes, then. Not mine." The crowd thins away in ones and twos, ashamed of its own torches.`);
+        firstLight.push(`First light. ${accName} comes with the rope and the crowd behind, and finds you already at ${tgt.name}'s door, having never left it. You tell them what you watched, hour by hour, and what the night did and did not hold.`);
+        firstLight.push(`${accName} looks from you to the door and back, a long time. Then the coil of rope drops in the mud. "On your eyes, then. Not mine." The crowd thins away in ones and twos, ashamed of its own torches.`);
       }
       if (spentNightOnAccused && victim && victimKind === "kill" && watching === tgt.id && !s.hardCleared.includes(tgt.id)) s.hardCleared.push(tgt.id);
       s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, disp: clampDisp((x.disp || 0) + 2) } : x));
@@ -3957,18 +3991,25 @@ function resolveNight(prev, planIn, preEvents) {
       /* a neck publicly saved is not offered up again the very next day:
          the shame of the dropped rope buys them a few mornings' peace */
       s.mobSpared = { id: tgt.id, until: n + 4 };
+      s.dawnTitle = "THE ROPE DROPS";
       s.mob = null;
     } else if (tgt && tgt.alive) {
-      beats.push(`First light. ${acc && acc.alive ? acc.name : "The mob"} keeps the promise: torches and rope at ${tgt.name}'s door, and no one moves to stop it. Not even you.`);
+      s.dawnTitle = "THE ROPE";
+      firstLight.push(`First light. ${acc && acc.alive ? acc.name : "The mob"} keeps the promise: torches and rope at ${tgt.name}'s door, and no one moves to stop it. Not even you.`);
       if (tgt.id === s.monster.vid) {
-        beats.push(`The rope goes over the beam. ${tgt.name} does not struggle. ${tgt.name} smiles, and keeps smiling while the knot is tied, and it is the smiling that empties the front row.`);
-        beats.push(`The rope snaps like thread. What stands up out of the dust is not ${tgt.name}, and never was. "Clever," it says into the silence, in a voice like something enjoying a new mouth. "Clever, clever ${acc && acc.alive ? acc.name : "little village"}. You counted right." It looks around the square, taking all the time in the world. "Nobody else did."`);
+        firstLight.push(`The rope goes over the beam. ${tgt.name} does not struggle. ${tgt.name} smiles, and keeps smiling while the knot is tied, and it is the smiling that empties the front row.`);
+        firstLight.push(`The rope snaps like thread. What stands up out of the dust is not ${tgt.name}, and never was. "Clever," it says into the silence, in a voice like something enjoying a new mouth. "Clever, clever ${acc && acc.alive ? acc.name : "little village"}. You counted right." It looks around the square, taking all the time in the world. "Nobody else did."`);
         if (acc && acc.alive) {
-          beats.push(`Then it takes ${acc.name}. In the middle of the square, in front of everyone, while the torches gutter and nobody's legs will answer them. What it says while it works is worse than the work: "${acc.name} always was the sharp one. Yes. I think I will keep the sharp part." Then it is over the churchyard wall and gone.`);
+          firstLight.push(`Then it takes ${acc.name}. In the middle of the square, in front of everyone, while the torches gutter and nobody's legs will answer them. What it says while it works is worse than the work: "${acc.name} always was the sharp one. Yes. I think I will keep the sharp part." Then it is over the churchyard wall and gone.`);
           s.npcs = s.npcs.map((x) => (x.id === acc.id ? { ...x, alive: false } : x));
           s.deaths.push({ night: n, id: acc.id, name: acc.name, kind: "slain", where: "Village Square", examined: false, found: [] });
+          /* the morning owes this death a card like any other. It was taken
+             in daylight in front of everyone, so there is nothing to find at
+             the scene and nothing to deduce from it: the card exists so the
+             dawn does not quietly lose a villager the player watched die. */
+          dawn.push(ev(`${acc.name} is dead in the Village Square, taken in daylight in front of the whole village while it stood there and let it happen. There is no scene to read and no doubt to sit with. Everybody saw.`, acc.id, 3));
         }
-        beats.push("The mob had the right face and no idea of the name. Learn its true nature from what it leaves behind. It will come back every night until there is no one left to come back for.");
+        firstLight.push("The mob had the right face and no idea of the name. Learn its true nature from what it leaves behind. It will come back every night until there is no one left to come back for.");
         dawn.push(ev(`The whole village saw what stood up under the beam wearing ${tgt.name}'s face. Only the cure it answers to ends it now, and it comes back tonight.`, tgt.id, 2));
         s.fled = true;
         s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, fled: true } : x));
@@ -3976,6 +4017,12 @@ function resolveNight(prev, planIn, preEvents) {
       } else {
         s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
         s.deaths.push({ night: n, id: tgt.id, name: tgt.name, kind: "mobbed" });
+        /* the record of the morning, in the morning's own cards: the village
+           took a neighbour off the list itself, and the dawn says so plainly
+           whether or not anybody was left who loved them enough to blame you */
+        dawn.push(ev(tgt.turned
+          ? `${tgt.name} hangs by the beam at the Village Square, and the village is telling itself it saw something in the eyes at the end. It did. It was still a rope, and it was still too late.`
+          : `${tgt.name} hangs by the beam at the Village Square, on the village's word and nobody's evidence. The lanes are very quiet about it, in the way that means everyone is thinking the same thing.`, tgt.id, 3));
       /* you did not tie the knot, but you did not stop it either, and the
          people who loved them were counting who spoke up. Half what a rope
          on your own word costs, because half of this was the village's. */
@@ -3986,12 +4033,13 @@ function resolveNight(prev, planIn, preEvents) {
       }
         if (acc && acc.alive && !tgt.turned) s.ropeStain = acc.id;
         if (!tgt.turned) { s.calmHope = tgt.name; s.calmHopeNight = n; }
-        if (tgt.turned) beats.push(`As the rope draws tight, ${tgt.name}'s eyes flash with something that was never theirs. Changed, and hanged too late for it to matter.`);
-        else beats.push(`${tgt.name} calls your name at the end. Not the mob's. Yours. You could have found the truth in time.`);
+        if (tgt.turned) firstLight.push(`As the rope draws tight, ${tgt.name}'s eyes flash with something that was never theirs. Changed, and hanged too late for it to matter.`);
+        else firstLight.push(`${tgt.name} calls your name at the end. Not the mob's. Yours. You could have found the truth in time.`);
         s.mob = null;
       }
     } else { s.mob = null; }
   }
+  if (firstLight.length) s.dawnBeats = firstLight;
 
   /* --- the weather leaves a morning behind it --- */
   if (n > 1 && wx && !s.over && chance(0.7)) dawn.push(ev(WEATHER_DAWN[wx]));
@@ -4288,7 +4336,10 @@ function resolveNight(prev, planIn, preEvents) {
          game is not that, and a fail state you cannot argue with would make
          going out unplayable. But you hear your name said in that tone once,
          and you do not forget how the square sounded while it happened. */
-      if (seenOutNights(s) >= 3) {
+      /* being seen out often enough, or being the one the square puts on the
+         same road as somebody who did not come home, both get your name said
+         out loud before it settles on the neighbour it came for */
+      if (seenOutNights(s) >= 3 || (s.lastWith && n - s.lastWith.night <= 2)) {
         dawn.push(ev(`Before ${target.name}'s name went up in the square, yours did. It did not stay up. It did not go away either, and you know now exactly what it sounds like when a room full of neighbours considers you properly.`, undefined, 2));
       }
     }
@@ -5028,7 +5079,19 @@ function answerFor(s, id, night, q, targetId) {
     /* -- the night walk is remembered, both ways -- */
     if (!witnessedHandled) {
       const metMe = (npc.sawYouOut || []).find((e2) => e2.night === night && e2.met);
-      if (metMe && claim && claim !== "home") {
+      /* the night somebody died with your lantern on the same road: asked
+         where THEY were that night, they answer, and then they ask you the
+         same thing, because the whole village has been asking it since
+         breakfast. Said hardest by whoever loved the dead. */
+      const lw = s.lastWith;
+      const lwHit = !!(lw && lw.night === night && npc.id !== lw.id && !isMonster && !npc.turned);
+      if (lwHit) {
+        /* it outranks the ordinary lantern barb below rather than stacking
+           with it: one accusation to the face is the beat, two is a speech */
+        quote += bondedTo(lw.id).includes(npc.id)
+          ? ` Then, without heat, which is worse: "You were out that night as well. With ${lw.name}, they say, near the end of it. I would rather hear it from you than keep deciding alone."`
+          : ` A beat. "You were abroad that night yourself, mind. Same night as ${lw.name}. I only repeat what the square says, and the square has said it twice."`;
+      } else if (metMe && claim && claim !== "home") {
         quote += ` "But you know that. You hailed me in the lane yourself, remember. Two fools abroad on the same bad night."`;
       } else if (claim && claim !== "home" && s.playerSaw.some((f) => f.night === night && f.id === id && f.loc === claim)) {
         quote += ` "But then, you know that already. You were there yourself. I saw your lantern."`;
@@ -7882,6 +7945,14 @@ const EXTRA_CSS = `
 @keyframes mvivin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .mvIvChip:hover { border-color: #D9A441 !important; }
 .mvIvDock { box-shadow: 0 -12px 26px rgba(4,6,12,0.55); }
+/* Centring (or bottom-aligning) a column that has outgrown its own scroll
+   box throws the START of it out through the top edge, where no scrollbar
+   can ever reach it: a seven-beat JUDGMENT lost its opening line under the
+   title with no way to scroll back. "safe" drops the centring at exactly
+   the moment it stops fitting, so overflow only ever goes downward. The
+   plain keyword stays first as the fallback for anything older. */
+.mvSafeCenter { justify-content: center; justify-content: safe center; }
+.mvSafeEnd { justify-content: flex-end; justify-content: safe flex-end; }
 @media (prefers-reduced-motion: reduce) { .mvIvIn { animation: none; opacity: 1; } }
 /* the walk's weather: two banks of fog crossing at different speeds, and a
    moon that breathes. Nothing else moves out there. */
@@ -7968,6 +8039,35 @@ const EXTRA_CSS = `
 @media (prefers-reduced-motion: reduce) { .mvKill-burn, .mvKill-pierce, .mvKill-shatter, .mvKill-sink, .mvKill-shrink, .mvKill-dissolve, .mvKillFlash { animation: none; opacity: 0.45; filter: grayscale(1) brightness(0.5); } }
 `;
 const CSS_ALL = fontStyles + EXTRA_CSS;
+
+/* The beat column the three cinematic screens share: the night, the death
+   screen and the offer. It exists for the two things a plain scrolling div
+   got wrong once a scene ran long.
+
+   First, alignment: see .mvSafeCenter. Second, the beats are DEALT, on a
+   timer, and a long scene deals its later beats below the fold, into a part
+   of the column nobody is looking at. So the column follows the dealing
+   down on the same clock the reveal runs on, one beat at a time, and never
+   further than the beat that just landed. Skipping the dealing puts it back
+   at the top, because a player who skipped is reading from the first line. */
+function BeatFlow({ revealed, base, step, align = "center", className = "", style, onClick, children }) {
+  const ref = useRef(null);
+  const count = React.Children.count(children);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (revealed) { el.scrollTop = 0; return; }
+    const smooth = !(typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const timers = Array.from(el.children).map((kid, i) => setTimeout(() => {
+      const box = el.getBoundingClientRect(), line = kid.getBoundingClientRect();
+      if (line.bottom > box.bottom) el.scrollBy({ top: line.bottom - box.bottom + 10, behavior: smooth ? "smooth" : "auto" });
+    }, (base + i * step) * 1000));
+    return () => timers.forEach(clearTimeout);
+  }, [revealed, count, base, step]);
+  return (
+    <div ref={ref} className={`${align === "end" ? "mvSafeEnd" : "mvSafeCenter"} ${className}`} style={style} onClick={onClick}>{children}</div>
+  );
+}
 
 function SpokenText({ text, speed = 38, delay = 0 }) {
   const words = text.split(" ");
@@ -8780,7 +8880,7 @@ function MonsterVillage() {
               </>
             ) : savedRun ? (
               <div className="grid grid-cols-2 gap-2">
-                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 1.5 }}>CONTINUE · {savedRun.phase === "day" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`}</span></Btn>
+                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 1.5 }}>CONTINUE · {savedRun.phase === "day" || savedRun.phase === "firstlight" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`}</span></Btn>
                 <Btn kind="red" full center onClick={() => setConfirmAbandon(true)}><span className="mv-display" style={{ letterSpacing: 1.5 }}>NEW GAME</span></Btn>
               </div>
             ) : (
@@ -9045,7 +9145,17 @@ function MonsterVillage() {
   if (s.phase === "night") {
     const beats = s.nightBeats || [];
     const total = 1.2 + beats.length * 1.4;
-    const toDawn = () => { setS({ ...s, phase: "day" }); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
+    /* the night is over. If the village has something to do in the open once
+       it is light - so far, the mob's ultimatum falling due - that plays on
+       its own screen before the morning's cards, never as the tail of the
+       night's. A run that ended in the night skips it: there is no village
+       morning to attend. */
+    const toDawn = () => {
+      const next = !s.over && s.dawnBeats && s.dawnBeats.length ? "firstlight" : "day";
+      if (next === "firstlight") setBeatsRevealed(false);
+      setS({ ...s, phase: next });
+      if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+    };
     /* A night-walk kill was already lived in the lanes, so its death screen is
        the only screen. But an accusation gone wrong (deathAfterBeats) plays
        its JUDGMENT cinematic first — the rite, the wrong name, the thing
@@ -9066,11 +9176,11 @@ function MonsterVillage() {
             <div className="flex justify-center mt-4 shrink-0 mvLoom"><MonsterArt id={m.id} size={132} light /></div>
             {/* the last thing you read is the biggest thing on the screen, and
                 it brightens as it goes, the way a night card does */}
-            <div className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col justify-center" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer" }}>
+            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer" }}>
               {s.deathBeats.map((b, i) => (
                 <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.85 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.15).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
               ))}
-            </div>
+            </BeatFlow>
             <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
               <DockBtn kind="destroy" onClick={toDawn}>IT IS OVER</DockBtn>
             </div>
@@ -9118,12 +9228,12 @@ function MonsterVillage() {
                 {beatsFirst ? "THE RITE UNRAVELS" : won ? "THE RECKONING" : `DAY ${s.dayNum} GIVES WAY`}
               </span>
               <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: title.length > 12 ? 27 : 35, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{title}</h1>
-              <div className="flex flex-col" style={{ flex: 1, minHeight: 0, justifyContent: "center", gap: 9, marginTop: 13, paddingBottom: 6, overflowY: "auto" }}>
+              <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} className="flex flex-col" style={{ flex: 1, minHeight: 0, gap: 9, marginTop: 13, paddingBottom: 8, overflowY: "auto" }}>
                 {beats.map((b, i) => (
                   <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: beatColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
                 ))}
                 {!beatsRevealed && <p className="mvBeat" style={{ margin: 0, fontSize: 15.5, letterSpacing: 4, textAlign: "center", color: "rgba(233,223,200,0.6)", animationDelay: `${total}s` }}>· · ·</p>}
-              </div>
+              </BeatFlow>
               {/* what the night cost, and what is left of the village */}
               <div className="flex items-baseline" style={{ gap: 26, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
                 <span className="flex items-baseline" style={{ gap: 8 }}>
@@ -9146,6 +9256,68 @@ function MonsterVillage() {
           <div className="mvGrainF" />
         </div>
       );
+  }
+
+  /* ---------- First light ----------
+     The night card is what happened while every door in Hollow's Edge was
+     barred. This is the part the village does together, awake, in the open,
+     and it gets its own screen between the night and the morning's cards:
+     same shape as the night cinematic, the square at sunrise instead of the
+     moon over the roofs, and the count read off the living rather than off
+     who the village has not buried yet - by now everybody has seen it. */
+  if (s.phase === "firstlight") {
+    const fBeats = s.dawnBeats || [];
+    const fTotal = 1.2 + fBeats.length * 1.4;
+    const fTitle = s.dawnTitle || "FIRST LIGHT";
+    const toDay = () => {
+      setBeatsRevealed(false);
+      setS({ ...s, phase: "day", dawnBeats: null, dawnTitle: null });
+      if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+    };
+    const fColor = (i) => (i === fBeats.length - 1
+      ? "#F1E4C6"
+      : `rgba(233,223,200,${(0.8 + (fBeats.length > 1 ? i / (fBeats.length - 1) : 1) * 0.2).toFixed(2)})`);
+    return (
+      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: "#080709", color: C.parch, overflow: "hidden" }}>
+        <style>{CSS_ALL}</style>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
+            <DawnScene loc="Village Square" s={s} height={228} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(8,7,9,0) 44%, rgba(8,7,9,0.6) 84%, rgba(8,7,9,0.9) 100%)" }} />
+          </div>
+          <div className="mvGrain" />
+          <button onClick={toDay} className="mv-btn mv-body absolute" style={{ top: "max(env(safe-area-inset-top),23px)", right: 18, padding: "4px 10px", border: "none", borderRadius: 3, background: "rgba(8,10,18,0.55)", color: C.amber, fontSize: 13.5, cursor: "pointer", zIndex: 2 }}>skip ≫</button>
+          <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 30px)" }}
+            onClick={() => setBeatsRevealed(true)}>
+            <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: C.amber }}>THE VILLAGE GATHERS</span>
+            <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: fTitle.length > 12 ? 27 : 35, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{fTitle}</h1>
+            <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} className="flex flex-col" style={{ flex: 1, minHeight: 0, gap: 9, marginTop: 13, paddingBottom: 8, overflowY: "auto" }}>
+              {fBeats.map((b, i) => (
+                <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: fColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
+              ))}
+              {!beatsRevealed && <p className="mvBeat" style={{ margin: 0, fontSize: 15.5, letterSpacing: 4, textAlign: "center", color: "rgba(233,223,200,0.6)", animationDelay: `${fTotal}s` }}>· · ·</p>}
+            </BeatFlow>
+            <div className="flex items-baseline" style={{ gap: 26, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
+              <span className="flex items-baseline" style={{ gap: 8 }}>
+                <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.parch }}>{s.nightNum}</span>
+                <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
+              </span>
+              <span className="flex items-baseline" style={{ gap: 8, marginLeft: "auto" }}>
+                <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.amber }}>{aliveNpcs(s).length}</span>
+                <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>STILL LIVING</span>
+              </span>
+            </div>
+          </div>
+          <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
+            <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${fTotal}s` }}>
+              <DockBtn kind="commit" onClick={toDay}>ONWARD →</DockBtn>
+            </div>
+          </div>
+        </div>
+        <div className="mvVignette" />
+        <div className="mvGrainF" />
+      </div>
+    );
   }
 
   /* ---------- Pass G2: the offer ----------
@@ -9204,12 +9376,12 @@ function MonsterVillage() {
           <div className="relative text-center" style={{ flexShrink: 0, padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 32px)" }}>
             <span className="mv-display mvTitleGlow" style={{ fontSize: 17, letterSpacing: 4.5, whiteSpace: "nowrap", color: C.redBright }}>IT MAKES AN OFFER</span>
           </div>
-          <div className="relative flex-1 min-h-0 flex flex-col justify-end" style={{ gap: 10, padding: "0 26px 26px", overflowY: "auto" }}
+          <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} align="end" className="relative flex-1 min-h-0 flex flex-col" style={{ gap: 10, padding: "0 26px 26px", overflowY: "auto" }}
             onClick={() => setBeatsRevealed(true)}>
             {offerBeats.map((b, i) => (
               <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === offerBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.85 + (offerBeats.length > 1 ? i / (offerBeats.length - 1) : 1) * 0.15).toFixed(2)})`, textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.7)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
             ))}
-          </div>
+          </BeatFlow>
           <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
             <button onClick={joinIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
               style={{ borderRadius: 3, padding: "13px 0", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8", fontSize: 14, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal}s` }}>Take its hand</button>
@@ -9272,8 +9444,12 @@ function MonsterVillage() {
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse 74% 46% at 50% 34%, ${tone.glow} 0%, rgba(8,10,10,0.92) 62%, ${tone.ground} 100%)` }} />
           <div className="mvGrain" />
-          <div className="relative flex-1 min-h-0 flex flex-col justify-center text-center" style={{ padding: "0 24px", overflowY: "auto" }}>
-           <div className="relative">
+          <div className="mvSafeCenter relative flex-1 min-h-0 flex flex-col text-center" style={{ padding: "14px 24px 18px", overflowY: "auto" }}>
+           {/* shrink-0: a run that earned four or five deeds makes this card
+               taller than the screen, and a flex child that is allowed to
+               shrink gets squeezed to fit instead of letting the column
+               scroll, which cut the last deed down to a sliver of its rule. */}
+           <div className="relative shrink-0">
             {/* The looming shape belongs to the plate, not to the frame. Pinned
                 to the frame it stayed put while the plate scrolled over it, so
                 the moment a run earned enough deeds to overflow the screen the
@@ -9560,6 +9736,12 @@ function MonsterVillage() {
   const goReturn = (extraMods) => {
     const newMods = { ...walk.mods, ...(extraMods || {}) };
     const extraLog = []; /* lived as full beats in the "found" stage */
+    /* the mark this pass of the ground actually turned up, if any: the lanes
+       tell you what it FELT like and the stamp says what got written down,
+       the same pairing the daylight search plaques already use. Tracked
+       separately from searchRoll because searchRoll may have been rolled by
+       an earlier stage, in which case nothing is being found on this screen. */
+    let foundSign = null;
     const f = walk.facts;
     if (newMods.approach !== "back") {
       /* -- the boundary circuit pays out live, never silently -- */
@@ -9588,6 +9770,7 @@ function MonsterVillage() {
         const found = unfound.length && chance(findP) ? pick(unfound) : null;
         if (found) {
           newMods.searchRoll = { found, sense: senseFor(found) };
+          foundSign = found;
           extraLog.push(`Your lantern catches something half-hidden at your feet. You crouch, and look, and wish you had not. ${newMods.searchRoll.sense}`);
         } else {
           /* the ground gave up no mark tonight: a chance instead at an animal
@@ -9600,6 +9783,7 @@ function MonsterVillage() {
             const asg = pick(animalPool);
             const scene = animalSignScene(asg);
             newMods.searchRoll = { found: asg, sense: scene, animal: true };
+            foundSign = asg;
             extraLog.push(scene);
           } else {
             newMods.searchRoll = { found: null, sense: null };
@@ -9616,7 +9800,7 @@ function MonsterVillage() {
        a lead-in. It gets its own stage, typed out one line at a time, so
        nothing important is ever a grey footnote to something else. */
     if (extraLog.length) {
-      setWalk({ ...walk, mods: newMods, stage: "found", foundLines: extraLog, foundIdx: 0, pre: [] });
+      setWalk({ ...walk, mods: newMods, stage: "found", foundLines: extraLog, foundSign, foundIdx: 0, pre: [] });
       return;
     }
     advanceAfterSearch(walk, newMods, []);
@@ -9972,7 +10156,9 @@ function MonsterVillage() {
                     <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`Some secrets are only secrets. You leave ${fw2.name} to theirs and keep to your own errand, toward the ${walk.loc}.`] })}>Leave them to it. On to the {walk.loc}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Enough for one night. Head home</Btn>
                   </>)}
-                  {fsc.kind === "plain" && (<>
+                  {/* "anything else", not "plain": no kind may reach this
+                      stage without a way off it. */}
+                  {!["monster", "turned", "grief", "secret"].includes(fsc.kind) && (<>
                     <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, followSeen: fw2.id }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [sameDest ? `You leave ${fw2.name} to their business and turn to your own: the ${walk.loc} is not theirs to keep.` : `You leave ${fw2.name} to it and turn for the ${walk.loc}.`] })}>{sameDest ? "Leave them to it. See to your own search" : `Leave them to it. On to the ${walk.loc}`}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, followAct: "home", loc: fsc.dest })}>Enough for one night. Head home</Btn>
                   </>)}
@@ -10090,6 +10276,14 @@ function MonsterVillage() {
                   <p style={{ fontSize: 15.5, lineHeight: 1.5, color: C.parch, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
                     <SpokenText text={lines[idx]} speed={40} />
                   </p>
+                  {/* the mark, written down, under the sentence that earned
+                      it: the lanes describe what you are looking at and the
+                      stamp names it, so a find in the dark reads the same way
+                      a find by daylight does instead of leaving the player to
+                      work out afterward what the journal just gained. */}
+                  {idx === lines.length - 1 && walk.foundSign && (
+                    <span className="mvIvIn" style={{ display: "flex" }}><StampChip sign={walk.foundSign} /></span>
+                  )}
                   {idx < lines.length - 1
                     ? <Btn full kind="amber" onClick={() => setWalk({ ...walk, foundIdx: idx + 1 })}>And then →</Btn>
                     : <Btn full kind="amber" onClick={() => advanceAfterSearch(walk, walk.mods, [])}>Take it in, and go on →</Btn>}
@@ -10271,7 +10465,13 @@ function MonsterVillage() {
                     <Btn full onClick={() => commitWatch({ follow: walk.targetId, followAct: "help" })}>Try to reach them</Btn>
                   </>)}
                   {fsc.kind === "secret" && <Btn full kind="amber" onClick={() => commitWatch({ follow: walk.targetId })}>Leave without being seen</Btn>}
-                  {fsc.kind === "plain" && <Btn full kind="amber" onClick={() => commitWatch({ follow: walk.targetId })}>Enough for one night. Head home</Btn>}
+                  {fsc.kind === "grief" && <Btn full kind="amber" onClick={() => commitWatch({ follow: walk.targetId })}>Leave them their hour. Head home</Btn>}
+                  {/* the catch-all is written as "anything not handled above"
+                      rather than as kind === "plain": a follow that reaches
+                      this stage with a kind nobody wrote a button for strands
+                      the whole run on a screen with no way off it, which is
+                      exactly what a watch that ended at a graveside did. */}
+                  {!["monster", "turned", "secret", "grief"].includes(fsc.kind) && <Btn full kind="amber" onClick={() => commitWatch({ follow: walk.targetId })}>Enough for one night. Head home</Btn>}
                 </div>
               );
             })()}
