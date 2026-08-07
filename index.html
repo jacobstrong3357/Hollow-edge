@@ -7583,6 +7583,33 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small, center 
   );
 }
 
+/* The gate needs to feel like a place, not a page header. This is deliberately
+   a small, composited scene rather than a new art pipeline: it keeps the first
+   V5 screen fast on a phone while giving the village a little weather, depth,
+   and an unsettling hint of life before a game even begins. */
+function HomeScene({ veteran }) {
+  return (
+    <div className="mvHomeScene" aria-hidden="true">
+      <Scene loc="Village Square" kind="quiet" height={veteran ? 258 : 290} />
+      <span className="mvHomeMoon" />
+      <span className="mvHomeCloud mvHomeCloudA" />
+      <span className="mvHomeCloud mvHomeCloudB" />
+      <span className="mvHomeMist mvHomeMistFar" />
+      <span className="mvHomeMist mvHomeMistNear" />
+      <span className="mvHomeBell" />
+      <span className="mvHomeFigure" />
+      <div className="mvHomeFade" />
+    </div>
+  );
+}
+
+function savedRunSummary(run) {
+  if (!run) return null;
+  const phase = run.phase === "day" || run.phase === "firstlight" ? "DAY" : "NIGHT";
+  const count = (run.npcs || []).filter((x) => x.alive && !x.fled).length;
+  return { phase, number: phase === "DAY" ? run.dayNum : run.nightNum, living: count };
+}
+
 /* ---------- the four recurring objects ----------
    Every redesigned screen is assembled out of these. They carry no state and
    no game knowledge: a screen decides WHAT to say and these decide how it
@@ -7931,6 +7958,25 @@ const EXTRA_CSS = `
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
+.mvHomeScene { position:absolute; inset:0 0 auto; height:330px; overflow:hidden; pointer-events:none; }
+.mvHomeScene > svg { position:absolute; inset:0; height:300px !important; filter:saturate(0.78) contrast(1.08); }
+.mvHomeMoon { position:absolute; width:96px; height:96px; right:-18px; top:8px; border-radius:50%; background:radial-gradient(circle,rgba(233,223,200,0.16) 0 25%,rgba(233,223,200,0.07) 27%,rgba(233,223,200,0) 68%); animation:mvHomeMoon 8s ease-in-out infinite alternate; }
+@keyframes mvHomeMoon { from { opacity:0.72; transform:scale(0.94); } to { opacity:1; transform:scale(1.08); } }
+.mvHomeCloud { position:absolute; height:42px; border-radius:50%; filter:blur(9px); background:radial-gradient(ellipse,rgba(11,14,29,0.82),rgba(11,14,29,0)); opacity:0.75; }
+.mvHomeCloudA { width:190px; left:-94px; top:34px; animation:mvHomeCloudA 22s linear infinite alternate; }
+.mvHomeCloudB { width:250px; right:-160px; top:70px; opacity:0.58; animation:mvHomeCloudB 31s linear infinite alternate; }
+@keyframes mvHomeCloudA { to { transform:translateX(160px); } }
+@keyframes mvHomeCloudB { to { transform:translateX(-210px); } }
+.mvHomeMist { position:absolute; left:-15%; width:130%; height:58px; border-radius:50%; filter:blur(14px); background:radial-gradient(ellipse,rgba(165,179,208,0.16),rgba(165,179,208,0) 68%); }
+.mvHomeMistFar { top:164px; animation:mvHomeMistFar 26s ease-in-out infinite alternate; }
+.mvHomeMistNear { top:208px; opacity:0.7; animation:mvHomeMistNear 36s ease-in-out infinite alternate; }
+@keyframes mvHomeMistFar { from { transform:translateX(-7%); } to { transform:translateX(8%); } }
+@keyframes mvHomeMistNear { from { transform:translateX(7%); } to { transform:translateX(-10%); } }
+.mvHomeBell { position:absolute; left:48.8%; top:187px; width:3px; height:16px; background:rgba(233,223,200,0.35); transform-origin:50% 0; animation:mvHomeBell 9s ease-in-out infinite; }
+@keyframes mvHomeBell { 0%,75%,100% { transform:rotate(0); opacity:0.1; } 81% { transform:rotate(7deg); opacity:0.7; } 87% { transform:rotate(-5deg); opacity:0.65; } 93% { transform:rotate(2deg); opacity:0.25; } }
+.mvHomeFigure { position:absolute; bottom:59px; left:38%; width:6px; height:20px; border-radius:50% 50% 18% 18%; background:#060812; box-shadow:0 3px 9px rgba(0,0,0,0.95); animation:mvHomeFigure 14s ease-in-out infinite; }
+@keyframes mvHomeFigure { 0%,62%,100% { opacity:0; transform:translateX(-10px); } 70%,89% { opacity:0.82; transform:translateX(20px); } }
+.mvHomeFade { position:absolute; inset:0; background:linear-gradient(rgba(5,6,12,0.04) 0%,rgba(5,6,12,0.05) 28%,#05060C 96%); }
 .mvGrain { position: absolute; inset: 0; pointer-events: none; opacity: 0.05;
   background-image: repeating-conic-gradient(#000 0deg 1deg, transparent 1deg 2deg); background-size: 5px 5px; }
 .mvEmber { position:absolute; width:3px; height:3px; border-radius:50%; background:#D9A441; opacity:0; animation: mvember 9s linear infinite; }
@@ -7953,7 +7999,7 @@ const EXTRA_CSS = `
    plain keyword stays first as the fallback for anything older. */
 .mvSafeCenter { justify-content: center; justify-content: safe center; }
 .mvSafeEnd { justify-content: flex-end; justify-content: safe flex-end; }
-@media (prefers-reduced-motion: reduce) { .mvIvIn { animation: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
 /* the walk's weather: two banks of fog crossing at different speeds, and a
    moon that breathes. Nothing else moves out there. */
 .mvFogBank { background: radial-gradient(ellipse 58% 52% at 50% 50%, rgba(180,196,224,0.11), transparent 72%); }
@@ -8541,6 +8587,7 @@ function MonsterVillage() {
   const [showBestiaryHome, setShowBestiaryHome] = useState(false);
   const [showStatsHome, setShowStatsHome] = useState(false);
   const [showSecretsHome, setShowSecretsHome] = useState(false);
+  const [showRunLedger, setShowRunLedger] = useState(false);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [snd, setSndOn] = useState(false);
   const [dawnDone, setDawnDone] = useState(false);
@@ -8548,6 +8595,7 @@ function MonsterVillage() {
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
   const [savedRun, setSavedRun] = useState(null);
+  const [saveSlots, setSaveSlots] = useState([null, null, null]);
   const [deathShown, setDeathShown] = useState(false);
   const recordedRef = useRef(null);
   const walkStageRef = useRef(null);
@@ -8579,6 +8627,18 @@ function MonsterVillage() {
           }
         }
       } catch (e) { /* a save that will not parse is a save best forgotten */ }
+      /* The active run is still autosaved separately, so a closed tab can be
+         resumed without ceremony. The ledger is for the player who wants to
+         deliberately keep more than one village alive at a time. */
+      try {
+        const r3 = await window.storage.get("mv-run-slots");
+        const raw = r3 && r3.value ? JSON.parse(r3.value) : [];
+        const slots = Array.isArray(raw) ? raw.slice(0, 3).map((entry) => {
+          const run = entry && entry.run;
+          return run && run.monster && run.npcs && !run.over && MONSTERS.some((mm) => mm.id === run.monster.type) ? entry : null;
+        }) : [];
+        setSaveSlots([...slots, null, null, null].slice(0, 3));
+      } catch (e) { setSaveSlots([null, null, null]); }
     })();
   }, []);
 
@@ -8724,6 +8784,28 @@ function MonsterVillage() {
     resetUi();
   };
   const resume = () => { const run = savedRun; setSavedRun(null); setS(run); resetUi(); };
+  const writeSaveSlots = async (next) => {
+    setSaveSlots(next);
+    try { await window.storage.set("mv-run-slots", JSON.stringify(next)); } catch (e) {}
+  };
+  const stowRun = (index) => {
+    if (!savedRun) return;
+    const next = [...saveSlots];
+    next[index] = { run: JSON.parse(JSON.stringify(savedRun)), savedAt: new Date().toISOString() };
+    writeSaveSlots(next);
+  };
+  const loadRunSlot = (entry) => {
+    if (!entry || !entry.run) return;
+    setSavedRun(null);
+    setS(entry.run);
+    setShowRunLedger(false);
+    resetUi();
+  };
+  const eraseRunSlot = (index) => {
+    const next = [...saveSlots];
+    next[index] = null;
+    writeSaveSlots(next);
+  };
 
   const doAction = (fn) => {
     setModal(null); setAccusePick(null); setAccuseType(null); setProfile(null);
@@ -8738,19 +8820,18 @@ function MonsterVillage() {
     const veteran = meta && meta.games > 0;
     const defeatedCount = veteran ? Object.keys(meta.defeated).length : 0;
     const hollowedLocked = !veteran || !MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]);
+    const savedSlotCount = saveSlots.filter(Boolean).length;
+    const activeRun = savedRun ? savedRunSummary(savedRun) : null;
     return (
       <div className="mvScreen mv-body relative overflow-hidden" style={{ background: "#05060C", color: C.text }}>
         <style>{CSS_ALL}</style>
-        <div className="absolute inset-x-0 top-0" style={{ opacity: 0.9 }}>
-          <Scene loc="Village Square" kind="quiet" height={veteran ? 150 : 210} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(5,6,12,0) 20%, #05060C 96%)" }} />
-        </div>
+        <HomeScene veteran={veteran} />
         {[12, 30, 55, 74, 88].map((x, i) => (
           <span key={i} className="mvEmber" style={{ left: `${x}%`, bottom: "30%", animationDelay: `${i * 1.7}s` }} />
         ))}
         <div className="mvGrain" />
         <div className="relative max-w-md mx-auto px-6 flex flex-col h-full overflow-y-auto">
-          <div style={{ flexShrink: 0, height: veteran ? "max(env(safe-area-inset-top), 26px)" : 72 }} />
+          <div style={{ flexShrink: 0, height: veteran ? "max(env(safe-area-inset-top), 36px)" : 82 }} />
           <div className="mvIn" style={{ animationDelay: "0.3s" }}>
             <div className="mv-display" style={{ color: C.redBright, fontSize: veteran ? 13 : 14.5, letterSpacing: 4 }}>IT IS ALREADY AMONG YOU</div>
             <h1 className="mv-display mvTitleGlow mt-1" style={{ fontSize: veteran ? 29 : 40, lineHeight: veteran ? 1.02 : 0.94, color: C.parch, textShadow: "0 3px 16px #000" }}>Hollow's Edge</h1>
@@ -8890,9 +8971,15 @@ function MonsterVillage() {
                 style={{ borderRadius: 2, padding: "11px 0", background: "linear-gradient(#D9A441,#B8863A)", border: "none", color: "#1A1408", fontSize: 14.5, letterSpacing: 3, cursor: "pointer" }}>ENTER HOLLOW'S EDGE</button>
             )}
             <div className="flex justify-center mt-2">
-              <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
-                {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button onClick={() => setShowRunLedger(true)} className="mv-body" style={{ background: "transparent", border: "none", color: C.parchLine, fontSize: 13, cursor: "pointer", padding: 0 }}>
+                  ▤ run ledger{savedSlotCount ? ` · ${savedSlotCount}` : ""}
+                </button>
+                <span style={{ width: 1, height: 13, background: C.line }} />
+                <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
+                  {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -8917,6 +9004,46 @@ function MonsterVillage() {
                     </div>
                   ))}
                 </div>
+          </DrawerShell>
+        )}
+        {showRunLedger && (
+          <DrawerShell kicker="WHAT YOU HAVE NOT LEFT BEHIND" count={`${savedSlotCount} OF 3 KEPT`}
+            title="The Run Ledger" sub="The current game is kept automatically. File it here to return to this exact village whenever you choose."
+            onClose={() => setShowRunLedger(false)}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {activeRun ? (
+                  <Plaque rule="amber" style={{ boxShadow: "0 10px 22px rgba(0,0,0,0.32)" }}>
+                    <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber }}>THE RUN AT YOUR DOOR</div>
+                    <div className="flex items-end" style={{ gap: 12, marginTop: 5 }}>
+                      <div className="mv-display" style={{ fontSize: 25, lineHeight: 1, color: C.parch }}>{activeRun.phase} {activeRun.number}</div>
+                      <div style={{ paddingBottom: 2, fontSize: 13.5, color: C.dim }}>{activeRun.living} still living</div>
+                    </div>
+                    <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.4, color: C.text, fontStyle: "italic" }}>Every choice is already written down. Continue it, or set a copy aside below.</p>
+                  </Plaque>
+                ) : (
+                  <div style={{ padding: "12px 13px", background: C.sky, borderTop: `2px solid ${C.parchLine}`, borderRadius: 2, color: C.dim, fontSize: 14.5, fontStyle: "italic", lineHeight: 1.4 }}>No unfinished village waits at the gate. Begin a game, and its last moment will be kept here automatically.</div>
+                )}
+                {[0, 1, 2].map((i) => {
+                  const entry = saveSlots[i];
+                  const detail = entry ? savedRunSummary(entry.run) : null;
+                  return (
+                    <div key={i} style={{ padding: "12px 13px", background: entry ? "linear-gradient(135deg,#1B2036,#121629)" : "rgba(233,223,200,0.035)", border: `1px solid ${entry ? "#3A3348" : C.line}`, borderRadius: 8 }}>
+                      <div className="flex items-center" style={{ gap: 10 }}>
+                        <span className="mv-display" style={{ width: 23, height: 23, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${entry ? C.amber : C.line}`, borderRadius: "50%", color: entry ? C.amber : C.dim, fontSize: 12 }}>{["I", "II", "III"][i]}</span>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className="mv-display" style={{ fontSize: 14.5, letterSpacing: 1.2, color: entry ? C.parch : C.dim }}>{entry ? `${detail.phase} ${detail.number} · ${detail.living} LIVING` : "AN EMPTY PLACE"}</div>
+                          <div style={{ marginTop: 1, color: C.dim, fontSize: 12.5, fontStyle: "italic" }}>{entry ? "A village waiting in the dark." : "Nothing has been written here yet."}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
+                        {entry && <Btn small kind="amber" onClick={() => loadRunSlot(entry)}>Load this run</Btn>}
+                        {activeRun && <Btn small onClick={() => stowRun(i)}>{entry ? "Replace with current" : "Save current run"}</Btn>}
+                        {entry && <button onClick={() => eraseRunSlot(i)} className="mv-body" style={{ marginLeft: "auto", background: "transparent", border: "none", color: C.redBright, fontSize: 12.5, cursor: "pointer", padding: "4px 0" }}>erase</button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
           </DrawerShell>
         )}
         {showBestiaryHome && meta && (
