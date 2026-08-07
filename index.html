@@ -5974,6 +5974,30 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     falk: <path d="M22,45 C18,23 28,11 40,11 C54,12 62,25 58,45 L53,35 C49,21 31,21 27,36 Z" fill="#C7C3B9" />,
     rosa: <path d="M21,45 C16,20 26,10 40,10 C57,11 65,26 59,45 L54,37 C52,22 28,21 26,38 Z" fill="#25233A" />,
   }[id];
+  /* One careful step toward a finished ink illustration: these are drawn
+     locks, not a painted texture. At thumbnail scale they read as a more
+     lived-in head of hair; when a portrait is enlarged they give the face a
+     little of the hand-cut, candlelit linework of the village itself. */
+  const hairInk = {
+    marta: <g stroke="#C2C8E0" strokeWidth="0.85" fill="none" opacity="0.62"><path d="M23,31 q5,-13 13,-15 M29,26 q4,-9 10,-10 M46,16 q7,6 8,16 M51,20 q5,7 4,15" /><path d="M25,35 q-2,6 1,10" /></g>,
+    tobias: <g stroke="#E2DFC9" strokeWidth="0.9" fill="none" opacity="0.72"><path d="M22,31 q7,-15 17,-16 M26,26 q8,-10 18,-9 M33,18 q9,0 16,8 M43,17 q10,4 13,14" /><path d="M23,35 q-2,7 1,11 M55,29 q3,7 0,14" /></g>,
+    ansel: <g stroke="#B7B8C0" strokeWidth="0.78" fill="none" opacity="0.62"><path d="M25,31 q6,-12 15,-13 M31,23 q8,-5 16,1 M47,20 q7,5 8,13" /><path d="M26,36 q-1,7 2,10" /></g>,
+    greta: <g stroke="#5E7A60" strokeWidth="0.85" fill="none" opacity="0.65"><path d="M21,33 q5,-15 16,-16 M27,25 q8,-10 18,-7 M44,17 q10,3 13,14 M51,23 q6,8 4,17" /><path d="M22,39 q-2,7 1,12" /></g>,
+    wilhelm: <g stroke="#66584A" strokeWidth="0.78" fill="none" opacity="0.72"><path d="M25,31 q6,-11 15,-12 M31,23 q9,-5 17,1 M47,21 q6,4 8,12" /><path d="M26,37 q-1,6 2,9" /></g>,
+    liesel: <g stroke="#80604A" strokeWidth="0.85" fill="none" opacity="0.62"><path d="M22,32 q5,-15 16,-16 M28,24 q8,-9 18,-7 M46,17 q9,4 12,15 M52,23 q5,7 4,15" /><path d="M23,38 q-2,7 1,11" /></g>,
+    falk: <g stroke="#F0E9DA" strokeWidth="0.82" fill="none" opacity="0.66"><path d="M24,31 q6,-13 16,-14 M30,23 q9,-6 18,-1 M47,19 q8,5 9,14" /><path d="M25,36 q-1,7 2,10" /></g>,
+    rosa: <g stroke="#605A82" strokeWidth="0.8" fill="none" opacity="0.72"><path d="M22,33 q5,-15 17,-16 M28,24 q8,-9 18,-7 M46,17 q9,4 12,15 M52,23 q5,7 4,16" /><path d="M23,39 q-2,8 1,13" /></g>,
+  }[id];
+  const faceInk = {
+    marta: <g><path d="M29,47.5 l3,1 M48,47.5 l3,-1" /><path d="M31,52 q3,1.5 5,1" /></g>,
+    tobias: <g><path d="M28.5,34 q4,-3 8,-2 M44,32 q5,-1 8,2" /><path d="M29,48 l4,1.5 M28.5,50.5 l4,1.4 M47,49 l4,-1.4 M47.5,51.5 l3.5,-1.3" /><path d="M31,54 q3,2 5.5,1.5" /></g>,
+    ansel: <g><path d="M29,48 l3,1 M48,48 l3,-1" /><path d="M32,54 q4,1.5 7,1" /></g>,
+    greta: <g><path d="M28.5,47.5 l3,1.2 M48.5,47.5 l3,-1.2" /><path d="M31.5,53 q3,1.8 5.5,1" /></g>,
+    wilhelm: <g><path d="M29,48 l3,1.4 M48,48 l3,-1.4" /><path d="M31,53.5 q3,2 5,1.2" /></g>,
+    liesel: <g><path d="M29,48 l3,1 M48,48 l3,-1" /><path d="M31.5,53 q3,1.6 5.5,0.8" /></g>,
+    falk: <g><path d="M29,48 l3,1 M48,48 l3,-1" /><path d="M31,54 q3,1.5 5.5,1" /></g>,
+    rosa: <g><path d="M29,48 l3,1 M48,48 l3,-1" /><path d="M31.5,53 q3.5,1.8 5.5,1" /></g>,
+  }[id];
   /* V5 keeps the cast in the game's own hand-drawn SVG language. Their work
      lives in the room behind them as a few quiet marks, never as a rendered
      scene competing with a face at 40px. */
@@ -6014,13 +6038,14 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
         <ellipse cx="40" cy="41" rx="16.5" ry="19.5" fill={skin} />
         <path d="M40,21.5 C50,21.5 56.5,30 56.5,41 C56.5,52 50,60.5 40,60.5 C47,54.5 50,48.5 50,41 C50,33.5 47,27.5 40,21.5 Z" fill={shadeC} opacity="0.5" />
         <path d="M26,33 C27.5,27 32,23.5 38,22.6" stroke="#FFF6E0" strokeWidth="1.3" opacity="0.35" fill="none" strokeLinecap="round" />
-        {!turnedKnown && <g opacity="0.19"><path d="M28,47 l4,1.4 M28.5,49.5 l4,1.4 M48,48.4 l4,-1.5 M48,51 l3.5,-1.5" stroke="#8A7458" strokeWidth="0.65" strokeLinecap="round" /><path d="M34,55 q6,2 12,0" stroke="#B89A74" strokeWidth="0.65" fill="none" /></g>}
+        {!turnedKnown && <g opacity="0.28" stroke="#755F47" strokeWidth="0.65" fill="none" strokeLinecap="round">{faceInk}<path d="M34,55 q6,2 12,0" stroke="#B89A74" /></g>}
         {eye(33.5, F.e[0], F.e[1])}{eye(46.5, F.e[0], F.e[1])}
         <ellipse cx="33.5" cy="44.6" rx="3" ry="1.3" fill="#8A7458" opacity="0.28" />
         <ellipse cx="46.5" cy="44.6" rx="3" ry="1.3" fill="#8A7458" opacity="0.28" />
         <path d="M28.5,46.5 q1.4,3 3.6,4.2 M51.5,46.5 q-1.4,3 -3.6,4.2" stroke="#B89A74" strokeWidth="0.9" fill="none" opacity="0.5" />
         <path d="M40,42 q1.6,4.4 -0.6,6.4 q-1.2,0.8 -2.2,0.2" stroke="#B89A74" strokeWidth="1.1" fill="none" opacity="0.8" />
         {F.over}
+        {hairInk}
         <path d={`M34.5,${MPOS[0]} ${MOUTH}`} stroke={MPOS[1] || "#8A6A50"} strokeWidth="1.4" fill="none" strokeLinecap="round" />
         <g transform={`translate(0,${BCFG[2]})`}><path d={BROWS} stroke={BCFG[0]} strokeWidth={BCFG[1]} fill="none" strokeLinecap="round" /></g>
       </g>
