@@ -5919,21 +5919,6 @@ function Scene({ loc, kind, height = 150, unlit, moonless }) {
   );
 }
 
-/* V5 portraits are painted as two 2×2 plates plus Liesel's standalone card.
-   Each sheet is square, so placing it at twice the SVG size exposes exactly
-   one 80×80 quadrant. The original vector portrait remains as the safe
-   fallback for any future/generated villager id. */
-const V5_PORTRAIT_ART = {
-  marta: { src: "assets/v5-cast-sheet-a-512.png", col: 0, row: 0 },
-  tobias: { src: "assets/v5-cast-sheet-a-512.png", col: 1, row: 0 },
-  ansel: { src: "assets/v5-cast-sheet-a-512.png", col: 0, row: 1 },
-  greta: { src: "assets/v5-cast-sheet-a-512.png", col: 1, row: 1 },
-  wilhelm: { src: "assets/v5-cast-sheet-b-512.png", col: 0, row: 0 },
-  falk: { src: "assets/v5-cast-sheet-b-512.png", col: 0, row: 1 },
-  rosa: { src: "assets/v5-cast-sheet-b-512.png", col: 1, row: 1 },
-  liesel: { src: "assets/v5-liesel-portrait-512.png", single: true },
-};
-
 function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
   /* Second-pass faces: light from the candle side, profession worn plainly,
      and nobody who sleeps well. The mouth and brows lift only when this
@@ -5945,7 +5930,6 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
   const shadeC = turnedKnown ? "#9AA0B8" : "#C4AE8C";
   const eyeCol = turnedKnown ? C.turn : { greta: "#3E5A34", rosa: "#38302A", liesel: "#4A3020" }[id] || "#33291E";
   const mk = !turnedKnown && (disp || 0) >= 1 ? "smile" : "neutral";
-  const art = V5_PORTRAIT_ART[id];
   const eye = (x, lid = 0, nar = 0) => (
     <g key={`e${x}`}>
       <ellipse cx={x} cy="41.6" rx="3.5" ry={2.6 - nar} fill={turnedKnown ? "#E8EAF2" : "#F8F3E6"} />
@@ -5984,7 +5968,7 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     ? "M29.5,36.4 q3.5,-2.4 6.6,-1.2 M43.9,35.2 q3.5,-1.2 6.6,1.2"
     : "M29.5,37.4 q3.5,-1.6 6.6,-0.4 M43.9,37 q3.5,-1.2 6.6,0.4";
   return (
-    <svg className="mvPortrait" viewBox="0 0 80 80" width={size} height={size} style={{ display: "block", filter: dead ? "grayscale(1)" : "none", opacity: dead ? 0.55 : 1 }}>
+    <svg viewBox="0 0 80 80" width={size} height={size} style={{ display: "block", filter: dead ? "grayscale(1)" : "none", opacity: dead ? 0.55 : 1 }}>
       <defs>
         <radialGradient id={`mvP2bg-${id}`} cx="50%" cy="22%" r="92%">
           <stop offset="0%" stopColor={TINT} /><stop offset="68%" stopColor="#1A1E32" /><stop offset="100%" stopColor="#07090F" />
@@ -5996,16 +5980,7 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
       </defs>
       <rect width="80" height="80" rx="10" fill={`url(#mvP2bg-${id})`} />
       <ellipse cx="16" cy="46" rx="18" ry="32" fill="#D9A441" opacity="0.1" />
-      {art && (
-        <g>
-          <image className="mvPortraitArt" href={art.src} x={art.single ? 0 : -art.col * 80} y={art.single ? 0 : -art.row * 80} width={art.single ? 80 : 160} height={art.single ? 80 : 160} preserveAspectRatio="none" />
-          <rect width="80" height="80" rx="10" fill="none" stroke="rgba(233,223,200,0.22)" strokeWidth="1" />
-          <rect width="80" height="80" rx="10" fill={turnedKnown ? "rgba(82,54,128,0.43)" : "rgba(4,6,12,0.08)"} />
-          {turnedKnown && <><circle cx="29" cy="40" r="2.1" fill="#C0A6E0" opacity="0.9" /><circle cx="51" cy="40" r="2.1" fill="#C0A6E0" opacity="0.9" /></>}
-          {disp != null && disp >= 1 && !turnedKnown && <rect x="2" y="2" width="76" height="76" rx="8" fill="none" stroke="rgba(217,164,65,0.58)" strokeWidth="1.3" />}
-        </g>
-      )}
-      {!art && (<g filter="url(#mvPRough)">
+      <g filter="url(#mvPRough)">
         {F.garment}
         <path d="M34,58 h12 l-1,6 h-10 Z" fill={skin} />
         <ellipse cx="40" cy="41" rx="16.5" ry="19.5" fill={skin} />
@@ -6019,7 +5994,7 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
         {F.over}
         <path d={`M34.5,${MPOS[0]} ${MOUTH}`} stroke={MPOS[1] || "#8A6A50"} strokeWidth="1.4" fill="none" strokeLinecap="round" />
         <g transform={`translate(0,${BCFG[2]})`}><path d={BROWS} stroke={BCFG[0]} strokeWidth={BCFG[1]} fill="none" strokeLinecap="round" /></g>
-      </g>)}
+      </g>
       {dead && <path d="M24,26 L56,58 M56,26 L24,58" stroke="#AEB4CC" strokeWidth="4.5" strokeLinecap="round" opacity="0.8" />}
     </svg>
   );
@@ -7983,9 +7958,6 @@ const EXTRA_CSS = `
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
-.mvPortrait { overflow:hidden; border-radius:10px; background:#101526; box-shadow:0 5px 13px rgba(0,0,0,0.38); }
-.mvPortraitArt { transform-box:fill-box; transform-origin:50% 100%; animation:mvPortraitBreathe 6.5s ease-in-out infinite alternate; }
-@keyframes mvPortraitBreathe { from { transform:scale(1); } to { transform:scale(1.025) translateY(-0.7px); } }
 .mvHomeScene { position:absolute; inset:0 0 auto; height:330px; overflow:hidden; pointer-events:none; }
 .mvHomeScene > svg { position:absolute; inset:0; height:300px !important; filter:saturate(0.78) contrast(1.08); }
 .mvHomeMoon { position:absolute; width:96px; height:96px; right:-18px; top:8px; border-radius:50%; background:radial-gradient(circle,rgba(233,223,200,0.16) 0 25%,rgba(233,223,200,0.07) 27%,rgba(233,223,200,0) 68%); animation:mvHomeMoon 8s ease-in-out infinite alternate; }
@@ -8027,7 +7999,7 @@ const EXTRA_CSS = `
    plain keyword stays first as the fallback for anything older. */
 .mvSafeCenter { justify-content: center; justify-content: safe center; }
 .mvSafeEnd { justify-content: flex-end; justify-content: safe flex-end; }
-@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure, .mvPortraitArt { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
 /* the walk's weather: two banks of fog crossing at different speeds, and a
    moon that breathes. Nothing else moves out there. */
 .mvFogBank { background: radial-gradient(ellipse 58% 52% at 50% 50%, rgba(180,196,224,0.11), transparent 72%); }
