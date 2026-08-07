@@ -188,7 +188,7 @@ must name both WHO and WHAT before the village runs out of people.
   its killer (`QUARRY_DAWN`, keyed by sign exactly like `ANIMAL_SIGN`), and
   the place keeps the marks of the chase for that one day if the player goes
   back (`QUARRY_ECHO` in `actSearch`, texture only). It surfaces a NEW tell
-  only when the night has not already given one up (`signLearnedTonight`,
+  only when the night has not already given one up (`signGivenTonight()`,
   `mods.searchRoll.found`): earned, never doubled, and never a plant.
 - **The village keeps its own journal, and you are in it.** `sawYouOut`
   (recorded whenever a neighbour shares your location at night) now costs
@@ -381,20 +381,41 @@ must name both WHO and WHAT before the village runs out of people.
 
 ## Testing (no network to unpkg from CI/sandbox)
 
-The CDNs may be blocked in sandboxes. To test headless:
-1. `npm install react@18.3.1 react-dom@18.3.1 @babel/standalone@7.24.7
-   tone@14.7.77 @tailwindcss/browser` in a scratch dir, copy the UMD builds,
-   and `sed` the `<script src>` URLs in a **copy** of index.html to local
-   paths (never commit that copy).
-2. Serve with `python3 -m http.server`, drive with Playwright
-   (`/opt/pw-browsers/chromium`). Use `page.evaluate` + native `el.click()`
-   (Playwright actionability fights the overlay animations).
+The steps below are now scripted. **Run this before every commit** — it is the
+only automated check the project has, and JSX transpiles at page load, so a
+typo is invisible until something renders it:
+
+```bash
+bash tools/setup-local.sh     # vendor the 5 CDN libs into .local-test/ (once)
+node tools/smoke.mjs          # boot + play smoke test; non-zero on any error
+node tools/smoke.mjs --headed # watch it run
+```
+
+`setup-local.sh` vendors the libraries and writes `.local-test/index.local.html`
+(a copy of index.html with its five `<script src>` URLs repointed locally),
+because the CDNs are usually blocked in sandboxes. `.local-test/` is gitignored
+— **never commit the patched copy, and never copy it over `index.html`**: it
+only runs with `.local-test/vendor/` beside it. `smoke.mjs` serves it, asserts
+the page boots (`#boot` is removed on success), React mounts, and the gate
+reaches a live run, printing Babel's line number and code frame on a parse
+failure.
+
+Two caveats and two techniques:
+1. The vendored Tailwind is **v4**; production loads the **v3** CDN. The
+   harness proves "does it run", never "does it look right" — don't chase a
+   layout difference seen only locally.
+2. Bump a library version in `index.html` and you must bump the matching pin in
+   `tools/setup-local.sh` (it fails loudly rather than testing the wrong thing).
 3. To force rare paths (deaths, offers), override `Math.random` via
    `page.evaluate(() => { Math.random = () => 0.001; })` after starting the
    walk — an active night + event + hunts-crowd usually lands at the Village
    Square.
 4. Watch `page.on('pageerror')` — Babel parse errors also surface in
-   `#bootErr`.
+   `#bootErr`. Babel also logs one harmless "deoptimised the styling" error on
+   every run (the inline script is >500KB); `smoke.mjs` filters that one string
+   only, and the filter must stay narrow.
+
+See `AGENTS.md` for repo state, the `main` history split, and the deploy path.
 
 ## Git / authorship preferences (important)
 

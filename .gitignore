@@ -1,0 +1,15 @@
+# Local test rig built by tools/setup-local.sh: vendored CDN libraries plus
+# index.local.html, which is index.html with its five <script src> URLs
+# repointed at those local files.
+#
+# This must never be committed. The patched copy only runs on a machine with
+# .local-test/vendor/ sitting next to it, so committing it (or copying it over
+# index.html) would ship a game that loads nothing for every real player.
+.local-test/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

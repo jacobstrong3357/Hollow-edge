@@ -3256,7 +3256,7 @@ function resolveNight(prev, planIn, preEvents) {
            over your hiding place and talked to you. It knows exactly who was
            in the lane, and behaves accordingly from here on. */
         s.monsterSawYou = mods.brush || chance(0.6) ? true : s.monsterSawYou;
-        /* Staying to LEARN it is the riskier read (see deathP2 above), so on
+        /* Staying to LEARN it is the riskier read (see followDeathChance), so on
            survival it earns more than the face fleeing already gives: pressed
            close enough to watch the change, you come away with one of its true
            tells as well. Never wail - that is only ever heard on a wailing
