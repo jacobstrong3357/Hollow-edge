@@ -7661,6 +7661,18 @@ function HomeScene({ veteran }) {
   return (
     <div className="mvHomeScene" aria-hidden="true">
       <Scene loc="Village Square" kind="quiet" height={veteran ? 258 : 290} />
+      <svg className="mvHomeDepth" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+        <g className="mvHomeRidge">
+          <path d="M-18,225 C34,190 66,204 110,220 C150,235 200,202 246,216 C292,230 346,194 420,210 L420,300 L-18,300 Z" fill="#080A14" opacity="0.78" />
+          <path d="M-18,255 C35,225 85,240 128,250 C174,260 206,230 266,239 C315,246 361,226 420,239 L420,300 L-18,300 Z" fill="#05060C" />
+        </g>
+        <g className="mvHomePinesFar" fill="#0A0D1A" opacity="0.92">
+          <path d="M22,242 l16,-54 16,54 h-9 l12,38 H19 l12,-38 Z" /><path d="M316,244 l19,-70 19,70 h-10 l14,40 h-46 l14,-40 Z" /><path d="M365,250 l13,-46 13,46 h-7 l9,31 h-32 l9,-31 Z" />
+        </g>
+        <g className="mvHomePinesNear" fill="#04050A">
+          <path d="M-10,286 l26,-103 26,103 h-15 l20,48 H-25 l20,-48 Z" /><path d="M255,290 l24,-98 24,98 h-14 l19,46 h-58 l19,-46 Z" />
+        </g>
+      </svg>
       <span className="mvHomeMoon" />
       <span className="mvHomeCloud mvHomeCloudA" />
       <span className="mvHomeCloud mvHomeCloudB" />
@@ -7668,6 +7680,8 @@ function HomeScene({ veteran }) {
       <span className="mvHomeMist mvHomeMistNear" />
       <span className="mvHomeBell" />
       <span className="mvHomeFigure" />
+      <span className="mvHomeLantern mvHomeLanternA" />
+      <span className="mvHomeLantern mvHomeLanternB" />
       <div className="mvHomeFade" />
     </div>
   );
@@ -7678,6 +7692,29 @@ function savedRunSummary(run) {
   const phase = run.phase === "day" || run.phase === "firstlight" ? "DAY" : "NIGHT";
   const count = (run.npcs || []).filter((x) => x.alive && !x.fled).length;
   return { phase, number: phase === "DAY" ? run.dayNum : run.nightNum, living: count };
+}
+
+/* The gate carries the practical promise of a modern game without becoming
+   a bright dashboard. It makes the saved village visible before the player
+   is asked to enter it; the ledger remains the deeper place for slot work. */
+function HomeGatePanel({ activeRun, savedSlotCount, onOpenLedger }) {
+  const hasRun = !!activeRun;
+  return (
+    <button onClick={onOpenLedger} className="mvHomeGate mvIn w-full text-left" style={{ animationDelay: "0.55s" }}>
+      <span className="mvHomeGateSeal">{hasRun ? "↻" : "✦"}</span>
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span className="mv-display" style={{ display: "block", fontSize: 10.5, letterSpacing: 2.55, color: hasRun ? C.amber : C.parchLine }}>
+          {hasRun ? "A VILLAGE WAITS AT THE GATE" : "THE ROAD KEEPS YOUR PLACE"}
+        </span>
+        <span style={{ display: "block", marginTop: 3, color: C.parch, fontSize: 13.5, lineHeight: 1.25 }}>
+          {hasRun ? `${activeRun.phase} ${activeRun.number} · ${activeRun.living} still living` : "Every run is kept automatically."}
+        </span>
+      </span>
+      <span className="mv-display" style={{ alignSelf: "center", fontSize: 10, letterSpacing: 1.7, color: C.dim, whiteSpace: "nowrap" }}>
+        {savedSlotCount ? `${savedSlotCount}/3 KEPT` : "LEDGER ›"}
+      </span>
+    </button>
+  );
 }
 
 /* ---------- the four recurring objects ----------
@@ -8030,6 +8067,13 @@ const EXTRA_CSS = `
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
 .mvHomeScene { position:absolute; inset:0 0 auto; height:330px; overflow:hidden; pointer-events:none; }
 .mvHomeScene > svg { position:absolute; inset:0; height:300px !important; filter:saturate(0.78) contrast(1.08); }
+.mvHomeScene > .mvHomeDepth { width:100%; height:330px !important; z-index:1; filter:none; }
+.mvHomeRidge { animation:mvHomeRidge 32s ease-in-out infinite alternate; }
+@keyframes mvHomeRidge { from { transform:translateX(-6px); } to { transform:translateX(7px); } }
+.mvHomePinesFar { transform-origin:50% 100%; animation:mvHomePinesFar 23s ease-in-out infinite alternate; }
+.mvHomePinesNear { transform-origin:50% 100%; animation:mvHomePinesNear 17s ease-in-out infinite alternate; }
+@keyframes mvHomePinesFar { from { transform:translateX(-5px); } to { transform:translateX(6px); } }
+@keyframes mvHomePinesNear { from { transform:translateX(4px); } to { transform:translateX(-8px); } }
 .mvHomeMoon { position:absolute; width:96px; height:96px; right:-18px; top:8px; border-radius:50%; background:radial-gradient(circle,rgba(233,223,200,0.16) 0 25%,rgba(233,223,200,0.07) 27%,rgba(233,223,200,0) 68%); animation:mvHomeMoon 8s ease-in-out infinite alternate; }
 @keyframes mvHomeMoon { from { opacity:0.72; transform:scale(0.94); } to { opacity:1; transform:scale(1.08); } }
 .mvHomeCloud { position:absolute; height:42px; border-radius:50%; filter:blur(9px); background:radial-gradient(ellipse,rgba(11,14,29,0.82),rgba(11,14,29,0)); opacity:0.75; }
@@ -8046,7 +8090,14 @@ const EXTRA_CSS = `
 @keyframes mvHomeBell { 0%,75%,100% { transform:rotate(0); opacity:0.1; } 81% { transform:rotate(7deg); opacity:0.7; } 87% { transform:rotate(-5deg); opacity:0.65; } 93% { transform:rotate(2deg); opacity:0.25; } }
 .mvHomeFigure { position:absolute; bottom:59px; left:38%; width:6px; height:20px; border-radius:50% 50% 18% 18%; background:#060812; box-shadow:0 3px 9px rgba(0,0,0,0.95); animation:mvHomeFigure 14s ease-in-out infinite; }
 @keyframes mvHomeFigure { 0%,62%,100% { opacity:0; transform:translateX(-10px); } 70%,89% { opacity:0.82; transform:translateX(20px); } }
+.mvHomeLantern { position:absolute; z-index:2; width:5px; height:5px; border-radius:50%; background:#E2AC4D; box-shadow:0 0 0 3px rgba(217,164,65,0.07),0 0 14px 4px rgba(217,164,65,0.28); animation:mvHomeLantern 3.2s ease-in-out infinite alternate; }
+.mvHomeLanternA { top:175px; left:27%; } .mvHomeLanternB { top:183px; right:23%; animation-delay:-1.1s; }
+@keyframes mvHomeLantern { from { transform:scale(0.72); opacity:0.5; } to { transform:scale(1.25); opacity:1; } }
 .mvHomeFade { position:absolute; inset:0; background:linear-gradient(rgba(5,6,12,0.04) 0%,rgba(5,6,12,0.05) 28%,#05060C 96%); }
+.mvHomeGate { display:flex; align-items:stretch; gap:10px; position:relative; z-index:2; margin-top:12px; padding:10px 11px 10px 9px; border:1px solid rgba(201,185,143,0.34); border-radius:5px; background:linear-gradient(115deg,rgba(28,31,50,0.92),rgba(10,12,23,0.88)); box-shadow:0 10px 25px rgba(0,0,0,0.26),inset 0 1px 0 rgba(233,223,200,0.05); cursor:pointer; }
+.mvHomeGate::after { content:""; position:absolute; inset:3px; border:1px solid rgba(217,164,65,0.09); border-radius:3px; pointer-events:none; }
+.mvHomeGate:hover { border-color:rgba(217,164,65,0.75); transform:translateY(-1px); }
+.mvHomeGateSeal { width:29px; height:29px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:1px solid rgba(217,164,65,0.58); border-radius:50%; color:#E9DFC8; font-size:14px; background:rgba(217,164,65,0.08); box-shadow:0 0 12px rgba(217,164,65,0.1); }
 .mvGrain { position: absolute; inset: 0; pointer-events: none; opacity: 0.05;
   background-image: repeating-conic-gradient(#000 0deg 1deg, transparent 1deg 2deg); background-size: 5px 5px; }
 .mvEmber { position:absolute; width:3px; height:3px; border-radius:50%; background:#D9A441; opacity:0; animation: mvember 9s linear infinite; }
@@ -8069,7 +8120,7 @@ const EXTRA_CSS = `
    plain keyword stays first as the fallback for anything older. */
 .mvSafeCenter { justify-content: center; justify-content: safe center; }
 .mvSafeEnd { justify-content: flex-end; justify-content: safe flex-end; }
-@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure, .mvHomeRidge, .mvHomePinesFar, .mvHomePinesNear, .mvHomeLantern { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
 /* the walk's weather: two banks of fog crossing at different speeds, and a
    moon that breathes. Nothing else moves out there. */
 .mvFogBank { background: radial-gradient(ellipse 58% 52% at 50% 50%, rgba(180,196,224,0.11), transparent 72%); }
@@ -8906,6 +8957,7 @@ function MonsterVillage() {
             <div className="mv-display" style={{ color: C.redBright, fontSize: veteran ? 13 : 14.5, letterSpacing: 4 }}>IT IS ALREADY AMONG YOU</div>
             <h1 className="mv-display mvTitleGlow mt-1" style={{ fontSize: veteran ? 29 : 40, lineHeight: veteran ? 1.02 : 0.94, color: C.parch, textShadow: "0 3px 16px #000" }}>Hollow's Edge</h1>
           </div>
+          <HomeGatePanel activeRun={activeRun} savedSlotCount={savedSlotCount} onOpenLedger={() => setShowRunLedger(true)} />
           {!veteran && (
             <>
               <p className="mvIn mt-2" style={{ animationDelay: "0.8s", color: C.parch, fontSize: 13.5, lineHeight: 1.45 }}>
