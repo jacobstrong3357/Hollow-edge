@@ -5926,6 +5926,22 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
      carried by rings and prose, never by a scowl. The dead are greyed and
      crossed out wherever they appear. */
   const TINT = { marta: "#3A3560", tobias: "#3A3348", ansel: "#2C2A44", greta: "#2E4230", wilhelm: "#46372E", liesel: "#4A3550", falk: "#2E3A48", rosa: "#42304A" }[id] || "#2A2F4A";
+  /* The living cast gets the V5 illustrated portrait pass. We deliberately
+     keep the original reactive SVG below for death and revealed-monster
+     states: those states need to change colour and carry their own marks. */
+  const portraitArt = {
+    marta: "assets/v5-portraits/marta-v5-ink.png",
+    tobias: "assets/v5-portraits/tobias-v5-ink.png",
+    ansel: "assets/v5-portraits/ansel-v5-ink.png",
+    greta: "assets/v5-portraits/greta-v5-ink.png",
+    wilhelm: "assets/v5-portraits/wilhelm-v5-ink.png",
+    liesel: "assets/v5-portraits/liesel-v5-ink.png",
+    falk: "assets/v5-portraits/falk-v5-ink.png",
+    rosa: "assets/v5-portraits/rosa-v5-ink.png",
+  }[id];
+  if (portraitArt && !dead && !turnedKnown) {
+    return <img src={portraitArt} alt="" width={size} height={size} draggable="false" style={{ display: "block", width: size, height: size, objectFit: "cover", borderRadius: Math.max(6, size * 0.125), boxShadow: "0 2px 8px rgba(0,0,0,0.38)" }} />;
+  }
   const skin = turnedKnown ? "#C9CDDC" : (id === "tobias" || id === "falk") ? "#DDD1B6" : "#E9DFC8";
   const shadeC = turnedKnown ? "#9AA0B8" : "#C4AE8C";
   const eyeCol = turnedKnown ? C.turn : { greta: "#3E5A34", rosa: "#38302A", liesel: "#4A3020" }[id] || "#33291E";
