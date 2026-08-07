@@ -5961,6 +5961,19 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     rosa: { garment: <g><path d="M14,80 C14,61 66,61 66,80 Z" fill="#3E3550" /><path d="M40,62 v18" stroke="#2E2740" strokeWidth="1.2" />{[66, 70, 74].map((y) => <circle key={y} cx="40" cy={y} r="0.9" fill="#D8CBB2" opacity="0.8" />)}<path d="M28,63 q6,9 5.5,17" stroke="#C8BFA6" strokeWidth="2.4" fill="none" opacity="0.8" /><path d="M29.2,67 l1.7,-0.4 M30.8,71 l1.7,-0.3 M31.9,75 l1.7,-0.2" stroke="#6B5F44" strokeWidth="0.8" /><path d="M50,64 l5,3 M55,67 l-1.6,1.6" stroke="#C8CEDA" strokeWidth="1.1" strokeLinecap="round" /></g>,
       over: <g><path d="M24,42 C22,20 58,20 56,42 L52,37 C52,27 28,27 28,37 Z" fill="#2E2A3E" /><path d="M40,22.5 v6" stroke="#1E1B2C" strokeWidth="1.2" /><path d="M24,40 q-2,10 1,20 M56,40 q2,10 -1,20" stroke="#2E2A3E" strokeWidth="5" fill="none" /><circle cx="24.5" cy="61.5" r="2" fill="#6E2A34" /><circle cx="55.5" cy="61.5" r="2" fill="#6E2A34" /></g>, e: [0.2, -0.3] },
   }[id] || { garment: <path d="M14,80 C14,62 66,62 66,80 Z" fill={C.garment} />, over: null, e: [0, 0] };
+  /* V5 keeps the cast in the game's own hand-drawn SVG language. Their work
+     lives in the room behind them as a few quiet marks, never as a rendered
+     scene competing with a face at 40px. */
+  const craft = {
+    marta: <g opacity="0.44"><path d="M4,18 h16 M4,31 h16" stroke="#AEB4CC" strokeWidth="1" /><path d="M7,17 v-7 h5 v7 M14,17 v-5 h4 v5 M8,30 v-8 h6 v8 M16,30 v-6 h3 v6" fill="#7883A2" /><circle cx="9.5" cy="10" r="2" fill="#D9A441" opacity="0.7" /><path d="M59,20 q6,-8 13,-3 M62,24 q7,-4 12,2" stroke="#B8A878" strokeWidth="1.3" fill="none" /></g>,
+    tobias: <g opacity="0.46"><path d="M3,62 h74 v12 H3 Z" fill="#5E5040" /><path d="M4,66 h72 M9,62 v12 M24,62 v12 M59,62 v12" stroke="#B8A878" strokeWidth="0.8" opacity="0.65" /><path d="M8,17 l12,12 M11,14 l12,12" stroke="#B8A878" strokeWidth="2.2" /><path d="M6,14 l7,-5 3,3 -7,5 Z" fill="#9C9280" /><path d="M61,17 l13,0 M65,13 l0,10" stroke="#9C9280" strokeWidth="1.6" /></g>,
+    ansel: <g opacity="0.42"><path d="M6,14 q7,-12 14,0 v24 H6 Z" fill="#52617D" /><path d="M13,5 v29 M7,17 h12" stroke="#C9D5E8" strokeWidth="0.9" opacity="0.7" /><path d="M59,61 h16 v12 H59 Z" fill="#5E5040" /><path d="M61,63 h12 v3 H61 M61,68 h10 v3 H61" stroke="#C9B98F" strokeWidth="0.8" /><path d="M68,26 v10 M64,31 h8" stroke="#D9A441" strokeWidth="1.3" /></g>,
+    greta: <g opacity="0.48"><path d="M6,67 C8,45 15,28 23,13 M13,62 l-6,-8 M16,51 l7,-7 M18,39 l-6,-6 M62,14 C67,28 72,46 74,66" stroke="#78906A" strokeWidth="1.5" fill="none" /><path d="M7,54 q-5,-4 -1,-7 q5,1 1,7 M22,44 q6,-4 7,1 q-4,4 -7,-1 M12,33 q-6,-1 -5,-6 q6,-1 5,6" fill="#78906A" /><path d="M61,65 v-15 h9 v15 Z" fill="#6E7E68" /><path d="M61,52 q4,-4 9,0" stroke="#C9B98F" strokeWidth="1" fill="none" /></g>,
+    wilhelm: <g opacity="0.46"><path d="M8,12 l14,16 M10,11 l6,-5 3,4 -6,5 Z" fill="#9C9280" /><path d="M5,55 q5,-14 16,-17 q4,11 -2,22" fill="none" stroke="#B8A878" strokeWidth="1.6" /><path d="M59,12 l16,22 M67,18 l7,-3" stroke="#52617D" strokeWidth="3" /><path d="M60,58 q8,-12 15,-16 M62,63 q7,-10 14,-12" stroke="#52617D" strokeWidth="1.2" /></g>,
+    liesel: <g opacity="0.48"><path d="M5,23 h17 M5,37 h17 M8,22 v-10 h4 v10 M15,22 v-7 h4 v7 M9,36 v-10 h5 v10 M17,36 v-8 h3 v8" fill="#8A6E52" /><path d="M61,13 v19 M57,24 h8" stroke="#D9A441" strokeWidth="1.2" /><path d="M59,13 q2,-5 4,0" stroke="#D9A441" strokeWidth="1.1" fill="none" /><circle cx="61" cy="12" r="4" fill="#D9A441" opacity="0.2" className="mvFlick" /></g>,
+    falk: <g opacity="0.45"><path d="M4,11 h17 v28 H4 Z" fill="#536076" /><path d="M6,14 h13 M6,26 h13" stroke="#AEB4CC" strokeWidth="0.8" /><path d="M8,25 v-7 h3 v7 M14,25 v-9 h3 v9 M61,19 v19 M56,28 h10" stroke="#C9D5E8" strokeWidth="1.4" fill="none" /><path d="M65,13 q5,4 0,9 q-5,-5 0,-9 Z" fill="#9EC2CD" opacity="0.7" /></g>,
+    rosa: <g opacity="0.45"><path d="M5,11 v55 M18,11 v55 M5,18 h13 M5,55 h13" stroke="#8A6E52" strokeWidth="1.5" /><path d="M8,21 l7,31 M15,21 l-7,31" stroke="#C9B98F" strokeWidth="0.65" /><circle cx="66" cy="59" r="7" fill="none" stroke="#C9B98F" strokeWidth="1.1" /><circle cx="66" cy="59" r="2" fill="#C9B98F" /><path d="M56,17 q8,4 15,0 M58,22 q7,4 14,0" stroke="#AEB4CC" strokeWidth="1" fill="none" /></g>,
+  }[id];
   const MOUTH = mk === "smile" ? "q5.5,2.4 11,0" : "h11";
   const MPOS = { tobias: [53, "#5E584C"], wilhelm: [52, "#8A7458"], liesel: [52.5, "#8A5A50"], ansel: [53.5], falk: [54] }[id] || [53];
   const BCFG = { tobias: ["#9C9282", 2.2, 0], ansel: ["#231F28", 1.6, 0], greta: ["#2A4032", 1.5, 0], wilhelm: ["#3A3026", 2.8, 0], liesel: ["#4A3A2E", 1.5, 0], falk: ["#B8B0A0", 1.7, -1.6], rosa: ["#2E2A3E", 1.4, 0] }[id] || ["#6E5A42", 1.4, 0];
@@ -5981,6 +5994,7 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
       <rect width="80" height="80" rx="10" fill={`url(#mvP2bg-${id})`} />
       <ellipse cx="16" cy="46" rx="18" ry="32" fill="#D9A441" opacity="0.1" />
       <g filter="url(#mvPRough)">
+        {craft}
         {F.garment}
         <path d="M34,58 h12 l-1,6 h-10 Z" fill={skin} />
         <ellipse cx="40" cy="41" rx="16.5" ry="19.5" fill={skin} />
