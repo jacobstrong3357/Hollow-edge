@@ -24,6 +24,12 @@ must name both WHO and WHAT before the village runs out of people.
 - `netlify.toml` 404s `/CLAUDE.md` and `/design_handoff_hollows_edge_redesign/*`
   on the published site; the deploy is wired to pushes on `main` (site
   `hollowsedge` on Netlify).
+- **V5 character art** lives in `assets/v5-cast-sheet-a-512.png`,
+  `assets/v5-cast-sheet-b-512.png`, and `assets/v5-liesel-portrait-512.png`.
+  They are 512px painted source plates used by `V5_PORTRAIT_ART` in
+  `index.html`; the two sheets are 2×2 grids cropped by quadrant, while
+  Liesel is a standalone square. Keep the vector `Portrait` path as a
+  fallback for future ids and any environment that cannot load the plates.
 - **`design_handoff_hollows_edge_redesign/`** is the mobile redesign handoff:
   `README.md` (design system + a section per screen, naming the repo function
   each replaces) and `Hollow's Edge Redesign.dc.html` (the canvas; find a
