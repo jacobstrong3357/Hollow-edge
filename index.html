@@ -11,7 +11,7 @@
 <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 <style>
-  html, body { margin: 0; padding: 0; min-height: 100%; background: #0a0a0b;
+  html, body { margin: 0; padding: 0; min-height: 100%; background: #e8deca;
     -webkit-text-size-adjust: 100%; -moz-text-size-adjust: 100%; text-size-adjust: 100%; }
   /* Android Chrome inflates small fonts in text blocks ("font boosting"),
      which distorts tight grids like the monster chart differently on every
@@ -21,10 +21,12 @@
   #boot {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px; text-align: center;
-    background: #0a0a0b; color: #8b8378; z-index: 9999;
+    background-color: #e8deca; color: #61584c; z-index: 9999;
+    background-image: radial-gradient(circle at 16% 22%, rgba(83,70,50,.08) 0 1px, transparent 1.5px), radial-gradient(circle at 76% 61%, rgba(83,70,50,.06) 0 1px, transparent 1.5px);
+    background-size: 19px 23px, 29px 31px;
     font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0.08em; padding: 24px;
   }
-  #boot .t { font-size: 22px; color: #c9c1b4; }
+  #boot .t { font-size: 22px; color: #191715; }
   #boot .s { font-size: 13px; opacity: 0.75; max-width: 420px; line-height: 1.6; }
   #boot .e { font-size: 12px; color: #9e3039; font-family: ui-monospace, Menlo, monospace;
              letter-spacing: 0; max-width: 640px; text-align: left; white-space: pre-wrap; }
@@ -5820,10 +5822,14 @@ function actAccuse(prev, id, typeId) {
 /* ================= ART: woodcut SVG ================= */
 
 const C = {
-  bg: "#101321", panel: "#171B2E", panel2: "#1E2338", line: "#2B3050",
-  text: "#C9CBD8", dim: "#B3AC9B", fog: "#8A8FA8", amber: "#D9A441", red: "#9E3039", redBright: "#C24450",
-  parch: "#E9DFC8", parchLine: "#C9B98F", ink: "#2B2416", inkDim: "#6B5F44", turn: "#7A5FA0",
-  sky: "#141830", ground: "#0B0E1C", sil: "#05070F", pale: "#AEB4CC", garment: "#232845",
+  /* Ink-v1: daylight is now a printed folio rather than a blue dashboard.
+     Night keeps its charcoal ground, so the day/night change remains a real
+     atmospheric transition instead of a palette swap with no narrative use. */
+  bg: "#E8DECA", panel: "#DED1B8", panel2: "#F2E8D5", line: "#7C705E",
+  text: "#231F1A", dim: "#6D6355", fog: "#8C857A", amber: "#9B642D", nightAmber: "#D4AA70", red: "#772B2B", redBright: "#B94B4B",
+  parch: "#F1E6D1", parchLine: "#A58F6B", ink: "#191715", inkDim: "#61584C", turn: "#654B70",
+  paper: "#E8DECA", paper2: "#F3E9D6", paperDeep: "#D5C5A8",
+  sky: "#171614", ground: "#0D0C0A", sil: "#050505", pale: "#C7BDAB", garment: "#292621",
 };
 
 /* Full-bleed art never hard-cuts: every strip that runs off the top of a
@@ -5833,12 +5839,51 @@ const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 52%, rgba(0,0,0,0.6) 74%, 
    reads as the same dark rather than as the end of a picture */
 const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 62%, rgba(0,0,0,0.5) 88%, transparent 100%)";
 
+/* Authored location plates. Day and night keep the same landmarks so a
+   place is recognisable at a glance; the persistent village wounds swap in
+   their own drawing instead of trying to communicate damage with a tint. */
+const LOCATION_DAY_ART = {
+  Cottage: "assets/ink-v1/locations/cottage-day-ink-v1.png",
+  Graveyard: "assets/ink-v1/locations/graveyard-day-ink-v1.png",
+  "Dark Forest": "assets/ink-v1/locations/dark-forest-day-ink-v1.png",
+  "Old Church": "assets/ink-v1/locations/old-church-day-ink-v1.png",
+  "Village Square": "assets/ink-v1/locations/village-square-day-ink-v1.png",
+  Tavern: "assets/ink-v1/locations/tavern-day-ink-v1.png",
+  "Old Mill": "assets/ink-v1/locations/old-mill-day-ink-v1.png",
+};
+const LOCATION_NIGHT_ART = {
+  Cottage: "assets/ink-v1/locations/cottage-night-ink-v1.png",
+  Graveyard: "assets/ink-v1/locations/graveyard-night-ink-v1.png",
+  "Dark Forest": "assets/ink-v1/locations/dark-forest-night-ink-v1.png",
+  "Old Church": "assets/ink-v1/locations/old-church-night-ink-v1.png",
+  "Village Square": "assets/ink-v1/locations/village-square-night-ink-v1.png",
+  Tavern: "assets/ink-v1/locations/tavern-night-ink-v1.png",
+  "Old Mill": "assets/ink-v1/locations/old-mill-night-ink-v1.png",
+};
+const LOCATION_WOUND_ART = {
+  church_burned: "assets/ink-v1/locations/old-church-burned-ink-v1.png",
+  square_riot: "assets/ink-v1/locations/village-square-riot-ink-v1.png",
+  well_fouled: "assets/ink-v1/locations/village-square-well-fouled-ink-v1.png",
+  tavern_shut: "assets/ink-v1/locations/tavern-shut-ink-v1.png",
+  mill_flood: "assets/ink-v1/locations/old-mill-flooded-ink-v1.png",
+};
+
 /* `unlit` puts every lamp in the picture out. A dark window is drawn at the
    same value as a doorway, so it reads as a socket rather than as a window
    somebody forgot to fill in, and nothing flickers because nothing is burning.
    `moonless` takes the moon out of the sky and leaves the stars, for the
    nights when something is between the village and it. */
 function Scene({ loc, kind, height = 150, unlit, moonless }) {
+  const source = LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
+  return (
+    <div className={`heLocationPlate heLocationPlateNight${unlit ? " is-unlit" : ""}${moonless ? " is-moonless" : ""}`} style={{ height }}>
+      <img src={source} alt="" draggable="false" />
+      {unlit && <span className="heLocationUnlit" aria-hidden="true" />}
+      {moonless && <span className="heLocationMoonless" aria-hidden="true" />}
+      {kind === "body" && <span className="heLocationBody" aria-hidden="true" />}
+      {kind === "turned" && <span className="heLocationTurned" aria-hidden="true"><i /><b>··</b></span>}
+    </div>
+  );
   const lit = unlit ? C.ink : C.amber;
   const win = (x, y, w = 8, h = 12, arch) => (
     <g key={`w${x}${y}`}>
@@ -5930,17 +5975,34 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
      keep the original reactive SVG below for death and revealed-monster
      states: those states need to change colour and carry their own marks. */
   const portraitArt = {
-    marta: "assets/v5-portraits/marta-v5-ink.png",
-    tobias: "assets/v5-portraits/tobias-v5-ink.png",
-    ansel: "assets/v5-portraits/ansel-v5-ink.png",
-    greta: "assets/v5-portraits/greta-v5-ink.png",
-    wilhelm: "assets/v5-portraits/wilhelm-v5-ink.png",
-    liesel: "assets/v5-portraits/liesel-v5-ink.png",
-    falk: "assets/v5-portraits/falk-v5-ink.png",
-    rosa: "assets/v5-portraits/rosa-v5-ink.png",
+    marta: "assets/ink-v1/portraits/marta-ink-v1.png",
+    tobias: "assets/ink-v1/portraits/tobias-ink-v1.png",
+    ansel: "assets/ink-v1/portraits/ansel-ink-v1.png",
+    greta: "assets/ink-v1/portraits/greta-ink-v1.png",
+    wilhelm: "assets/ink-v1/portraits/wilhelm-ink-v1.png",
+    liesel: "assets/ink-v1/portraits/liesel-ink-v1.png",
+    falk: "assets/ink-v1/portraits/falk-ink-v1.png",
+    rosa: "assets/ink-v1/portraits/rosa-ink-v1.png",
   }[id];
-  if (portraitArt && !dead && !turnedKnown) {
-    return <img src={portraitArt} alt="" width={size} height={size} draggable="false" style={{ display: "block", width: size, height: size, objectFit: "cover", borderRadius: Math.max(6, size * 0.125), boxShadow: "0 2px 8px rgba(0,0,0,0.38)" }} />;
+  const skullArt = {
+    marta: "assets/ink-v1/skulls/marta-skull-ink-v1.png",
+    tobias: "assets/ink-v1/skulls/tobias-skull-ink-v1.png",
+    ansel: "assets/ink-v1/skulls/ansel-skull-ink-v1.png",
+    greta: "assets/ink-v1/skulls/greta-skull-ink-v1.png",
+    wilhelm: "assets/ink-v1/skulls/wilhelm-skull-ink-v1.png",
+    liesel: "assets/ink-v1/skulls/liesel-skull-ink-v1.png",
+    falk: "assets/ink-v1/skulls/falk-skull-ink-v1.png",
+    rosa: "assets/ink-v1/skulls/rosa-skull-ink-v1.png",
+  }[id];
+  if (portraitArt) {
+    const sourceArt = dead && skullArt ? skullArt : portraitArt;
+    return (
+      <span className={`hePortrait${dead ? " is-dead" : ""}${turnedKnown ? " is-changed" : ""}`} style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 2, background: C.paper2, boxShadow: "0 0 0 1px rgba(25,23,21,0.42), 0 2px 8px rgba(25,23,21,0.18)" }}>
+        <img src={sourceArt} alt="" width={size} height={size} draggable="false" style={{ display: "block", width: size, height: size, objectFit: "cover", filter: dead ? "contrast(1.05) saturate(0.82)" : turnedKnown ? "grayscale(0.86) contrast(1.18) sepia(0.12)" : "contrast(1.04) saturate(0.82)" }} />
+        {!dead && turnedKnown && <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 38%, rgba(101,75,112,0.1), rgba(101,75,112,0.42))", mixBlendMode: "multiply", border: `2px solid ${C.turn}` }} />}
+        {!dead && turnedKnown && <svg aria-hidden="true" viewBox="0 0 100 100" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}><path d="M2 91 C18 78 12 58 30 50 C20 35 31 20 43 8 M98 89 C80 76 88 57 69 49 C82 32 68 17 58 4" stroke="#33263A" strokeWidth="2.4" fill="none" opacity="0.72" /></svg>}
+      </span>
+    );
   }
   const skin = turnedKnown ? "#C9CDDC" : (id === "tobias" || id === "falk") ? "#DDD1B6" : "#E9DFC8";
   const shadeC = turnedKnown ? "#9AA0B8" : "#C4AE8C";
@@ -6886,6 +6948,14 @@ function DawnScene({ loc, s, height = 190 }) {
     loc === "Village Square" ? (s.wellFouled ? "well_fouled" : s.breadRiot ? "square_riot" : "square") :
     loc === "Tavern" ? (s.tavernShut ? "tavern_shut" : "tavern") :
     loc === "Old Mill" ? ((s.burned || []).includes("Old Mill") ? "mill_flood" : "mill") : "cottage";
+  const wounded = LOCATION_WOUND_ART[key];
+  const source = wounded || LOCATION_DAY_ART[loc] || LOCATION_DAY_ART.Cottage;
+  return (
+    <div className={`heLocationPlate heLocationPlateDay${wounded ? " is-wounded" : ""}`} style={{ height }}>
+      <img src={source} alt="" draggable="false" />
+      <span className="heLocationPaperVeil" aria-hidden="true" />
+    </div>
+  );
   const pine = (x, sc = 1, col = "#372C4A") => (
     <g key={`pn${x}`} transform={`translate(${x},0) scale(${sc})`}>
       <polygon points="0,164 -24,164 -12,112" fill={col} /><polygon points="0,138 -21,138 -10,94" fill={col} />
@@ -7095,53 +7165,14 @@ function DawnScene({ loc, s, height = 190 }) {
    not a place - so it needs no location argument. */
 function NightScene({ height = 190 }) {
   return (
-    <svg viewBox="0 0 400 190" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
-      <defs>
-        <linearGradient id="nsSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0A0E20" /><stop offset="55%" stopColor="#141A30" /><stop offset="100%" stopColor="#1C2138" />
-        </linearGradient>
-        <radialGradient id="nsMoon"><stop offset="0%" stopColor="#EEF0F8" stopOpacity="0.9" /><stop offset="100%" stopColor="#AEB4CC" stopOpacity="0" /></radialGradient>
-      </defs>
-      <rect width="400" height="190" fill="url(#nsSky)" />
-      <circle cx="322" cy="48" r="48" fill="url(#nsMoon)" className="mvGlowPulse" />
-      <circle cx="322" cy="48" r="20" fill="#E9ECF6" />
-      <circle cx="316" cy="44" r="3.2" fill="#C4C9DA" opacity="0.5" /><circle cx="328" cy="55" r="2.5" fill="#C4C9DA" opacity="0.5" />
-      {[[40, 32], [80, 58], [130, 26], [180, 46], [230, 32], [268, 62], [360, 36], [388, 60]].map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="1.15" fill="#DDE2F0" opacity="0.6" className="mvFlick" style={{ animationDelay: `${i * 0.5}s` }} />
-      ))}
-      <ellipse className="mvFog" cx="120" cy="158" rx="150" ry="14" fill="#3A4468" opacity="0.16" />
-      <rect y="166" width="400" height="24" fill="#0B0E1C" />
-      {[[20, 40, 30], [70, 32, 40], [250, 38, 34], [300, 44, 30], [356, 50, 26]].map(([x, w, h]) => (
-        <g key={x}><rect x={x} y={166 - h} width={w} height={h} fill="#0C1120" /><polygon points={`${x - 4},${166 - h} ${x + w + 4},${166 - h} ${x + w / 2},${166 - h - 14}`} fill="#0A0E1A" /></g>
-      ))}
-      <rect x="42" y="158" width="7" height="9" fill="#D9A441" opacity="0.85" className="mvFlick" />
-      <rect x="316" y="158" width="7" height="9" fill="#D9A441" opacity="0.7" className="mvFlick" style={{ animationDelay: "1.2s" }} />
-      <path d="M150,170 q4,-16 12,-16 q8,0 12,16 Z" fill="#0C1120" />
-    </svg>
+    <div className="heNightVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "linear-gradient(rgba(9,8,14,.02),rgba(9,8,10,.52)),url('assets/ink-v1/scenes/night-transition-ink-v1.png')", backgroundSize: "cover", backgroundPosition: "center" }} />
   );
 }
 
 /* A sliver of the village in morning light, behind the day header. */
 function DayStrip({ height = 64 }) {
   return (
-    <svg viewBox="0 0 400 70" style={{ width: "100%", height, display: "block" }} preserveAspectRatio="xMidYMax slice">
-      <defs>
-        <linearGradient id="dwStrip" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#48507A" /><stop offset="70%" stopColor="#9A7A72" /><stop offset="100%" stopColor="#D0A878" />
-        </linearGradient>
-        <radialGradient id="dwStripSun">
-          <stop offset="0%" stopColor="#FFE9BC" stopOpacity="0.9" /><stop offset="100%" stopColor="#E8A85A" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width="400" height="70" fill="url(#dwStrip)" />
-      <circle cx="330" cy="52" r="38" fill="url(#dwStripSun)" className="mvGlowPulse" />
-      <circle cx="330" cy="52" r="9" fill="#FFEFCB" />
-      {[[30, 40, 26], [82, 34, 32], [255, 38, 28], [368, 44, 24]].map(([x, w, h]) => (
-        <g key={x}><rect x={x} y={70 - h} width={w} height={h} fill="#221C34" /><polygon points={`${x - 4},${70 - h} ${x + w + 4},${70 - h} ${x + w / 2},${70 - h - 13}`} fill="#1C1730" /></g>
-      ))}
-      <path d="M150,70 q4,-16 12,-16 q8,0 12,16 Z" fill="#221C34" />
-      <ellipse className="mvFog" cx="200" cy="66" rx="150" ry="6" fill="#EED8B0" opacity="0.16" />
-    </svg>
+    <div className="heDayVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "linear-gradient(rgba(232,222,202,.02),rgba(25,23,21,.68)),linear-gradient(135deg,rgba(76,81,128,.64),rgba(206,151,105,.62)),url('assets/ink-v1/scenes/village-gate-ink-v1.png')", backgroundBlendMode: "multiply,color,normal", backgroundSize: "cover", backgroundPosition: "center 58%" }} />
   );
 }
 
@@ -7640,13 +7671,13 @@ const fontStyles = `
 
 function Btn({ children, onClick, disabled, kind = "ghost", full, small, center }) {
   const styles = {
-    ghost: { background: "transparent", border: `1px solid ${C.line}`, color: C.text },
+    ghost: { background: "rgba(25,23,21,0.08)", border: `1px solid ${C.line}`, color: C.parch },
     amber: { background: "transparent", border: `1px solid ${C.amber}`, color: C.amber },
     red: { background: C.red, border: `1px solid ${C.red}`, color: "#F3E9E4" },
   }[kind];
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`mv-btn mv-body rounded ${full ? "w-full" : ""} ${small ? "px-3 py-1.5 text-sm" : "px-4 py-2.5"}`}
+      className={`mv-btn mv-kind-${kind} mv-body rounded ${full ? "w-full" : ""} ${small ? "px-3 py-1.5 text-sm" : "px-4 py-2.5"}`}
       style={{ ...styles, opacity: disabled ? 0.35 : 1, cursor: disabled ? "default" : "pointer", textAlign: center ? "center" : "left" }}>
       {children}
     </button>
@@ -7660,59 +7691,53 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small, center 
 function HomeScene({ veteran }) {
   return (
     <div className="mvHomeScene" aria-hidden="true">
-      <Scene loc="Village Square" kind="quiet" height={veteran ? 258 : 290} />
-      <svg className="mvHomeDepth" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
-        <g className="mvHomeRidge">
-          <path d="M-18,225 C34,190 66,204 110,220 C150,235 200,202 246,216 C292,230 346,194 420,210 L420,300 L-18,300 Z" fill="#080A14" opacity="0.78" />
-          <path d="M-18,255 C35,225 85,240 128,250 C174,260 206,230 266,239 C315,246 361,226 420,239 L420,300 L-18,300 Z" fill="#05060C" />
-        </g>
-        <g className="mvHomePinesFar" fill="#0A0D1A" opacity="0.92">
-          <path d="M22,242 l16,-54 16,54 h-9 l12,38 H19 l12,-38 Z" /><path d="M316,244 l19,-70 19,70 h-10 l14,40 h-46 l14,-40 Z" /><path d="M365,250 l13,-46 13,46 h-7 l9,31 h-32 l9,-31 Z" />
-        </g>
-        <g className="mvHomePinesNear" fill="#04050A">
-          <path d="M-10,286 l26,-103 26,103 h-15 l20,48 H-25 l20,-48 Z" /><path d="M255,290 l24,-98 24,98 h-14 l19,46 h-58 l19,-46 Z" />
-        </g>
-      </svg>
-      <span className="mvHomeMoon" />
-      <span className="mvHomeCloud mvHomeCloudA" />
-      <span className="mvHomeCloud mvHomeCloudB" />
-      <span className="mvHomeMist mvHomeMistFar" />
-      <span className="mvHomeMist mvHomeMistNear" />
-      <span className="mvHomeBell" />
-      <span className="mvHomeFigure" />
-      <span className="mvHomeLantern mvHomeLanternA" />
-      <span className="mvHomeLantern mvHomeLanternB" />
+      <img className="heGatePlate" src="assets/ink-v1/scenes/village-gate-ink-v1.png" alt="" draggable="false" />
+      {[["11%","17%",0],["82%","22%",1.1],["19%","35%",2.2],["76%","40%",3.4],["29%","52%",4.1],["67%","55%",5.3]].map(([left,top,delay], i) => (
+        <span key={i} className="heLittleGhost" style={{ left, top, animationDelay: `${delay}s` }}><i /><i /></span>
+      ))}
       <div className="mvHomeFade" />
     </div>
   );
 }
 
-function savedRunSummary(run) {
-  if (!run) return null;
-  const phase = run.phase === "day" || run.phase === "firstlight" ? "DAY" : "NIGHT";
-  const count = (run.npcs || []).filter((x) => x.alive && !x.fled).length;
-  return { phase, number: phase === "DAY" ? run.dayNum : run.nightNum, living: count };
+function HomeTitle({ veteran }) {
+  return (
+    <header className={`heGameTitle mvIn${veteran ? " is-veteran" : ""}`} style={{ animationDelay: "0.2s" }}>
+      <div className="heGameTitleType">A FOLK-HORROR DEDUCTION GAME</div>
+      <h1 className="mv-display">Hollow's Edge</h1>
+      <div className="heGameTitleTag mv-display">IT IS ALREADY AMONG YOU</div>
+    </header>
+  );
 }
 
-/* The gate carries the practical promise of a modern game without becoming
-   a bright dashboard. It makes the saved village visible before the player
-   is asked to enter it; the ledger remains the deeper place for slot work. */
-function HomeGatePanel({ activeRun, savedSlotCount, onOpenLedger }) {
-  const hasRun = !!activeRun;
+function HomeMetaCard({ icon, title, value, note, tone = "bone", onClick, delay }) {
   return (
-    <button onClick={onOpenLedger} className="mvHomeGate mvIn w-full text-left" style={{ animationDelay: "0.55s" }}>
-      <span className="mvHomeGateSeal">{hasRun ? "↻" : "✦"}</span>
-      <span style={{ minWidth: 0, flex: 1 }}>
-        <span className="mv-display" style={{ display: "block", fontSize: 10.5, letterSpacing: 2.55, color: hasRun ? C.amber : C.parchLine }}>
-          {hasRun ? "A VILLAGE WAITS AT THE GATE" : "THE ROAD KEEPS YOUR PLACE"}
-        </span>
-        <span style={{ display: "block", marginTop: 3, color: C.parch, fontSize: 13.5, lineHeight: 1.25 }}>
-          {hasRun ? `${activeRun.phase} ${activeRun.number} · ${activeRun.living} still living` : "Every run is kept automatically."}
-        </span>
+    <button onClick={onClick} className={`heHomeMetaCard tone-${tone} mvIn`} style={{ animationDelay: delay }}>
+      <span className="heHomeMetaIcon mv-display" aria-hidden="true">{icon}</span>
+      <span className="heHomeMetaCopy">
+        <span className="mv-display heHomeMetaTitle">{title}</span>
+        <span className="mv-display heHomeMetaValue">{value}</span>
+        <span className="heHomeMetaNote">{note}</span>
       </span>
-      <span className="mv-display" style={{ alignSelf: "center", fontSize: 10, letterSpacing: 1.7, color: C.dim, whiteSpace: "nowrap" }}>
-        {savedSlotCount ? `${savedSlotCount}/3 KEPT` : "LEDGER ›"}
+      <span className="heHomeMetaArrow" aria-hidden="true">›</span>
+    </button>
+  );
+}
+
+function HomeBlackBookCard({ meta, defeatedCount, onClick }) {
+  const shown = MONSTERS.filter((mm) => meta.defeated[mm.id]).slice(0, 5);
+  return (
+    <button onClick={onClick} className="heBlackBookCard mvIn" style={{ animationDelay: "0.65s" }}>
+      <span className="heBookSpine" aria-hidden="true" />
+      <span className="heBookCorners" aria-hidden="true" />
+      <span className="heBookKicker mv-display">THE ARCHIVE OF HOLLOW'S EDGE</span>
+      <span className="heBookTitle mv-display">The Black Book</span>
+      <span className="heBookRule" aria-hidden="true"><i>☾</i></span>
+      <span className="heBookLore">Horrors you have faced. Names you have earned. Rites that may end them.</span>
+      <span className="heBookCreatures" aria-hidden="true">
+        {shown.length ? shown.map((mm) => <MonsterArt key={mm.id} id={mm.id} size={34} light />) : <span className="mv-display">THE PAGES ARE STILL HUNGRY</span>}
       </span>
+      <span className="heBookProgress mv-display">{defeatedCount} OF {MONSTERS.length} NAMED <b>OPEN ›</b></span>
     </button>
   );
 }
@@ -7894,7 +7919,7 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
   const hasMoon = moonMul > 0;
   const mo = (a) => Math.min(0.85, +(a * moonMul).toFixed(3));
   return (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
+    <div className="fixed inset-0 z-40 mv-body heNight flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
         {/* The sky runs to the very top of the frame. The silhouette itself
             still starts 44px down, where it always did, but the band above it
@@ -7958,8 +7983,8 @@ function NightChoice({ children, onClick, quiet }) {
     <button onClick={onClick} className="mv-btn mv-body" style={{
       borderRadius: 4, padding: "9px 13px", textAlign: "left", fontSize: 14, cursor: "pointer",
       background: quiet ? "rgba(10,12,24,0.55)" : "rgba(217,164,65,0.1)",
-      border: `1px solid ${quiet ? C.line : C.amber}`,
-      color: quiet ? C.text : C.amber,
+      border: `1px solid ${quiet ? C.line : C.nightAmber}`,
+      color: quiet ? C.parch : C.nightAmber,
     }}>{children}</button>
   );
 }
@@ -7969,9 +7994,9 @@ const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"
    All the same furniture: a gilt kicker with its count at the right, the
    drawer's name in display type, and one CLOSE bar at the foot. No hero card:
    these are pages of a book, not places you have been. */
-function DrawerShell({ kicker, count, title, sub, bar, onClose, children }) {
+function DrawerShell({ kicker, count, title, sub, bar, onClose, children, variant }) {
   return (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: "#08070C", color: C.parch, overflow: "hidden" }}>
+    <div className={`fixed inset-0 z-40 mv-body flex flex-col heHomeDrawer${variant ? ` heDrawer-${variant}` : ""}`} role="dialog" aria-modal="true" aria-label={title} style={{ background: "#08070C", color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
         <div className="mvGrain" />
         <div className="relative" style={{ flexShrink: 0, padding: "0 20px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 26px)" }}>
@@ -7987,7 +8012,7 @@ function DrawerShell({ kicker, count, title, sub, bar, onClose, children }) {
             </div>
           )}
         </div>
-        <div className="relative flex-1 min-h-0 overflow-y-auto" style={{ padding: "14px 20px 0", WebkitOverflowScrolling: "touch" }}>
+        <div className="relative flex-1 min-h-0 overflow-y-auto heHomeDrawerBody" style={{ padding: "14px 20px 0", WebkitOverflowScrolling: "touch" }}>
           {children}
         </div>
         <Dock><DockBtn kind="commit" onClick={onClose}>CLOSE</DockBtn></Dock>
@@ -8035,15 +8060,15 @@ function Dock({ children, tone = "night", line }) {
    quiet. Amber is never decoration - if it is amber, pressing it spends
    something or ends a phase. */
 const DOCK_BTN_KINDS = {
-  commit: { background: "rgba(217,164,65,0.1)", border: `1px solid ${C.amber}`, color: C.amber },
+  commit: { background: "rgba(212,170,112,0.1)", border: `1px solid ${C.nightAmber}`, color: C.nightAmber },
   destroy: { background: C.red, border: `1px solid ${C.red}`, color: "#F3E9E4" },
-  quiet: { background: "transparent", border: `1px solid ${C.line}`, color: C.text },
+  quiet: { background: "transparent", border: `1px solid ${C.line}`, color: C.parch },
   /* the quiet way out of a bruised screen: the hairline bruises too */
-  quietBruise: { background: "transparent", border: "1px solid #3A2430", color: C.text },
+  quietBruise: { background: "transparent", border: "1px solid #3A2430", color: C.parch },
 };
 function DockBtn({ children, onClick, kind = "quiet", disabled }) {
   return (
-    <button onClick={onClick} disabled={disabled} className="mv-btn mv-display w-full"
+    <button onClick={onClick} disabled={disabled} className={`mv-btn mv-kind-${kind} mv-display w-full`}
       style={{ borderRadius: 3, padding: "13px 0", textAlign: "center", fontSize: 14.5, letterSpacing: 2, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.35 : 1, ...DOCK_BTN_KINDS[kind] }}>
       {children}
     </button>
@@ -8054,6 +8079,160 @@ function DockBtn({ children, onClick, kind = "quiet", disabled }) {
 /* ================= UI (v7) ================= */
 
 const EXTRA_CSS = `
+:root { --he-paper:#E8DECA; --he-paper-light:#F3E9D6; --he-paper-deep:#D5C5A8; --he-ink:#191715; --he-graphite:#61584C; --he-rule:#7C705E; --he-blood:#772B2B; }
+button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visible { outline:3px double var(--he-ink); outline-offset:3px; }
+.mv-btn:hover:not(:disabled) { filter:contrast(1.08); }
+.mv-btn:disabled { filter:grayscale(.55); }
+.heGate, .heDay { background-color:var(--he-paper) !important; background-image:radial-gradient(circle at 17% 21%,rgba(77,63,42,.07) 0 1px,transparent 1.5px),radial-gradient(circle at 71% 64%,rgba(77,63,42,.05) 0 1px,transparent 1.5px),linear-gradient(102deg,rgba(255,255,255,.12),rgba(90,70,40,.04)); background-size:23px 27px,31px 37px,100% 100%; }
+.heGate { color:var(--he-ink) !important; }
+.heGate .mvHomeScene { position:fixed; inset:0; height:100%; opacity:.58; }
+.heGatePlate { position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px); object-fit:cover; object-position:center; filter:grayscale(.16) sepia(.08) contrast(1.03); }
+.heGate .mvHomeScene::before { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; background:radial-gradient(ellipse 78% 33% at 50% 61%,rgba(230,157,92,.32),rgba(221,177,119,.12) 48%,transparent 72%),linear-gradient(180deg,rgba(113,139,166,.11),transparent 42%,rgba(203,141,88,.14) 74%,transparent); mix-blend-mode:soft-light; }
+.heGate .mvHomeFade { background:linear-gradient(180deg,rgba(232,222,202,.06) 0%,rgba(232,222,202,.22) 25%,rgba(232,222,202,.76) 57%,rgba(232,222,202,.97) 100%); }
+.heGate .relative.max-w-md { text-shadow:none; }
+.heGate h1, .heGate p, .heGate .mv-display { color:var(--he-ink) !important; text-shadow:none !important; }
+.heGameTitle { position:relative; z-index:3; flex-shrink:0; margin:0 0 5px; padding:9px 13px 11px; text-align:center; background:linear-gradient(90deg,transparent,rgba(243,233,214,.82) 10% 90%,transparent); border-top:1px solid rgba(25,23,21,.56); border-bottom:2px solid var(--he-ink); transform:rotate(-.18deg); }
+.heGameTitle::before, .heGameTitle::after { content:""; position:absolute; bottom:-5px; width:38px; height:1px; background:var(--he-ink); opacity:.72; }
+.heGameTitle::before { left:19%; transform:rotate(3deg); } .heGameTitle::after { right:19%; transform:rotate(-3deg); }
+.heGameTitleType { font-family:'Alegreya',serif; font-size:9.5px; line-height:1; font-weight:700; letter-spacing:2.55px; color:var(--he-graphite); }
+.heGameTitle h1 { margin:5px 0 2px; font-size:clamp(43px,12.5vw,52px); line-height:.88; letter-spacing:.5px; color:var(--he-ink) !important; }
+.heGameTitleTag { font-size:10px; line-height:1; letter-spacing:3.35px; color:var(--he-blood) !important; }
+.heGameTitle.is-veteran { padding-top:7px; padding-bottom:9px; }
+.heGameTitle.is-veteran h1 { font-size:clamp(40px,11.5vw,48px); }
+.heBlackBookCard { position:relative; z-index:3; width:100%; min-height:204px; margin-top:8px; padding:18px 18px 13px 27px; display:flex; flex-direction:column; align-items:stretch; overflow:hidden; text-align:left; color:var(--he-paper-light); background:radial-gradient(circle at 76% 18%,rgba(119,43,43,.16),transparent 31%),linear-gradient(108deg,#090807 0%,#211719 54%,#0b0909 100%); border:1px solid #080706 !important; border-radius:3px 10px 9px 3px; box-shadow:6px 8px 0 rgba(25,23,21,.22),inset 0 0 0 3px rgba(232,222,202,.045),inset 10px 0 18px rgba(0,0,0,.56); transform:rotate(-.3deg); cursor:pointer; }
+.heBlackBookCard:hover { transform:rotate(-.3deg) translateY(-2px); }
+.heBookSpine { position:absolute; left:8px; top:5px; bottom:5px; width:8px; border-left:1px solid rgba(232,222,202,.16); border-right:1px solid rgba(232,222,202,.1); box-shadow:4px 0 9px rgba(0,0,0,.55); }
+.heBookCorners::before, .heBookCorners::after { content:""; position:absolute; right:8px; width:20px; height:20px; border-right:1px solid rgba(217,164,65,.55); }
+.heBookCorners::before { top:8px; border-top:1px solid rgba(217,164,65,.55); transform:skew(-7deg); } .heBookCorners::after { bottom:8px; border-bottom:1px solid rgba(217,164,65,.55); transform:skew(7deg); }
+.heGate .heBlackBookCard .mv-display, .heGate .heBlackBookCard .heBookKicker, .heGate .heBlackBookCard .heBookTitle, .heGate .heBlackBookCard .heBookProgress { color:var(--he-paper-light) !important; }
+.heBookKicker { font-size:9px; letter-spacing:2.6px; opacity:.66; }
+.heBookTitle { margin-top:4px; font-size:31px; line-height:1; letter-spacing:1px; }
+.heBookRule { display:flex; align-items:center; gap:8px; margin:8px 0 6px; color:#D2A761; }
+.heBookRule::before, .heBookRule::after { content:""; height:1px; flex:1; background:linear-gradient(90deg,transparent,rgba(210,167,97,.72)); }
+.heBookRule::after { background:linear-gradient(90deg,rgba(210,167,97,.72),transparent); }
+.heBookRule i { font:normal 18px/1 Georgia,serif; }
+.heBookLore { max-width:94%; color:rgba(243,233,214,.78); font-size:13px; line-height:1.25; font-style:italic; }
+.heBookCreatures { min-height:38px; margin-top:auto; display:flex; align-items:center; justify-content:center; gap:5px; color:rgba(243,233,214,.6); }
+.heBookCreatures > .mv-display { font-size:9px; letter-spacing:2.35px; }
+.heBookProgress { display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:7px; border-top:1px solid rgba(243,233,214,.16); font-size:9.5px; letter-spacing:1.6px; }
+.heBookProgress b { color:#D2A761; font-weight:400; }
+.heHomeMetaGrid { position:relative; z-index:3; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.heHomeMetaCard { position:relative; width:100%; min-height:82px; display:grid; grid-template-columns:34px minmax(0,1fr) 10px; align-items:center; gap:8px; padding:8px 8px 8px 9px; overflow:hidden; text-align:left; color:var(--he-ink); background:rgba(243,233,214,.88); border:1px solid var(--he-ink) !important; border-radius:1px; box-shadow:2px 3px 0 rgba(25,23,21,.19); cursor:pointer; }
+.heHomeMetaCard::before { content:""; position:absolute; left:0; right:0; top:0; height:4px; background:var(--card-tone,var(--he-rule)); }
+.heHomeMetaCard:nth-child(odd) { transform:rotate(.22deg); } .heHomeMetaCard:nth-child(even) { transform:rotate(-.24deg); }
+.heHomeMetaCard.tone-violet { --card-tone:#675071; background:linear-gradient(145deg,rgba(104,80,113,.17),rgba(243,233,214,.92) 54%); }
+.heHomeMetaCard.tone-red { --card-tone:var(--he-blood); background:linear-gradient(145deg,rgba(119,43,43,.15),rgba(243,233,214,.92) 54%); }
+.heHomeMetaCard.tone-green { --card-tone:#4E6A54; background:linear-gradient(145deg,rgba(78,106,84,.17),rgba(243,233,214,.92) 54%); }
+.heHomeMetaCard.tone-blue { --card-tone:#536B83; background:linear-gradient(145deg,rgba(83,107,131,.17),rgba(243,233,214,.92) 54%); }
+.heHomeMetaIcon { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:1px solid var(--card-tone,var(--he-rule)); border-radius:50%; font-size:16px; color:var(--card-tone,var(--he-ink)) !important; background:rgba(243,233,214,.48); transform:rotate(-4deg); }
+.heHomeMetaCopy { min-width:0; display:flex; flex-direction:column; }
+.heHomeMetaTitle { font-size:10px; line-height:1; letter-spacing:1.7px; color:var(--card-tone,var(--he-graphite)) !important; }
+.heHomeMetaValue { margin-top:3px; font-size:18px; line-height:1; letter-spacing:.5px; color:var(--he-ink) !important; }
+.heHomeMetaNote { margin-top:3px; font-size:11px; line-height:1.05; color:var(--he-graphite); white-space:normal; }
+.heHomeMetaArrow { font:24px/1 Georgia,serif; color:var(--card-tone,var(--he-rule)); }
+.heFirstGuide { position:relative; z-index:3; }
+.heFirstGuide .heHomeMetaCard { min-height:61px; grid-template-columns:38px minmax(0,1fr) 12px; }
+.heNewGameButton { min-height:46px; padding:11px 0; border:1px solid var(--he-ink) !important; border-radius:1px !important; background:var(--he-ink) !important; box-shadow:3px 4px 0 rgba(25,23,21,.2); font-size:14px; letter-spacing:3.5px; cursor:pointer; }
+.heGate .heNewGameButton, .heGate .heNewGameButton * { color:var(--he-paper-light) !important; text-shadow:none !important; }
+.heSoundToggle { min-height:34px; padding:6px 10px; background:rgba(243,233,214,.6); border:0 !important; color:var(--he-graphite); font-size:12px; cursor:pointer; }
+.heHomeDrawer { background:radial-gradient(circle at 50% 0,rgba(91,65,52,.28),transparent 35%),#0c0a0a !important; }
+.heGate .heHomeDrawer h1, .heGate .heHomeDrawer p, .heGate .heHomeDrawer .mv-display { color:var(--he-paper-light) !important; text-shadow:none !important; }
+.heGate .heHomeDrawer button:not(.mvHomeGate) { border-color:rgba(232,222,202,.28) !important; }
+.heDrawer-secrets { position:fixed; isolation:isolate; background:#0E0B09 !important; }
+.heDrawer-secrets::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/secrets-archive-ink-v1.png') center/cover no-repeat; filter:saturate(.76) sepia(.08) contrast(1.04); opacity:.58; }
+.heDrawer-secrets::after { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:linear-gradient(180deg,rgba(12,9,8,.78) 0,rgba(12,9,8,.66) 25%,rgba(12,9,8,.36) 48%,rgba(12,9,8,.72) 84%,rgba(12,9,8,.96) 100%); }
+.heDrawer-secrets > .max-w-md { position:relative; z-index:1; }
+.heDrawer-secrets .heHomeDrawerBody { padding-left:16px !important; padding-right:16px !important; }
+.heSecretPerson { padding:12px 13px; background:rgba(13,10,8,.88); border:1px solid rgba(232,222,202,.24); box-shadow:3px 4px 0 rgba(0,0,0,.28); }
+.heSecretPerson:nth-child(odd) { transform:rotate(.12deg); } .heSecretPerson:nth-child(even) { transform:rotate(-.12deg); }
+.heGate .heHomeDrawer .heSecretNameplate { color:var(--he-ink) !important; background:var(--he-paper-light) !important; border-color:#8B7658 !important; text-shadow:none !important; }
+.heDrawer-secrets .heSecretCount { color:#D5BE94 !important; }
+.heBlackBookPage { background-color:var(--he-paper) !important; background-image:radial-gradient(circle at 21% 17%,rgba(75,58,38,.06) 0 1px,transparent 1.4px),linear-gradient(105deg,rgba(255,255,255,.1),rgba(91,68,38,.04)) !important; }
+.heBlackBookHero { min-height:132px; border-radius:3px 10px 9px 3px !important; box-shadow:5px 7px 0 rgba(25,23,21,.24),inset 10px 0 18px rgba(0,0,0,.5) !important; }
+.heGate .heBlackBookHero .mv-display { color:var(--he-paper-light) !important; }
+.heBlackBookEntry { border-radius:2px !important; background:rgba(243,233,214,.8) !important; border-color:rgba(25,23,21,.42) !important; box-shadow:2px 3px 0 rgba(25,23,21,.12); }
+.heBlackBookPage .heBlackBookEntry .mv-display, .heBlackBookPage .heBlackBookEntry p { color:var(--he-ink) !important; }
+.heBlackBookPage .heBookStatTile .mv-display { color:var(--he-paper-light) !important; }
+.heBookRite { color:var(--he-ink) !important; }
+.heGate .mvHomeGate { background:rgba(243,233,214,.9); border:1px solid var(--he-ink); box-shadow:5px 6px 0 rgba(25,23,21,.18); transform:rotate(-.35deg); }
+.heGate .mvHomeGate::after { border:1px solid rgba(25,23,21,.23); }
+.heGate .mvHomeGateSeal { color:var(--he-ink); border-color:var(--he-ink); background:transparent; }
+.heGate button { backdrop-filter:blur(1.4px); }
+.heGate button:not(.mvHomeGate) { border-color:var(--he-ink) !important; }
+.heGate .mv-kind-amber { background:var(--he-ink) !important; color:var(--he-paper-light) !important; box-shadow:3px 4px 0 rgba(25,23,21,.18); }
+.heGate .mv-kind-amber * { color:var(--he-paper-light) !important; }
+.heGate .mv-kind-red { background:rgba(243,233,214,.9) !important; color:var(--he-blood) !important; border:2px solid var(--he-blood) !important; }
+.heGate .mv-kind-red * { color:var(--he-blood) !important; }
+.heGate .mvPossess { background:linear-gradient(0deg,rgba(25,23,21,.78),rgba(119,43,43,.18) 55%,transparent 80%); mix-blend-mode:multiply; }
+.heLittleGhost { position:absolute; z-index:2; width:17px; height:24px; border-radius:50% 50% 43% 43%; background:rgba(243,233,214,.93); box-shadow:0 0 0 1px rgba(25,23,21,.35); opacity:.7; animation:heGhost 7s ease-in-out infinite alternate; }
+.heLittleGhost::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:7px; background:linear-gradient(135deg,transparent 35%,rgba(243,233,214,.93) 36% 64%,transparent 65%) 0 0/8px 8px repeat-x; }
+.heLittleGhost i { position:absolute; top:8px; width:2.5px; height:4px; border-radius:50%; background:var(--he-ink); }
+.heLittleGhost i:first-child { left:5px; } .heLittleGhost i:last-child { right:5px; }
+@keyframes heGhost { from { transform:translateY(0) rotate(-2deg); opacity:.5; } to { transform:translateY(-5px) rotate(2deg); opacity:.82; } }
+.heDay { color:var(--he-ink) !important; }
+.heDay::before { content:""; position:fixed; inset:0; pointer-events:none; background:url('assets/ink-v1/scenes/village-gate-ink-v1.png') center/cover no-repeat; opacity:.035; mix-blend-mode:multiply; }
+.heDay > .max-w-md, .heDay .max-w-md { position:relative; }
+.heDayVillagePlate { filter:sepia(.08) saturate(.86) contrast(1.04); }
+.heNightVillagePlate { filter:saturate(.92) contrast(1.03); }
+.heDay .mvGrainF { opacity:.11; mix-blend-mode:multiply; background-image:repeating-linear-gradient(97deg,rgba(25,23,21,.08) 0 1px,transparent 1px 5px); background-size:17px 19px; }
+.heDay .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 62%,rgba(58,45,28,.18) 100%); }
+.heDay .mvIvDock { box-shadow:0 -5px 0 rgba(25,23,21,.15),0 -12px 28px rgba(58,45,28,.18); }
+.heDay .mv-btn { border-radius:2px !important; }
+.heDay .hePortrait { box-shadow:2px 3px 0 rgba(25,23,21,.18),0 0 0 1px rgba(25,23,21,.55) !important; }
+.heDay > .fixed.bottom-0 { background:#171614 !important; border-top-color:#7C705E !important; }
+.heDay > .fixed.bottom-0 .mvIvDock { background:#171614 !important; }
+.heDayMastheadCopy.is-village .heMastheadKicker { color:#D4AA70 !important; text-shadow:0 1px 5px rgba(0,0,0,.88) !important; }
+.heDayMastheadCopy.is-village .heMastheadTitle { color:#F3E9D6 !important; text-shadow:0 2px 8px rgba(0,0,0,.9) !important; }
+.heDayMastheadCopy.is-village .heMastheadSub { color:#E4D7C0 !important; font-size:14px !important; font-weight:600; text-shadow:0 1px 5px rgba(0,0,0,.92); }
+.heDay .mvIvDock { border-top-color:#9B8360 !important; }
+.heExamScreen { background:#D9C7A9 !important; color:var(--he-ink) !important; }
+.heExamScreen > .max-w-md::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/physicians-lab-ink-v3.png') center/cover no-repeat; filter:saturate(.9) sepia(.025) contrast(1.02); }
+.heExamScreen .heDayMastheadVeil.is-lab { background:linear-gradient(180deg,rgba(243,233,214,.97) 0,rgba(243,233,214,.91) 164px,rgba(232,222,202,.58) 288px,rgba(232,222,202,.14) 53%,rgba(28,22,17,.24) 73%,rgba(18,14,12,.66) 100%); pointer-events:none; }
+.heExamScreen .heDayMastheadCopy.is-lab { padding-bottom:14px; background:linear-gradient(90deg,rgba(243,233,214,.72),rgba(243,233,214,.24) 76%,transparent); border-bottom:1px solid rgba(25,23,21,.48); }
+.heExamScreen .heDayMastheadCopy.is-lab .heMastheadKicker { color:#87501F !important; text-shadow:none !important; }
+.heExamScreen .heDayMastheadCopy.is-lab .heMastheadTitle { color:var(--he-ink) !important; text-shadow:none !important; font-size:28px !important; }
+.heExamScreen .heDayMastheadCopy.is-lab .heMastheadSub { color:#4F473D !important; font-size:14px !important; font-weight:600; text-shadow:0 1px rgba(243,233,214,.8); }
+.heExamScreen .heExamBody { padding-top:14px !important; }
+.heExamScreen .heExamReader, .heExamScreen .heExamResult { background:rgba(243,233,214,.95) !important; color:var(--he-ink) !important; border:1px solid rgba(25,23,21,.72); border-top:4px solid #654B70 !important; box-shadow:4px 5px 0 rgba(25,23,21,.18),0 10px 28px rgba(35,25,17,.18); }
+.heExamScreen .heExamReader .mv-display, .heExamScreen .heExamReader span, .heExamScreen .heExamResult .mv-display, .heExamScreen .heExamResult p { color:var(--he-ink) !important; text-shadow:none !important; }
+.heExamScreen .heExamReader > div > span:last-child { color:#514A40 !important; font-weight:500; }
+.heExamScreen .heExamPicker { margin-left:-4px; margin-right:-4px; margin-bottom:10px; padding:13px 12px 12px !important; background:rgba(243,233,214,.95); border:1px solid rgba(25,23,21,.72); box-shadow:4px 5px 0 rgba(25,23,21,.2),0 14px 30px rgba(26,20,15,.22); }
+.heExamScreen .heExamPickerTitle { color:var(--he-ink) !important; font-size:12.5px !important; }
+.heExamScreen .heExamTarget { min-height:84px; padding-top:6px !important; padding-bottom:7px !important; background:rgba(248,239,222,.96) !important; color:var(--he-ink) !important; border:1px solid rgba(25,23,21,.68) !important; box-shadow:1px 2px 0 rgba(25,23,21,.14); }
+.heExamScreen .heExamTarget:hover:not(:disabled) { background:#FFF7E8 !important; transform:translateY(-1px) rotate(-.15deg); }
+.heExamScreen .heExamTargetName { color:var(--he-ink) !important; font-size:12.5px !important; font-weight:600; }
+.heExamScreen .heExamTarget:disabled .heExamTargetName { color:#514A40 !important; }
+.heExamScreen .mvIvDock { position:relative; z-index:2; background:rgba(19,15,13,.97) !important; border-top:2px solid #9B8360 !important; box-shadow:0 -8px 28px rgba(20,15,12,.32); }
+.heExamScreen .mvIvDock button { color:var(--he-paper-light) !important; border-color:#B9A27C !important; background:rgba(243,233,214,.035) !important; }
+.heExamScreen > .mvVignette { opacity:.2; }
+.heExamScreen > .mvGrainF { opacity:.07; }
+.heDeathScene { background:#D9CCB8 !important; color:var(--he-ink) !important; }
+.heDeathScene p { color:#4F473D !important; }
+.heDeathScene .heDeathLook { min-height:54px; background:rgba(248,239,222,.97) !important; color:var(--he-ink) !important; border:1px solid rgba(119,43,43,.5) !important; box-shadow:2px 3px 0 rgba(25,23,21,.12); }
+.heDeathScene .heDeathLook:hover { background:#FFF7E8 !important; border-color:#772B2B !important; transform:translateY(-1px) rotate(-.08deg); }
+.heDeathScene .heDeathLookLabel { color:var(--he-ink) !important; text-shadow:none !important; font-weight:650; }
+.heLocationPlate { position:relative; width:100%; overflow:hidden; background:#D8CAB3; isolation:isolate; }
+.heLocationPlate > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; user-select:none; }
+.heLocationPlateDay > img { filter:saturate(.94) sepia(.025) contrast(1.02); }
+.heLocationPlateDay .heLocationPaperVeil { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(255,248,231,.08),transparent 46%,rgba(80,56,34,.08)); mix-blend-mode:soft-light; }
+.heLocationPlateDay.is-wounded > img { filter:saturate(.78) sepia(.08) contrast(1.08); }
+.heLocationPlateNight { background:#090806; }
+.heLocationPlateNight > img { filter:saturate(.96) sepia(.015) contrast(1.04) brightness(.99); }
+.heLocationPlateNight .heLocationUnlit { position:absolute; inset:0; background:rgba(3,4,5,.28); mix-blend-mode:multiply; }
+.heLocationPlateNight .heLocationMoonless { position:absolute; inset:0; background:linear-gradient(115deg,rgba(0,0,0,.3),transparent 54%,rgba(0,0,0,.5)); }
+.heLocationBody { position:absolute; left:40%; bottom:5%; width:17%; height:14%; border-radius:52% 48% 10% 10%; background:#D9CEB9; box-shadow:0 2px 0 #191715,0 -5px 18px rgba(224,214,193,.12); transform:rotate(-2deg); opacity:.88; }
+.heLocationTurned { position:absolute; left:47%; bottom:1%; width:8%; height:38%; display:flex; justify-content:center; border-radius:50% 50% 12% 12%; background:#BBB3A5; color:#382A40; box-shadow:0 0 18px rgba(187,179,165,.16); opacity:.88; }
+.heLocationTurned > i { position:absolute; top:-10%; width:70%; aspect-ratio:1; border-radius:50%; background:#C9C2B4; }
+.heLocationTurned > b { position:relative; z-index:1; top:-9%; letter-spacing:2px; font-size:10px; }
+.heNight { background:#090806 !important; }
+.heNight svg { filter:saturate(.68) sepia(.05) contrast(1.08); }
+.heNight .mvGrain, .heNight .mvGrainF { opacity:.085; mix-blend-mode:screen; background-image:repeating-linear-gradient(96deg,rgba(241,230,209,.12) 0 1px,transparent 1px 6px); background-size:23px 27px; }
+.heNight .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 52%,rgba(0,0,0,.72) 100%); }
+.heNight .mvFog, .heNight .mvFogBank { filter:saturate(.62); }
+.heNight .mv-btn:focus-visible, .heNight [role="button"]:focus-visible { outline-color:var(--he-paper-light); }
+@media (max-height:740px) { .heGate .relative.max-w-md { padding-left:16px; padding-right:16px; } .heGate .hePortrait { transform:scale(.9); } .heGameTitle { padding-top:6px; padding-bottom:8px; } .heGameTitle h1 { font-size:40px; } .heBlackBookCard { min-height:174px; padding-top:13px; } .heBookLore { display:none; } .heHomeMetaCard { min-height:68px; } .heHomeMetaNote { display:none; } }
+@media (max-height:680px) { .heExamScreen .heDayMastheadCopy.is-lab { padding-top:max(env(safe-area-inset-top),18px) !important; padding-bottom:9px; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadTitle { font-size:23px !important; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; } .heExamScreen .heExamBody { padding-top:10px !important; gap:9px !important; } .heExamScreen .heExamReader { padding-top:10px !important; padding-bottom:10px !important; } .heExamScreen .heExamPicker { margin-bottom:6px; padding:9px !important; } .heExamScreen .heExamTarget { min-height:80px; padding-top:5px !important; padding-bottom:5px !important; } }
+@media (max-width:350px) { .heGameTitleType { letter-spacing:1.9px; } .heGameTitleTag { letter-spacing:2.5px; } .heHomeMetaGrid { gap:6px; } .heHomeMetaCard { grid-template-columns:29px minmax(0,1fr) 8px; padding-left:6px; gap:6px; } .heHomeMetaIcon { width:28px; height:28px; } }
 /* Chrome on Android keeps its address bar inside 100vh, so a 100vh screen
    runs its last inch under the browser's own furniture. dvh is the visible
    viewport; vh stays as the fallback for anything that has not heard of it. */
@@ -8120,7 +8299,7 @@ const EXTRA_CSS = `
    plain keyword stays first as the fallback for anything older. */
 .mvSafeCenter { justify-content: center; justify-content: safe center; }
 .mvSafeEnd { justify-content: flex-end; justify-content: safe flex-end; }
-@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure, .mvHomeRidge, .mvHomePinesFar, .mvHomePinesNear, .mvHomeLantern { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .mvIvIn, .mvHomeMoon, .mvHomeCloud, .mvHomeMist, .mvHomeBell, .mvHomeFigure, .mvHomeRidge, .mvHomePinesFar, .mvHomePinesNear, .mvHomeLantern, .mvTitleGlow, .mvIn, .mvEmber, .heLittleGhost { animation: none; opacity: 1; } .mvHomeFigure { opacity: 0.45; } }
 /* the walk's weather: two banks of fog crossing at different speeds, and a
    moon that breathes. Nothing else moves out there. */
 .mvFogBank { background: radial-gradient(ellipse 58% 52% at 50% 50%, rgba(180,196,224,0.11), transparent 72%); }
@@ -8232,7 +8411,9 @@ function BeatFlow({ revealed, base, step, align = "center", className = "", styl
     return () => timers.forEach(clearTimeout);
   }, [revealed, count, base, step]);
   return (
-    <div ref={ref} className={`${align === "end" ? "mvSafeEnd" : "mvSafeCenter"} ${className}`} style={style} onClick={onClick}>{children}</div>
+    <div ref={ref} className={`${align === "end" ? "mvSafeEnd" : "mvSafeCenter"} ${className}`} style={style} onClick={onClick}
+      role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined} aria-label={onClick ? "Reveal all text" : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}>{children}</div>
   );
 }
 
@@ -8240,13 +8421,16 @@ function SpokenText({ text, speed = 38, delay = 0 }) {
   const words = text.split(" ");
   const [n, setN] = useState(delay > 0 ? 0 : 1);
   useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setN(words.length); return; }
     setN(delay > 0 ? 0 : 1);
     let t = null;
     const begin = () => { setN(1); t = setInterval(() => setN((x) => (x >= words.length ? (clearInterval(t), x) : x + 1)), speed); };
     const d = delay > 0 ? setTimeout(begin, delay) : (begin(), null);
     return () => { if (t) clearInterval(t); if (d) clearTimeout(d); };
   }, [text]);
-  return <span onClick={() => setN(words.length)} style={{ cursor: "pointer" }}>{words.slice(0, n).join(" ")}<span style={{ opacity: 0.4 }}>{n < words.length ? " ▍" : ""}</span></span>;
+  const reveal = () => setN(words.length);
+  return <span onClick={reveal} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); reveal(); } }} role="button" tabIndex={0} aria-label="Reveal full text" style={{ cursor: "pointer" }}>{words.slice(0, n).join(" ")}<span style={{ opacity: 0.4 }}>{n < words.length ? " ▍" : ""}</span></span>;
 }
 
 /* Staged suspense: lines land one at a time on a slow pulse, then the
@@ -8256,11 +8440,13 @@ function TensionReveal({ lines, finale, label, kind = "red", onDone }) {
   const total = lines.length + (finale ? 1 : 0);
   useEffect(() => {
     setN(0);
+    const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setN(total); return; }
     const t = setInterval(() => setN((x) => (x >= total ? (clearInterval(t), x) : x + 1)), 1700);
     return () => clearInterval(t);
   }, [lines]);
   return (
-    <div className="flex flex-col gap-2" onClick={() => setN(total)}>
+    <div className="flex flex-col gap-2" onClick={() => setN(total)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setN(total); } }} role="button" tabIndex={0} aria-label="Reveal the outcome">
       {lines.slice(0, n).map((l, i) => (
         <p key={i} className="mvIn" style={{ fontSize: 15.5, lineHeight: 1.5, color: C.redBright, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>{l}</p>
       ))}
@@ -8325,13 +8511,13 @@ function Carousel({ items, renderItem, minHeight = 120, onDone, doneLabel = "Don
     else if (dx >= 40) go(-1);
   };
   const navBtn = (label, onClick, disabled) => (
-    <button onClick={onClick} disabled={disabled} className="mv-display"
-      style={{ background: "transparent", border: "none", color: disabled ? C.dim : C.amber, fontSize: 24.5, lineHeight: 1, cursor: disabled ? "default" : "pointer", padding: "4px 10px", opacity: disabled ? 0.3 : 1 }}>
+    <button onClick={onClick} disabled={disabled} className="mv-display" aria-label={label === "‹" ? "Previous card" : "Next card"}
+      style={{ minWidth: 44, minHeight: 44, background: "transparent", border: "none", color: disabled ? C.dim : C.amber, fontSize: 24.5, lineHeight: 1, cursor: disabled ? "default" : "pointer", padding: "4px 10px", opacity: disabled ? 0.3 : 1 }}>
       {label}
     </button>
   );
   return (
-    <div>
+    <div role="region" aria-label={`Card ${idx + 1} of ${items.length}`} tabIndex={items.length > 1 ? 0 : undefined} onKeyDown={(e) => { if (e.key === "ArrowLeft") go(-1); else if (e.key === "ArrowRight") go(1); }}>
       <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ minHeight }}>
         {renderItem(items[idx], idx)}
       </div>
@@ -8342,7 +8528,7 @@ function Carousel({ items, renderItem, minHeight = 120, onDone, doneLabel = "Don
           {navBtn("‹", () => go(-1), idx === 0)}
           <Pips n={items.length} live={idx} />
           {atLast && onDone
-            ? <button onClick={onDone} className="mv-display" style={{ background: "transparent", border: "none", color: C.amber, fontSize: 13.5, letterSpacing: 1, cursor: "pointer", padding: "4px 10px" }}>{doneLabel}</button>
+            ? <button onClick={onDone} className="mv-display" style={{ minHeight: 44, background: "transparent", border: "none", color: C.amber, fontSize: 13.5, letterSpacing: 1, cursor: "pointer", padding: "4px 10px" }}>{doneLabel}</button>
             : navBtn("›", () => go(1), atLast)}
         </div>
       )}
@@ -8708,7 +8894,6 @@ function MonsterVillage() {
   const [showBestiaryHome, setShowBestiaryHome] = useState(false);
   const [showStatsHome, setShowStatsHome] = useState(false);
   const [showSecretsHome, setShowSecretsHome] = useState(false);
-  const [showRunLedger, setShowRunLedger] = useState(false);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [snd, setSndOn] = useState(false);
   const [dawnDone, setDawnDone] = useState(false);
@@ -8716,7 +8901,7 @@ function MonsterVillage() {
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
   const [savedRun, setSavedRun] = useState(null);
-  const [saveSlots, setSaveSlots] = useState([null, null, null]);
+  const [bootReady, setBootReady] = useState(false);
   const [deathShown, setDeathShown] = useState(false);
   const recordedRef = useRef(null);
   const walkStageRef = useRef(null);
@@ -8748,18 +8933,7 @@ function MonsterVillage() {
           }
         }
       } catch (e) { /* a save that will not parse is a save best forgotten */ }
-      /* The active run is still autosaved separately, so a closed tab can be
-         resumed without ceremony. The ledger is for the player who wants to
-         deliberately keep more than one village alive at a time. */
-      try {
-        const r3 = await window.storage.get("mv-run-slots");
-        const raw = r3 && r3.value ? JSON.parse(r3.value) : [];
-        const slots = Array.isArray(raw) ? raw.slice(0, 3).map((entry) => {
-          const run = entry && entry.run;
-          return run && run.monster && run.npcs && !run.over && MONSTERS.some((mm) => mm.id === run.monster.type) ? entry : null;
-        }) : [];
-        setSaveSlots([...slots, null, null, null].slice(0, 3));
-      } catch (e) { setSaveSlots([null, null, null]); }
+      setBootReady(true);
     })();
   }, []);
 
@@ -8905,28 +9079,6 @@ function MonsterVillage() {
     resetUi();
   };
   const resume = () => { const run = savedRun; setSavedRun(null); setS(run); resetUi(); };
-  const writeSaveSlots = async (next) => {
-    setSaveSlots(next);
-    try { await window.storage.set("mv-run-slots", JSON.stringify(next)); } catch (e) {}
-  };
-  const stowRun = (index) => {
-    if (!savedRun) return;
-    const next = [...saveSlots];
-    next[index] = { run: JSON.parse(JSON.stringify(savedRun)), savedAt: new Date().toISOString() };
-    writeSaveSlots(next);
-  };
-  const loadRunSlot = (entry) => {
-    if (!entry || !entry.run) return;
-    setSavedRun(null);
-    setS(entry.run);
-    setShowRunLedger(false);
-    resetUi();
-  };
-  const eraseRunSlot = (index) => {
-    const next = [...saveSlots];
-    next[index] = null;
-    writeSaveSlots(next);
-  };
 
   const doAction = (fn) => {
     setModal(null); setAccusePick(null); setAccuseType(null); setProfile(null);
@@ -8936,28 +9088,35 @@ function MonsterVillage() {
     if (!next.over && next.phase !== "night" && fresh.length) setSheet(fresh);
   };
 
+  if (!s && !bootReady) {
+    return (
+      <div className="mvScreen mv-body heGate relative overflow-hidden flex items-center justify-center" aria-live="polite">
+        <style>{CSS_ALL}</style>
+        <HomeScene />
+        <div className="relative text-center" style={{ padding: "24px 28px", background: "rgba(243,233,214,.86)", border: `1px solid ${C.ink}`, boxShadow: "5px 6px 0 rgba(25,23,21,.18)" }}>
+          <div className="mv-display" style={{ fontSize: 24, color: C.ink }}>Hollow's Edge</div>
+          <div className="mv-display" style={{ marginTop: 8, fontSize: 10.5, letterSpacing: 3, color: C.inkDim }}>OPENING THE LEDGER…</div>
+        </div>
+      </div>
+    );
+  }
+
   /* ---------- Title screen · the village gate ---------- */
   if (!s) {
     const veteran = meta && meta.games > 0;
     const defeatedCount = veteran ? Object.keys(meta.defeated).length : 0;
     const hollowedLocked = !veteran || !MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]);
-    const savedSlotCount = saveSlots.filter(Boolean).length;
-    const activeRun = savedRun ? savedRunSummary(savedRun) : null;
     return (
-      <div className="mvScreen mv-body relative overflow-hidden" style={{ background: "#05060C", color: C.text }}>
+      <div className="mvScreen mv-body heGate relative overflow-hidden" style={{ background: C.paper, color: C.ink }}>
         <style>{CSS_ALL}</style>
         <HomeScene veteran={veteran} />
         {[12, 30, 55, 74, 88].map((x, i) => (
           <span key={i} className="mvEmber" style={{ left: `${x}%`, bottom: "30%", animationDelay: `${i * 1.7}s` }} />
         ))}
         <div className="mvGrain" />
-        <div className="relative max-w-md mx-auto px-6 flex flex-col h-full overflow-y-auto">
-          <div style={{ flexShrink: 0, height: veteran ? "max(env(safe-area-inset-top), 36px)" : 82 }} />
-          <div className="mvIn" style={{ animationDelay: "0.3s" }}>
-            <div className="mv-display" style={{ color: C.redBright, fontSize: veteran ? 13 : 14.5, letterSpacing: 4 }}>IT IS ALREADY AMONG YOU</div>
-            <h1 className="mv-display mvTitleGlow mt-1" style={{ fontSize: veteran ? 29 : 40, lineHeight: veteran ? 1.02 : 0.94, color: C.parch, textShadow: "0 3px 16px #000" }}>Hollow's Edge</h1>
-          </div>
-          <HomeGatePanel activeRun={activeRun} savedSlotCount={savedSlotCount} onOpenLedger={() => setShowRunLedger(true)} />
+        <div className="relative max-w-md mx-auto px-5 flex flex-col h-full overflow-y-auto">
+          <div style={{ flexShrink: 0, height: "max(env(safe-area-inset-top), 24px)" }} />
+          <HomeTitle veteran={veteran} />
           {!veteran && (
             <>
               <p className="mvIn mt-2" style={{ animationDelay: "0.8s", color: C.parch, fontSize: 13.5, lineHeight: 1.45 }}>
@@ -8986,88 +9145,19 @@ function MonsterVillage() {
                 </div>
                 <div className="mv-display text-center" style={{ marginTop: 12, fontSize: 11, letterSpacing: 3, color: C.dim }}>ONE OF THEM YOU DO NOT</div>
               </div>
-              <button className="mvIn mv-btn mv-display" style={{ animationDelay: "1.2s", width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 2, textAlign: "center", background: "transparent", color: C.parch, fontSize: 13.5, letterSpacing: 3, border: `1px solid ${C.parchLine}`, cursor: "pointer" }}
-                onClick={() => setShowHowTo(true)}>
-                HOW TO PLAY
-              </button>
+              <div className="heFirstGuide" style={{ marginTop: 10 }}>
+                <HomeMetaCard icon="?" title="How to Play" value="THE RULES" note="Learn the village before you enter it" tone="blue" delay="1.2s" onClick={() => setShowHowTo(true)} />
+              </div>
             </>
           )}
           {veteran && (
             <>
-              <p className="mvIn mt-1" style={{ animationDelay: "0.7s", color: C.dim, fontSize: 13, lineHeight: 1.4, fontStyle: "italic" }}>
-                One of eight neighbours still isn't what they seem. Go and find them again.
-              </p>
-              {/* The book is the screen: an open ledger of the sixteen, gilt
-                  rule and a gutter down the middle, and a name written in
-                  only where you have ended one. The rest are shapes you have
-                  not earned the word for yet. */}
-              <button className="mvIn mt-3 text-left w-full relative" style={{ animationDelay: "0.8s", display: "flex", flexDirection: "column", padding: "11px 12px 9px", border: "1px solid #2B2536", borderRadius: 3, background: "linear-gradient(#191521,#0E0C13)", boxShadow: "0 16px 34px rgba(0,0,0,0.6), inset 0 1px 0 rgba(233,223,200,0.07)", cursor: "pointer" }}
-                onClick={() => setShowBestiaryHome(true)}>
-                <span style={{ position: "absolute", left: 2, top: 6, bottom: 6, width: 2, background: "rgba(233,223,200,0.06)" }} />
-                <span style={{ position: "absolute", right: 2, top: 6, bottom: 6, width: 2, background: "rgba(233,223,200,0.06)" }} />
-                <span style={{ display: "flex", alignItems: "baseline", gap: 10, borderBottom: "1px solid #3A3348", paddingBottom: 5 }}>
-                  <span className="mv-display" style={{ fontSize: 13, letterSpacing: 3.5, color: C.amber }}>THE BLACK BOOK</span>
-                  <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 2, color: C.dim }}>{defeatedCount} OF {MONSTERS.length} ENDED</span>
-                </span>
-                <span style={{ display: "grid", gridTemplateColumns: "1fr 12px 1fr", marginTop: 6, flex: 1 }}>
-                  {[MONSTERS.slice(0, Math.ceil(MONSTERS.length / 2)), null, MONSTERS.slice(Math.ceil(MONSTERS.length / 2))].map((col, ci) => (
-                    col === null ? <span key="gutter" /> : (
-                      <span key={ci} style={{ display: "block" }}>
-                        {col.map((mm) => {
-                          const done = !!meta.defeated[mm.id];
-                          const locked = mm.id === "hollowed" && !done && hollowedLocked;
-                          return (
-                            <span key={mm.id} title={locked ? "defeat the other 15 to unlock this" : done ? mm.name : "not yet ended"}
-                              style={{ display: "flex", alignItems: "center", gap: 7, padding: "3px 0", borderBottom: "1px solid rgba(233,223,200,0.05)" }}>
-                              <span className="relative" style={{ flexShrink: 0, display: "flex", opacity: done ? 1 : 0.3, filter: done ? "none" : "grayscale(1)" }}>
-                                <MonsterArt id={mm.id} size={22} light />
-                                {locked && (
-                                  <svg width="12" height="12" viewBox="0 0 24 24" className="absolute" style={{ right: -3, bottom: 1 }} aria-label="locked">
-                                    <path d="M8 11 V7.5 a4 4 0 0 1 8 0 V11" stroke={C.parch} strokeWidth="2.6" fill="none" />
-                                    <rect x="5" y="10.5" width="14" height="10.5" rx="2" fill={C.parch} />
-                                  </svg>
-                                )}
-                              </span>
-                              <span className="mv-display" style={{ fontSize: 13, letterSpacing: 0.5, color: done ? C.parch : C.inkDim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {done ? mm.name : "\u2014"}
-                              </span>
-                              {done && <span style={{ marginLeft: "auto", color: C.red, fontSize: 11, flexShrink: 0 }}>&#10013;</span>}
-                            </span>
-                          );
-                        })}
-                      </span>
-                    )
-                  ))}
-                </span>
-              </button>
-              <button className="mvIn mt-1.5 grid grid-cols-3 w-full rounded-lg py-1.5 px-1" style={{ animationDelay: "1.1s", background: "rgba(233,223,200,0.06)", border: `1px solid ${C.line}`, cursor: "pointer" }}
-                onClick={() => setShowStatsHome(true)}>
-                <span className="flex flex-col items-center gap-1">
-                  <span className="mv-display" style={{ fontSize: 15, lineHeight: 1, color: C.parch }}>{meta.wins}–{meta.losses}</span>
-                  <span className="mv-display" style={{ fontSize: 8.5, letterSpacing: 1.3, color: C.dim, whiteSpace: "nowrap" }}>DAWNS</span>
-                </span>
-                <span className="flex flex-col items-center gap-1" style={{ borderLeft: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}` }}>
-                  <span className="mv-display" style={{ fontSize: 15, lineHeight: 1, color: C.parch }}>{meta.streak} · {meta.bestStreak}</span>
-                  <span className="mv-display" style={{ fontSize: 8.5, letterSpacing: 1.3, color: C.dim, whiteSpace: "nowrap" }}>STREAK · BEST</span>
-                </span>
-                <span className="flex flex-col items-center gap-1">
-                  <span className="mv-display" style={{ fontSize: 15, lineHeight: 1, color: C.parch }}>{meta.fastestWin ? `night ${meta.fastestWin}` : meta.nights}</span>
-                  <span className="mv-display" style={{ fontSize: 8.5, letterSpacing: 1.3, color: C.dim, whiteSpace: "nowrap" }}>{meta.fastestWin ? "FASTEST WIN" : "NIGHTS WALKED"}</span>
-                </span>
-              </button>
-              <div className="mvIn mt-1.5 grid grid-cols-3 rounded-lg overflow-hidden" style={{ animationDelay: "1.3s", border: `1px solid ${C.line}` }}>
-                <button className="mv-body text-center" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: "5px 0", whiteSpace: "nowrap" }}
-                  onClick={() => setShowAch(true)}>
-                  ✠ Deeds <span style={{ color: C.parch }}>{meta.ach.length}</span>/{ACH.length}
-                </button>
-                <button className="mv-body text-center" style={{ background: "transparent", border: "none", borderLeft: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}`, color: C.dim, fontSize: 13, cursor: "pointer", padding: "5px 0", whiteSpace: "nowrap" }}
-                  onClick={() => setShowSecretsHome(true)}>
-                  ✒ Secrets <span style={{ color: C.parch }}>{Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)}</span>/{Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)}
-                </button>
-                <button className="mv-body text-center" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: "5px 0", whiteSpace: "nowrap" }}
-                  onClick={() => setShowHowTo(true)}>
-                  How to Play
-                </button>
+              <HomeBlackBookCard meta={meta} defeatedCount={defeatedCount} onClick={() => setShowBestiaryHome(true)} />
+              <div className="heHomeMetaGrid">
+                <HomeMetaCard icon="Ⅱ" title="Your Record" value={`${meta.wins}–${meta.losses}`} note={`${meta.streak} current · ${meta.bestStreak} best streak`} tone="violet" delay="0.8s" onClick={() => setShowStatsHome(true)} />
+                <HomeMetaCard icon="✠" title="Deeds" value={`${meta.ach.length}/${ACH.length}`} note="What the village remembers" tone="red" delay="0.9s" onClick={() => setShowAch(true)} />
+                <HomeMetaCard icon="✒" title="Secrets" value={`${Object.values(meta.secretsFound || {}).reduce((a, arr) => a + arr.length, 0)}/${Object.values(SECRET_POOL).reduce((a, arr) => a + arr.length, 0)}`} note="What your neighbours confessed" tone="green" delay="1s" onClick={() => setShowSecretsHome(true)} />
+                <HomeMetaCard icon="?" title="How to Play" value="THE RULES" note="Evidence, nights and accusations" tone="blue" delay="1.1s" onClick={() => setShowHowTo(true)} />
               </div>
             </>
           )}
@@ -9087,21 +9177,12 @@ function MonsterVillage() {
                 <Btn kind="red" full center onClick={() => setConfirmAbandon(true)}><span className="mv-display" style={{ letterSpacing: 1.5 }}>NEW GAME</span></Btn>
               </div>
             ) : (
-              /* the one committing action on the screen, so it is filled
-                 amber like every other committing action in the game */
-              <button onClick={start} className="mv-btn mv-display w-full text-center"
-                style={{ borderRadius: 2, padding: "11px 0", background: "linear-gradient(#D9A441,#B8863A)", border: "none", color: "#1A1408", fontSize: 14.5, letterSpacing: 3, cursor: "pointer" }}>ENTER HOLLOW'S EDGE</button>
+              <button onClick={start} className="mv-btn mv-display w-full text-center heNewGameButton">NEW GAME</button>
             )}
             <div className="flex justify-center mt-2">
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <button onClick={() => setShowRunLedger(true)} className="mv-body" style={{ background: "transparent", border: "none", color: C.parchLine, fontSize: 13, cursor: "pointer", padding: 0 }}>
-                  ▤ run ledger{savedSlotCount ? ` · ${savedSlotCount}` : ""}
-                </button>
-                <span style={{ width: 1, height: 13, background: C.line }} />
-                <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13, cursor: "pointer", padding: 0 }}>
-                  {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
-                </button>
-              </div>
+              <button onClick={toggleSound} className="mv-body heSoundToggle">
+                {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
+              </button>
             </div>
           </div>
         </div>
@@ -9128,51 +9209,11 @@ function MonsterVillage() {
                 </div>
           </DrawerShell>
         )}
-        {showRunLedger && (
-          <DrawerShell kicker="WHAT YOU HAVE NOT LEFT BEHIND" count={`${savedSlotCount} OF 3 KEPT`}
-            title="The Run Ledger" sub="The current game is kept automatically. File it here to return to this exact village whenever you choose."
-            onClose={() => setShowRunLedger(false)}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {activeRun ? (
-                  <Plaque rule="amber" style={{ boxShadow: "0 10px 22px rgba(0,0,0,0.32)" }}>
-                    <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.5, color: C.amber }}>THE RUN AT YOUR DOOR</div>
-                    <div className="flex items-end" style={{ gap: 12, marginTop: 5 }}>
-                      <div className="mv-display" style={{ fontSize: 25, lineHeight: 1, color: C.parch }}>{activeRun.phase} {activeRun.number}</div>
-                      <div style={{ paddingBottom: 2, fontSize: 13.5, color: C.dim }}>{activeRun.living} still living</div>
-                    </div>
-                    <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.4, color: C.text, fontStyle: "italic" }}>Every choice is already written down. Continue it, or set a copy aside below.</p>
-                  </Plaque>
-                ) : (
-                  <div style={{ padding: "12px 13px", background: C.sky, borderTop: `2px solid ${C.parchLine}`, borderRadius: 2, color: C.dim, fontSize: 14.5, fontStyle: "italic", lineHeight: 1.4 }}>No unfinished village waits at the gate. Begin a game, and its last moment will be kept here automatically.</div>
-                )}
-                {[0, 1, 2].map((i) => {
-                  const entry = saveSlots[i];
-                  const detail = entry ? savedRunSummary(entry.run) : null;
-                  return (
-                    <div key={i} style={{ padding: "12px 13px", background: entry ? "linear-gradient(135deg,#1B2036,#121629)" : "rgba(233,223,200,0.035)", border: `1px solid ${entry ? "#3A3348" : C.line}`, borderRadius: 8 }}>
-                      <div className="flex items-center" style={{ gap: 10 }}>
-                        <span className="mv-display" style={{ width: 23, height: 23, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${entry ? C.amber : C.line}`, borderRadius: "50%", color: entry ? C.amber : C.dim, fontSize: 12 }}>{["I", "II", "III"][i]}</span>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div className="mv-display" style={{ fontSize: 14.5, letterSpacing: 1.2, color: entry ? C.parch : C.dim }}>{entry ? `${detail.phase} ${detail.number} · ${detail.living} LIVING` : "AN EMPTY PLACE"}</div>
-                          <div style={{ marginTop: 1, color: C.dim, fontSize: 12.5, fontStyle: "italic" }}>{entry ? "A village waiting in the dark." : "Nothing has been written here yet."}</div>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
-                        {entry && <Btn small kind="amber" onClick={() => loadRunSlot(entry)}>Load this run</Btn>}
-                        {activeRun && <Btn small onClick={() => stowRun(i)}>{entry ? "Replace with current" : "Save current run"}</Btn>}
-                        {entry && <button onClick={() => eraseRunSlot(i)} className="mv-body" style={{ marginLeft: "auto", background: "transparent", border: "none", color: C.redBright, fontSize: 12.5, cursor: "pointer", padding: "4px 0" }}>erase</button>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-          </DrawerShell>
-        )}
         {showBestiaryHome && meta && (
-          <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+          <div className="fixed inset-0 z-40 mv-body flex flex-col heBlackBookPage" role="dialog" aria-modal="true" aria-label="The Black Book" style={{ background: C.paper, color: C.ink }}>
             <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
               <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
-                <div className="rounded-2xl overflow-hidden relative" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
+                <div className="rounded-2xl overflow-hidden relative heBlackBookHero" style={{ border: `1px solid ${C.line}`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)", background: "linear-gradient(160deg,#241B1E,#161014)" }}>
                   <div className="flex items-center justify-center flex-wrap gap-1.5 py-4 px-3" style={{ minHeight: 88 }}>
                     {MONSTERS.filter((mm) => meta.defeated[mm.id]).slice(0, 10).map((mm) => <MonsterArt key={mm.id} id={mm.id} size={30} light />)}
                     {!MONSTERS.some((mm) => meta.defeated[mm.id]) && <span style={{ fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>Not one horror ended yet.</span>}
@@ -9196,13 +9237,13 @@ function MonsterVillage() {
                     const away = Math.max(0, met - ended);
                     const rate = met > 0 ? Math.round((ended / met) * 100) : 0;
                     const tile = (n, label, rule, ink) => (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: C.sky, borderTop: `2px solid ${rule}`, borderRadius: 2, padding: "10px 0" }}>
+                      <div className="heBookStatTile" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: C.sky, borderTop: `2px solid ${rule}`, borderRadius: 2, padding: "10px 0" }}>
                         <span className="mv-display" style={{ fontSize: 19, lineHeight: 1, color: ink || C.parch }}>{n}</span>
                         <span className="mv-display" style={{ fontSize: 9, letterSpacing: 1.5, color: C.dim, whiteSpace: "nowrap" }}>{label}</span>
                       </div>
                     );
                     return (
-                      <div key={mm.id} style={{ padding: 13, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12, opacity: done ? 1 : 0.45 }}>
+                      <div key={mm.id} className="heBlackBookEntry" style={{ padding: 13, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12, opacity: done ? 1 : 0.45 }}>
                         <div className="flex gap-3">
                           <div className="shrink-0"><MonsterArt id={mm.id} size={54} light /></div>
                           <div style={{ minWidth: 0 }}>
@@ -9224,7 +9265,7 @@ function MonsterVillage() {
                           <>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11, padding: "8px 11px", background: "rgba(217,164,65,0.07)", borderLeft: `2px solid ${C.amber}` }}>
                               <span style={{ color: C.amber, fontSize: 15.5 }}>⚔</span>
-                              <span style={{ fontSize: 14, color: C.parch }}>The books prescribe the <strong>{METHODS[mm.method]}</strong></span>
+                              <span className="heBookRite" style={{ fontSize: 14, color: C.parch }}>The books prescribe the <strong>{METHODS[mm.method]}</strong></span>
                             </div>
                             <div className="mv-display" style={{ fontSize: 11, letterSpacing: 3.5, color: C.dim, borderBottom: "1px solid #3A3348", paddingBottom: 6, marginTop: 16 }}>YOUR RECORD AGAINST IT</div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 9, marginTop: 11 }}>
@@ -9311,7 +9352,7 @@ function MonsterVillage() {
         {showSecretsHome && (
           <DrawerShell kicker="WHAT THEY CARRY" count={`${Object.values((meta && meta.secretsFound) || {}).reduce((a2, arr) => a2 + arr.length, 0)} OF ${Object.values(SECRET_POOL).reduce((a2, arr) => a2 + arr.length, 0)} KNOWN`}
             title="Secrets Kept" sub="Every human secret you have drawn out of a neighbour, across every game. Each carries one per run."
-            onClose={() => setShowSecretsHome(false)}>
+            variant="secrets" onClose={() => setShowSecretsHome(false)}>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {NPC_DEFS.map((n) => {
@@ -9320,15 +9361,15 @@ function MonsterVillage() {
                     return (
                       /* the neighbour wears the same bone plate the day gives
                          them, and what they carry is listed under it */
-                      <div key={n.id}>
+                      <div key={n.id} className="heSecretPerson">
                         <div className="flex items-center" style={{ gap: 10 }}>
                           <Portrait id={n.id} size={36} />
                           <div style={{ minWidth: 0, flex: 1 }}>
-                            <span className="mv-display" style={{ display: "inline-block", background: C.parch, color: C.ink, fontSize: 10, letterSpacing: 0.8, padding: "3px 8px", borderBottom: `2px solid ${C.parchLine}` }}>
+                            <span className="mv-display heSecretNameplate" style={{ display: "inline-block", background: C.parch, color: C.ink, fontSize: 10, letterSpacing: 0.8, padding: "3px 8px", borderBottom: `2px solid ${C.parchLine}` }}>
                               {n.name.toUpperCase()} · {String(n.role || "").toUpperCase()}
                             </span>
                           </div>
-                          <span className="mv-display" style={{ flexShrink: 0, fontSize: 10, letterSpacing: 1.5, color: C.dim }}>{found.length} OF {pool.length}</span>
+                          <span className="mv-display heSecretCount" style={{ flexShrink: 0, fontSize: 10, letterSpacing: 1.5, color: C.dim }}>{found.length} OF {pool.length}</span>
                         </div>
                         <div className="mt-2 flex flex-col gap-1.5">
                           {pool.map((sec, i) => (
@@ -9417,7 +9458,7 @@ function MonsterVillage() {
     if (dying && !beatsFirst) {
       const dTotal = 1.0 + s.deathBeats.length * 1.6;
       return (
-        <div className="mvScreen mv-body relative overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 28%, #2E1016, #0A070C 72%)", color: C.parch }}>
+        <div className="mvScreen mv-body heNight relative overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 28%, #2E1016, #0A070C 72%)", color: C.parch }}>
           <style>{CSS_ALL}</style>
           <div className="mvGrainF" />
           <div className="relative max-w-md mx-auto px-6 pt-12 pb-8 h-full flex flex-col">
@@ -9454,7 +9495,7 @@ function MonsterVillage() {
     const livingTonight = s.npcs.filter((n) => !n.fled && (n.alive
       || s.deaths.some((d) => d.id === n.id && d.night === s.nightNum && d.kind !== "turned"))).length;
     return (
-        <div className="fixed inset-0 mv-body flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
+        <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
           <style>{CSS_ALL}</style>
           <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
             {/* the night itself, full bleed and fading out rather than cut:
@@ -9527,7 +9568,7 @@ function MonsterVillage() {
       ? "#F1E4C6"
       : `rgba(233,223,200,${(0.8 + (fBeats.length > 1 ? i / (fBeats.length - 1) : 1) * 0.2).toFixed(2)})`);
     return (
-      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: "#080709", color: C.parch, overflow: "hidden" }}>
+      <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "#080709", color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
@@ -9613,7 +9654,7 @@ function MonsterVillage() {
       /* It already has you. The screen says so: the thing fills it, close and
          unhurried, and the words arrive from inside that rather than from a
          card laid on top of it. Two ways out and no third. */
-      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: "#070508", color: C.parch, overflow: "hidden" }}>
+      <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "#070508", color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div className="mvDrift absolute" style={{ left: "50%", top: 96, width: 330, height: 330, marginLeft: -165, opacity: 0.5 }}>
@@ -9688,7 +9729,7 @@ function MonsterVillage() {
     );
 
     if (!epiOpen) return (
-      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: tone.ground, color: C.parch, overflow: "hidden" }}>
+      <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: tone.ground, color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse 74% 46% at 50% 34%, ${tone.glow} 0%, rgba(8,10,10,0.92) 62%, ${tone.ground} 100%)` }} />
@@ -10996,7 +11037,7 @@ function MonsterVillage() {
      art (DawnScene) bakes these in for the day pickers, but the night
      Scene silhouette does not, so the text label is the one place both
      agree. */
-  const locAffSuffix = (l) => (s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 13.5 }}> · burned</span>
+  const locAffSuffix = (l) => (s.burned || []).includes(l) ? <span style={{ color: C.redBright, fontSize: 13.5 }}> · {l === "Old Mill" ? "flooded" : "burned"}</span>
     : (s.tavernShut && l === "Tavern") ? <span style={{ color: C.dim, fontSize: 13.5 }}> · shut</span>
     : (s.wellFouled && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 13.5 }}> · well fouled</span>
     : (s.breadRiot && l === "Village Square") ? <span style={{ color: C.dim, fontSize: 13.5 }}> · riot</span>
@@ -11005,7 +11046,7 @@ function MonsterVillage() {
     <button key={l} onClick={onClick} className="mv-btn rounded w-full overflow-hidden relative"
       style={{ border: `1px solid ${C.line}`, background: "transparent", cursor: "pointer", padding: 0, display: "block" }}>
       <Scene loc={l} kind="quiet" height={h} />
-      {(s.burned || []).includes(l) && <div className="mvScorch" />}
+      {(s.burned || []).includes(l) && (l === "Old Mill" ? <div className="mvFlood" style={{ position: "absolute", inset: "58% 0 0", background: "linear-gradient(rgba(105,120,116,.08),rgba(105,120,116,.42))" }} /> : <div className="mvScorch" />)}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(8,10,18,0.9) 0%, rgba(8,10,18,0.12) 72%)" }} />
       <span className="mv-display" style={{ position: "absolute", left: 12, bottom: 6, color: C.parch, fontSize: 18, letterSpacing: 1, textShadow: "0 1px 6px #000" }}>{l}{locAffSuffix(l)}</span>
     </button>
@@ -11074,17 +11115,19 @@ function MonsterVillage() {
      display type, and the choices weighted to the bottom of the screen so
      the thumb reaches them. The strip is masked rather than clipped so the
      art never hard-cuts into the ground colour. */
-  const dayMasthead = (kicker, title, sub) => (
+  const dayMasthead = (kicker, title, sub, setting = "village") => (
     <>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 0, WebkitMaskImage: DAY_STRIP_MASK, maskImage: DAY_STRIP_MASK }}>
-        <DayStrip height={230} />
-      </div>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(8,10,18,0.3) 0%, rgba(8,10,18,0.62) 34%, rgba(16,19,33,0.9) 62%, #101321 88%)" }} />
+      {setting !== "lab" && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, WebkitMaskImage: DAY_STRIP_MASK, maskImage: DAY_STRIP_MASK }}>
+          <DayStrip height={230} />
+        </div>
+      )}
+      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" ? undefined : { background: "linear-gradient(rgba(8,10,18,0.3) 0%, rgba(8,10,18,0.62) 34%, rgba(16,19,33,0.9) 62%, #101321 88%)" }} />
       <div className="mvGrain" />
-      <div className="relative" style={{ flexShrink: 0, padding: "0 22px", paddingTop: "max(env(safe-area-inset-top),25px)" }}>
-        <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.2, whiteSpace: "nowrap", color: C.amber }}>{kicker}</span>
-        <h1 className="mv-display" style={{ margin: "5px 0 0", fontSize: 26, lineHeight: 1.1, color: C.parch }}>{title}</h1>
-        <p style={{ margin: "5px 0 0", fontSize: 13, lineHeight: 1.5, color: C.dim }}>{sub}</p>
+      <div className={`relative heDayMastheadCopy is-${setting}`} style={{ flexShrink: 0, padding: "0 22px", paddingTop: setting === "lab" ? "calc(max(env(safe-area-inset-top),25px) + 10px)" : "max(env(safe-area-inset-top),25px)" }}>
+        <span className="mv-display block heMastheadKicker" style={{ fontSize: 12, letterSpacing: 3.2, whiteSpace: "nowrap", color: C.amber }}>{kicker}</span>
+        <h1 className="mv-display heMastheadTitle" style={{ margin: "5px 0 0", fontSize: 26, lineHeight: 1.1, color: C.parch }}>{title}</h1>
+        <p className="heMastheadSub" style={{ margin: "5px 0 0", fontSize: 13, lineHeight: 1.5, color: C.dim }}>{sub}</p>
       </div>
     </>
   );
@@ -11301,7 +11344,7 @@ function MonsterVillage() {
     const investIcon = { wounds: "wounds", ground: "ground", air: "air", surroundings: "walls" };
     const tb = npcById(s, "tobias");
     return (
-      <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1520, ${C.bg} 70%)`, color: C.text }}>
+      <div className="fixed inset-0 z-30 mv-body flex flex-col heDeathScene" style={{ background: `linear-gradient(#D4C4B1, ${C.bg} 70%)`, color: C.text }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
           <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
             <div className="overflow-hidden" style={{ borderRadius: 14, border: `1px solid ${C.line}`, background: "linear-gradient(180deg,#1F1622,#160F1A)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
@@ -11341,9 +11384,9 @@ function MonsterVillage() {
                       const gained = ns.foundSigns.filter((sg) => !s.foundSigns.includes(sg));
                       setS(ns);
                       setInvest({ left: invest.left - 1, used: [...invest.used, a.key], findings: [...invest.findings, { label: a.label, line, sign: gained[0] }] });
-                    }} className="mvIvChip rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left" style={{ background: C.panel2, border: "1px solid rgba(194,68,80,0.35)", cursor: "pointer" }}>
+                    }} className="mvIvChip heDeathLook rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left" style={{ background: C.panel2, border: "1px solid rgba(194,68,80,0.35)", cursor: "pointer" }}>
                       <span style={{ color: C.redBright, flexShrink: 0 }}><MvIcon k={investIcon[a.key]} /></span>
-                      <span className="mv-display" style={{ fontSize: 15, color: C.parch }}>{a.label}</span>
+                      <span className="mv-display heDeathLookLabel" style={{ fontSize: 15, color: C.parch }}>{a.label}</span>
                     </button>
                   ))}
                 </div>
@@ -11415,16 +11458,16 @@ function MonsterVillage() {
     const noHours = s.ap < 1;
     const target = examRes ? npcById(s, examRes.id) : null;
     return (
-      <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+      <div className="fixed inset-0 z-30 mv-body flex flex-col heExamScreen" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
           {dayMasthead(apKicker(), examRes ? `${exN.name} reads the blood` : "Examined for the change",
-            examRes ? `Looking over ${(target || {}).name}.` : "Costs a neighbour's trust, whatever it finds.")}
-          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "18px 20px 0", gap: 14, WebkitOverflowScrolling: "touch" }}>
+            examRes ? `Looking over ${(target || {}).name}.` : "Costs a neighbour's trust, whatever it finds.", "lab")}
+          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col heExamBody" style={{ padding: "18px 20px 0", gap: 14, WebkitOverflowScrolling: "touch" }}>
             {examRes ? (
               /* the reading, in the reader's own words. Violet is the change:
                  death red must never appear on this screen. */
               (examRes.beats || []).map((e, i) => (
-                <Plaque key={i} className="mvIvIn" rule="change"
+                <Plaque key={i} className="mvIvIn heExamResult" rule="change"
                   portrait={<Portrait id={e.pid || exId} size={40} turnedKnown={(npcById(s, e.pid || exId) || {}).turned && (npcById(s, e.pid || exId) || {}).known} />}>
                   <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{e.t}</p>
                 </Plaque>
@@ -11432,7 +11475,7 @@ function MonsterVillage() {
             ) : (
               <>
                 {/* the reader fronts the screen, because the action is theirs */}
-                <Plaque rule="change" portrait={<Portrait id={exId} size={44} turnedKnown={exN.turned && exN.known} disp={exN.disp} />}>
+                <Plaque className="heExamReader" rule="change" portrait={<Portrait id={exId} size={44} turnedKnown={exN.turned && exN.known} disp={exN.disp} />}>
                   <span className="mv-display" style={{ display: "block", fontSize: 17, letterSpacing: 1, color: C.parch }}>
                     {exN.name} <span style={{ fontSize: 13.5, fontStyle: "italic", letterSpacing: 0, color: C.dim }}>{exN.role}</span>
                   </span>
@@ -11443,8 +11486,8 @@ function MonsterVillage() {
                     {" "}A clean result proves little, and a changed reader clears their own kind.
                   </span>
                 </Plaque>
-                <div style={{ marginTop: "auto", paddingBottom: 4 }}>
-                  <span className="mv-display" style={{ display: "block", textAlign: "center", fontSize: 12, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER ·</span>
+                <div className="heExamPicker" style={{ marginTop: "auto", paddingBottom: 4 }}>
+                  <span className="mv-display heExamPickerTitle" style={{ display: "block", textAlign: "center", fontSize: 12, letterSpacing: 2.5, color: C.dim }}>· WHO WILL YOU HAVE LOOKED OVER ·</span>
                   {noHours && <p className="text-center" style={{ margin: "8px 0 0", fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>No hours left in the day for another look.</p>}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8, marginTop: 12 }}>
                     {aliveNpcs(s).map((n) => {
@@ -11454,10 +11497,10 @@ function MonsterVillage() {
                          spending an hour to be told so. */
                       const reader = examinerFor(s, n.id);
                       return (
-                        <button key={n.id} onClick={() => reader && runExamine(n.id)} disabled={noHours || !reader} className="mv-btn mv-body mvIvChip"
+                        <button key={n.id} onClick={() => reader && runExamine(n.id)} disabled={noHours || !reader} className="mv-btn mv-body mvIvChip heExamTarget"
                           style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 4px 10px", background: C.sky, border: `1px solid ${changed ? C.turn : C.line}`, borderRadius: 8, cursor: noHours ? "default" : "pointer", opacity: noHours ? 0.4 : 1 }}>
                           <Portrait id={n.id} size={38} turnedKnown={changed} disp={n.disp} />
-                          <span style={{ fontSize: 11, lineHeight: 1.15, textAlign: "center", color: changed ? "#C0A6E0" : C.text }}>{n.name}</span>
+                          <span className="heExamTargetName" style={{ fontSize: 11, lineHeight: 1.15, textAlign: "center", color: changed ? "#C0A6E0" : C.text }}>{n.name}</span>
                           {!reader && <span className="mv-display" style={{ fontSize: 8.5, letterSpacing: 1, textAlign: "center", color: C.dim }}>NO READER</span>}
                         </button>
                       );
@@ -12010,10 +12053,13 @@ function MonsterVillage() {
   }
 
   /* ---------- Day screen ---------- */
+  const dayOverlayOpen = !!(tab || modal || dayScene || sheet || profile || iv || invest || walk);
   return (
-    <div className="min-h-screen mv-body" style={{ background: C.bg, color: C.text }}>
+    <div className="min-h-screen mv-body heDay" style={{ background: C.bg, color: C.text }}>
       <style>{CSS_ALL}</style>
       {journal}{searchModal}{daySceneModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{unbindModal}{favourModal}{accuseModal}{profileModal}{resultSheet}
+
+      <div inert={dayOverlayOpen ? "" : undefined} aria-hidden={dayOverlayOpen ? "true" : undefined}>
 
       {/* the masthead: the day named the way the village would say it, over the
           skyline, with the nights it has already survived under the title and
@@ -12247,11 +12293,13 @@ function MonsterVillage() {
               {s.fled ? "UNMASKED" : "ACCUSE"}
             </button>
             <button className="mv-btn mv-display text-center" onClick={() => { setPlanStage(null); setModal("plan"); }}
-              style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: "linear-gradient(#D9A441,#B8863A)", border: "none", color: "#1A1408", fontSize: 14.5, letterSpacing: 3, cursor: "pointer" }}>
+              style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: "linear-gradient(#D8C6A7,#B8A27D)", border: `1px solid ${C.parchLine}`, color: C.ink, fontSize: 14.5, letterSpacing: 3, cursor: "pointer" }}>
               NIGHTFALL ☾
             </button>
           </div>
         </div>
+      </div>
+
       </div>
 
       <div className="mvVignette" />
