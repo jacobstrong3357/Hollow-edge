@@ -7203,7 +7203,7 @@ function NightScene({ height = 190 }) {
 /* A sliver of the village in morning light, behind the day header. */
 function DayStrip({ height = 64 }) {
   return (
-    <div className="heDayVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "linear-gradient(rgba(232,222,202,.02),rgba(25,23,21,.68)),linear-gradient(135deg,rgba(76,81,128,.64),rgba(206,151,105,.62)),url('assets/ink-v1/scenes/village-gate-ink-v1.png')", backgroundBlendMode: "multiply,color,normal", backgroundSize: "cover", backgroundPosition: "center 58%" }} />
+    <div className="heDayVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundColor: "#C9B9A5", backgroundImage: "linear-gradient(rgba(232,222,202,.02),rgba(25,23,21,.46)),url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundBlendMode: "multiply,normal", backgroundSize: "100% auto", backgroundRepeat: "no-repeat", backgroundPosition: "center top" }} />
   );
 }
 
@@ -8134,6 +8134,11 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .mv-btn:hover:not(:disabled) { filter:contrast(1.08); }
 .mv-btn:disabled { filter:grayscale(.55); }
 .heGate, .heDay { background-color:var(--he-paper) !important; background-image:radial-gradient(circle at 17% 21%,rgba(77,63,42,.07) 0 1px,transparent 1.5px),radial-gradient(circle at 71% 64%,rgba(77,63,42,.05) 0 1px,transparent 1.5px),linear-gradient(102deg,rgba(255,255,255,.12),rgba(90,70,40,.04)); background-size:23px 27px,31px 37px,100% 100%; }
+.heDayPickerScreen, .heDaySearchScreen, .heDayFavourScreen { background-color:var(--he-paper) !important; color:var(--he-ink) !important; }
+.heDayPickerScreen .heListChoice { background:rgba(243,233,214,.78) !important; border-color:var(--he-rule) !important; color:var(--he-ink) !important; }
+.heDaySearchLead { color:var(--he-ink) !important; }
+.heDaySearchMethod { color:var(--he-graphite) !important; text-shadow:none !important; }
+.heAccuseLead { margin:0; padding:10px 12px 11px; color:var(--he-paper-light) !important; background:rgba(24,15,16,.86); border-left:2px solid var(--he-blood); box-shadow:2px 3px 0 rgba(25,23,21,.18); text-shadow:0 1px 1px #000; }
 .heSideQuestNotice { position:relative; isolation:isolate; width:100%; padding:9px 16px 10px; color:var(--he-paper-light); background:linear-gradient(103deg,#15120f 0%,#2a1d18 52%,#12100e 100%); border:0 !important; border-top:1px solid #8a6746 !important; border-bottom:2px solid #6e5037 !important; box-shadow:inset 0 0 0 2px rgba(243,233,214,.035),0 3px 0 rgba(25,23,21,.16); }
 .heSideQuestNotice::after { content:""; position:absolute; z-index:0; left:7px; right:10px; top:4px; bottom:5px; border:1px solid rgba(243,233,214,.09); border-radius:2px 6px 3px 5px; transform:rotate(-.08deg); pointer-events:none; }
 .heSideQuestNoticeInner { position:relative; z-index:1; max-width:448px; min-height:46px; margin:0 auto; display:flex; align-items:center; gap:12px; }
@@ -9876,7 +9881,7 @@ function MonsterVillage() {
             <button onClick={joinIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
               style={{ borderRadius: 3, padding: "13px 0", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8", fontSize: 14, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal}s` }}>Take its hand</button>
             <button onClick={refuseIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
-              style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: "1px solid #2B2536", color: C.text, fontSize: 14, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal + 0.2}s` }}>Refuse. Whatever comes next, comes</button>
+              style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: "1px solid #514557", color: C.parch, fontSize: 14, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal + 0.2}s` }}>Refuse. Whatever comes next, comes</button>
           </div>
         </div>
         <div className="mvVignette" />
@@ -9987,7 +9992,7 @@ function MonsterVillage() {
                     return (
                       <div key={id} style={{ padding: "10px 13px", background: C.sky, borderTop: `2px solid ${C.amber}`, borderRadius: 2, textAlign: "left" }}>
                         <div className="mv-display" style={{ fontSize: 14.5, letterSpacing: 0.8, color: C.parch }}>✝ {a2.name}</div>
-                        <div style={{ marginTop: 2, fontSize: 13.5, lineHeight: 1.35, color: C.dim }}>{a2.desc}</div>
+                        <div style={{ marginTop: 2, fontSize: 13.5, lineHeight: 1.35, color: C.parchLine }}>{a2.desc}</div>
                       </div>
                     );
                   })}
@@ -10000,7 +10005,7 @@ function MonsterVillage() {
             <button onClick={() => { setEpiCard(0); setEpiOpen(true); }} className="mv-btn mv-display w-full"
               style={{ borderRadius: 3, padding: "13px 0", background: `${tone.glow}`, border: `1px solid ${tone.ink}`, color: tone.ink, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>WHAT BECAME OF THEM</button>
             <button onClick={() => { setEpiOpen(false); setS(null); }} className="mv-btn mv-display w-full"
-              style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>ANOTHER VILLAGE</button>
+              style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: `1px solid ${C.line}`, color: C.parch, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>ANOTHER VILLAGE</button>
           </div>
         </div>
         <div className="mvVignette" />
@@ -10022,14 +10027,14 @@ function MonsterVillage() {
           </div>
 
           {s.over.win && (
-            <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.panel, border: `1px solid ${C.line}` }}>
+            <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.sky, border: `1px solid ${C.line}` }}>
               <div className="mv-display" style={{ color: C.redBright, fontSize: 13.5, letterSpacing: 2 }}>HOW IT ENDED</div>
               <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} light /></div>
               <p className="mt-1 text-center" style={{ fontSize: 15, color: C.parch }}>{METHOD_KILL_LINES[m.method]}</p>
             </div>
           )}
 
-          <div className="mvIn mt-4 rounded-lg p-3 flex gap-3 items-center" style={{ animationDelay: "0.9s", background: C.panel, border: `1px solid ${C.line}` }}>
+          <div className="mvIn mt-4 rounded-lg p-3 flex gap-3 items-center" style={{ animationDelay: "0.9s", background: C.sky, border: `1px solid ${C.line}` }}>
             <MonsterArt id={m.id} size={72} light />
             <div>
               <div className="mv-display" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>THE TRUTH</div>
@@ -10043,7 +10048,7 @@ function MonsterVillage() {
 
           <div className="mvIn mt-4" style={{ animationDelay: "1.6s" }}>
             <div className="mv-display" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>THE NIGHTS AS THEY TRULY WERE</div>
-            <div className="mt-1 rounded-lg p-3" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+            <div className="mt-1 rounded-lg p-3" style={{ background: C.sky, border: `1px solid ${C.line}` }}>
               {s.nightLogs.map((log) => {
                 const d = s.deaths.find((x) => x.night === log.night && (x.kind === "slain" || x.kind === "drained"));
                 const t = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
@@ -10054,8 +10059,8 @@ function MonsterVillage() {
                   : "you barred your door";
                 return (
                   <div key={log.night} className="flex gap-2 py-0.5" style={{ fontSize: 14.5, borderBottom: `1px solid ${C.line}` }}>
-                    <span className="mv-display shrink-0" style={{ width: 18, color: C.dim }}>{log.night}</span>
-                    <span style={{ color: C.dim }}>{itTxt} · {youTxt}{d ? <span style={{ color: C.redBright }}> · {d.name} died</span> : t ? <span style={{ color: C.turn }}> · {t.name} was changed</span> : ""}</span>
+                    <span className="mv-display shrink-0" style={{ width: 18, color: C.parchLine }}>{log.night}</span>
+                    <span style={{ color: "rgba(241,230,209,.78)" }}>{itTxt} · {youTxt}{d ? <span style={{ color: C.redBright }}> · {d.name} died</span> : t ? <span style={{ color: C.turn }}> · {t.name} was changed</span> : ""}</span>
                   </div>
                 );
               })}
@@ -10608,10 +10613,10 @@ function MonsterVillage() {
               const hw = npcById(s, walk.lane.wid);
               return (
                 <div className="flex flex-col gap-2">
-                  <div className="rounded-lg p-2.5 flex gap-3 items-start" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                  <div className="rounded-lg p-2.5 flex gap-3 items-start" style={{ background: C.sky, border: `1px solid ${C.line}` }}>
                     <div className="shrink-0"><Portrait id={hw.id} size={44} /></div>
                     <div>
-                      <div className="mv-display" style={{ color: C.amber, fontSize: 12.5, letterSpacing: 1 }}>{hw.name} {hw.role}</div>
+                      <div className="mv-display" style={{ color: C.nightAmber, fontSize: 12.5, letterSpacing: 1 }}>{hw.name} {hw.role}</div>
                       <p className="mt-1" style={{ fontSize: 15.5, fontStyle: "italic", lineHeight: 1.5 }}><SpokenText text={walk.hailText} speed={30} /></p>
                       {walk.chatText && <p className="mt-1" style={{ fontSize: 15.5, fontStyle: "italic", lineHeight: 1.5 }}>{walk.chatText}</p>}
                     </div>
@@ -10667,14 +10672,14 @@ function MonsterVillage() {
               const mw = npcById(s, walk.mingleId);
               return (
                 <div className="flex flex-col gap-2">
-                  <div className="rounded-lg p-2.5 flex gap-3 items-start" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                  <div className="rounded-lg p-2.5 flex gap-3 items-start" style={{ background: C.sky, border: `1px solid ${C.line}` }}>
                     <div className="shrink-0"><Portrait id={mw.id} size={44} /></div>
                     <div>
-                      <div className="mv-display" style={{ color: C.amber, fontSize: 12.5, letterSpacing: 1 }}>{mw.name} {mw.role}</div>
+                      <div className="mv-display" style={{ color: C.nightAmber, fontSize: 12.5, letterSpacing: 1 }}>{mw.name} {mw.role}</div>
                       <p className="mt-1" style={{ fontSize: 15.5, fontStyle: "italic", lineHeight: 1.5 }}><SpokenText text={walk.mingleText} speed={30} /></p>
                     </div>
                   </div>
-                  <p style={{ fontSize: 15.5, lineHeight: 1.5, color: C.text }}>{walk.mingleObs}</p>
+                  <p style={{ fontSize: 15.5, lineHeight: 1.5, color: C.parch }}>{walk.mingleObs}</p>
                   <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "event"), pre: [`You linger a while at the ${walk.facts.eventLoc}, and then turn back to your own errand.`] })}>On, into the dark →</Btn>
                 </div>
               );
@@ -11300,7 +11305,7 @@ function MonsterVillage() {
     </div>
   );
   const pickerShell = (chip, title, body, onClose, accent, art) => (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+    <div className="fixed inset-0 z-40 mv-body flex flex-col heDay heDayPickerScreen" style={{ background: C.paper, color: C.text }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
         {pickerHero(chip, title, onClose, accent, art)}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
@@ -11319,10 +11324,10 @@ function MonsterVillage() {
     <>
       {setting !== "lab" && (
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, WebkitMaskImage: DAY_STRIP_MASK, maskImage: DAY_STRIP_MASK }}>
-          <DayStrip height={230} />
+          <DayStrip height={140} />
         </div>
       )}
-      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" ? undefined : { background: "linear-gradient(rgba(8,10,18,0.3) 0%, rgba(8,10,18,0.62) 34%, rgba(16,19,33,0.9) 62%, #101321 88%)" }} />
+      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" ? undefined : { background: "linear-gradient(180deg,rgba(8,10,18,.16) 0,rgba(8,10,18,.48) 88px,rgba(232,222,202,.82) 150px,rgba(232,222,202,.2) 218px,transparent 286px)", pointerEvents: "none" }} />
       <div className="mvGrain" />
       <div className={`relative heDayMastheadCopy is-${setting}`} style={{ flexShrink: 0, padding: "0 22px", paddingTop: setting === "lab" ? "calc(max(env(safe-area-inset-top),25px) + 10px)" : "max(env(safe-area-inset-top),25px)" }}>
         <span className="mv-display block heMastheadKicker" style={{ fontSize: 12, letterSpacing: 3.2, whiteSpace: "nowrap", color: C.amber }}>{kicker}</span>
@@ -11386,7 +11391,7 @@ function MonsterVillage() {
       );
     };
     return (
-      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
+      <div className="fixed inset-0 z-40 mv-body flex flex-col heDay heDaySearchScreen" style={{ background: C.paper, color: C.text, overflow: "hidden" }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div className="mvGrain" />
           <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),21px)" }}>
@@ -11400,7 +11405,7 @@ function MonsterVillage() {
           <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "14px 20px 0", gap: 9, WebkitOverflowScrolling: "touch" }}>
             {arriving ? (
               <>
-                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{dayScene.open}</p>
+                <p className="heDaySearchLead" style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.ink, textWrap: "pretty" }}>{dayScene.open}</p>
                 <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8, paddingBottom: 4 }}>
                   <span className="mv-display text-center" style={{ fontSize: 12, letterSpacing: 2.5, color: C.dim }}>· CHOOSE HOW TO WORK THE PLACE ·</span>
                   {Object.entries(DAY_SEARCH_STYLES).map(([k, st]) => (
@@ -11413,7 +11418,7 @@ function MonsterVillage() {
               </>
             ) : (
               <>
-                <p style={{ margin: 0, fontSize: 13, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.9)", textWrap: "pretty" }}>{dayScene.styleLine}</p>
+                <p className="heDaySearchMethod" style={{ margin: 0, fontSize: 13, fontStyle: "italic", lineHeight: 1.5, color: C.inkDim, textWrap: "pretty" }}>{dayScene.styleLine}</p>
                 {beats.slice(0, idx).map((e, i) => beatEl(e, i, false))}
                 {beats.length > 0 && beatEl(beats[idx], idx, true)}
                 <div style={{ marginTop: "auto", padding: "8px 0 4px" }}>
@@ -11752,7 +11757,7 @@ function MonsterVillage() {
                 <button key={n.id} disabled={!n.alive} onClick={n.alive ? () => { setPlanStage(null); startWatchWalk(n.id); } : undefined}
                   className="mv-btn mv-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 4px 10px", background: "rgba(10,12,24,0.55)", border: `1px solid ${C.line}`, borderRadius: 8, cursor: n.alive ? "pointer" : "default", opacity: n.alive ? 1 : 0.4 }}>
                   <Portrait id={n.id} size={38} dead={!n.alive} turnedKnown={n.turned && n.known} />
-                  <span style={{ fontSize: 11, lineHeight: 1.15, textAlign: "center", color: C.text, textDecoration: n.alive ? "none" : "line-through" }}>{n.name}</span>
+                  <span style={{ fontSize: 11, lineHeight: 1.15, textAlign: "center", color: C.parch, textDecoration: n.alive ? "none" : "line-through", textShadow: "0 1px 2px #000" }}>{n.name}</span>
                 </button>
               ))}
             </div>
@@ -11867,7 +11872,7 @@ function MonsterVillage() {
             })}
           </div>
           {accuseType && (
-            <div style={{ marginTop: 14, marginBottom: 2, padding: "13px 15px", background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12 }}>
+            <div style={{ marginTop: 14, marginBottom: 2, padding: "13px 15px", background: C.sky, border: `1px solid ${C.line}`, borderRadius: 4 }}>
               <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: "rgba(233,223,200,1)", textWrap: "pretty" }}>
                 The books prescribe one rite for a <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>. Every wrong name costs a life, and the village has faith left for {2 - s.wrongGuesses === 1 ? "one more attempt" : `${2 - s.wrongGuesses} attempts`}. No more.
               </p>
@@ -11903,7 +11908,7 @@ function MonsterVillage() {
     const tn2 = tgt ? tgt.name : "them";
     const answer = (kind) => { setModal(null); doAction((x) => actFavourAnswer(x, kind)); };
     return (
-      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
+      <div className="fixed inset-0 z-40 mv-body flex flex-col heDay heDayFavourScreen" style={{ background: C.paper, color: C.text, overflow: "hidden" }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           {dayMasthead(`DAY ${s.dayNum} · COSTS YOU NOTHING`, `${giver.name} is on your step`, `They want to know what you saw of ${tn2}.`)}
           <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", gap: 12, WebkitOverflowScrolling: "touch" }}>
@@ -11959,7 +11964,7 @@ function MonsterVillage() {
         <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "14px 16px 0", WebkitOverflowScrolling: "touch" }}>
           {accusePick ? (
             <>
-              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.dim, textWrap: "pretty" }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
+              <p className="heAccuseLead" style={{ fontSize: 14.5, lineHeight: 1.5, textWrap: "pretty" }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
               {/* ruled-out creatures stay pressable at 35%: the signs are the
                   player's own reading, and the game never decides for them */}
               <div style={{ position: "relative", zIndex: 7, marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
@@ -11971,13 +11976,13 @@ function MonsterVillage() {
                     <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
                       style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
                       <MonsterArt id={mm.id} size={42} light />
-                      <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                      <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.inkDim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
                     </button>
                   );
                 })}
               </div>
               {accuseType && (
-                <div style={{ marginTop: 14, marginBottom: 2, padding: "13px 15px", background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12 }}>
+                <div style={{ marginTop: 14, marginBottom: 2, padding: "13px 15px", background: C.sky, border: `1px solid ${C.line}`, borderRadius: 4 }}>
                   <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: "rgba(233,223,200,1)", textWrap: "pretty" }}>
                     Put <strong style={{ color: C.parch }}>{npcById(s, accusePick).name}</strong> to the rite of the <strong style={{ color: C.parch }}>{MONSTERS.find((x) => x.id === accuseType).name}</strong>: <strong style={{ color: C.parch }}>{METHODS[MONSTERS.find((x) => x.id === accuseType).method]}</strong>, by {ritePreparer(s, accusePick)}'s hand.
                   </p>
@@ -11986,14 +11991,14 @@ function MonsterVillage() {
             </>
           ) : (
             <>
-              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.dim, textWrap: "pretty" }}>The village hangs whoever you circle, and no verdict is read out. An innocent dead on your word emboldens the thing, and a second is the end of you.</p>
+              <p className="heAccuseLead" style={{ fontSize: 14.5, lineHeight: 1.5, textWrap: "pretty" }}>The village hangs whoever you circle, and no verdict is read out. An innocent dead on your word emboldens the thing, and a second is the end of you.</p>
               <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8 }}>
                 {aliveNpcs(s).map((n) => {
                   const struckP = s.struckNpcs.includes(n.id);
                   return (
                     <button key={n.id} onClick={() => setAccusePick(n.id)} className="mv-btn flex flex-col items-center" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, opacity: struckP ? 0.4 : 1 }}>
                       <Portrait id={n.id} size={48} turnedKnown={n.turned && n.known} />
-                      <span style={{ fontSize: 11, lineHeight: 1.15, textAlign: "center", color: C.dim, textDecoration: struckP ? "line-through" : "none" }}>{n.name}</span>
+                      <span style={{ fontSize: 11, lineHeight: 1.15, textAlign: "center", color: C.inkDim, textDecoration: struckP ? "line-through" : "none" }}>{n.name}</span>
                     </button>
                   );
                 })}
