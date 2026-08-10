@@ -6464,7 +6464,7 @@ function MonsterDeath({ id, method, size = 120, light }) {
 
 /* The room you are received in: each villager's own walls and tools behind
    the talk, in the same woodcut-silhouette style as the location scenes. */
-function InterviewScene({ id, height = 92, afflicted }) {
+function LegacyInterviewScene({ id, height = 92, afflicted }) {
   /* Every room is its own painting: a full-scene ambient wash in the room's
      own colour, a handful of large shapes, one blazing light source, and a
      few things barely seen at the edge of the gloom. All movement is CSS
@@ -6928,11 +6928,42 @@ function InterviewScene({ id, height = 92, afflicted }) {
   );
 }
 
+/* The villager rooms are deliberately shallow ink banners. They are read at
+   roughly 400x120 in play, so the composition does the work: a few crooked
+   tools, lived-in marks and small things watching from the edges. Event-state
+   art keeps the same room and changes only what happened to it. */
+const INTERVIEW_ROOM_ART = {
+  marta: "assets/ink-v2/interiors/bakery-interior-ink-v2.png",
+  tobias: "assets/ink-v2/interiors/grave-shed-interior-ink-v2.png",
+  ansel: "assets/ink-v2/interiors/old-church-interior-ink-v2.png",
+  greta: "assets/ink-v2/interiors/stillroom-interior-ink-v2.png",
+  wilhelm: "assets/ink-v2/interiors/forge-interior-ink-v2.png",
+  liesel: "assets/ink-v2/interiors/taproom-interior-ink-v2.png",
+  falk: "assets/ink-v2/interiors/surgery-interior-ink-v2.png",
+  rosa: "assets/ink-v2/interiors/sewing-room-interior-ink-v2.png",
+};
+const INTERVIEW_ROOM_WOUND_ART = {
+  marta: "assets/ink-v2/interiors/bakery-rioted-interior-ink-v2.png",
+  ansel: "assets/ink-v2/interiors/old-church-burned-interior-ink-v2.png",
+  greta: "assets/ink-v2/interiors/stillroom-sick-interior-ink-v2.png",
+  liesel: "assets/ink-v2/interiors/taproom-shut-interior-ink-v2.png",
+  falk: "assets/ink-v2/interiors/surgery-sick-interior-ink-v2.png",
+};
+function InterviewScene({ id, height = 92, afflicted }) {
+  const source = (afflicted && INTERVIEW_ROOM_WOUND_ART[id]) || INTERVIEW_ROOM_ART[id] || INTERVIEW_ROOM_ART.marta;
+  return (
+    <div className={`heInteriorBanner${afflicted && INTERVIEW_ROOM_WOUND_ART[id] ? " is-wounded" : ""}`} style={{ height }}>
+      <img src={source} alt="" draggable="false" />
+      <span className="heInteriorPaperVeil" aria-hidden="true" />
+    </div>
+  );
+}
+
 /* Each room wears its name on the banner. */
 const IV_ROOM_NAME = {
-  marta: "THE BAKERY", tobias: "THE GRAVE SHED", ansel: "THE VESTRY",
+  marta: "THE BAKERY", tobias: "THE GRAVE SHED", ansel: "INSIDE THE OLD CHURCH",
   greta: "THE STILLROOM", wilhelm: "THE FORGE", liesel: "THE TAPROOM",
-  falk: "THE SURGERY", rosa: "THE SEWING ROOM",
+  falk: "THE PHYSICIAN'S SURGERY", rosa: "THE SEWING ROOM",
 };
 
 /* ---------- Dawn, painted per place ----------
@@ -7249,9 +7280,9 @@ function IvIcon({ k }) {
    the other. */
 function PersonHero({ n, chip, accent, onClose, height = 112, afflicted }) {
   return (
-    <div className="overflow-hidden relative" style={{ borderRadius: 16, border: `1px solid ${accent}55`, boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
+    <div className="overflow-hidden relative hePersonHero" style={{ borderRadius: 16, border: `1px solid ${accent}88`, boxShadow: "0 9px 22px rgba(48,34,17,0.24)" }}>
       <InterviewScene id={n.id} height={height} afflicted={afflicted} />
-      <div className="absolute inset-0" style={{ background: !n.alive ? "linear-gradient(rgba(20,16,20,0.35), rgba(20,16,20,0.92))" : "linear-gradient(rgba(20,24,41,0) 42%, rgba(20,24,41,0.9))", pointerEvents: "none" }} />
+      <div className="absolute inset-0" style={{ background: !n.alive ? "linear-gradient(rgba(20,16,20,0.26), rgba(20,16,20,0.94))" : "linear-gradient(rgba(25,23,21,0) 38%, rgba(25,23,21,0.91))", pointerEvents: "none" }} />
       {onClose && (
         <button onClick={onClose} className="absolute top-2 right-2.5 mv-body rounded" style={{ background: "rgba(8,10,18,0.55)", border: "none", color: accent, fontSize: 13.5, cursor: "pointer", padding: "3px 9px" }}>close ✕</button>
       )}
@@ -7274,15 +7305,15 @@ function PersonHero({ n, chip, accent, onClose, height = 112, afflicted }) {
    page used to print in loose prose underneath. */
 function PersonReadings({ s, n, mood }) {
   const rows = [
-    ["BUILD", `${BUILD_WORD[n.build] || `${n.build} of build`}${n.alive && s.knownBuild === n.build ? ", like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ", and could be the shape in the dark" : ""}`, C.parch],
-    ["DEMEANOUR", IV_BEARING[n.id], C.parch],
+    ["BUILD", `${BUILD_WORD[n.build] || `${n.build} of build`}${n.alive && s.knownBuild === n.build ? ", like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ", and could be the shape in the dark" : ""}`, C.ink],
+    ["DEMEANOUR", IV_BEARING[n.id], C.ink],
     ["DISPOSITION", mood.word.charAt(0).toUpperCase() + mood.word.slice(1), mood.color],
   ];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       {rows.map(([label, text, ink]) => (
         <div key={label} style={{ display: "flex", gap: 9, alignItems: "baseline" }}>
-          <span className="mv-display" style={{ flexShrink: 0, width: 88, fontSize: 10, letterSpacing: 1.4, color: C.dim }}>{label}</span>
+          <span className="mv-display" style={{ flexShrink: 0, width: 88, fontSize: 10, letterSpacing: 1.4, color: C.inkDim }}>{label}</span>
           <span style={{ minWidth: 0, fontSize: 13.5, lineHeight: 1.4, color: ink }}>{text}</span>
         </div>
       ))}
@@ -7338,9 +7369,9 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   }, [iv.transcript.length]);
 
   const renderOpener = (t, i) => (
-    <p key={`o${i}`} className="mvIvIn mt-2" style={{ fontSize: 13.5, fontStyle: "italic", color: C.dim, lineHeight: 1.5 }}>{t.a}</p>
+    <p key={`o${i}`} className="mvIvIn mt-2" style={{ fontSize: 14.5, fontStyle: "italic", color: C.inkDim, lineHeight: 1.55 }}>{t.a}</p>
   );
-  const openerBlock = <div className="pl-3" style={{ borderLeft: `2px solid ${C.line}` }}>{openers.map(renderOpener)}</div>;
+  const openerBlock = <div className="heInterviewOpener" style={{ borderLeft: `3px solid ${C.amber}` }}>{openers.map(renderOpener)}</div>;
 
   const pips = [0, 1, 2].map((i) => (
     <span key={i} className="inline-block rounded-full" style={{ width: 9, height: 9, background: i < iv.left ? C.amber : "transparent", border: `1.5px solid ${i < iv.left ? C.amber : C.line}`, boxShadow: i < iv.left ? "0 0 6px rgba(217,164,65,0.45)" : "none" }} />
@@ -7348,7 +7379,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
 
   const subHead = (title, backTo = null) => (
     <div className="flex items-center gap-2 mb-2">
-      <button onClick={() => setIvSub(backTo)} aria-label="Back" className="mv-btn rounded-full" style={{ width: 26, height: 26, background: "transparent", border: `1px solid ${C.line}`, color: C.dim, cursor: "pointer", fontSize: 15.5, lineHeight: "23px" }}>‹</button>
+      <button onClick={() => setIvSub(backTo)} aria-label="Back" className="mv-btn rounded-full" style={{ width: 26, height: 26, background: "transparent", border: `1px solid ${C.parchLine}`, color: C.parch, cursor: "pointer", fontSize: 15.5, lineHeight: "23px" }}>‹</button>
       <span className="mv-display" style={{ fontSize: 13.5, letterSpacing: 2.5, color: C.amber }}>{title}</span>
     </div>
   );
@@ -7358,11 +7389,11 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
      to run instead of sliding under the questions counter. */
   const nightRow = nights.length > 0 && (
     <div style={{ marginBottom: 10 }}>
-      <p style={{ margin: "0 0 6px", fontSize: 13.5, color: C.dim }}>Pick which night you're asking about.</p>
+      <p style={{ margin: "0 0 6px", fontSize: 13.5, color: C.parchLine }}>Pick which night you're asking about.</p>
       <div className="flex items-center gap-2" style={{ overflowX: "auto", overflowY: "hidden", padding: "1px 0", scrollbarWidth: "none" }}>
         {nights.map((nn) => (
           <button key={nn} onClick={() => setIv({ ...iv, night: nn })} className="mv-display mv-btn px-3 py-1 rounded-full"
-            style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 14, background: iv.night === nn ? C.amber : "transparent", color: iv.night === nn ? C.ink : C.dim, border: `1px solid ${iv.night === nn ? C.amber : C.line}`, cursor: "pointer" }}>
+            style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 14, background: iv.night === nn ? C.amber : "transparent", color: iv.night === nn ? C.ink : C.parchLine, border: `1px solid ${iv.night === nn ? C.amber : C.parchLine}`, cursor: "pointer" }}>
             NIGHT {nn}
           </button>
         ))}
@@ -7383,7 +7414,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   );
 
   return (
-    <div className="fixed inset-0 z-30 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text }}>
+    <div className="fixed inset-0 z-30 mv-body flex flex-col heInterviewScreen" style={{ background: C.paper, color: C.text }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
 
         {/* ---- who you are stood in front of ----
@@ -7412,7 +7443,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                   </div>
                   <div className="flex items-center gap-1.5" style={{ marginTop: 2 }}>
                     <span className="inline-block rounded-full" style={{ width: 5, height: 5, background: mood.color }} />
-                    <span style={{ fontSize: 12, color: C.dim }}>{mood.word}</span>
+                    <span style={{ fontSize: 12, color: C.parchLine }}>{mood.word}</span>
                   </div>
                 </div>
                 {/* what you already have on them, without leaving the room:
@@ -7437,7 +7468,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
         </div>
 
         {/* ---- the talk ---- */}
-        <div ref={scroller} className="flex-1 overflow-y-auto px-4 pt-2 pb-4" style={{ minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+        <div ref={scroller} className="flex-1 overflow-y-auto px-4 pt-2 pb-4 heInterviewPaper" style={{ minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
           {!begun
             ? openerBlock
             : (
@@ -7458,7 +7489,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                 <div className="flex justify-end">
                   <div className="rounded-xl px-3 py-2" style={{ maxWidth: "86%", background: "rgba(217,164,65,0.09)", border: "1px solid rgba(217,164,65,0.3)", borderBottomRightRadius: 4 }}>
                     <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: C.dim }}>YOU ASK{t.night ? ` · NIGHT ${t.night}` : ""}</div>
-                    <div style={{ fontSize: 13.5, color: C.parch }}>{t.q}</div>
+                    <div style={{ fontSize: 14.5, color: C.ink, lineHeight: 1.45 }}>{t.q}</div>
                   </div>
                 </div>
                 <div className="flex items-end gap-2 mt-2">
@@ -7505,7 +7536,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               pips. They live below the questions now, with room to run. */}
           {begun && !done && (
             <div className="flex items-center justify-end gap-1.5 mb-2">
-              <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.5, color: free ? chrome.ink : C.dim }}>{free ? "QUESTIONS · FREE" : "QUESTIONS"}</span>
+              <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.5, color: free ? chrome.ink : C.parchLine }}>{free ? "QUESTIONS · FREE" : "QUESTIONS"}</span>
               {pips}
             </div>
           )}
@@ -7518,8 +7549,8 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                     style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: "pointer" }}>
                     <span style={{ color: C.amber, flexShrink: 0 }}><IvIcon k={c.key} /></span>
                     <span style={{ minWidth: 0 }}>
-                      <span className="mv-display block" style={{ fontSize: 15, color: C.parch, lineHeight: 1.15 }}>{c.label}</span>
-                      <span className="block" style={{ fontSize: 12, color: C.dim, lineHeight: 1.3 }}>{c.hint}</span>
+                      <span className="mv-display block" style={{ fontSize: 15, color: C.ink, lineHeight: 1.15 }}>{c.label}</span>
+                      <span className="block" style={{ fontSize: 12.5, color: C.inkDim, lineHeight: 1.3 }}>{c.hint}</span>
                     </span>
                   </button>
                 ))}
@@ -7614,14 +7645,14 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
             ? <Btn full center kind="amber" onClick={endInterview}>End the interview</Btn>
             : (
               <div className="mt-2.5 text-center">
-                <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 14, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>End the interview</button>
+                <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.parchLine, fontSize: 14, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>End the interview</button>
               </div>
             ))}
           {!begun && (
             <>
               <Btn full center kind="amber" onClick={() => setIv({ ...iv, begun: true })}><span className="mv-display" style={{ letterSpacing: 2 }}>BEGIN THE INTERVIEW</span></Btn>
               <div className="mt-2 text-center">
-                <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.dim, fontSize: 13.5, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>Take your leave instead</button>
+                <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.parchLine, fontSize: 13.5, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>Take your leave instead</button>
               </div>
             </>
           )}
@@ -7640,6 +7671,15 @@ const fontStyles = `
    size inherits - buttons, mostly. Anything that states its own size, inline
    or through a utility class, still states it. */
 .mv-body { font-family: 'Alegreya', Georgia, serif; font-size: 18px; }
+.heInteriorBanner { position: relative; width: 100%; overflow: hidden; background: #D9BE91; }
+.heInteriorBanner img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: 50% 52%; filter: saturate(.9) contrast(1.03); }
+.heInteriorBanner.is-wounded img { filter: saturate(.82) contrast(1.07); }
+.heInteriorPaperVeil { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(241,230,209,.10), transparent 16%, transparent 84%, rgba(241,230,209,.10)); box-shadow: inset 0 0 18px rgba(72,45,18,.18); }
+.hePersonHero { background: #CDAE7D; }
+.heInterviewScreen, .heProfileScreen { background-image: radial-gradient(circle at 50% 0, rgba(178,118,51,.10), transparent 34%), linear-gradient(#E1D1B4, #F2E8D5 42%, #E8DECA); }
+.heInterviewPaper, .heProfilePaper { background: linear-gradient(180deg, rgba(243,233,214,.44), rgba(232,222,202,.34)); border-top: 1px solid rgba(124,112,94,.22); }
+.heInterviewOpener { margin-top: 9px; padding: 7px 12px 10px; border-radius: 0 8px 8px 0; background: rgba(255,250,237,.42); box-shadow: 0 4px 14px rgba(77,55,29,.06); }
+.heInterviewOpener p:first-child { margin-top: 0; }
 .mv-btn { transition: background 0.15s, border-color 0.15s; }
 .mv-btn:active { transform: translateY(1px); }
 .mvFog { animation: mvfog 16s ease-in-out infinite alternate; }
@@ -11879,18 +11919,18 @@ function MonsterVillage() {
     const statusRule = troubled ? "danger" : n.turned && n.known ? "change" : n.cured ? "amber" : "bone";
     const nAff = (n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled);
     return (
-      <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#12162A, ${C.bg} 72%)`, color: C.parch }}>
+      <div className="fixed inset-0 z-40 mv-body flex flex-col heProfileScreen" style={{ background: C.paper, color: C.text }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
           <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
             <PersonHero n={n} accent={heroAccent} height={112} afflicted={nAff}
               onClose={() => setProfile(null)}
               chip={troubled ? (n.fled ? "IN HIDING" : "GONE") : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"} />
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4 heProfilePaper" style={{ WebkitOverflowScrolling: "touch" }}>
             {/* who they are to this village. The build line under it already
                 says the physical part, and lore.body said it again in prose -
                 the page told you twice that Ansel is tall. */}
-            <p style={{ fontSize: 13, lineHeight: 1.5, fontStyle: "italic", color: "rgba(233,223,200,0.9)" }}>{lore.who || lore.body}</p>
+            <p style={{ fontSize: 14.5, lineHeight: 1.55, fontStyle: "italic", color: C.inkDim }}>{lore.who || lore.body}</p>
             {/* the same three readings the interview shows. Build and
                 demeanour used to be loose unlabelled prose here and a
                 labelled block there. */}
@@ -11962,7 +12002,7 @@ function MonsterVillage() {
                   is filled amber because it spends an hour of daylight */}
               <button onClick={() => setS({ ...s, struckNpcs: struckP ? s.struckNpcs.filter((x) => x !== n.id) : [...s.struckNpcs, n.id] })}
                 className="mv-btn mv-display w-full text-center"
-                style={{ borderRadius: 2, padding: "9px 0", background: "transparent", border: `1px solid ${C.line}`, color: C.text, fontSize: 13.5, letterSpacing: 3, cursor: "pointer" }}>
+                style={{ borderRadius: 2, padding: "9px 0", background: "transparent", border: `1px solid ${C.parchLine}`, color: C.parch, fontSize: 13.5, letterSpacing: 3, cursor: "pointer" }}>
                 {struckP ? "RESTORE TO SUSPICION" : "STRIKE FROM SUSPICION"}
               </button>
               <div className="flex mt-2" style={{ gap: 8 }}>
@@ -11976,7 +12016,7 @@ function MonsterVillage() {
                   return (
                     <button disabled={off} onClick={off ? undefined : () => { setProfile(null); startInterview(n.id); }}
                       className="mv-btn mv-display text-center"
-                      style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: off ? "transparent" : "linear-gradient(#D9A441,#B8863A)", border: off ? `1px solid ${C.line}` : "none", color: off ? C.dim : "#1A1408", fontSize: 14.5, letterSpacing: 3, opacity: off ? 0.5 : 1, cursor: off ? "default" : "pointer" }}>
+                      style={{ flex: 1, borderRadius: 2, padding: "12px 0", background: off ? "transparent" : "linear-gradient(#D9A441,#B8863A)", border: off ? `1px solid ${C.parchLine}` : "none", color: off ? C.parchLine : "#1A1408", fontSize: 14.5, letterSpacing: 3, opacity: off ? 0.5 : 1, cursor: off ? "default" : "pointer" }}>
                       {gone ? "NOWHERE TO BE FOUND" : "INTERVIEW"}
                     </button>
                   );
