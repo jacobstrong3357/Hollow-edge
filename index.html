@@ -5879,8 +5879,9 @@ const LOCATION_WOUND_ART = {
 function Scene({ loc, kind, height = 150, unlit, moonless }) {
   const source = LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
   return (
-    <div className={`heLocationPlate heLocationPlateNight${unlit ? " is-unlit" : ""}${moonless ? " is-moonless" : ""}`} style={{ height }}>
+    <div className={`heLocationPlate heLocationPlateNight${loc === "Village Square" ? " is-village-square" : ""}${unlit ? " is-unlit" : ""}${moonless ? " is-moonless" : ""}`} style={{ height }}>
       <img src={source} alt="" draggable="false" />
+      <span className="heLocationNightGrade" aria-hidden="true" />
       {unlit && <span className="heLocationUnlit" aria-hidden="true" />}
       {moonless && <span className="heLocationMoonless" aria-hidden="true" />}
       {kind === "body" && <span className="heLocationBody" aria-hidden="true" />}
@@ -7199,7 +7200,7 @@ function DawnScene({ loc, s, height = 190 }) {
    not a place - so it needs no location argument. */
 function NightScene({ height = 190 }) {
   return (
-    <div className="heNightVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "linear-gradient(rgba(9,8,14,.02),rgba(9,8,10,.52)),url('assets/ink-v1/scenes/night-transition-ink-v1.png')", backgroundSize: "cover", backgroundPosition: "center" }} />
+    <div className="heNightVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "linear-gradient(rgba(36,24,43,.02),rgba(10,8,13,.48)),url('assets/ink-v1/locations/village-square-night-ink-v1.png')", backgroundSize: "cover", backgroundPosition: "center 42%" }} />
   );
 }
 
@@ -7214,9 +7215,9 @@ function DayStrip({ height = 64 }) {
    tall scene and remains useful behind the larger daylight-action mastheads;
    forcing it into 432x92 was what made the home header feel like a severed
    vertical illustration. */
-function DayBannerStrip({ height = 92 }) {
+function DayBannerStrip({ height = 110 }) {
   return (
-    <div className="heDayBannerPlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundSize: "cover", backgroundPosition: "center" }} />
+    <div className="heDayBannerPlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundSize: "100% auto", backgroundRepeat: "no-repeat", backgroundPosition: "center 42%" }} />
   );
 }
 
@@ -8285,7 +8286,9 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heLocationPlateDay .heLocationPaperVeil { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(255,248,231,.08),transparent 46%,rgba(80,56,34,.08)); mix-blend-mode:soft-light; }
 .heLocationPlateDay.is-wounded > img { filter:saturate(.78) sepia(.08) contrast(1.08); }
 .heLocationPlateNight { background:#090806; }
-.heLocationPlateNight > img { filter:saturate(.96) sepia(.015) contrast(1.04) brightness(.99); }
+.heLocationPlateNight > img { filter:saturate(.92) contrast(1.025) brightness(1.1); }
+.heLocationPlateNight:not(.is-village-square) > img { filter:saturate(.9) hue-rotate(28deg) contrast(1.025) brightness(1.16); }
+.heLocationPlateNight .heLocationNightGrade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(171,132,184,.15) 0%,rgba(113,76,132,.1) 58%,rgba(25,17,32,.03) 100%); mix-blend-mode:screen; }
 .heLocationPlateNight .heLocationUnlit { position:absolute; inset:0; background:rgba(3,4,5,.28); mix-blend-mode:multiply; }
 .heLocationPlateNight .heLocationMoonless { position:absolute; inset:0; background:linear-gradient(115deg,rgba(0,0,0,.3),transparent 54%,rgba(0,0,0,.5)); }
 .heLocationBody { position:absolute; left:40%; bottom:5%; width:17%; height:14%; border-radius:52% 48% 10% 10%; background:#D9CEB9; box-shadow:0 2px 0 #191715,0 -5px 18px rgba(224,214,193,.12); transform:rotate(-2deg); opacity:.88; }
@@ -9084,6 +9087,10 @@ function MonsterVillage() {
      { id, beats } for a plain finding, or { id, interview: true } while the
      changed one is questioned inline. */
   const [examRes, setExamRes] = useState(null);
+  /* The unbinding follows the examination's inline-interview rule: once the
+     circle opens, a survivor is spoken to in the room instead of being
+     reduced to a result sheet. */
+  const [unbindRes, setUnbindRes] = useState(null);
   const [walk, setWalk] = useState(null);
   /* the rope notice states the sentence at all times; what you can do about
      it folds away, because it is the same four options every morning */
@@ -10060,7 +10067,7 @@ function MonsterVillage() {
             <div className="mv-display" style={{ color: s.over.win ? C.amber : C.redBright, fontSize: 15.5, letterSpacing: 3 }}>
               {s.over.win ? "DAWN COMES CLEAN" : joined ? "YOU WALK ON, NOT ALONE" : "HOLLOW'S EDGE FALLS"}
             </div>
-            <h1 className="mv-display mt-1" style={{ fontSize: 33.5, lineHeight: 1.1, color: C.parch }}>{s.over.win ? "It is over." : joined ? "It is over, and you did not stay to see the rest." : "It is over, and not in your favour."}</h1>
+            <h1 className="mv-display mt-1" style={{ fontSize: 28, lineHeight: 1.15, color: C.ink }}>{s.over.win ? "It is over." : joined ? "It is over, and you did not stay to see the rest." : "It is over, and not in your favour."}</h1>
             <p className="mt-2" style={{ fontSize: 14, lineHeight: 1.5 }}>{s.over.text}</p>
           </div>
 
@@ -10086,7 +10093,7 @@ function MonsterVillage() {
 
           <div className="mvIn mt-4" style={{ animationDelay: "1.6s" }}>
             <div className="mv-display" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>THE NIGHTS AS THEY TRULY WERE</div>
-            <div className="mt-1 rounded-lg p-3" style={{ background: C.sky, border: `1px solid ${C.line}` }}>
+            <div className="mt-1 rounded-lg p-3" style={{ background: C.paper2, border: `1px solid ${C.parchLine}`, boxShadow: "1px 2px 0 rgba(25,23,21,.08)" }}>
               {s.nightLogs.map((log) => {
                 const d = s.deaths.find((x) => x.night === log.night && (x.kind === "slain" || x.kind === "drained"));
                 const t = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
@@ -10097,8 +10104,8 @@ function MonsterVillage() {
                   : "you barred your door";
                 return (
                   <div key={log.night} className="flex gap-2 py-0.5" style={{ fontSize: 14.5, borderBottom: `1px solid ${C.line}` }}>
-                    <span className="mv-display shrink-0" style={{ width: 18, color: C.parchLine }}>{log.night}</span>
-                    <span style={{ color: "rgba(241,230,209,.78)" }}>{itTxt} · {youTxt}{d ? <span style={{ color: C.redBright }}> · {d.name} died</span> : t ? <span style={{ color: C.turn }}> · {t.name} was changed</span> : ""}</span>
+                    <span className="mv-display shrink-0" style={{ width: 18, color: C.inkDim }}>{log.night}</span>
+                    <span style={{ color: C.text }}>{itTxt} · {youTxt}{d ? <span style={{ color: C.red }}> · {d.name} died</span> : t ? <span style={{ color: "#654A78" }}> · {t.name} was changed</span> : ""}</span>
                   </div>
                 );
               })}
@@ -10136,17 +10143,17 @@ function MonsterVillage() {
               );
               return (
                 <div className="mt-2">
-                  <div className="flex" style={{ gap: 14, alignItems: "flex-start", padding: "16px 16px 17px", background: C.sky, borderTop: `2px solid ${tone.ink}`, borderRadius: 2 }}>
+                  <div className="flex" style={{ gap: 14, alignItems: "flex-start", padding: "14px 14px 15px", background: C.paper2, border: `1px solid ${C.parchLine}`, borderTop: `2px solid ${tone.ink}`, borderRadius: 3, boxShadow: "1px 2px 0 rgba(25,23,21,.08)" }}>
                     <span className="shrink-0 flex"><Portrait id={x.id} size={56} dead={!x.alive} turnedKnown={x.turned && x.known} /></span>
                     <span style={{ minWidth: 0, flex: 1 }}>
-                      <span className="mv-display block" style={{ fontSize: 19, letterSpacing: 0.6, color: C.parch }}>{x.name}</span>
-                      <span className="mv-display block" style={{ marginTop: 2, fontSize: 10, letterSpacing: 1.6, color: C.dim }}>{x.role.replace(/^the /, "THE ").toUpperCase()} · {fateWord(x)}</span>
+                      <span className="mv-display block" style={{ fontSize: 19, letterSpacing: 0.6, color: C.ink }}>{x.name}</span>
+                      <span className="mv-display block" style={{ marginTop: 2, fontSize: 10, letterSpacing: 1.6, color: C.inkDim }}>{x.role.replace(/^the /, "THE ").toUpperCase()} · {fateWord(x)}</span>
                       {/* the same body size as the dawn carousel this card is
                           shaped after, and as the night log directly above it.
                           It was the only body paragraph in the game set larger
                           than 15.5, and on a phone it read as a different
                           screen from the one it is sitting on. */}
-                      <p style={{ margin: "8px 0 0", fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{line}</p>
+                      <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.48, color: C.text, textWrap: "pretty" }}>{line}</p>
                     </span>
                   </div>
                   <div className="flex items-center justify-between" style={{ marginTop: 14 }}>
@@ -10175,7 +10182,7 @@ function MonsterVillage() {
     );
   }
 
-  const nightfall = (plan) => { setModal(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); Snd.beat(false); setS(resolveNight(s, plan)); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
+  const nightfall = (plan) => { setModal(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setUnbindRes(null); setWalk(null); Snd.beat(false); setS(resolveNight(s, plan)); if (typeof window !== "undefined") window.scrollTo({ top: 0 }); };
 
   /* ---------- The night walk ----------
      A fixed, ordered node queue is built once, here, from the facts already
@@ -11568,7 +11575,7 @@ function MonsterVillage() {
     </div>
   ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
 
-  const interviewModal = iv && !(examRes && examRes.interview) && (
+  const interviewModal = iv && !(examRes && examRes.interview) && !(unbindRes && unbindRes.interview) && (
     <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
       openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
       askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endInterview}
@@ -11929,12 +11936,64 @@ function MonsterVillage() {
     </div>
   );
 
-  const unbindModal = modal === "unbind" && pickerShell("DAY " + s.dayNum, "Unbind whom of what holds them?", (
-    <div className="flex flex-col gap-2">
-      <p style={{ color: C.dim, fontSize: 14.5 }}>This costs the whole of the day, every hour you have left, and can be tried on each of the changed only once. If it works, whatever leaves them may remember something useful. If it fails, the thing they carry feels the working, and does not forgive it lightly.</p>
-      {eligibleUnbind.map((n) => villagerBtn(n, () => doAction((x) => actUnbind(x, n.id))))}
-    </div>
-  ), () => setModal(null), null, <DawnScene loc="Old Church" s={s} height={96} />);
+  const runUnbind = (id) => {
+    setIvOpenerOpen(false);
+    const next = actUnbind(s, id);
+    const fresh = next.dayEvents.slice(s.dayEvents.length);
+    const survivor = npcById(next, id);
+    setS(next);
+    if (survivor && survivor.alive && !next.over) {
+      const valid = next.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
+      setIv({ id, night: valid.length ? valid[valid.length - 1] : next.nightNum, left: 3, transcript: fresh.map((e) => ({ q: null, a: e.t })) });
+      setUnbindRes({ id, interview: true });
+      return;
+    }
+    setUnbindRes({ id, beats: fresh });
+  };
+  const endUnbindInterview = () => { setIv(null); setIvSub(null); setUnbindRes(null); setModal(null); };
+
+  const unbindModal = modal === "unbind" && (() => {
+    if (unbindRes && unbindRes.interview && iv) {
+      return (
+        <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
+          openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
+          askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endUnbindInterview} free />
+      );
+    }
+    const target = unbindRes ? npcById(s, unbindRes.id) : null;
+    return (
+      <div className="fixed inset-0 z-30 mv-body flex flex-col heExamScreen" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
+          {dayMasthead(`DAY ${s.dayNum} · THE WHOLE DAY`, unbindRes ? "The circle is broken" : "The Rite of Unbinding",
+            unbindRes ? `${(target || {}).name} did not come back from it.` : "Call one changed neighbour back, if the old words still can.", "church")}
+          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col heExamBody" style={{ padding: "18px 20px 0", gap: 14, WebkitOverflowScrolling: "touch" }}>
+            {unbindRes ? (
+              (unbindRes.beats || []).map((e, i) => (
+                <Plaque key={i} className="mvIvIn heExamResult" rule="change"
+                  portrait={<Portrait id={e.pid || unbindRes.id} size={40} dead={target && !target.alive} turnedKnown={target && target.turned && target.known} />}>
+                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{e.t}</p>
+                </Plaque>
+              ))
+            ) : (
+              <>
+                <Plaque rule="change">
+                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch }}>
+                    This takes every hour left today and can be tried on each of the changed only once. If it fails, the thing they carry feels the working and does not forgive it.
+                  </p>
+                </Plaque>
+                <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8, paddingBottom: 4 }}>
+                  {eligibleUnbind.map((n) => villagerBtn(n, () => runUnbind(n.id)))}
+                </div>
+              </>
+            )}
+          </div>
+          <Dock>{unbindRes ? <DockBtn kind="commit" onClick={() => { setUnbindRes(null); setModal(null); }}>DONE</DockBtn> : <DockBtn onClick={() => { setUnbindRes(null); setModal(null); }}>LEAVE IT</DockBtn>}</Dock>
+        </div>
+        <div className="mvVignette" />
+        <div className="mvGrainF" />
+      </div>
+    );
+  })();
 
   /* ---------- the doorstep: answering for a favour ----------
      They asked, the night happened, and now they are here. Costs no hour -
@@ -11979,6 +12038,43 @@ function MonsterVillage() {
       </div>
     );
   })();
+
+  const openAccusation = (id = null) => {
+    setProfile(null);
+    setAccusePick(id);
+    setAccuseType(null);
+    setModal(s.wrongGuesses === 1 ? "accuseConfirm" : "accuse");
+  };
+
+  const accuseConfirmModal = modal === "accuseConfirm" && (
+    <div className="fixed inset-0 z-50 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+        <div className="mvGrain" />
+        <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),21px)" }}>
+          <div className="overflow-hidden relative" style={{ borderRadius: 16, border: "1px solid rgba(194,68,80,0.5)" }}>
+            <NightScene height={150} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(46,16,22,0.18), rgba(22,10,12,0.92))" }} />
+            <div className="absolute left-4 bottom-3 mv-display" style={{ fontSize: 21, letterSpacing: 2, color: C.parch, textShadow: "0 1px 8px #000" }}>Accuse again?</div>
+          </div>
+        </div>
+        <div className="relative flex-1 flex flex-col justify-center px-6">
+          <Plaque rule="blood">
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: C.parch, textWrap: "pretty" }}>
+              You have named it wrong once. Name the wrong face or the wrong creature again, and it stops taking neighbours and comes for you.
+            </p>
+          </Plaque>
+        </div>
+        <Dock tone="bruise">
+          <div className="grid grid-cols-2 gap-2">
+            <DockBtn kind="quietBruise" onClick={() => { setAccusePick(null); setModal(null); }}>STEP BACK</DockBtn>
+            <DockBtn kind="destroy" onClick={() => setModal("accuse")}>ACCUSE AGAIN</DockBtn>
+          </div>
+        </Dock>
+      </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
+    </div>
+  );
 
   const accuseModal = modal === "accuse" && (
     <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: `linear-gradient(#1A0F14, ${C.bg} 72%)`, color: C.parch, overflow: "hidden" }}>
@@ -12209,7 +12305,7 @@ function MonsterVillage() {
                 {struckP ? "RESTORE TO SUSPICION" : "STRIKE FROM SUSPICION"}
               </button>
               <div className="flex mt-2" style={{ gap: 8 }}>
-                <button disabled={s.fled} onClick={() => { setProfile(null); setAccusePick(n.id); setModal("accuse"); }}
+                <button disabled={s.fled} onClick={() => openAccusation(n.id)}
                   className="mv-btn heDockButton heDangerButton mv-display text-center"
                   style={{ width: 104, borderRadius: 2, padding: "12px 0", background: "transparent", border: `1px solid ${C.red}`, color: C.redBright, fontSize: 13.5, letterSpacing: 2.5, opacity: s.fled ? 0.5 : 1, cursor: s.fled ? "default" : "pointer" }}>ACCUSE</button>
                 {(() => {
@@ -12300,7 +12396,7 @@ function MonsterVillage() {
   return (
     <div className="min-h-screen mv-body heDay" style={{ background: C.bg, color: C.text }}>
       <style>{CSS_ALL}</style>
-      {journal}{searchModal}{daySceneModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{unbindModal}{favourModal}{accuseModal}{profileModal}{resultSheet}
+      {journal}{searchModal}{daySceneModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{unbindModal}{favourModal}{accuseConfirmModal}{accuseModal}{profileModal}{resultSheet}
 
       <div inert={dayOverlayOpen ? "" : undefined} aria-hidden={dayOverlayOpen ? "true" : undefined}>
 
@@ -12309,12 +12405,12 @@ function MonsterVillage() {
           the count of who is left at the right */}
       <div className="sticky top-0 z-20" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="relative">
-          <DayBannerStrip height={92} />
+          <DayBannerStrip height={110} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(16,19,33,0.05) 0%, rgba(16,19,33,0.45) 55%, rgba(16,19,33,0.86) 100%)" }} />
           <div className="absolute inset-x-0 bottom-0" style={{ padding: "0 18px 8px" }}>
             <div className="max-w-md mx-auto flex items-end" style={{ gap: 12 }}>
               <div style={{ minWidth: 0 }}>
-                <h1 className="mv-display" style={{ margin: 0, fontSize: 24, lineHeight: 1, color: C.parch, textShadow: "0 2px 10px #000" }}>{dayTitle(s.dayNum)}</h1>
+                <h1 className="mv-display" style={{ margin: 0, fontSize: 26, lineHeight: 1, color: C.parch, textShadow: "0 2px 10px #000" }}>{dayTitle(s.dayNum)}</h1>
                 <div className="flex items-center" style={{ gap: 9, marginTop: 5 }}>
                   <MoonStrip s={s} />
                   {s.fled && <span className="mv-display" style={{ fontSize: 10, letterSpacing: 2, color: C.redBright }}>UNDER SIEGE</span>}
@@ -12322,9 +12418,9 @@ function MonsterVillage() {
               </div>
               <div style={{ marginLeft: "auto", display: "flex", gap: 14, alignItems: "center" }}>
                 <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.pale, fontSize: 13, cursor: "pointer", padding: 0, textShadow: "0 1px 4px #000" }}>{snd ? "♪" : "♪·off"}</button>
-                <div style={{ textAlign: "center" }}>
-                  <div className="mv-display" style={{ fontSize: 21.5, lineHeight: 1, color: C.parch, textShadow: "0 1px 6px #000" }}>{aliveNpcs(s).length}</div>
-                  <div className="mv-display" style={{ fontSize: 9, letterSpacing: 1.5, color: knownChanged ? C.turn : C.dim }}>{knownChanged ? "SOME CHANGED" : "LIVING"}</div>
+                <div style={{ textAlign: "center", minWidth: 52, padding: "5px 8px 4px", borderRadius: 5, background: "rgba(8,10,18,.58)", border: "1px solid rgba(241,230,209,.28)", boxShadow: "0 2px 10px rgba(0,0,0,.22)" }}>
+                  <div className="mv-display" style={{ fontSize: 23, lineHeight: 1, color: "#FFF4DE", textShadow: "0 1px 6px #000" }}>{aliveNpcs(s).length}</div>
+                  <div className="mv-display" style={{ marginTop: 2, fontSize: 10, letterSpacing: 1.6, color: knownChanged ? "#D4B9EC" : "#F1E6D1" }}>{knownChanged ? "SOME CHANGED" : "LIVING"}</div>
                 </div>
               </div>
             </div>
@@ -12403,10 +12499,9 @@ function MonsterVillage() {
         {/* The night's recap belongs to the dawn reveal (once) and the journal's
             Nights log (summarised, in the Journal). The day homepage keeps only
             the active-danger warnings, never the full recap. */}
-        {(s.enraged || s.wrongGuesses === 1) && (
+        {s.enraged && (
           <div className="mt-3">
             {s.enraged && <p style={{ color: C.redBright, fontSize: 14.5, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
-            {s.wrongGuesses === 1 && <p className={s.enraged ? "mt-1.5" : ""} style={{ color: C.redBright, fontSize: 14.5 }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
           </div>
         )}
 
@@ -12537,7 +12632,7 @@ function MonsterVillage() {
             {s.clues.length + s.foundSigns.length > clueSeen && <span style={{ position: "absolute", top: 11, right: 12, width: 7, height: 7, borderRadius: 4, background: C.redBright, boxShadow: `0 0 6px ${C.redBright}` }} />}
           </button>
           <div className="flex" style={{ gap: 8 }}>
-            <button className="mv-btn heDockButton heDangerButton mv-display text-center" disabled={s.fled} onClick={() => setModal("accuse")}
+            <button className="mv-btn heDockButton heDangerButton mv-display text-center" disabled={s.fled} onClick={() => openAccusation()}
               style={{ width: 104, borderRadius: 2, padding: "12px 0", background: "transparent", border: `1px solid ${C.red}`, color: C.redBright, fontSize: 13.5, letterSpacing: 2.5, cursor: s.fled ? "default" : "pointer", opacity: s.fled ? 0.5 : 1 }}>
               {s.fled ? "UNMASKED" : "ACCUSE"}
             </button>
