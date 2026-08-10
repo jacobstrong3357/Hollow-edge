@@ -17,7 +17,10 @@ must name both WHO and WHAT before the village runs out of people.
   `s.over` lands) and offered back at the gate as **`CONTINUE · DAY N`** /
   **`CONTINUE · NIGHT N`**. A gate with no record shows only HOW TO PLAY and
   ENTER; the Black Book, the tally, Deeds and Secrets appear once `meta`
-  has a game in it. The V5 gate also has a three-place **Run Ledger**
+  has a game in it. An interactive lane/watch queue is persisted separately
+  under `mv-run-walk`, matched to the automatic run's `gameId`, so resuming
+  cannot reroll a night whose facts and choices were already sampled. The V5
+  gate also has a three-place **Run Ledger**
   (`mv-run-slots`): each is a deliberately filed, JSON-safe snapshot of the
   current unfinished run. The automatic `mv-run` must remain separate, so a
   tab close never requires the player to have used a manual slot.

@@ -3799,7 +3799,7 @@ function resolveNight(prev, planIn, preEvents) {
         /* -- if the dead is someone the player met, followed or watched
            TONIGHT, the recap must say so plainly, not let the connection
            vanish into a generic scream. -- */
-        const crossedPaths = [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, watching, ...(mods.company || [])].filter(Boolean).includes(victim.id);
+        const crossedPaths = [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || [])].filter(Boolean).includes(victim.id);
         /* the watched-and-taken case is its own story: the player held that
            very door under watch and saw nothing. The recap must own that
            plainly (the kill came AFTER the watcher went home to bed), not
@@ -4082,21 +4082,24 @@ function resolveNight(prev, planIn, preEvents) {
   /* --- side quest: did the player watch/follow the quest target tonight?
      The favour was asked for THIS night. Ignore it and the asker knows by
      morning, says so to your face, and thinks the less of you for it. --- */
-  if (s.sideQuest && !s.sideQuest.done) {
-    const qt = s.sideQuest.target;
-    /* Whether you kept your word or not, the asker comes to you at dawn and
-       asks. Missing the night is no longer settled behind your back: you can
-       admit it, or you can look them in the eye and say you were there. See
-       actFavourAnswer. */
-    s.sideQuest = { ...s.sideQuest, done: (watching === qt || mods.follow === qt), doneNight: n, due: true };
-  } else if (s.sideQuest && s.sideQuest.due && !s.sideQuest.reported && n - (s.sideQuest.doneNight || s.sideQuest.night) > 3) {
-    /* left unanswered for days, the asking simply curdles */
-    const giver = npcById(s, s.sideQuest.giver);
-    if (giver && giver.alive && !giver.fled) {
-      s.npcs = s.npcs.map((x) => (x.id === giver.id ? { ...x, disp: clampDisp((x.disp || 0) - 1) } : x));
-      dawn.push(ev(`${giver.name} has stopped asking what you saw. That is its own answer, and they have taken it as one.`, giver.id, 2));
+  if (s.sideQuest && !s.sideQuest.reported) {
+    if (!s.sideQuest.due) {
+      const qt = s.sideQuest.target;
+      /* Whether you kept your word or not, the asker comes to you at dawn and
+         asks. Missing the night is no longer settled behind your back: you can
+         admit it, or you can look them in the eye and say you were there. See
+         actFavourAnswer. Stamp this once: otherwise an unanswered missed
+         favour gets a fresh doneNight every dawn and can never expire. */
+      s.sideQuest = { ...s.sideQuest, done: (watching === qt || mods.follow === qt), doneNight: n, due: true };
+    } else if (n - (s.sideQuest.doneNight || s.sideQuest.night) > 3) {
+      /* left unanswered for days, the asking simply curdles */
+      const giver = npcById(s, s.sideQuest.giver);
+      if (giver && giver.alive && !giver.fled) {
+        s.npcs = s.npcs.map((x) => (x.id === giver.id ? { ...x, disp: clampDisp((x.disp || 0) - 1) } : x));
+        dawn.push(ev(`${giver.name} has stopped asking what you saw. That is its own answer, and they have taken it as one.`, giver.id, 2));
+      }
+      s.sideQuest = null;
     }
-    s.sideQuest = null;
   }
 
   /* --- a secret the player has been spreading may reach its owner --- */
@@ -9106,6 +9109,7 @@ function MonsterVillage() {
   const [watchIntroSeen, setWatchIntroSeen] = useState(false);
   const [dayScene, setDayScene] = useState(null);
   const [savedRun, setSavedRun] = useState(null);
+  const [savedWalk, setSavedWalk] = useState(null);
   const [bootReady, setBootReady] = useState(false);
   const [deathShown, setDeathShown] = useState(false);
   const recordedRef = useRef(null);
@@ -9135,6 +9139,15 @@ function MonsterVillage() {
             Object.keys(run.locEvidence || {}).forEach((l) => { run.locEvidence[l] = (run.locEvidence[l] || []).filter((sg) => valid.includes(sg)); });
             run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
             setSavedRun(run);
+            /* The live lane queue is UI state, but unlike an unopened picker
+               it has already sampled the night and recorded player choices.
+               Keep it beside (never inside) mv-run, tied to this exact game,
+               so a locked phone cannot reroll danger by returning to dusk. */
+            try {
+              const r3 = await window.storage.get("mv-run-walk");
+              const wr = r3 && r3.value ? JSON.parse(r3.value) : null;
+              if (wr && wr.gameId === run.gameId && wr.walk && (wr.walk.mode === "out" || wr.walk.mode === "watch")) setSavedWalk(wr.walk);
+            } catch (e2) { /* a stale walk is safe to ignore */ }
           }
         }
       } catch (e) { /* a save that will not parse is a save best forgotten */ }
@@ -9150,6 +9163,17 @@ function MonsterVillage() {
       else window.storage.set("mv-run", JSON.stringify(s));
     } catch (e) {}
   }, [s]);
+
+  /* Persist only a walk that is actually in progress. Pickers and ordinary
+     day modals are deliberately disposable; this queue is not, because its
+     facts and consequences were sampled before the first lane was shown. */
+  useEffect(() => {
+    if (!bootReady || !s) return;
+    try {
+      if (walk) window.storage.set("mv-run-walk", JSON.stringify({ gameId: s.gameId, walk }));
+      else window.storage.delete("mv-run-walk");
+    } catch (e) {}
+  }, [walk, s && s.gameId, bootReady]);
 
   const saveMeta = async (next) => {
     setMeta(next);
@@ -9279,11 +9303,16 @@ function MonsterVillage() {
   const resetUi = () => { setTab(null); setModal(null); setAccusePick(null); setAccuseType(null); setSheet(null); setProfile(null); setIv(null); setIvSub(null); setInvest(null); setExamRes(null); setWalk(null); setDayScene(null); setNewAch([]); setClueSeen(0); setDawnDone(false); setBeatsRevealed(false); setWatchIntroSeen(false); setConfirmAbandon(false); setEpiCard(0); };
   const start = () => {
     setSavedRun(null);
+    setSavedWalk(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
     setS(newGame(!!(meta && meta.games > 0), hollowedUnlocked));
     resetUi();
   };
-  const resume = () => { const run = savedRun; setSavedRun(null); setS(run); resetUi(); };
+  const resume = () => {
+    const run = savedRun, runWalk = savedWalk;
+    setSavedRun(null); setSavedWalk(null); setS(run); resetUi();
+    if (runWalk) setWalk(runWalk);
+  };
 
   const doAction = (fn) => {
     setModal(null); setAccusePick(null); setAccuseType(null); setProfile(null);
@@ -9291,6 +9320,15 @@ function MonsterVillage() {
     const fresh = next.dayEvents.slice(s.dayEvents.length);
     setS(next);
     if (!next.over && next.phase !== "night" && fresh.length) setSheet(fresh);
+  };
+
+  /* Dawn acknowledgement is part of the run, not merely this tab. Without a
+     persisted marker, closing the phone after FACE THE DAY makes CONTINUE
+     deal the same morning cards again on every resume. The night number makes
+     the marker self-reset as soon as the next night resolves. */
+  const acknowledgeDawn = () => {
+    setDawnDone(true);
+    setS({ ...s, dawnSeenNight: s.nightNum });
   };
 
   if (!s && !bootReady) {
@@ -9378,7 +9416,7 @@ function MonsterVillage() {
               </>
             ) : savedRun ? (
               <div className="grid grid-cols-2 gap-2">
-                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 1.5 }}>CONTINUE · {savedRun.phase === "day" || savedRun.phase === "firstlight" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`}</span></Btn>
+                <Btn kind="amber" full center onClick={resume}><span className="mv-display" style={{ letterSpacing: 1.5 }}>CONTINUE · {savedWalk ? `NIGHT ${savedRun.nightNum + 1}` : savedRun.phase === "day" || savedRun.phase === "firstlight" ? `DAY ${savedRun.dayNum}` : `NIGHT ${savedRun.nightNum}`}</span></Btn>
                 <Btn kind="red" full center onClick={() => setConfirmAbandon(true)}><span className="mv-display" style={{ letterSpacing: 1.5 }}>NEW GAME</span></Btn>
               </div>
             ) : (
@@ -9847,7 +9885,7 @@ function MonsterVillage() {
         nightBeats: [],
         deathBeats: [
           "It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting.",
-          ...(DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "the dark"),
+          ...(DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "dark"),
         ],
         beatTitle: `NIGHT ${s.nightNum} · REFUSED`,
         phase: "night",
@@ -12220,7 +12258,7 @@ function MonsterVillage() {
       </span>
     </button>
   );
-  if (s.dawn.length > 0 && !dawnDone) {
+  if (s.dawn.length > 0 && !dawnDone && s.dawnSeenNight !== s.nightNum) {
     const dloc = (s.dawnScene && s.dawnScene.loc) || "Cottage";
     return (
       <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
@@ -12241,7 +12279,7 @@ function MonsterVillage() {
           <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", WebkitOverflowScrolling: "touch" }}>
             {/* every morning is the same deck, whether it carries a body or
                 only what the night turned up: one is not bigger news */}
-            <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={() => setDawnDone(true)} />
+            <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={acknowledgeDawn} />
             {(s.enraged || s.wrongGuesses === 1) && (
               <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 9 }}>
                 {s.enraged && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.redBright, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
@@ -12249,7 +12287,7 @@ function MonsterVillage() {
               </div>
             )}
           </div>
-          <Dock><DockBtn kind="commit" onClick={() => setDawnDone(true)}>FACE THE DAY</DockBtn></Dock>
+          <Dock><DockBtn kind="commit" onClick={acknowledgeDawn}>FACE THE DAY</DockBtn></Dock>
         </div>
         <div className="mvVignette" />
         <div className="mvGrainF" />
