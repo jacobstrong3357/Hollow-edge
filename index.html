@@ -12377,8 +12377,8 @@ function MonsterVillage() {
                narrowed. It is never fewer than three faces, so it points and
                never proves. */
             const fits = n.alive && !faceK && fitsShape(s, n);
-            const ring = n.fled ? C.redBright
-              : n.alive && faceK === n.id ? C.redBright
+            const hidingInk = "#70584B";
+            const ring = n.alive && faceK === n.id ? C.redBright
               : s.mob && s.mob.target === n.id && n.alive ? C.red
               : fits && shapeCertain(s) ? C.amber
               : fits && shapeNarrowed(s) ? "rgba(217,164,65,0.4)" : null;
@@ -12387,7 +12387,7 @@ function MonsterVillage() {
                rumour. A build hint stays a ring and never earns a caption,
                because it is a guess and the plate is for what is settled. */
             const st = !n.alive ? { rule: C.line, note: "BURIED", noteColor: C.dim }
-              : n.fled ? { rule: C.redBright, note: "IN HIDING", noteColor: C.redBright }
+              : n.fled ? { rule: hidingInk, note: "IN HIDING", noteColor: hidingInk }
               : faceK === n.id ? { rule: C.redBright, note: "IT WEARS THIS FACE", noteColor: C.redBright }
               : n.turned && n.known ? { rule: C.turn, note: "CHANGED", noteColor: C.turn }
               : n.cured ? { rule: C.amber, note: "UNBOUND", noteColor: C.amber }
@@ -12397,7 +12397,11 @@ function MonsterVillage() {
               <button key={n.id} onClick={() => setProfile(n.id)} className="mv-btn"
                 style={{ display: "flex", flexDirection: "column", alignItems: "stretch", background: "transparent", border: "none", padding: 0, cursor: "pointer", opacity: !n.alive || struckP ? 0.5 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "center" }}>
-                  <div style={{ borderRadius: 12, boxShadow: ring ? `0 0 0 2px ${ring}` : "none" }}>
+                  <div style={{
+                    borderRadius: n.fled ? "3px 6px 2px 5px" : 12,
+                    boxShadow: ring ? `0 0 0 2px ${ring}` : n.fled ? "2px 2px 0 rgba(57,43,35,.24)" : "none",
+                    transform: n.fled ? "rotate(-1.4deg)" : "none",
+                  }}>
                     <Portrait id={n.id} size={40} dead={!n.alive} turnedKnown={n.turned && n.known} disp={n.disp} />
                   </div>
                 </div>
