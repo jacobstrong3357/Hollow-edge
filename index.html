@@ -7207,6 +7207,16 @@ function DayStrip({ height = 64 }) {
   );
 }
 
+/* The sticky day title needs a panorama of its own. The older DayStrip is a
+   tall scene and remains useful behind the larger daylight-action mastheads;
+   forcing it into 432x92 was what made the home header feel like a severed
+   vertical illustration. */
+function DayBannerStrip({ height = 92 }) {
+  return (
+    <div className="heDayBannerPlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundSize: "cover", backgroundPosition: "center" }} />
+  );
+}
+
 /* Icons for the day's four errands. */
 function MvIcon({ k }) {
   const b = {
@@ -8213,6 +8223,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heDay::before { content:""; position:fixed; inset:0; pointer-events:none; background:url('assets/ink-v1/scenes/village-gate-ink-v1.png') center/cover no-repeat; opacity:.035; mix-blend-mode:multiply; }
 .heDay > .max-w-md, .heDay .max-w-md { position:relative; }
 .heDayVillagePlate { filter:sepia(.08) saturate(.86) contrast(1.04); }
+.heDayBannerPlate { background-color:#C9B9A5; filter:sepia(.035) saturate(.88) contrast(1.05); }
 .heNightVillagePlate { filter:saturate(.92) contrast(1.03); }
 .heDay .mvGrainF { opacity:.11; mix-blend-mode:multiply; background-image:repeating-linear-gradient(97deg,rgba(25,23,21,.08) 0 1px,transparent 1px 5px); background-size:17px 19px; }
 .heDay .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 62%,rgba(58,45,28,.18) 100%); }
@@ -12246,7 +12257,7 @@ function MonsterVillage() {
           the count of who is left at the right */}
       <div className="sticky top-0 z-20" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="relative">
-          <DayStrip height={92} />
+          <DayBannerStrip height={92} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(16,19,33,0.05) 0%, rgba(16,19,33,0.45) 55%, rgba(16,19,33,0.86) 100%)" }} />
           <div className="absolute inset-x-0 bottom-0" style={{ padding: "0 18px 8px" }}>
             <div className="max-w-md mx-auto flex items-end" style={{ gap: 12 }}>
