@@ -8134,6 +8134,15 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .mv-btn:hover:not(:disabled) { filter:contrast(1.08); }
 .mv-btn:disabled { filter:grayscale(.55); }
 .heGate, .heDay { background-color:var(--he-paper) !important; background-image:radial-gradient(circle at 17% 21%,rgba(77,63,42,.07) 0 1px,transparent 1.5px),radial-gradient(circle at 71% 64%,rgba(77,63,42,.05) 0 1px,transparent 1.5px),linear-gradient(102deg,rgba(255,255,255,.12),rgba(90,70,40,.04)); background-size:23px 27px,31px 37px,100% 100%; }
+.heSideQuestNotice { position:relative; isolation:isolate; width:100%; padding:9px 16px 10px; color:var(--he-paper-light); background:linear-gradient(103deg,#15120f 0%,#2a1d18 52%,#12100e 100%); border:0 !important; border-top:1px solid #8a6746 !important; border-bottom:2px solid #6e5037 !important; box-shadow:inset 0 0 0 2px rgba(243,233,214,.035),0 3px 0 rgba(25,23,21,.16); }
+.heSideQuestNotice::after { content:""; position:absolute; z-index:0; left:7px; right:10px; top:4px; bottom:5px; border:1px solid rgba(243,233,214,.09); border-radius:2px 6px 3px 5px; transform:rotate(-.08deg); pointer-events:none; }
+.heSideQuestNoticeInner { position:relative; z-index:1; max-width:448px; min-height:46px; margin:0 auto; display:flex; align-items:center; gap:12px; }
+.heSideQuestPortrait { flex:0 0 auto; padding:2px; background:var(--he-paper-light); border:1px solid #0b0908; border-radius:2px 5px 3px 4px; box-shadow:2px 2px 0 rgba(0,0,0,.38); transform:rotate(-1.2deg); }
+.heSideQuestCopy { margin:0; color:#f3e9d6; font-size:14.5px; line-height:1.28; text-shadow:0 1px 1px #000; }
+.heSideQuestCopy strong { color:#fff5df; }
+.heSideQuestKicker { display:block; margin-bottom:3px; color:#c49761; font-size:9px; line-height:1; letter-spacing:2.4px; text-shadow:none; }
+.heSideQuestNotice--action { cursor:pointer; }
+.heSideQuestNotice--action:hover { filter:contrast(1.08); }
 .heGate { color:var(--he-ink) !important; }
 .heGate .mvHomeScene { position:fixed; inset:0; height:100%; opacity:.58; }
 .heGatePlate { position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px); object-fit:cover; object-position:center; filter:grayscale(.16) sepia(.08) contrast(1.03); }
@@ -12321,10 +12330,11 @@ function MonsterVillage() {
         /* once the night is behind you they are ON your step, and the banner
            is the way back to them if you dismissed the doorstep */
         if (s.sideQuest.due) return (
-          <button onClick={() => setModal("favour")} className="mv-btn w-full px-4 py-2 text-left" style={{ background: "rgba(217,164,65,0.14)", borderBottom: `1px solid ${C.amber}`, border: "none", borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: C.amber, cursor: "pointer" }}>
-            <span className="max-w-md mx-auto flex items-center gap-3">
-              <Portrait id={giver.id} size={32} turnedKnown={giver.turned && giver.known} />
-              <span style={{ fontSize: 14.5, color: C.parch }}>
+          <button onClick={() => setModal("favour")} className="mv-btn heSideQuestNotice heSideQuestNotice--action text-left">
+            <span className="heSideQuestNoticeInner">
+              <span className="heSideQuestPortrait"><Portrait id={giver.id} size={32} turnedKnown={giver.turned && giver.known} /></span>
+              <span className="heSideQuestCopy">
+                <span className="mv-display heSideQuestKicker">AT YOUR DOOR</span>
                 <strong>{giver.name}</strong> is on your step, wanting to know what you saw of <strong>{sqTarget ? sqTarget.name : "them"}</strong>.
                 <span style={{ color: C.amber }}> Answer them →</span>
               </span>
@@ -12332,10 +12342,11 @@ function MonsterVillage() {
           </button>
         );
         return (
-          <div className="px-4 py-2" style={{ background: "rgba(217,164,65,0.14)", borderBottom: `1px solid ${C.amber}` }}>
-            <div className="max-w-md mx-auto flex items-center gap-3">
-              <Portrait id={giver.id} size={32} turnedKnown={giver.turned && giver.known} />
-              <p style={{ fontSize: 14.5, color: C.parch }}>
+          <div className="heSideQuestNotice">
+            <div className="heSideQuestNoticeInner">
+              <span className="heSideQuestPortrait"><Portrait id={giver.id} size={32} turnedKnown={giver.turned && giver.known} /></span>
+              <p className="heSideQuestCopy">
+                <span className="mv-display heSideQuestKicker">A QUIET FAVOUR</span>
                 {s.sideQuest.done
                   ? <><strong>{giver.name}</strong> is waiting to hear what you saw of <strong>{sqTarget ? sqTarget.name : "them"}</strong>.{s.sideQuest.gated ? " Report back, and they'll open up what they know." : ""}</>
                   : <><strong>{giver.name}</strong> asked you to watch <strong>{sqTarget ? sqTarget.name : "them"}</strong> tonight.{s.sideQuest.gated ? " Do it, and they'll trade you what they know." : ""}</>}
