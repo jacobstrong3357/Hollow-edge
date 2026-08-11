@@ -5885,6 +5885,24 @@ const LOCATION_NIGHT_ART = {
   Tavern: "assets/ink-v2/locations/tavern-night-ink-v2.png",
   "Old Mill": "assets/ink-v2/locations/old-mill-night-ink-v2.png",
 };
+/* The walk shell is nearly square. These plates carry real sky and foreground
+   beyond the old wide card crop, so narrow phones can take only the added side
+   margins instead of enlarging the landmark. */
+const LOCATION_NIGHT_WALK_ART = {
+  Graveyard: "assets/ink-v2/locations/graveyard-night-walk-ink-v3.png",
+  "Dark Forest": "assets/ink-v2/locations/dark-forest-night-walk-ink-v3.png",
+  "Old Church": "assets/ink-v2/locations/old-church-night-walk-ink-v3.png",
+  "Village Square": "assets/ink-v2/locations/village-square-night-walk-ink-v3.png",
+  Tavern: "assets/ink-v2/locations/tavern-night-walk-ink-v3.png",
+  "Old Mill": "assets/ink-v2/locations/old-mill-night-walk-ink-v3.png",
+};
+const LOCATION_NIGHT_WALK_WOUND_ART = {
+  burn: "assets/ink-v2/locations/old-church-burning-night-walk-ink-v3.png",
+  riot: "assets/ink-v2/locations/village-square-riot-night-walk-ink-v3.png",
+  fouled: "assets/ink-v2/locations/village-square-well-fouled-night-walk-ink-v3.png",
+  shut: "assets/ink-v2/locations/tavern-shut-night-walk-ink-v3.png",
+  flood: "assets/ink-v2/locations/old-mill-flooded-night-walk-ink-v3.png",
+};
 const LOCATION_WOUND_ART = {
   church_burned: "assets/ink-v2/locations/old-church-burned-ink-v2.png",
   square_riot: "assets/ink-v2/locations/village-square-riot-ink-v2.png",
@@ -5898,8 +5916,8 @@ const LOCATION_WOUND_ART = {
    somebody forgot to fill in, and nothing flickers because nothing is burning.
    `moonless` takes the moon out of the sky and leaves the stars, for the
    nights when something is between the village and it. */
-function Scene({ loc, kind, height = 150, unlit, moonless }) {
-  const source = LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
+function Scene({ loc, kind, height = 150, unlit, moonless, source: suppliedSource }) {
+  const source = suppliedSource || LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
   return (
     <div className={`heLocationPlate heLocationPlateNight${loc === "Village Square" ? " is-village-square" : ""}${unlit ? " is-unlit" : ""}${moonless ? " is-moonless" : ""}`} style={{ height }}>
       <img src={source} alt="" draggable="false" />
@@ -7988,13 +8006,14 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   const wd = NIGHT_WOUNDS[wound] || null;
   const sky = NIGHT_SKIES[wx] || null;
+  const walkSource = LOCATION_NIGHT_WALK_WOUND_ART[wound] || LOCATION_NIGHT_WALK_ART[loc] || LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
   return (
     <div className="fixed inset-0 z-40 mv-body heNight heNightShell flex flex-col" style={{ height: "100dvh", background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative heNightShellFrame" style={{ minHeight: 0, overflow: "hidden" }}>
-        {/* The authored panorama keeps its natural wide ratio, then dissolves
-            through the dark instead of ending at the bottom of a cropped card. */}
+        {/* The square plate includes authored sky and foreground. Narrow screens
+            crop its added side margins rather than zooming the old panorama. */}
         <div className="mvDrift absolute heNightScene" style={{ left: 0, right: 0, top: 0, height: "clamp(360px,54dvh,430px)", transformOrigin: "50% 24%", background: C.sky, WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.64) brightness(0.82)" : "saturate(1.03) brightness(1.1)" }}>
-          <Scene loc={loc} kind="quiet" height="clamp(360px,54dvh,430px)" unlit={wd && wd.unlit} />
+          <Scene loc={loc} kind="quiet" height="clamp(360px,54dvh,430px)" unlit={wd && wd.unlit} source={walkSource} />
         </div>
         <div className="absolute heNightVeil" style={{ left: 0, right: 0, top: 0, height: "clamp(490px,70dvh,590px)", background: `linear-gradient(rgba(${tn.veil},0.28) 0%, rgba(${tn.veil},0.025) 25%, rgba(${tn.veil},0.13) 47%, rgba(${tn.veil},0.31) 65%, rgba(${tn.veil},0.46) 80%, rgba(${tn.veil},0.18) 100%)` }} />
         {/* one cloud, crossing the whole sky in the time nobody watches it for */}
