@@ -7326,16 +7326,16 @@ function PersonHero({ n, chip, accent, onClose, height = 112, afflicted }) {
 /* What you can see of them, as three plain readings. The build row carries
    whatever the nights have settled about the shape - the same sentence the
    page used to print in loose prose underneath. */
-function PersonReadings({ s, n, mood }) {
+function PersonReadings({ s, n, mood, only }) {
   const rows = [
-    ["BUILD", `${BUILD_WORD[n.build] || `${n.build} of build`}${n.alive && s.knownBuild === n.build ? ", like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ", and could be the shape in the dark" : ""}`, C.ink],
-    ["DEMEANOUR", IV_BEARING[n.id], C.ink],
-    ["DISPOSITION", mood.word.charAt(0).toUpperCase() + mood.word.slice(1), mood.color],
-  ];
+    ["build", "BUILD", `${BUILD_WORD[n.build] || `${n.build} of build`}${n.alive && s.knownBuild === n.build ? ", like the shape in the dark" : n.alive && !s.knownBuild && buildCandidates(s) && buildCandidates(s).includes(n.build) ? ", and could be the shape in the dark" : ""}`, C.ink],
+    ["demeanour", "DEMEANOUR", IV_BEARING[n.id], C.ink],
+    ["disposition", "DISPOSITION", mood.word.charAt(0).toUpperCase() + mood.word.slice(1), mood.color],
+  ].filter(([key]) => !only || only.includes(key));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      {rows.map(([label, text, ink]) => (
-        <div key={label} style={{ display: "flex", gap: 9, alignItems: "baseline" }}>
+      {rows.map(([key, label, text, ink]) => (
+        <div key={key} style={{ display: "flex", gap: 9, alignItems: "baseline" }}>
           <span className="mv-display" style={{ flexShrink: 0, width: 88, fontSize: 10, letterSpacing: 1.4, color: C.inkDim }}>{label}</span>
           <span style={{ minWidth: 0, fontSize: 13.5, lineHeight: 1.4, color: ink }}>{text}</span>
         </div>
@@ -7703,6 +7703,15 @@ const fontStyles = `
 .hePersonHero { background: #CDAE7D; }
 .heInterviewScreen, .heProfileScreen { background-image: radial-gradient(circle at 50% 0, rgba(178,118,51,.10), transparent 34%), linear-gradient(#E1D1B4, #F2E8D5 42%, #E8DECA); }
 .heInterviewPaper, .heProfilePaper { background: linear-gradient(180deg, rgba(243,233,214,.44), rgba(232,222,202,.34)); border-top: 1px solid rgba(124,112,94,.22); }
+.heProfileSection + .heProfileSection { margin-top:19px; }
+.heProfileSectionHead { display:flex; align-items:center; gap:10px; margin-bottom:9px; color:#87501F; font-size:12px; letter-spacing:2.6px; }
+.heProfileSectionHead::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(124,112,94,.7),rgba(124,112,94,.08)); }
+.heProfileSectionBody { padding-left:2px; padding-right:2px; }
+.heProfileStanding { padding:11px 12px 12px; background:rgba(214,196,163,.23); border-left:3px solid rgba(155,131,96,.72); }
+.heProfileStanding .heProfileSectionHead { margin-bottom:7px; }
+.heProfileEmpty { max-width:35ch; }
+.heProfileFacts { padding:9px 12px 10px; background:rgba(249,240,222,.46); border:1px solid rgba(124,112,94,.42); border-left:3px solid #9B8360; box-shadow:2px 3px 0 rgba(25,23,21,.08); }
+.heProfileFacts p + p { border-top:1px solid rgba(124,112,94,.25); padding-top:6px; }
 .heInterviewOpener { margin-top: 9px; padding: 7px 12px 10px; border-radius: 0 8px 8px 0; background: rgba(255,250,237,.42); box-shadow: 0 4px 14px rgba(77,55,29,.06); }
 .heInterviewOpener p:first-child { margin-top: 0; }
 .mv-btn { transition: background 0.15s, border-color 0.15s; }
@@ -12344,6 +12353,8 @@ function MonsterVillage() {
       : null;
     const troubled = !n.alive || n.fled;
     const heroAccent = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "#AEB6D8";
+    const profileMood = n.turned && n.known ? { word: "no longer themselves", color: C.turn } : IV_MOOD[dispTier(n.disp)];
+    const hasKnownIdentity = (n.alive && s.knownSex && n.sex === s.knownSex) || (n.secretKnown && secretOf(s, n.id));
     const nAff = (n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled);
     return (
       <div className="fixed inset-0 z-40 mv-body flex flex-col heProfileScreen" style={{ background: C.paper, color: C.text }}>
@@ -12354,56 +12365,70 @@ function MonsterVillage() {
               chip={death ? "DECEASED" : troubled ? "IN HIDING" : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4 heProfilePaper" style={{ WebkitOverflowScrolling: "touch" }}>
-            {/* who they are to this village. The build line under it already
-                says the physical part, and lore.body said it again in prose -
-                the page told you twice that Ansel is tall. */}
-            <p style={{ fontSize: 14.5, lineHeight: 1.55, fontStyle: "italic", color: C.inkDim }}>{lore.who || lore.body}</p>
-            {/* the same three readings the interview shows. Build and
-                demeanour used to be loose unlabelled prose here and a
-                labelled block there. */}
-            <div className="mt-3"><PersonReadings s={s} n={n} mood={n.turned && n.known ? { word: "no longer themselves", color: C.turn } : IV_MOOD[dispTier(n.disp)]} /></div>
-            {/* the same courtesy the build line gets: the page says what fits
-                and stays quiet about what does not - the missing ring on the
-                day screen is the village's way of saying the rest. */}
-            {n.alive && s.knownSex && n.sex === s.knownSex && (
-              <p className="mt-1.5" style={{ fontSize: 13.5, color: C.amber, fontStyle: "italic" }}>
-                A {s.knownSex === "f" ? "woman" : "man"}, and what was described in the dark was a {s.knownSex === "f" ? "woman" : "man"}.
-              </p>
-            )}
-            {n.secretKnown && secretOf(s, n.id) && (
-              <p className="mt-1.5" style={{ fontSize: 13.5, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {secretOf(s, n.id).short}.</p>
-            )}
-            {n.alive && !n.fled && (
-              <p className="mt-1.5" style={{ fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
-            )}
-            {deathHeading && <div className="mv-display mt-4" style={{ color: C.red, fontSize: 13.5, letterSpacing: 1.8, lineHeight: 1.45 }}>{deathHeading}</div>}
-            <div className={`mv-display ${deathHeading ? "mt-3" : "mt-4"}`} style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>WHAT YOU KNOW</div>
-            {facts.length === 0 && <p style={{ fontSize: 15, color: C.dim }} className="mt-1.5">Nothing yet. You have not seen them at night, nor heard a word of their movements.</p>}
-            {(() => {
-              const PAGE = 4;
-              const total = Math.max(1, Math.ceil(facts.length / PAGE));
-              const cur = factPage === -1 ? total - 1 : Math.min(factPage, total - 1);
-              return (
-                <>
-                  {facts.length > 0 && (
-                    <Plaque rule="bone" className="mt-1.5" style={{ padding: "10px 14px 12px" }}>
-                      {facts.slice(cur * PAGE, cur * PAGE + PAGE).map((f, i) => (
-                        <p key={i} style={{ margin: i === 0 ? 0 : "5px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(233,223,200,1)", fontStyle: f.clue ? "italic" : "normal" }}>
-                          {f.t}{f.flag && <span style={{ color: C.redBright, fontWeight: 700 }}> ✕ {f.flag}</span>}
-                        </p>
-                      ))}
-                    </Plaque>
-                  )}
-                  {facts.length > PAGE && (
-                    <div className="flex items-center justify-between mt-2">
-                      {pageBtn("‹ EARLIER", cur === 0, () => setFactPage(cur - 1))}
-                      <span style={{ fontSize: 13.5, color: C.dim }}>page {cur + 1} of {total}</span>
-                      {pageBtn("LATER ›", cur >= total - 1, () => setFactPage(cur + 1))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+            <section className="heProfileSection">
+              <div className="mv-display heProfileSectionHead">THE PERSON</div>
+              <div className="heProfileSectionBody">
+                {/* who they are to this village. The build line under it already
+                    says the physical part, and lore.body said it again in prose -
+                    the page told you twice that Ansel is tall. */}
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.55, fontStyle: "italic", color: C.inkDim }}>{lore.who || lore.body}</p>
+                <div className="mt-3"><PersonReadings s={s} n={n} mood={profileMood} only={["build", "demeanour"]} /></div>
+              </div>
+            </section>
+
+            <section className="heProfileSection heProfileStanding">
+              <div className="mv-display heProfileSectionHead">YOUR STANDING</div>
+              <div className="heProfileSectionBody">
+                <PersonReadings s={s} n={n} mood={profileMood} only={["disposition"]} />
+                {n.alive && !n.fled && (
+                  <p className="mt-2" style={{ marginBottom: 0, fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
+                )}
+              </div>
+            </section>
+
+            <section className="heProfileSection">
+              <div className="mv-display heProfileSectionHead">WHAT YOU KNOW</div>
+              <div className="heProfileSectionBody">
+                {deathHeading && <div className="mv-display" style={{ color: C.red, fontSize: 13.5, letterSpacing: 1.8, lineHeight: 1.45 }}>{deathHeading}</div>}
+                {/* the same courtesy the build line gets: the page says what fits
+                    and stays quiet about what does not - the missing ring on the
+                    day screen is the village's way of saying the rest. */}
+                {n.alive && s.knownSex && n.sex === s.knownSex && (
+                  <p className={deathHeading ? "mt-2" : ""} style={{ marginBottom: 0, fontSize: 13.5, color: C.amber, fontStyle: "italic" }}>
+                    A {s.knownSex === "f" ? "woman" : "man"}, and what was described in the dark was a {s.knownSex === "f" ? "woman" : "man"}.
+                  </p>
+                )}
+                {n.secretKnown && secretOf(s, n.id) && (
+                  <p className="mt-2" style={{ marginBottom: 0, fontSize: 13.5, color: C.amber, fontStyle: "italic" }}>Their secret, kept: {secretOf(s, n.id).short}.</p>
+                )}
+                {facts.length === 0 && !hasKnownIdentity && <p style={{ marginBottom: 0, fontSize: 14.5, color: C.dim }} className={deathHeading ? "mt-2 heProfileEmpty" : "heProfileEmpty"}>No movements or testimony recorded yet.</p>}
+                {(() => {
+                  const PAGE = 4;
+                  const total = Math.max(1, Math.ceil(facts.length / PAGE));
+                  const cur = factPage === -1 ? total - 1 : Math.min(factPage, total - 1);
+                  return (
+                    <>
+                      {facts.length > 0 && (
+                        <div className="heProfileFacts mt-2.5">
+                          {facts.slice(cur * PAGE, cur * PAGE + PAGE).map((f, i) => (
+                            <p key={i} style={{ margin: i === 0 ? 0 : "6px 0 0", fontSize: 13, lineHeight: 1.5, color: C.ink, fontStyle: f.clue ? "italic" : "normal" }}>
+                              {f.t}{f.flag && <span style={{ color: C.red, fontWeight: 700 }}> ✕ {f.flag}</span>}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {facts.length > PAGE && (
+                        <div className="flex items-center justify-between mt-2">
+                          {pageBtn("‹ EARLIER", cur === 0, () => setFactPage(cur - 1))}
+                          <span style={{ fontSize: 13.5, color: C.dim }}>page {cur + 1} of {total}</span>
+                          {pageBtn("LATER ›", cur >= total - 1, () => setFactPage(cur + 1))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </section>
           </div>
           {n.alive && !n.fled && (
             <div className="px-4 pt-3 mvIvDock heDockSpill" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
