@@ -10214,6 +10214,7 @@ function MonsterVillage() {
                 <span className="mv-display" style={{ alignSelf: "stretch", padding: "2px 4px 6px", fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.inkDim, borderBottom: `1px solid ${C.parchLine}` }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
                 {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={190} light flat /> : <MonsterArt id={m.id} size={190} flat />}
                 <span className="mv-display" style={{ fontSize: 18, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.ink }}>{joined ? "You" : m.name}</span>
+                {!joined && <span className="mv-display" style={{ marginTop: 1, fontSize: 9.5, lineHeight: 1.2, letterSpacing: 1.35, color: C.inkDim }}>WORE {monsterNpc.name.toUpperCase()}’S FACE</span>}
                 <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: s.over.win ? "#8A5A22" : C.red }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
               </span>
             </div>
