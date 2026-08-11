@@ -7226,7 +7226,7 @@ function DayStrip({ height = 64 }) {
    vertical illustration. */
 function DayBannerStrip({ height = 110 }) {
   return (
-    <div className="heDayBannerPlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundSize: "100% auto", backgroundRepeat: "no-repeat", backgroundPosition: "center 42%" }} />
+    <div className="heDayBannerPlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center 42%" }} />
   );
 }
 
@@ -8215,6 +8215,23 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heDay > .max-w-md, .heDay .max-w-md { position:relative; }
 .heDayVillagePlate { filter:sepia(.08) saturate(.86) contrast(1.04); }
 .heDayBannerPlate { background-color:#C9B9A5; filter:sepia(.035) saturate(.88) contrast(1.05); }
+.heDayHeaderFrame { height:clamp(74px,21.333vw,110px); min-height:0; }
+.heDayHeaderCopy { padding:0 18px 8px; }
+.heDayHeaderTitle { font-size:26px; }
+.heDayHeaderMeta { gap:14px; }
+.heDayLiving { min-width:52px; padding:5px 8px 4px; }
+.heDayLivingNumber { font-size:23px; }
+.heDayLivingLabel { font-size:10px; letter-spacing:1.6px; }
+@media (max-width:420px) {
+  .heDayHeaderCopy { padding:0 12px 6px; }
+  .heDayHeaderRow { gap:8px !important; }
+  .heDayHeaderTitle { font-size:clamp(21px,6.35vw,26px) !important; }
+  .heDayHeaderMeta { gap:8px !important; }
+  .heDayHeaderSound { font-size:12px !important; }
+  .heDayLiving { min-width:46px !important; padding:4px 6px 3px !important; }
+  .heDayLivingNumber { font-size:20px !important; }
+  .heDayLivingLabel { font-size:9px !important; letter-spacing:1.25px !important; }
+}
 .heNightVillagePlate { filter:saturate(.92) contrast(1.03); }
 .heDay .mvGrainF { opacity:.11; mix-blend-mode:multiply; background-image:repeating-linear-gradient(97deg,rgba(25,23,21,.08) 0 1px,transparent 1px 5px); background-size:17px 19px; }
 .heDay .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 62%,rgba(58,45,28,.18) 100%); }
@@ -12516,24 +12533,24 @@ function MonsterVillage() {
       {/* the masthead: the day named the way the village would say it, over the
           skyline, with the nights it has already survived under the title and
           the count of who is left at the right */}
-      <div className="sticky top-0 z-20" style={{ borderBottom: `1px solid ${C.line}` }}>
-        <div className="relative">
-          <DayBannerStrip height={110} />
+      <div className="sticky top-0 z-20 heDayHeader" style={{ borderBottom: `1px solid ${C.line}` }}>
+        <div className="relative heDayHeaderFrame">
+          <DayBannerStrip height="100%" />
           <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(16,19,33,0.05) 0%, rgba(16,19,33,0.45) 55%, rgba(16,19,33,0.86) 100%)" }} />
-          <div className="absolute inset-x-0 bottom-0" style={{ padding: "0 18px 8px" }}>
-            <div className="max-w-md mx-auto flex items-end" style={{ gap: 12 }}>
+          <div className="absolute inset-x-0 bottom-0 heDayHeaderCopy">
+            <div className="max-w-md mx-auto flex items-end heDayHeaderRow" style={{ gap: 12 }}>
               <div style={{ minWidth: 0 }}>
-                <h1 className="mv-display" style={{ margin: 0, fontSize: 26, lineHeight: 1, color: C.parch, textShadow: "0 2px 10px #000" }}>{dayTitle(s.dayNum)}</h1>
+                <h1 className="mv-display heDayHeaderTitle" style={{ margin: 0, lineHeight: 1, color: C.parch, textShadow: "0 2px 10px #000" }}>{dayTitle(s.dayNum)}</h1>
                 <div className="flex items-center" style={{ gap: 9, marginTop: 5 }}>
                   <MoonStrip s={s} />
                   {s.fled && <span className="mv-display" style={{ fontSize: 10, letterSpacing: 2, color: C.redBright }}>UNDER SIEGE</span>}
                 </div>
               </div>
-              <div style={{ marginLeft: "auto", display: "flex", gap: 14, alignItems: "center" }}>
-                <button onClick={toggleSound} className="mv-body" style={{ background: "transparent", border: "none", color: C.pale, fontSize: 13, cursor: "pointer", padding: 0, textShadow: "0 1px 4px #000" }}>{snd ? "♪" : "♪·off"}</button>
-                <div style={{ textAlign: "center", minWidth: 52, padding: "5px 8px 4px", borderRadius: 5, background: "rgba(8,10,18,.58)", border: "1px solid rgba(241,230,209,.28)", boxShadow: "0 2px 10px rgba(0,0,0,.22)" }}>
-                  <div className="mv-display" style={{ fontSize: 23, lineHeight: 1, color: "#FFF4DE", textShadow: "0 1px 6px #000" }}>{aliveNpcs(s).length}</div>
-                  <div className="mv-display" style={{ marginTop: 2, fontSize: 10, letterSpacing: 1.6, color: knownChanged ? "#D4B9EC" : "#F1E6D1" }}>{knownChanged ? "SOME CHANGED" : "LIVING"}</div>
+              <div className="heDayHeaderMeta" style={{ marginLeft: "auto", display: "flex", alignItems: "center" }}>
+                <button onClick={toggleSound} className="mv-body heDayHeaderSound" style={{ background: "transparent", border: "none", color: C.pale, fontSize: 13, cursor: "pointer", padding: 0, textShadow: "0 1px 4px #000" }}>{snd ? "♪" : "♪·off"}</button>
+                <div className="heDayLiving" style={{ textAlign: "center", borderRadius: 5, background: "rgba(8,10,18,.58)", border: "1px solid rgba(241,230,209,.28)", boxShadow: "0 2px 10px rgba(0,0,0,.22)" }}>
+                  <div className="mv-display heDayLivingNumber" style={{ lineHeight: 1, color: "#FFF4DE", textShadow: "0 1px 6px #000" }}>{aliveNpcs(s).length}</div>
+                  <div className="mv-display heDayLivingLabel" style={{ marginTop: 2, color: knownChanged ? "#D4B9EC" : "#F1E6D1" }}>{knownChanged ? "SOME CHANGED" : "LIVING"}</div>
                 </div>
               </div>
             </div>
