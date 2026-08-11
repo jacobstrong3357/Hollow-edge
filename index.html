@@ -5134,6 +5134,12 @@ function answerFor(s, id, night, q, targetId) {
   }
 
   if (q === "saw") {
+    /* A free "who else was there?" follow-up may already have named everyone
+       at this place. Do not spend the player's next full question reciting
+       the same witness list; acknowledge it, then add only what was seen
+       beyond that first answer (an absence, odd behaviour, or someone met
+       on the road). */
+    const alreadyNamedHere = actual && (s.askedLog[id] || []).includes(`${night}:sawAt:${actual}`);
     if (lying || (isMonster && log && log.active)) {
       quote = chance(0.7) ? `"No one. It was a night for seeing no one."` : (() => {
         const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
@@ -5148,7 +5154,9 @@ function answerFor(s, id, night, q, targetId) {
       const absent = s.npcs.filter((x) => x.alive && x.id !== id && log.outMap[x.id] !== evn.loc);
       const co = there.slice(0, 2);
       co.forEach((x) => mentions.push({ id: x.id, loc: evn.loc, kind: "with", night }));
-      let line = co.length ? `"Half the village was at the ${evn.name}. ${co.map((x) => x.name).join(" and ")} beside me most of the evening."` : `"A thin crowd at the ${evn.name}, and I knew every face in it."`;
+      let line = alreadyNamedHere
+        ? `"I have named who stood beside me at the ${evn.name} already."`
+        : co.length ? `"Half the village was at the ${evn.name}. ${co.map((x) => x.name).join(" and ")} beside me most of the evening."` : `"A thin crowd at the ${evn.name}, and I knew every face in it."`;
       if (absent.length && dispChance(0.65, npc.disp)) {
         const ab = pick(absent);
         mentions.push({ id: ab.id, kind: "absent", night });
@@ -5164,15 +5172,45 @@ function answerFor(s, id, night, q, targetId) {
     } else {
       const seen = s.npcs.filter((x) => x.alive && x.id !== id && log.outMap[x.id] === actual);
       seen.forEach((x) => mentions.push({ id: x.id, loc: actual, kind: "with", night }));
-      quote = seen.length
-        ? `"${seen.map((x) => x.name).join(" and ")} ${seen.length > 1 ? "were" : "was"} at the ${actual} with me. Ask them if you doubt me."`
-        : `"I was alone at the ${actual}. Foolish, I know."`;
+      quote = alreadyNamedHere
+        ? `"You have the names from the ${actual} already."`
+        : seen.length
+          ? `"${seen.map((x) => x.name).join(" and ")} ${seen.length > 1 ? "were" : "was"} at the ${actual} with me. Ask them if you doubt me."`
+          : `"I was alone at the ${actual}. Foolish, I know."`;
       const elsewhere = s.npcs.filter((x) => x.alive && x.id !== id && log.outMap[x.id] && log.outMap[x.id] !== "home" && log.outMap[x.id] !== actual);
       if (elsewhere.length && dispChance(0.45, npc.disp)) {
         const w = pick(elsewhere);
         mentions.push({ id: w.id, loc: log.outMap[w.id], kind: "passed", night });
         quote += ` "And I passed ${w.name} on the road, making for the ${log.outMap[w.id]}."`;
       }
+    }
+  }
+
+  /* A sighting follow-up asks for a reading of the person, not the location
+     all over again. These answers deliberately remain ambiguous: demeanour
+     can guide another question, but it never becomes proof by itself. */
+  if (q === "read" && targetId) {
+    const t = npcById(s, targetId);
+    const tLoc = log ? log.outMap[targetId] : undefined;
+    if (!t) {
+      quote = `"I do not know who you mean."`;
+    } else if (lying || (isMonster && log && log.active)) {
+      quote = targetId === s.monster.vid && !isMonster
+        ? `"Ordinary. Frightened, perhaps, but ordinary. Stop trying to make guilt out of a face."`
+        : pickFreshIdx(`readDodge:${id}`, [
+            `"How did ${t.name} seem? Like someone out after dark. We all look guilty by lantern light."`,
+            `"I was watching the road, not studying ${t.name}'s expression for your ledger."`,
+          ]);
+    } else if (actual && actual !== "home" && tLoc === actual) {
+      quote = pickFreshIdx(`readTogether:${id}:${targetId}`, [
+        `"Frightened. So was I. If frightened were proof, Hollow's Edge would have no innocents left."`,
+        `"${t.name} kept to the edge and watched the road more than the company. That can be fear, or waiting. I cannot tell you which."`,
+        `"Quiet, and listening harder than they spoke. Strange enough to remember; not enough to put a rope around."`,
+      ]);
+    } else if (tLoc && tLoc !== "home") {
+      quote = `"Only a glimpse on the road. ${t.name} was moving with purpose and no wish to stop. Ask what took them out, not whether I liked the look of it."`;
+    } else {
+      quote = `"I did not see enough of ${t.name} that night to read anything true in them."`;
     }
   }
 
@@ -5692,9 +5730,9 @@ function answerFor(s, id, night, q, targetId) {
   } else if (q === "saw") {
     const wm = mentions.find((mn) => mn.kind === "with" && mn.id);
     if (wm) {
-      const fkey = `${night}:about:${wm.id}`;
+      const fkey = `${night}:read:${wm.id}`;
       const wt = npcById(s, wm.id);
-      if (wt && !(s.askedLog[id] || []).includes(fkey)) followUps.push({ q: "about", label: `What do you make of ${wt.name} being there?`, targetId: wm.id });
+      if (wt && !(s.askedLog[id] || []).includes(fkey)) followUps.push({ q: "read", label: `How did ${wt.name} seem?`, targetId: wm.id });
     }
   }
 
@@ -5710,11 +5748,12 @@ function answerFor(s, id, night, q, targetId) {
    lied about. `strange`, `mobwhy` and `mobview` do not - the answer key files
    them against a night because that is its fallback, but the questions are
    about the day you are standing in, and dating them would be a lie. */
-const NIGHT_QS = ["where", "saw", "sawAt", "about", "press"];
+const NIGHT_QS = ["where", "saw", "sawAt", "about", "read", "press"];
 
 const Q_LABELS = {
   where: "Where were you that night?",
   saw: "Who did you see?",
+  read: "How did someone seem?",
   about: "Did you see someone in particular?",
   opinion: "What do you make of someone?",
   suspect: "Who do you think is doing this?",
