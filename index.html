@@ -6986,7 +6986,7 @@ function DawnScene({ loc, s, height = 190 }) {
   const wounded = LOCATION_WOUND_ART[key];
   const source = wounded || LOCATION_DAY_ART[loc] || LOCATION_DAY_ART.Cottage;
   return (
-    <div className={`heLocationPlate heLocationPlateDay${wounded ? " is-wounded" : ""}`} style={{ height }}>
+    <div className={`heLocationPlate heLocationPlateDay${loc === "Village Square" ? " is-village-square" : ""}${wounded ? " is-wounded" : ""}`} style={{ height }}>
       <img src={source} alt="" draggable="false" />
       <span className="heLocationPaperVeil" aria-hidden="true" />
     </div>
@@ -8283,11 +8283,13 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heLocationPlate { position:relative; width:100%; overflow:hidden; background:#D8CAB3; isolation:isolate; }
 .heLocationPlate > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; user-select:none; }
 .heLocationPlateDay > img { filter:saturate(.94) sepia(.025) contrast(1.02); }
+.heLocationPlateDay.is-village-square:not(.is-wounded) > img { filter:sepia(.4) saturate(1.18) hue-rotate(5deg) brightness(1.07) contrast(1.035); }
 .heLocationPlateDay .heLocationPaperVeil { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(255,248,231,.08),transparent 46%,rgba(80,56,34,.08)); mix-blend-mode:soft-light; }
 .heLocationPlateDay.is-wounded > img { filter:saturate(.78) sepia(.08) contrast(1.08); }
 .heLocationPlateNight { background:#090806; }
 .heLocationPlateNight > img { filter:saturate(.92) contrast(1.025) brightness(1.1); }
 .heLocationPlateNight:not(.is-village-square) > img { filter:saturate(.9) hue-rotate(28deg) contrast(1.025) brightness(1.16); }
+.heLocationPlateNight.is-village-square > img { filter:saturate(1.18) hue-rotate(-38deg) contrast(1.12) brightness(.78); }
 .heLocationPlateNight .heLocationNightGrade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(171,132,184,.15) 0%,rgba(113,76,132,.1) 58%,rgba(25,17,32,.03) 100%); mix-blend-mode:screen; }
 .heLocationPlateNight .heLocationUnlit { position:absolute; inset:0; background:rgba(3,4,5,.28); mix-blend-mode:multiply; }
 .heLocationPlateNight .heLocationMoonless { position:absolute; inset:0; background:linear-gradient(115deg,rgba(0,0,0,.3),transparent 54%,rgba(0,0,0,.5)); }
