@@ -7553,10 +7553,11 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
         </div>
 
         {/* ---- the tray ---- */}
-        <div className="mvIvDock px-4 pt-3" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom), 19px)", maxHeight: "46vh", overflowY: "auto" }}>
-          {/* the hours you have left, alone on their line. The nights used to
-              share it, and by Night 4 the scrolling row was sliding under the
-              pips. They live below the questions now, with room to run. */}
+        <div className="mvIvDock heDockSpill" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}` }}>
+          <div className="px-4 pt-3" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 19px)", maxHeight: "46vh", overflowY: "auto" }}>
+            {/* the hours you have left, alone on their line. The nights used to
+                share it, and by Night 4 the scrolling row was sliding under the
+                pips. They live below the questions now, with room to run. */}
           {begun && !done && (
             <div className="flex items-center justify-end gap-1.5 mb-2">
               <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.5, color: free ? chrome.ink : C.parchLine }}>{free ? "QUESTIONS · FREE" : "QUESTIONS"}</span>
@@ -7679,6 +7680,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
     </div>
@@ -8076,7 +8078,7 @@ function Pips({ n, live, size = 6 }) {
 const DOCK_TONES = { night: "linear-gradient(#181D31,#131728)", deep: "linear-gradient(#161B30,#111528)", bruise: "linear-gradient(#1E1218,#150C0F)" };
 function Dock({ children, tone = "night", line }) {
   return (
-    <div className="px-4 pt-3 mvIvDock relative" style={{ flexShrink: 0, background: DOCK_TONES[tone] || DOCK_TONES.night, borderTop: `1px solid ${line || (tone === "bruise" ? "rgba(194,68,80,0.3)" : C.line)}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
+    <div className="px-4 pt-3 mvIvDock heDockSpill relative" style={{ flexShrink: 0, background: DOCK_TONES[tone] || DOCK_TONES.night, borderTop: `1px solid ${line || (tone === "bruise" ? "rgba(194,68,80,0.3)" : C.line)}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
       {children}
     </div>
   );
@@ -8220,6 +8222,8 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heDawnReveal .heDawnBody::before { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,rgba(232,222,202,.045),transparent 34%),radial-gradient(ellipse at 50% 12%,rgba(217,164,65,.05),transparent 54%); }
 .heDawnReveal .heDawnDock { position:relative; z-index:7; width:100%; flex-shrink:0; background:linear-gradient(#181D31,#131728); border-top:1px solid ${C.line}; }
 .heDawnReveal .heDawnDockInner { padding:12px 16px max(env(safe-area-inset-bottom),21px); }
+.heDockSpill { position:relative; isolation:isolate; }
+.heDockSpill::before { content:""; position:absolute; z-index:-1; top:-1px; bottom:0; left:50%; width:100vw; transform:translateX(-50%); background:inherit; border-top:inherit; box-shadow:0 -12px 26px rgba(4,6,12,.32); pointer-events:none; }
 .heDay .mvIvDock { box-shadow:0 -5px 0 rgba(25,23,21,.15),0 -12px 28px rgba(58,45,28,.18); }
 .heDay .mv-btn:not(.heActionCard):not(.heInkButton):not(.heDockButton):not(.heListChoice):not(.heImageChoice):not(.mvIvChip):not(.heExamTarget):not(.heDeathLook) { border-radius:2px !important; }
 .heDay .hePortrait { box-shadow:2px 3px 0 rgba(25,23,21,.18),0 0 0 1px rgba(25,23,21,.55) !important; }
@@ -9612,7 +9616,7 @@ function MonsterVillage() {
                   })}
                 </div>
               </div>
-              <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
+              <div className="px-4 pt-3 mvIvDock heDockSpill" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
                 <Btn full center kind="amber" onClick={() => setShowBestiaryHome(false)}><span className="mv-display" style={{ letterSpacing: 2 }}>CLOSE THE BOOK</span></Btn>
               </div>
             </div>
@@ -9859,7 +9863,7 @@ function MonsterVillage() {
                 </span>
               </div>
             </div>
-            <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
+            <div className="relative mvIvDock heDockSpill" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
               <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
                 <DockBtn kind={beatsFirst ? "destroy" : "commit"} onClick={advance}>{beatsFirst ? "AND THEN →" : "ONWARD →"}</DockBtn>
               </div>
@@ -9921,7 +9925,7 @@ function MonsterVillage() {
               </span>
             </div>
           </div>
-          <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
+          <div className="relative mvIvDock heDockSpill" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
             <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${fTotal}s` }}>
               <DockBtn kind="commit" onClick={toDay}>ONWARD →</DockBtn>
             </div>
@@ -9995,7 +9999,7 @@ function MonsterVillage() {
               <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === offerBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.85 + (offerBeats.length > 1 ? i / (offerBeats.length - 1) : 1) * 0.15).toFixed(2)})`, textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.7)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
             ))}
           </BeatFlow>
-          <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
+          <div className="relative mvIvDock heDockSpill" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
             <button onClick={joinIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
               style={{ borderRadius: 3, padding: "13px 0", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8", fontSize: 14, cursor: "pointer", animationDelay: beatsRevealed ? undefined : `${offerTotal}s` }}>Take its hand</button>
             <button onClick={refuseIt} className={(beatsRevealed ? "" : "mvBeat ") + "mv-btn mv-body w-full"}
@@ -10119,7 +10123,7 @@ function MonsterVillage() {
             )}
            </div>
           </div>
-          <div className="relative mvIvDock" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
+          <div className="relative mvIvDock heDockSpill" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
             <button onClick={() => { setEpiCard(0); setEpiOpen(true); }} className="mv-btn mv-display w-full"
               style={{ borderRadius: 3, padding: "13px 0", background: `${tone.glow}`, border: `1px solid ${tone.ink}`, color: tone.ink, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>WHAT BECAME OF THEM</button>
             <button onClick={() => { setEpiOpen(false); setS(null); }} className="mv-btn mv-display w-full"
@@ -12291,7 +12295,6 @@ function MonsterVillage() {
     const n = npcById(s, profile);
     const lore = NPC_LORE[n.id];
     const death = s.deaths.find((d) => d.id === n.id && d.kind !== "turned");
-    const turnRec = s.deaths.find((d) => d.id === n.id && d.kind === "turned");
     const struckP = s.struckNpcs.includes(n.id);
     const facts = [];
     s.playerSaw.filter((f) => f.id === n.id).forEach((f) => facts.push({ o: f.night * 10, t: `Night ${f.night}: you saw them near the ${f.loc}.` }));
@@ -12315,23 +12318,15 @@ function MonsterVillage() {
     }));
     s.clues.filter((c) => c.includes(n.name)).forEach((c) => facts.push({ o: 999, t: c, clue: true }));
     facts.sort((a, b) => a.o - b.o);
-    let status = "Alive, as far as you know.";
-    if (n.alive && !n.fled && s.faceKnown === n.id) status = "You have seen this face in the dark, wearing something that was not it. Whatever the creature is, it goes about the village as this one. You need only its true nature now.";
-    if (n.fled && n.id === s.monster.vid) status = "Unmasked, and gone to ground somewhere in hiding. It comes back at night.";
-    else if (n.fled) status = "Gone from the village. Whatever drove them out, they did not stay to explain it, and they have not been seen since.";
-    else if (death) status = death.kind === "executed"
-      ? `Executed on your accusation, Day ${death.night}.${n.turned && n.known ? " Their eyes betrayed the change as they died." : ""}`
-      : death.kind === "mobbed"
-        ? `Hanged by the mob, Night ${death.night}.${n.turned && n.known ? " The rope revealed the change in them, too late to matter." : " You did not find the truth in time to stop it."}`
-        : `Slain, Night ${death.night}${death.where ? (death.where === "home" ? ", behind their own bolted door" : `, found at the ${death.where}`) : ""}. ${death.examined ? (death.found && death.found.length ? `The scene yielded this much: ${death.found.map((f) => senseFor(f, 0)).join(" ")}` : "The scene yielded nothing conclusive.") : "The death was never investigated."}`;
-    else if (n.cured) status = `Unbound, Day ${n.unbindDay || s.dayNum}. The rite drew what held them out into the open air, and it is gone. They are not unmarked by it.`;
-    else if (turnRec && n.known) status = `Changed, Night ${turnRec.night}. They are no longer wholly themselves. Their word serves the thing that took them.`;
+    const deathHeading = death
+      ? death.kind === "executed"
+        ? `DECEASED: DAY ${death.night}, EXECUTED ON YOUR ACCUSATION`
+        : death.kind === "mobbed"
+          ? `DECEASED: NIGHT ${death.night}, AT THE ROPE`
+          : `DECEASED: NIGHT ${death.night}${death.where ? (death.where === "home" ? ", AT HOME" : `, IN THE ${death.where.toUpperCase()}`) : ""}`
+      : null;
     const troubled = !n.alive || n.fled;
     const heroAccent = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "#AEB6D8";
-    const statusColor = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "rgba(233,223,200,1)";
-    /* what the village knows about them is a report, so it takes a rule: the
-       same vocabulary as everywhere else, and the state picks it. */
-    const statusRule = troubled ? "danger" : n.turned && n.known ? "change" : n.cured ? "amber" : "bone";
     const nAff = (n.id === "marta" && s.breadRiot) || (n.id === "liesel" && s.tavernShut) || (n.id === "ansel" && (s.burned || []).includes("Old Church")) || ((n.id === "greta" || n.id === "falk") && s.wellFouled);
     return (
       <div className="fixed inset-0 z-40 mv-body flex flex-col heProfileScreen" style={{ background: C.paper, color: C.text }}>
@@ -12339,7 +12334,7 @@ function MonsterVillage() {
           <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
             <PersonHero n={n} accent={heroAccent} height={112} afflicted={nAff}
               onClose={() => setProfile(null)}
-              chip={troubled ? (n.fled ? "IN HIDING" : "GONE") : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"} />
+              chip={death ? "DECEASED" : troubled ? "IN HIDING" : n.turned && n.known ? "CHANGED" : n.cured ? "UNBOUND" : "LIVING"} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4 heProfilePaper" style={{ WebkitOverflowScrolling: "touch" }}>
             {/* who they are to this village. The build line under it already
@@ -12364,10 +12359,8 @@ function MonsterVillage() {
             {n.alive && !n.fled && (
               <p className="mt-1.5" style={{ fontSize: 13.5, color: C.dim, fontStyle: "italic" }}>{(() => { const tier = dispTier(n.disp); const pool = DISP_MOOD[tier]; return pool[stableIdx(`${s.gameId}:${n.id}:${tier}`, pool.length)]; })()}</p>
             )}
-            <Plaque rule={statusRule} className="mt-3">
-              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: statusColor, textWrap: "pretty" }}>{status}</p>
-            </Plaque>
-            <div className="mv-display mt-4" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>WHAT YOU KNOW</div>
+            {deathHeading && <div className="mv-display mt-4" style={{ color: C.red, fontSize: 13.5, letterSpacing: 1.8, lineHeight: 1.45 }}>{deathHeading}</div>}
+            <div className={`mv-display ${deathHeading ? "mt-3" : "mt-4"}`} style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>WHAT YOU KNOW</div>
             {facts.length === 0 && <p style={{ fontSize: 15, color: C.dim }} className="mt-1.5">Nothing yet. You have not seen them at night, nor heard a word of their movements.</p>}
             {(() => {
               const PAGE = 4;
@@ -12396,7 +12389,7 @@ function MonsterVillage() {
             })()}
           </div>
           {n.alive && !n.fled && (
-            <div className="px-4 pt-3 mvIvDock" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
+            <div className="px-4 pt-3 mvIvDock heDockSpill" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
               {s.coerceNote && s.coerceNote.target === n.id && (
                 giveUpConfirm ? (
                   <div className="mb-2">
