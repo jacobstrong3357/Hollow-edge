@@ -7837,15 +7837,11 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
 }
 
 /* THE NIGHT SHELL - the most reused layout in the game. Nightfall, the walk,
-   the door watch and the siege are all this: the place behind the moon, two
+   the door watch and the siege are all this: the place dissolving into dark, two
    banks of fog, the hour on a line at the top, and whatever the night is
    asking pinned to the bottom where the thumb is. A screen supplies only its
    own words; the dark is the same dark every time. */
-const NIGHT_SCENE_MASK = "linear-gradient(#000 0%, #000 30%, rgba(0,0,0,.9) 42%, rgba(0,0,0,.7) 57%, rgba(0,0,0,.44) 72%, rgba(0,0,0,.2) 86%, transparent 100%)";
-/* Where the moon hangs. 342px is the composition the shell was drawn to at
-   its full 448px width; the percentage takes over on any phone narrow enough
-   that 342px would push the disc off the right edge. */
-const MOON_X = "min(342px, 100% - 86px)";
+const NIGHT_SCENE_MASK = "linear-gradient(#000 0%, #000 28%, rgba(0,0,0,.92) 40%, rgba(0,0,0,.72) 56%, rgba(0,0,0,.46) 72%, rgba(0,0,0,.2) 88%, transparent 100%)";
 /* the ordinary dark, and the dark once it has stopped pretending */
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
 /* THE SKY THE WALK IS UNDER. The same three words the ruled line already says,
@@ -7853,15 +7849,13 @@ const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#0
    `art` is whatever else is falling. This is only ever shown once you are
    already out of doors - the weather changes what a daylight search finds, so
    nightfall must never let you see it before you choose whether to go. */
-/* What the sky is doing tonight, drawn over the village. `moon` multiplies
-   the glow the shell already draws, the way a wound does: a storm has cloud
-   between you and it, and a real fog swallows it to a smear. Fog used to have
-   no entry here at all, which is why a fogged night looked exactly like a
-   clear one - the two drifting banks the shell always draws are atmosphere,
-   not weather. */
+/* What the sky is doing tonight, drawn over the village. Fog used to have no
+   entry here at all, which is why a fogged night looked exactly like a clear
+   one - the two drifting banks the shell always draws are atmosphere, not
+   weather. The authored location art now owns its crescent; weather crosses
+   in front of it instead of drawing a second moon over the illustration. */
 const NIGHT_SKIES = {
   fog: {
-    moon: 0.45,
     cloud: { top: 30, width: 340, height: 150, background: "radial-gradient(ellipse at 50% 50%, rgba(150,164,196,0.2) 0%, rgba(150,164,196,0.1) 52%, rgba(150,164,196,0) 76%)" },
     art: () => (<React.Fragment>
       {/* fog does not hang in the sky, it stands in the lanes: two more banks
@@ -7873,7 +7867,6 @@ const NIGHT_SKIES = {
     </React.Fragment>),
   },
   storm: {
-    moon: 0.3,
     cloud: { top: 6, width: 300, height: 110, background: "radial-gradient(ellipse at 50% 50%, rgba(12,14,26,0.92) 0%, rgba(12,14,26,0.55) 46%, rgba(12,14,26,0) 74%)" },
     art: () => (<React.Fragment>
       {/* the mock hangs its rain in the top 120px at a tenth opacity, where it
@@ -7884,7 +7877,6 @@ const NIGHT_SKIES = {
     </React.Fragment>),
   },
   frost: {
-    moon: 1.15,
     art: () => (<React.Fragment>
       <div className="mvFrost absolute" style={{ left: 0, right: 0, top: 0, height: 300, pointerEvents: "none", WebkitMaskImage: "linear-gradient(#000 55%, rgba(0,0,0,0))", maskImage: "linear-gradient(#000 55%, rgba(0,0,0,0))" }} />
       {[["18%", 194, 0.5], ["44%", 212, 3.1], ["66%", 186, 5.4], ["82%", 216, 7.2]].map(([l, t, d]) => (
@@ -7894,29 +7886,23 @@ const NIGHT_SKIES = {
   },
 };
 /* THE VILLAGE'S WOUNDS, as the night sees them. A wound is never a different
-   screen: it is this same dark with one thing wrong in it. An entry says how
-   much moon the sky has left (`moon`, a multiplier on the glow the shell
-   already draws, or 0 for a sky with no moon in it at all), whether anything
-   down there is still burning (`unlit`), and `art` - whatever the wound
-   breathes over the night, drawn above the moon and below the fog. Nothing
-   here reads or changes state: the wound is chosen by `nightWound` from
-   flags that are already set. */
+   screen: it is this same dark with one thing wrong in it. An entry says
+   whether anything down there is still burning (`unlit`) and `art` - whatever
+   the wound breathes over the night, drawn above the location and below the
+   fog. Nothing here reads or changes state: the wound is chosen by
+   `nightWound` from flags that are already set. */
 const NIGHT_WOUNDS = {
   /* the absence of light as an event. With no lamp left anywhere in Hollow's
-     Edge the moon is the only one burning, and reads brighter for it: high,
-     and no use at all to a village with nowhere warm to be. The press is why
-     the moon needs the boost - it sits above the moon, and would otherwise
-     put out the one light the wound means to leave standing. */
+     Edge the authored sky is all that still burns: high, remote, and no use
+     at all to a village with nowhere warm to be. */
   shut: {
-    unlit: true, moon: 1.6,
+    unlit: true,
     art: (v) => <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, pointerEvents: "none", background: `linear-gradient(rgba(${v},0.35), rgba(${v},0.62) 72%, rgba(${v},0))` }} />,
   },
   /* a village scar shown instead of reported. Fire behind the nave throws
-     orange the length of the lane, smoke rolls off it and climbs, and no moon
-     shows through any of it - the sky over the churchyard is the wrong colour
-     and that is the whole tell. */
+     orange the length of the lane, smoke rolls off it and climbs, and the sky
+     over the churchyard is the wrong colour. That is the whole tell. */
   burn: {
-    moon: 0,
     art: (v) => (<React.Fragment>
       <div className="mvFire absolute" style={{ left: 200, top: 104, width: 230, height: 170, marginLeft: -115, pointerEvents: "none", background: `radial-gradient(ellipse 50% 55% at 50% 62%, rgba(255,196,92,0.85) 0%, rgba(226,116,38,0.55) 34%, rgba(158,48,57,0.22) 58%, rgba(${v},0) 78%)` }} />
       <div className="mvGlowPulse absolute" style={{ left: 0, right: 0, top: 0, height: 320, pointerEvents: "none", background: `radial-gradient(ellipse 340px 250px at 200px 130px, rgba(230,132,48,0.3) 0%, rgba(158,48,57,0.12) 45%, rgba(${v},0) 76%)` }} />
@@ -7931,19 +7917,15 @@ const NIGHT_WOUNDS = {
      taken, and the square is lit by the same night as everywhere else - no
      lanterns, which is the point of it. Nobody here is holding a light for
      anybody. */
-  riot: { unlit: true, moon: 0.85 },
+  riot: { unlit: true },
   /* the only place in the whole walk that is not bone, amber or red. The
-     miasma breathes over the well on its own slow beat and the moon is dimmed
-     to nothing much above it. */
+     miasma breathes over the well on its own slow beat. */
   fouled: {
-    moon: 0.85,
     art: (v) => <div className="mvMiasma absolute" style={{ left: "49%", top: 148, width: 230, height: 150, marginLeft: -115, pointerEvents: "none", background: `radial-gradient(ellipse 50% 50% at 50% 60%, rgba(74,102,62,0.55) 0%, rgba(52,74,48,0.22) 42%, rgba(${v},0) 74%)` }} />,
   },
-  /* black standing water where the mill floor was, holding the moonlight flat
-     and giving none of it back. The silhouette is untouched: everything below
-     the race is simply water now. */
+  /* black standing water where the mill floor was, holding the night flat.
+     The silhouette is untouched: everything below the race is simply water. */
   flood: {
-    moon: 1.3,
     art: () => <div className="mvFlood absolute" style={{ left: 0, right: 0, top: 194, height: 150, pointerEvents: "none", background: "linear-gradient(rgba(24,34,52,0), rgba(28,42,66,0.6) 34%, rgba(22,32,50,0.5) 62%, rgba(20,30,48,0))" }} />,
   },
 };
@@ -7964,50 +7946,18 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   const wd = NIGHT_WOUNDS[wound] || null;
   const sky = NIGHT_SKIES[wx] || null;
-  /* a wound in the village and a sky over it can both take the moon away;
-     the darker of the two wins, so a storm over a burning church is not
-     somehow brighter than either. */
-  const woundMoon = wd && wd.moon !== undefined ? wd.moon : 1;
-  const skyMoon = sky && sky.moon !== undefined ? sky.moon : 1;
-  const moonMul = Math.min(woundMoon, skyMoon);
-  const hasMoon = moonMul > 0;
-  const mo = (a) => Math.min(0.85, +(a * moonMul).toFixed(3));
   return (
     <div className="fixed inset-0 z-40 mv-body heNight flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
-        {/* The sky runs to the very top of the frame. The silhouette itself
-            still starts 44px down, where it always did, but the band above it
-            is night rather than the shell's black, so the scene reads as a
-            window on the village and not as a picture with its top cut off. */}
-        <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 0, height: 234, transformOrigin: "50% 24%", background: C.sky, WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
-          {/* The shell hangs its OWN moon over this scene, so the little one
-              baked into the art is always suppressed here. They used to sit on
-              top of each other at the shell's full 448px and pass for one
-              moon; on a 360px phone the art is scaled and offset differently,
-              they come apart, and the second disc reads as the first one cut
-              off at the edge of the picture. */}
-          <div style={{ marginTop: 44 }}>
-            <Scene loc={loc} kind="quiet" height={190} unlit={wd && wd.unlit} moonless />
+        {/* The authored panorama keeps its natural wide ratio, then dissolves
+            through the dark instead of ending at the bottom of a cropped card. */}
+        <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 0, height: 284, transformOrigin: "50% 24%", background: C.sky, WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
+          <div style={{ marginTop: 34 }}>
+            <Scene loc={loc} kind="quiet" height={250} unlit={wd && wd.unlit} />
           </div>
         </div>
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 300, background: `linear-gradient(rgba(${tn.veil},0.55) 0%, rgba(${tn.veil},0.06) 26%, rgba(${tn.veil},0.66) 70%, ${tn.bg} 100%)` }} />
-        {/* the moon hangs off the RIGHT of the frame, not off a fixed 342px:
-            a 360px-wide phone used to slice a third of it away at the edge. */}
-        {/* The clipper starts at the top of the frame, so neither the disc
-            (38px radius) nor its halo (80px) can meet an edge of it. Either
-            one crossing that boundary drew a hard line across the sky - the
-            disc came off flat, the halo left a rectangle. Centre unmoved at 90. */}
-        {hasMoon && <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 306, overflow: "hidden", pointerEvents: "none" }}>
-          <div className="mvMoonGlow absolute" style={{ left: MOON_X, top: 90, width: 160, height: 160, margin: "-80px 0 0 -80px", borderRadius: "50%", background: danger ? `radial-gradient(circle, rgba(251,241,234,${mo(0.44)}) 0%, rgba(226,150,150,${mo(0.16)}) 38%, rgba(${tn.veil},0) 72%)` : `radial-gradient(circle, rgba(244,242,232,${mo(0.42)}) 0%, rgba(220,230,255,${mo(0.14)}) 38%, rgba(${tn.veil},0) 72%)` }} />
-          <div className="absolute" style={{ opacity: Math.min(1, 0.45 + moonMul * 0.55), left: MOON_X, top: 90, width: 76, height: 76, margin: "-38px 0 0 -38px", borderRadius: "50%", background: danger ? "radial-gradient(circle at 36% 30%, #FBF1EA 0%, #F3E2DA 42%, #D9C4C4 72%, #B09A9E 100%)" : "radial-gradient(circle at 36% 30%, #FFFDF2 0%, #F2EEDF 42%, #D4D8E6 72%, #A8AEC4 100%)", boxShadow: danger ? "0 0 34px rgba(226,160,168,0.5), inset -6px -5px 14px rgba(140,110,116,0.45)" : "0 0 30px rgba(232,238,255,0.45), inset -6px -5px 14px rgba(122,128,150,0.45)" }}>
-            {[[16, 14, 15, 14, 0.3], [39, 31, 9, 9, 0.26], [22, 40, 7, 6, 0.22]].map(([l, t, w, h, o], i) => (
-              <span key={i} style={{ position: "absolute", left: l, top: t, width: w, height: h, borderRadius: "50%", background: `rgba(126,132,156,${o})` }} />
-            ))}
-          </div>
-        </div>}
-        {hasMoon && <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 340, pointerEvents: "none", background: `radial-gradient(ellipse 290px 250px at ${MOON_X} 90px, rgba(226,234,255,${mo(0.16)}) 0%, rgba(214,224,255,${mo(0.05)}) 42%, rgba(${tn.veil},0) 74%)` }} />}
-        {/* one cloud, crossing the whole sky in the time nobody watches it for.
-            The only thing up there that ever passes in front of the moon. */}
+        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 390, background: `linear-gradient(rgba(${tn.veil},0.48) 0%, rgba(${tn.veil},0.05) 24%, rgba(${tn.veil},0.42) 54%, rgba(${tn.veil},0.82) 74%, ${tn.bg} 100%)` }} />
+        {/* one cloud, crossing the whole sky in the time nobody watches it for */}
         <div className="mvCloud absolute" style={{ left: 0, top: 52, width: 240, height: 88, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%, rgba(16,19,33,0.82) 0%, rgba(16,19,33,0.46) 46%, rgba(16,19,33,0) 74%)", ...(sky && sky.cloud) }} />
         {sky && sky.art && sky.art()}
         {wd && wd.art && wd.art(tn.veil)}
@@ -8018,7 +7968,7 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
         <div className="relative flex items-baseline" style={{ flexShrink: 0, gap: 10, padding: "0 22px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 26px)" }}>
           <span className="mv-display" style={{ fontSize: 12, letterSpacing: 2.6, whiteSpace: "nowrap", color: danger ? C.redBright : "rgba(233,223,200,0.9)" }}>{kicker}</span>
           {onClose && (
-            <button onClick={onClose} className="mv-btn mv-body" style={{ padding: "2px 0", background: "transparent", border: "none", borderBottom: "1px solid rgba(138,143,168,0.4)", color: C.dim, fontSize: 13.5, cursor: "pointer" }}>{closeLabel}</button>
+            <button onClick={onClose} className="mv-btn mv-body" style={{ marginLeft: "auto", padding: "2px 1px", background: "rgba(7,9,16,.28)", border: "none", borderBottom: "1px solid rgba(233,223,200,0.48)", color: "rgba(233,223,200,0.84)", fontSize: 13.5, cursor: "pointer", textShadow: "0 1px 5px #000" }}>{closeLabel}</button>
           )}
         </div>
         <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 22px 40px", overflowY: "auto" }}>
@@ -8032,7 +7982,21 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
 }
 /* A night choice is a sentence, not a command: amber when it takes you out
    of doors, quiet when it keeps you behind one. */
-function NightChoice({ children, onClick, quiet }) {
+function NightChoice({ children, onClick, quiet, plan, icon }) {
+  if (plan) return (
+    <button onClick={onClick} className="mv-btn mv-body heNightChoice heNightPlanChoice" style={{
+      minHeight: 62, display: "grid", gridTemplateColumns: "34px minmax(0,1fr) 14px", alignItems: "center", gap: 11,
+      padding: "11px 13px", textAlign: "left", cursor: "pointer", color: C.parch,
+      background: quiet ? "linear-gradient(100deg,rgba(11,12,20,.98),rgba(18,16,20,.94))" : "linear-gradient(100deg,rgba(47,33,19,.98),rgba(24,20,17,.98))",
+      border: `1px solid ${quiet ? "rgba(138,143,168,.55)" : "rgba(217,164,65,.76)"}`,
+      borderTop: `2px solid ${quiet ? "rgba(233,223,200,.58)" : C.nightAmber}`,
+      boxShadow: "3px 4px 0 rgba(0,0,0,.42), inset 0 0 0 1px rgba(243,233,214,.04)",
+    }}>
+      <span className="heNightPlanIcon" aria-hidden="true"><MvIcon k={icon} /></span>
+      <span className="mv-display" style={{ fontSize: 14.5, lineHeight: 1.2, letterSpacing: .45 }}>{children}</span>
+      <span className="heNightPlanArrow" aria-hidden="true">›</span>
+    </button>
+  );
   return (
     <button onClick={onClick} className="mv-btn mv-body heNightChoice" style={{
       borderRadius: 4, padding: "9px 13px", textAlign: "left", fontSize: 14, cursor: "pointer",
@@ -8397,7 +8361,6 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .mvFogB { animation: mvfogB 52s ease-in-out infinite alternate; }
 @keyframes mvfogA { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
 @keyframes mvfogB { from { transform: translateX(20px); } to { transform: translateX(-16px); } }
-.mvMoonGlow { animation: mvglowpulse 9s ease-in-out infinite alternate; }
 .mvCloud { animation: mvcloud 48s linear infinite; }
 @keyframes mvcloud { from { transform: translateX(-16%); } to { transform: translateX(116%); } }
 /* what the village's wounds do while you stand in front of them: fire that
@@ -8445,7 +8408,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .mvHeart { animation: mvheart 2.4s ease-in-out infinite; }
 @keyframes mvheart { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mvEdgeRed, .mvHeart { animation: none; opacity: 0.8; } }
-@media (prefers-reduced-motion: reduce) { .mvFogA, .mvFogB, .mvMoonGlow, .mvCloud { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mvFogA, .mvFogB, .mvCloud { animation: none; } }
 /* the thing that is already holding you does not lunge: it hangs, and
    breathes, and waits for an answer */
 .mvDrift { animation: mvdrift 11s ease-in-out infinite alternate; }
@@ -8528,6 +8491,29 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heInkButton.mv-kind-amber, .heDockButton.mv-kind-commit, .heCommitButton {
   border-radius:3px 6px 2px 5px / 5px 2px 6px 3px !important;
   box-shadow:3px 4px 0 rgba(18,14,10,.28), inset 0 0 0 1px rgba(212,170,112,.08);
+}
+.heNightPlanChoice:nth-child(even) { --he-btn-tilt:.12deg; }
+.heNightPlanChoice .heNightPlanIcon {
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  color:#D9A441;
+  border:1px solid rgba(217,164,65,.48);
+  border-radius:50% 46% 52% 44%;
+  background:rgba(7,9,16,.48);
+  transform:rotate(-2deg);
+}
+.heNightPlanChoice .heNightPlanArrow {
+  font-family:Georgia,serif;
+  font-size:25px;
+  line-height:1;
+  color:rgba(233,223,200,.72);
+  transform:translateY(-1px);
+}
+.heNightPlanChoice:hover:not(:disabled) .heNightPlanIcon {
+  color:#E4C06B;
+  border-color:rgba(228,192,107,.72);
 }
 .heInkButton.mv-kind-red, .heDockButton.mv-kind-destroy, .heDangerButton {
   --he-btn-tilt:.16deg;
@@ -11898,7 +11884,7 @@ function MonsterVillage() {
             <div style={{ flexShrink: 0, marginTop: 15, display: "flex", flexDirection: "column", gap: 8 }}>
               {s.fled ? (
                 <>
-                  <NightChoice onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</NightChoice>
+                  <NightChoice plan icon="walls" onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</NightChoice>
                   <button onClick={() => setModal("rite")} className="mv-btn mv-body"
                     style={{ borderRadius: 4, padding: "9px 13px", textAlign: "left", fontSize: 14, cursor: "pointer", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8" }}>Perform the rite at dusk</button>
                   {/* how many more wrong names the village will stand for.
@@ -11915,10 +11901,10 @@ function MonsterVillage() {
                 </>
               ) : (
                 <>
-                  <NightChoice onClick={() => setPlanStage("watch")}>Watch a villager's door</NightChoice>
-                  <NightChoice onClick={() => setPlanStage("search")}>Search an area</NightChoice>
+                  <NightChoice plan icon="exam" onClick={() => setPlanStage("watch")}>Watch a villager's door</NightChoice>
+                  <NightChoice plan icon="search" onClick={() => setPlanStage("search")}>Search an area</NightChoice>
                   <div style={{ marginTop: 6, paddingTop: 12, borderTop: "1px solid rgba(233,223,200,0.12)", display: "flex", flexDirection: "column" }}>
-                    <NightChoice quiet onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</NightChoice>
+                    <NightChoice plan quiet icon="walls" onClick={() => nightfall({ kind: "home" })}>Stay home, bar the door</NightChoice>
                   </div>
                 </>
               )}
