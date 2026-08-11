@@ -8273,6 +8273,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heLocationPlateNight .heLocationNightGrade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(171,132,184,.15) 0%,rgba(113,76,132,.1) 58%,rgba(25,17,32,.03) 100%); mix-blend-mode:screen; }
 .heLocationPlateNight.is-village-square .heLocationNightGrade { background:linear-gradient(180deg,rgba(102,69,145,.28) 0%,rgba(78,51,119,.22) 62%,rgba(28,19,40,.08) 100%); mix-blend-mode:color; }
 .heNightLocationChoice .heLocationPlateNight > img { object-position:50% 8%; }
+.heDayLocationChoice .heLocationPlateDay > img { object-position:50% 8%; }
 .heLocationPlateNight .heLocationUnlit { position:absolute; inset:0; background:rgba(3,4,5,.28); mix-blend-mode:multiply; }
 .heLocationPlateNight .heLocationMoonless { position:absolute; inset:0; background:linear-gradient(115deg,rgba(0,0,0,.3),transparent 54%,rgba(0,0,0,.5)); }
 .heLocationBody { position:absolute; left:40%; bottom:5%; width:17%; height:14%; border-radius:52% 48% 10% 10%; background:#D9CEB9; box-shadow:0 2px 0 #191715,0 -5px 18px rgba(224,214,193,.12); transform:rotate(-2deg); opacity:.88; }
@@ -11315,7 +11316,7 @@ function MonsterVillage() {
      bakes burned/riot/fouled/shut into the art, so the word would only say
      twice what the picture says once. */
   const dayLocBtn = (l, onClick, h = 74) => (
-    <button key={l} onClick={onClick} className="mv-btn mv-body heImageChoice"
+    <button key={l} onClick={onClick} className="mv-btn mv-body heImageChoice heDayLocationChoice"
       style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "hidden", background: C.sky, border: `1px solid ${C.line}`, borderRadius: 4, color: C.parch, cursor: "pointer" }}>
       <span style={{ display: "block", position: "relative", width: "100%", height: h, overflow: "hidden" }}>
         <DawnScene loc={l} s={s} height={h} />
@@ -12471,10 +12472,10 @@ function MonsterVillage() {
               <span style={{ flexShrink: 0, borderRadius: 4, overflow: "hidden", boxShadow: "0 0 0 1px rgba(194,68,80,0.6)", display: "flex" }}>
                 <Portrait id={mobT.id} size={30} turnedKnown={mobT.turned && mobT.known} />
               </span>
-              <p style={{ margin: 0, flex: 1, fontSize: 14, color: C.parch, lineHeight: 1.35 }}>
+              <p style={{ margin: 0, flex: 1, fontSize: 14, color: C.ink, lineHeight: 1.35 }}>
                 <strong>{mobA ? mobA.name : "The mob"}</strong> has the rope. <strong>{mobT.name}</strong> hangs at first light unless you find the truth.
               </p>
-              <button onClick={() => setRopeOpen(!ropeOpen)} className="mv-body" style={{ flexShrink: 0, background: ropeOpen ? "rgba(194,68,80,0.2)" : "transparent", border: "1px solid rgba(194,68,80,0.55)", borderRadius: 4, color: ropeOpen ? C.parch : C.redBright, fontSize: 12.5, padding: "3px 7px", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <button onClick={() => setRopeOpen(!ropeOpen)} className="mv-body" style={{ flexShrink: 0, background: ropeOpen ? "rgba(194,68,80,0.2)" : "transparent", border: "1px solid rgba(194,68,80,0.55)", borderRadius: 4, color: C.red, fontSize: 12.5, padding: "3px 7px", cursor: "pointer", whiteSpace: "nowrap" }}>
                 {ropeOpen ? "close ▴" : "what can I do? ▾"}
               </button>
             </div>
@@ -12486,8 +12487,8 @@ function MonsterVillage() {
                   ["III", <><strong>Watch {mobT.name}'s door tonight.</strong> What you see counts.</>, false],
                   ["IV", <><strong>Let the rope decide.</strong> And live with it.</>, true],
                 ].map(([num, text, quiet], i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, fontSize: 13.5, color: quiet ? C.dim : C.parch, lineHeight: 1.35 }}>
-                    <span className="mv-display" style={{ color: quiet ? C.dim : C.redBright, flexShrink: 0 }}>{num}</span>
+                  <div key={i} style={{ display: "flex", gap: 8, fontSize: 13.5, color: quiet ? C.inkDim : C.ink, lineHeight: 1.35 }}>
+                    <span className="mv-display" style={{ color: quiet ? C.inkDim : C.red, flexShrink: 0 }}>{num}</span>
                     <span>{text}</span>
                   </div>
                 ))}
