@@ -5850,7 +5850,7 @@ const LOCATION_DAY_ART = {
   Graveyard: "assets/ink-v2/locations/graveyard-day-ink-v2.png",
   "Dark Forest": "assets/ink-v2/locations/dark-forest-day-ink-v2.png",
   "Old Church": "assets/ink-v2/locations/old-church-day-ink-v2.png",
-  "Village Square": "assets/ink-v1/locations/village-square-day-ink-v1.png",
+  "Village Square": "assets/ink-v2/locations/village-square-day-ink-v2.png",
   Tavern: "assets/ink-v2/locations/tavern-day-ink-v2.png",
   "Old Mill": "assets/ink-v2/locations/old-mill-day-ink-v2.png",
 };
@@ -5859,14 +5859,14 @@ const LOCATION_NIGHT_ART = {
   Graveyard: "assets/ink-v2/locations/graveyard-night-ink-v2.png",
   "Dark Forest": "assets/ink-v2/locations/dark-forest-night-ink-v2.png",
   "Old Church": "assets/ink-v2/locations/old-church-night-ink-v2.png",
-  "Village Square": "assets/ink-v1/locations/village-square-night-ink-v1.png",
+  "Village Square": "assets/ink-v2/locations/village-square-night-ink-v2.png",
   Tavern: "assets/ink-v2/locations/tavern-night-ink-v2.png",
   "Old Mill": "assets/ink-v2/locations/old-mill-night-ink-v2.png",
 };
 const LOCATION_WOUND_ART = {
   church_burned: "assets/ink-v2/locations/old-church-burned-ink-v2.png",
-  square_riot: "assets/ink-v1/locations/village-square-riot-ink-v1.png",
-  well_fouled: "assets/ink-v1/locations/village-square-well-fouled-ink-v1.png",
+  square_riot: "assets/ink-v2/locations/village-square-riot-ink-v2.png",
+  well_fouled: "assets/ink-v2/locations/village-square-well-fouled-ink-v2.png",
   tavern_shut: "assets/ink-v2/locations/tavern-shut-ink-v2.png",
   mill_flood: "assets/ink-v2/locations/old-mill-flooded-ink-v2.png",
 };
@@ -7195,14 +7195,23 @@ function DawnScene({ loc, s, height = 190 }) {
   );
 }
 
-/* The night cinematic's hero: a moonlit village, the counterpart to
-   DawnScene. Always the same skyline - the night itself is the subject,
-   not a place - so it needs no location argument. */
-function NightScene({ height = 190 }) {
+/* The old "Village Square" panorama is really Hollow's Edge as a whole.
+   Keep it for village-wide dawn and night cinematics; location cards and
+   walks use the closer, well-centred Square plates above. */
+const VILLAGE_ART = {
+  day: "assets/ink-v1/scenes/village-day-ink-v1.png",
+  night: "assets/ink-v1/scenes/village-night-ink-v1.png",
+};
+function VillageScene({ height = 190, night = false }) {
   return (
-    <div className="heNightVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundImage: "linear-gradient(rgba(36,24,43,.02),rgba(10,8,13,.48)),url('assets/ink-v1/locations/village-square-night-ink-v1.png')", backgroundSize: "cover", backgroundPosition: "center 42%" }} />
+    <div className={night ? "heNightVillagePlate" : "heVillageDayPlate"} aria-hidden="true" style={{
+      width: "100%", height,
+      backgroundImage: `${night ? "linear-gradient(rgba(36,24,43,.02),rgba(10,8,13,.48))," : ""}url('${night ? VILLAGE_ART.night : VILLAGE_ART.day}')`,
+      backgroundSize: "cover", backgroundPosition: "center 42%",
+    }} />
   );
 }
+function NightScene({ height = 190 }) { return <VillageScene height={height} night />; }
 
 /* A sliver of the village in morning light, behind the day header. */
 function DayStrip({ height = 64 }) {
@@ -8261,15 +8270,13 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heLocationPlate { position:relative; width:100%; overflow:hidden; background:#D8CAB3; isolation:isolate; }
 .heLocationPlate > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; user-select:none; }
 .heLocationPlateDay > img { filter:saturate(.94) sepia(.025) contrast(1.02); }
-.heLocationPlateDay.is-village-square:not(.is-wounded) > img { filter:sepia(.4) saturate(1.18) hue-rotate(5deg) brightness(1.07) contrast(1.035); }
 .heLocationPlateDay .heLocationPaperVeil { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(255,248,231,.08),transparent 46%,rgba(80,56,34,.08)); mix-blend-mode:soft-light; }
 .heLocationPlateDay.is-wounded > img { filter:saturate(.78) sepia(.08) contrast(1.08); }
+.heLocationPlateDay.is-village-square > img { filter:saturate(.74) sepia(.025) hue-rotate(-8deg) brightness(.96) contrast(1.025); }
 .heLocationPlateNight { background:#090806; }
 .heLocationPlateNight > img { filter:saturate(.92) contrast(1.025) brightness(1.1); }
-.heLocationPlateNight:not(.is-village-square) > img { filter:saturate(.9) hue-rotate(28deg) contrast(1.025) brightness(1.16); }
-.heLocationPlateNight.is-village-square > img { filter:saturate(1.46) hue-rotate(-46deg) contrast(1.14) brightness(.72); }
+.heLocationPlateNight > img { filter:saturate(.9) hue-rotate(28deg) contrast(1.025) brightness(1.16); }
 .heLocationPlateNight .heLocationNightGrade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(171,132,184,.15) 0%,rgba(113,76,132,.1) 58%,rgba(25,17,32,.03) 100%); mix-blend-mode:screen; }
-.heLocationPlateNight.is-village-square .heLocationNightGrade { background:linear-gradient(180deg,rgba(102,69,145,.28) 0%,rgba(78,51,119,.22) 62%,rgba(28,19,40,.08) 100%); mix-blend-mode:color; }
 .heNightLocationChoice .heLocationPlateNight > img { object-position:50% 8%; }
 .heDayLocationChoice .heLocationPlateDay > img { object-position:50% 8%; }
 .heLocationPlateNight .heLocationUnlit { position:absolute; inset:0; background:rgba(3,4,5,.28); mix-blend-mode:multiply; }
@@ -9862,7 +9869,7 @@ function MonsterVillage() {
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
-            <DawnScene loc="Village Square" s={s} height={228} />
+            <VillageScene height={228} />
             <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(8,7,9,0) 44%, rgba(8,7,9,0.6) 84%, rgba(8,7,9,0.9) 100%)" }} />
           </div>
           <div className="mvGrain" />
