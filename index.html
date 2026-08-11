@@ -7883,7 +7883,7 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
    banks of fog, the hour on a line at the top, and whatever the night is
    asking pinned to the bottom where the thumb is. A screen supplies only its
    own words; the dark is the same dark every time. */
-const NIGHT_SCENE_MASK = "linear-gradient(#000 0%, #000 28%, rgba(0,0,0,.92) 40%, rgba(0,0,0,.72) 56%, rgba(0,0,0,.46) 72%, rgba(0,0,0,.2) 88%, transparent 100%)";
+const NIGHT_SCENE_MASK = "linear-gradient(#000 0%, #000 38%, rgba(0,0,0,.96) 50%, rgba(0,0,0,.84) 63%, rgba(0,0,0,.64) 75%, rgba(0,0,0,.4) 86%, rgba(0,0,0,.16) 95%, transparent 100%)";
 /* the ordinary dark, and the dark once it has stopped pretending */
 const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
 /* THE SKY THE WALK IS UNDER. The same three words the ruled line already says,
@@ -7989,14 +7989,14 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
   const wd = NIGHT_WOUNDS[wound] || null;
   const sky = NIGHT_SKIES[wx] || null;
   return (
-    <div className="fixed inset-0 z-40 mv-body heNight flex flex-col" style={{ background: tn.bg, color: C.parch, overflow: "hidden" }}>
-      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
+    <div className="fixed inset-0 z-40 mv-body heNight heNightShell flex flex-col" style={{ height: "100dvh", background: tn.bg, color: C.parch, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative heNightShellFrame" style={{ minHeight: 0, overflow: "hidden" }}>
         {/* The authored panorama keeps its natural wide ratio, then dissolves
             through the dark instead of ending at the bottom of a cropped card. */}
-        <div className="mvDrift absolute" style={{ left: 0, right: 0, top: 0, height: 284, transformOrigin: "50% 24%", background: C.sky, WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.6) brightness(0.75)" : "none" }}>
-          <Scene loc={loc} kind="quiet" height={284} unlit={wd && wd.unlit} />
+        <div className="mvDrift absolute heNightScene" style={{ left: 0, right: 0, top: 0, height: "clamp(360px,54dvh,430px)", transformOrigin: "50% 24%", background: C.sky, WebkitMaskImage: NIGHT_SCENE_MASK, maskImage: NIGHT_SCENE_MASK, filter: danger ? "saturate(0.64) brightness(0.82)" : "saturate(1.03) brightness(1.1)" }}>
+          <Scene loc={loc} kind="quiet" height="clamp(360px,54dvh,430px)" unlit={wd && wd.unlit} />
         </div>
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, height: 390, background: `linear-gradient(rgba(${tn.veil},0.48) 0%, rgba(${tn.veil},0.05) 24%, rgba(${tn.veil},0.42) 54%, rgba(${tn.veil},0.82) 74%, ${tn.bg} 100%)` }} />
+        <div className="absolute heNightVeil" style={{ left: 0, right: 0, top: 0, height: "clamp(490px,70dvh,590px)", background: `linear-gradient(rgba(${tn.veil},0.28) 0%, rgba(${tn.veil},0.025) 25%, rgba(${tn.veil},0.13) 47%, rgba(${tn.veil},0.31) 65%, rgba(${tn.veil},0.46) 80%, rgba(${tn.veil},0.18) 100%)` }} />
         {/* one cloud, crossing the whole sky in the time nobody watches it for */}
         <div className="mvCloud absolute" style={{ left: 0, top: 52, width: 240, height: 88, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%, rgba(16,19,33,0.82) 0%, rgba(16,19,33,0.46) 46%, rgba(16,19,33,0) 74%)", ...(sky && sky.cloud) }} />
         {sky && sky.art && sky.art()}
@@ -8011,7 +8011,7 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
             <button onClick={onClose} className="mv-btn mv-body" style={{ marginLeft: "auto", padding: "2px 1px", background: "rgba(7,9,16,.28)", border: "none", borderBottom: "1px solid rgba(233,223,200,0.48)", color: "rgba(233,223,200,0.84)", fontSize: 13.5, cursor: "pointer", textShadow: "0 1px 5px #000" }}>{closeLabel}</button>
           )}
         </div>
-        <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 22px 40px", overflowY: "auto" }}>
+        <div className="relative flex-1 min-h-0 flex flex-col heNightShellBody" style={{ padding: "0 22px max(env(safe-area-inset-bottom),22px)", overflowY: "auto" }}>
           {children}
         </div>
       </div>
@@ -8364,6 +8364,11 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heLocationTurned > i { position:absolute; top:-10%; width:70%; aspect-ratio:1; border-radius:50%; background:#C9C2B4; }
 .heLocationTurned > b { position:relative; z-index:1; top:-9%; letter-spacing:2px; font-size:10px; }
 .heNight { background:#090806 !important; }
+.heNightShell { height:100vh; height:100dvh; background:linear-gradient(180deg,#19162A 0%,#151623 43%,#11121C 100%) !important; }
+.heNightShellFrame { background:radial-gradient(ellipse 125% 68% at 50% 43%,rgba(75,57,90,.22),rgba(30,30,47,.15) 50%,rgba(17,18,29,.08) 80%,transparent 100%); }
+.heNight.heNightShell .mvVignette { background:radial-gradient(ellipse at 50% 40%,transparent 66%,rgba(0,0,0,.28) 100%); }
+.heNight.heNightShell .mvGrainF { opacity:.045; }
+.heNightShellBody { scrollbar-color:rgba(212,170,112,.34) transparent; }
 .heNight svg { filter:saturate(.68) sepia(.05) contrast(1.08); }
 .heNight .mvGrain, .heNight .mvGrainF { opacity:.085; mix-blend-mode:screen; background-image:repeating-linear-gradient(96deg,rgba(241,230,209,.12) 0 1px,transparent 1px 6px); background-size:23px 27px; }
 .heNight .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 52%,rgba(0,0,0,.72) 100%); }
@@ -10761,7 +10766,7 @@ function MonsterVillage() {
             {!isWatch && walk.stage === "depart" && (
               <div className="flex flex-col gap-2">
                 {beat(walk.openLine)}
-                {walk.facts.wx && <p style={{ fontSize: 15.5, lineHeight: 1.5, color: C.dim, fontStyle: "italic" }}>{WEATHER[walk.facts.wx].beat}</p>}
+                {walk.facts.wx && <p style={{ fontSize: 15.5, lineHeight: 1.5, color: "rgba(233,223,200,0.76)", fontStyle: "italic", textShadow: "0 1px 8px rgba(0,0,0,.72)" }}>{WEATHER[walk.facts.wx].beat}</p>}
                 {/* weather is already shown above at depart; carry only a
                     single atmospheric lead-in into the next stage so the walk
                     never opens on a wall of greyed text */}
