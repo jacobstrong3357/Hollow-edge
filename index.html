@@ -357,24 +357,24 @@ const METHOD_KILL_LINES = {
 };
 
 const MONSTERS = [
-  { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Old Mill"], lore: "Bound to the moon. It hunts on exact, ritual nights, every third, and cannot break the pattern. Takes only those caught outdoors, and takes them apart. The books prescribe the silver blade." },
-  { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], dayHidden: true, lore: "Its first feeding is always too deep: a body torn by tooth and talon. After that it feeds as the thirst takes it, never two nights running, and no door stops it. By day it beds in stolen grave earth. Its victims do not die: they change, and hide it. The stake ends it." },
-  { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], dayHidden: true, lore: "Stalks almost every night, but takes only those who wander after dark. Its grief carries on the wind, its cold clings to the ground, and its prints stop mid-stride, as if it forgot to keep touching the earth. Bar your door and it passes. A ring of salt unmakes it." },
-  { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger. It dens among the graves and prowls from there, but takes anyone caught outdoors, wherever it finds them. Too craven to enter a home. Consecrated fire, and nothing less." },
-  { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "Curses when the work is ready, resting a night or more between hexes. No barred door stops it. Its workings want blighted herbs and fresh-dug grave earth. Some it curses dead without a mark; others it bends into servants who walk on and lie for it. Burn the grimoire, and the witch burns with it." },
-  { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It opens with one soul taken violently, as a signature, then claims as it pleases: some hollowed and left walking, some torn apart for joy. Walls mean nothing and no pattern holds. It leaves cold rooms, scorched workings, blighted ground. Only exorcism casts it out." },
-  { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Old Mill"], lore: "Kills outdoors on no fixed pattern, running its prey down on whatever feet suit the night, then wears a borrowed face by day. The changing itself leaves a working scratched into whatever ground it happened on. Trust nothing you are told. Cold iron strips the borrowed face away." },
-  { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], dayHidden: true, lore: "Ritual-bound, every third night exactly, and it wails on the night before. Grief passes through every door, and the green browns and curls where it pours. Its dead bear no wound. It cannot bear its own face in a silver mirror." },
-  { id: "lich", name: "Lich", signs: ["graves", "flora", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "phylactery", hunts: ["Graveyard", "Old Church"], lore: "A sorcerer who cheated death by binding its life into a hidden vessel. It does not tear its victims but drains them: the touched go grey and cold and die on their own a night or three later, unmarked and withered. No barred door stops it. Find the vessel that holds its life, and shatter it." },
-  { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], dayHidden: true, lore: "One of the buried, come home, and ritual-bound to walk every second night without fail. It takes those caught outdoors and leaves them cold as the stone it slept under. It must be buried again at a crossroads, so it cannot find the way back." },
-  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["claw", "bite", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "The first face it takes, it takes badly, torn by tooth and nail. After that it replaces rather than kills; the taken pass for themselves. Its one other trace is a weeping that carries from no throat: the taken, grieving. Its name, said backwards, undoes it." },
-  { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers when the mood takes her, resting between, and wails AS she rides, not before. Walls mean nothing. Her dead have no wound: a face frozen mid-scream, a room gone cold, her workings scratched into the bedstead. A hawthorn charm, pressed to her while she feeds." },
-  { id: "necromancer", name: "Necromancer", signs: ["graves", "hex", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "rest", hunts: ["Graveyard", "Old Church"], lore: "It kills once with its own hands, to seed the ground. Then it sends the village's own dead: they rise, walk to doors they knew in life, and are let in by name. Every kill swells the congregation. The Rite of Eternal Rest lays them down mid-stride, and drags their master under." },
-  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two of its nights agree. It kills a new way each time and strews signs behind it: real ones, all of them, and all of them true of nothing. When the evidence will not add up to any one creature, it has already added up to this one. Quicksilver, forced down mid-change." },
-  { id: "succubus", name: "Succubus", signs: ["flora", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It does not break in: it calls, and the called unbar their own doors and walk out smiling. Its dead lie at its chosen ground, bitten neat at the throat, workings scratched and green withered where it sang. Its night sound is nearer song than grief. One note of the consecrated bell breaks it." },
+  { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Old Mill"], lore: "Moon-bound, it hunts every third night and only outdoors. A silver blade ends it." },
+  { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], dayHidden: true, lore: "Its first feeding kills; later victims change and hide it. It never hunts twice running, and barred doors cannot stop it. Drive in the stake." },
+  { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], dayHidden: true, lore: "It stalks most nights but takes only wanderers; a barred door is enough. Unmake it within a ring of salt." },
+  { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger from the graves. It takes whoever it finds outdoors but will not enter a home. Consecrated fire ends it." },
+  { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "It rests between curses, but no door stops them. Some victims die; others return as servants. Burn the grimoire, and the witch burns with it." },
+  { id: "demon", name: "Demon", signs: ["cold", "hex", "flora"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "both", reach: "home", method: "exorcism", hunts: ["Old Church", "Tavern"], lore: "It begins with a violent death, then kills or changes as it pleases. Walls and patterns mean nothing. Only exorcism casts it out." },
+  { id: "shifter", name: "Shapeshifter", signs: ["claw", "hex", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "kill", reach: "out", method: "iron", hunts: ["Dark Forest", "Old Mill"], lore: "It hunts outdoors without rhythm, then wears a borrowed face by day. Cold iron strips that face away." },
+  { id: "banshee", name: "Banshee", signs: ["cold", "flora", "wail"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "home", method: "mirror", hunts: ["Graveyard", "Village Square"], dayHidden: true, lore: "It kills every third night and wails the night before. Grief crosses every threshold. Turn a silver mirror upon it." },
+  { id: "lich", name: "Lich", signs: ["graves", "flora", "tracks"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "phylactery", hunts: ["Graveyard", "Old Church"], lore: "Its life is bound inside a hidden vessel. Those it drains wither and die nights later, and no door bars it. Find the phylactery and shatter it." },
+  { id: "revenant", name: "Revenant", signs: ["graves", "tracks", "cold"], rhythm: { kind: "strict", n: 2 }, attack: "kill", reach: "out", method: "crossroads", hunts: ["Graveyard", "Old Church"], dayHidden: true, lore: "One of the buried, walking every second night. It takes only those outdoors. Bury it again at a crossroads so it cannot return." },
+  { id: "doppel", name: "Doppelg\u00e4nger", signs: ["claw", "bite", "wail"], rhythm: { kind: "loose", p: 0.5, gap: 0 }, attack: "turn", reach: "home", method: "backname", hunts: ["Village Square", "Tavern"], lore: "Its first stolen face dies badly; after that it replaces rather than kills. The taken pass for themselves. Speak its name backwards to undo it." },
+  { id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"], rhythm: { kind: "loose", p: 0.45, gap: 1 }, attack: "kill", reach: "home", method: "hawthorn", hunts: ["Tavern", "Old Church"], lore: "She rides sleepers, resting between visits, and wails as she feeds. Walls mean nothing. Press a hawthorn charm to her." },
+  { id: "necromancer", name: "Necromancer", signs: ["graves", "hex", "cold"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "rest", hunts: ["Graveyard", "Old Church"], lore: "Its first kill seeds the ground; afterward the village dead knock at doors they knew. The Rite of Eternal Rest lays servants and master down." },
+  { id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "quicksilver", hunts: ["Village Square", "Dark Forest"], lore: "No two nights agree. Every sign it leaves is real and means nothing. When the evidence fits no creature, force quicksilver down it mid-change." },
+  { id: "succubus", name: "Succubus", signs: ["flora", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It calls victims out smiling, then leaves them bitten where it sang. One note of the consecrated bell breaks its charm." },
   /* -- The sixteenth. Locked behind the whole Black Book: it can only be
      drawn once every other horror has been ended at least once. It talks. -- */
-  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "tracks"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Taller than any door, and it uses none. Faceless, a courteous smooth blank. Trees sicken around it, and its stride prints as nothing walking should. It composes the caught with long claws, talking all the while in words no one here was taught. Burn its effigy while it watches." },
+  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "tracks"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Faceless and taller than any door, it walks outdoors among sickening trees. Burn its effigy while it watches—and talks." },
 ];
 
 const SIGN_CATS = {
@@ -2575,11 +2575,11 @@ const chance = (p) => Math.random() < p;
    same state (e.g. a villager's mood line on their profile card). */
 const stableIdx = (str, len) => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return len ? h % len : 0; };
 const monsterOf = (s) => MONSTERS.find((m) => m.id === s.monster.type);
-/* The bestiary as THIS game knows it: The Hollowed exists in the books only
-   once it exists in the world (s.hollowedIn, set at newGame). Until then it
-   is absent from the journal, the reckoning, the rites and the folk lore,
-   so no player can narrow their arithmetic onto a creature that cannot be
-   the answer. The Black Book on the title screen always shows all sixteen. */
+/* The answer-space as THIS game knows it: every book and picker keeps a
+   visible sixteenth plate for The Hollowed, but that plate stays sealed until
+   it exists in the world (s.hollowedIn, set at newGame). Excluding it here
+   keeps deduction arithmetic and random draws honest while the UI remains a
+   stable four-by-four collection. */
 const gameMonsters = (s) => MONSTERS.filter((mm) => mm.id !== "hollowed" || (s && s.hollowedIn));
 const npcById = (s, id) => s.npcs.find((n) => n.id === id);
 /* A favour belongs to the neighbour who asked it. If that neighbour dies or
@@ -6175,7 +6175,7 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     </svg>
   );
 }
-function MonsterArt({ id, size = 64, light, flat }) {
+function LegacyMonsterArt({ id, size = 64, light, flat }) {
   /* eyes glow out of the dark instead of sitting flat on it */
   const eye = (x, y, c = C.amber) => (
     <g>
@@ -6476,6 +6476,49 @@ function MonsterArt({ id, size = 64, light, flat }) {
         <g filter={`url(#mvR${seed})`}>{art}</g>
       </g>
     </svg>
+  );
+}
+
+/* The Black Book plates are authored as one matched set: the same parchment,
+   the same scratchy ink, and one coloured pair of eyes. Keep the old vector
+   drawings above as an archival fallback, but every live surface now reads
+   from the approved plates so the journal, accusation and endings agree. */
+const MONSTER_PLATES = {
+  werewolf: "werewolf.png", vampire: "vampire.png", wraith: "wraith.png", ghoul: "ghoul.png",
+  witch: "witch.png", demon: "demon.png", shifter: "shapeshifter.png", banshee: "banshee.png",
+  lich: "lich.png", revenant: "revenant.png", doppel: "doppelganger.png", hag: "night-hag.png",
+  necromancer: "necromancer.png", mimic: "mimic.png", succubus: "succubus.png", hollowed: "the-hollowed.png",
+};
+function MonsterArt({ id, size = 64, flat = false, locked = false }) {
+  const plate = MONSTER_PLATES[id];
+  if (!plate) return <LegacyMonsterArt id={id} size={size} flat={flat} />;
+  const name = (MONSTERS.find((mm) => mm.id === id) || {}).name || id;
+  const plateFilter = locked
+    ? `${flat ? "brightness(1.04) " : ""}grayscale(1) contrast(.78)`
+    : flat ? "brightness(1.04)" : "none";
+  return (
+    <span className="heMonsterPlate" style={{
+      position: "relative", display: "inline-flex", flexShrink: 0, width: size, height: size,
+      overflow: "hidden", background: flat ? C.parch : C.paper, borderRadius: flat ? 2 : Math.max(4, Math.round(size * 0.07)),
+      border: flat ? "none" : `1px solid ${C.parchLine}`,
+      boxShadow: flat ? "none" : "2px 3px 0 rgba(25,23,21,.18)",
+    }}>
+      <img src={`assets/monster-concepts-v1/${plate}`} alt={locked ? "Locked creature" : name}
+        draggable="false" decoding="async" style={{
+          display: "block", width: "100%", height: "100%", objectFit: "cover",
+          mixBlendMode: "normal", filter: plateFilter, opacity: locked ? 0.34 : 1,
+          WebkitMaskImage: flat ? "radial-gradient(ellipse at center,#000 62%,rgba(0,0,0,.92) 78%,transparent 100%)" : "none",
+          maskImage: flat ? "radial-gradient(ellipse at center,#000 62%,rgba(0,0,0,.92) 78%,transparent 100%)" : "none",
+        }} />
+      {locked && (
+        <span className="mv-display" style={{
+          position: "absolute", left: 3, right: 3, bottom: 4, padding: "2px 1px",
+          color: C.parch, background: "rgba(25,23,21,.88)", border: `1px solid ${C.parchLine}`,
+          fontSize: Math.max(7, Math.round(size * 0.13)), lineHeight: 1, letterSpacing: 1,
+          textAlign: "center", textShadow: "0 1px 2px #000",
+        }}>LOCKED</span>
+      )}
+    </span>
   );
 }
 
@@ -9643,6 +9686,7 @@ function MonsterVillage() {
                 <div className="mt-2 flex flex-col gap-2">
                   {MONSTERS.map((mm) => {
                     const done = !!meta.defeated[mm.id];
+                    const sealed = mm.id === "hollowed" && hollowedLocked;
                     const met = (meta.faced || {})[mm.id] || 0;
                     const ended = meta.defeated[mm.id] || 0;
                     const away = Math.max(0, met - ended);
@@ -9656,9 +9700,9 @@ function MonsterVillage() {
                     return (
                       <div key={mm.id} className="heBlackBookEntry" style={{ padding: 13, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12, opacity: done ? 1 : 0.45 }}>
                         <div className="flex gap-3">
-                          <div className="shrink-0"><MonsterArt id={mm.id} size={54} light /></div>
+                          <div className="shrink-0"><MonsterArt id={mm.id} size={54} light locked={sealed} /></div>
                           <div style={{ minWidth: 0 }}>
-                            <div className="mv-display" style={{ fontSize: 21.5, lineHeight: 1, color: C.parch }}>{done ? mm.name : "?????"}</div>
+                            {!sealed && <div className="mv-display" style={{ fontSize: 21.5, lineHeight: 1, color: C.parch }}>{done ? mm.name : "?????"}</div>}
                             {done && <div className="mv-display" style={{ fontSize: 10, letterSpacing: 2.5, color: C.dim, marginTop: 5 }}>ENDED {ended === 1 ? "ONCE" : ended === 2 ? "TWICE" : `${ended} TIMES`}</div>}
                             {done && (
                               <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
@@ -9669,9 +9713,9 @@ function MonsterVillage() {
                             )}
                           </div>
                         </div>
-                        <p style={{ margin: "11px 0 0", fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.95)", fontStyle: done ? "italic" : "normal", textWrap: "pretty" }}>
-                          {done ? mm.lore : mm.id === "hollowed" && hollowedLocked ? "Locked. Defeat the other fifteen horrors, and this one enters the draw." : "Defeat this horror once to reveal what it is and how it kills."}
-                        </p>
+                        {!sealed && <p style={{ margin: "11px 0 0", fontSize: 14, lineHeight: 1.5, color: "rgba(233,223,200,0.95)", fontStyle: done ? "italic" : "normal", textWrap: "pretty" }}>
+                          {done ? mm.lore : "Defeat this horror once to reveal what it is and how it kills."}
+                        </p>}
                         {done && (
                           <>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 11, padding: "8px 11px", background: "rgba(217,164,65,0.07)", borderLeft: `2px solid ${C.amber}` }}>
@@ -9869,21 +9913,29 @@ function MonsterVillage() {
     if (dying && !beatsFirst) {
       const dTotal = 1.0 + s.deathBeats.length * 1.6;
       return (
-        <div className="mvScreen mv-body heNight relative overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 28%, #2E1016, #0A070C 72%)", color: C.parch }}>
+        <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "radial-gradient(ellipse at 50% 20%, #2E1016, #0A070C 70%)", color: C.parch, overflow: "hidden" }}>
           <style>{CSS_ALL}</style>
           <div className="mvGrainF" />
-          <div className="relative max-w-md mx-auto px-6 pt-12 pb-8 h-full flex flex-col">
-            <div className="mv-display shrink-0 text-center mvIn" style={{ fontSize: 17, letterSpacing: 5, color: C.redBright, textShadow: "0 0 18px rgba(158,48,57,0.6)" }}>YOU DO NOT SEE THE DAWN</div>
-            <div className="flex justify-center mt-4 shrink-0 mvLoom"><MonsterArt id={m.id} size={132} light /></div>
-            {/* the last thing you read is the biggest thing on the screen, and
-                it brightens as it goes, the way a night card does */}
-            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer" }}>
+          <div className="relative max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+            <div className="shrink-0 text-center" style={{ padding: "calc(max(env(safe-area-inset-top),18px) + 10px) 22px 0" }}>
+              <div className="mv-display mvIn" style={{ fontSize: 14.5, letterSpacing: 4.2, color: C.redBright, textShadow: "0 0 18px rgba(158,48,57,0.6)" }}>YOU DO NOT SEE THE DAWN</div>
+              <div className="mvIn" style={{ width: 208, margin: "14px auto 0", padding: "8px 8px 10px", background: C.paper, borderTop: `3px solid ${C.red}`, borderRadius: "3px 10px 5px 3px", boxShadow: "7px 9px 0 rgba(0,0,0,.28)", animationDelay: ".25s" }}>
+                <MonsterArt id={m.id} size={190} flat />
+                <div className="mv-display" style={{ marginTop: 3, fontSize: 15, letterSpacing: 2, color: C.ink }}>{m.name}</div>
+              </div>
+            </div>
+            {/* A death is an epitaph under the plate, not loose copy marooned
+                beneath an icon. It owns the remaining height and scrolls only
+                when a rare long scene truly needs it. */}
+            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="flex-1 min-h-0 overflow-y-auto flex flex-col" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer", margin: "18px 22px 0", padding: "14px 16px 18px", background: "rgba(24,15,18,.76)", borderLeft: `3px solid ${C.red}` }}>
               {s.deathBeats.map((b, i) => (
                 <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.85 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.15).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
               ))}
             </BeatFlow>
-            <div className={beatsRevealed ? "mt-6 shrink-0" : "mvBeat mt-6 shrink-0"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
-              <DockBtn kind="destroy" onClick={toDawn}>IT IS OVER</DockBtn>
+            <div className="mvIvDock heDockSpill shrink-0" style={{ padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),23px)" }}>
+              <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
+                <DockBtn kind="destroy" onClick={toDawn}>IT IS OVER</DockBtn>
+              </div>
             </div>
           </div>
         </div>
@@ -10151,33 +10203,22 @@ function MonsterVillage() {
                shrink gets squeezed to fit instead of letting the column
                scroll, which cut the last deed down to a sliver of its rule. */}
            <div className="relative shrink-0">
-            {/* The looming shape belongs to the plate, not to the frame. Pinned
-                to the frame it stayed put while the plate scrolled over it, so
-                the moment a run earned enough deeds to overflow the screen the
-                face slid out from behind the card and sat across the prose and
-                the stat row: two monsters, one of them apparently a rendering
-                fault. Inside the content it travels with the card it looms
-                behind, and it is softened besides, so it reads as a presence
-                rather than a second picture wherever the page comes to rest. */}
-            <div className="absolute" style={{ left: "50%", top: 10, width: 340, height: 340, marginLeft: -170, opacity: 0.2, filter: "blur(4px)", pointerEvents: "none", zIndex: -1 }}>
-              <MonsterArt id={m.id} size={340} light />
-            </div>
             <span className="mv-display block mvIn" style={{ fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: tone.ink }}>
               {s.over.win ? "DAWN COMES CLEAN" : joined ? "YOU TOOK ITS OFFER" : "HOLLOW'S EDGE FALLS"}
             </span>
-            <h1 className="mv-display mvIn" style={{ margin: "12px 0 0", fontSize: joined ? 44 : 34, lineHeight: 1, color: C.parch, animationDelay: "0.2s" }}>
+            <h1 className="mv-display mvIn" style={{ margin: "10px auto 0", maxWidth: 330, fontSize: joined ? 40 : 29, lineHeight: 1.08, color: C.parch, animationDelay: "0.2s" }}>
               {s.over.win ? "It is over." : joined ? "Hollow" : "It is over, and not in your favour."}
             </h1>
-            <div className="flex justify-center mvIn" style={{ marginTop: 22, animationDelay: "0.5s" }}>
-              <span style={{ width: 172, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, padding: "16px 12px 13px", background: tone.panel, borderTop: `2px solid ${tone.ink}`, borderRadius: 2 }}>
-                <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.dim }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
-                {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={82} light /> : <MonsterArt id={m.id} size={82} light />}
-                <span className="mv-display" style={{ fontSize: 17, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.parch }}>{joined ? "You" : m.name}</span>
-                <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: tone.ink }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
+            <div className="flex justify-center mvIn" style={{ marginTop: 18, animationDelay: "0.5s" }}>
+              <span style={{ width: 238, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 9px 12px", background: C.paper, borderTop: `3px solid ${tone.ink}`, borderRadius: "3px 11px 5px 3px", boxShadow: "8px 9px 0 rgba(0,0,0,.22)" }}>
+                <span className="mv-display" style={{ alignSelf: "stretch", padding: "2px 4px 6px", fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.inkDim, borderBottom: `1px solid ${C.parchLine}` }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
+                {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={190} light /> : <MonsterArt id={m.id} size={190} flat />}
+                <span className="mv-display" style={{ fontSize: 18, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.ink }}>{joined ? "You" : m.name}</span>
+                <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: s.over.win ? "#8A5A22" : C.red }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
               </span>
             </div>
-            <p className="mvIn" style={{ margin: "14px 0 0", fontSize: 14.5, lineHeight: 1.5, color: "rgba(233,223,200,1)", textWrap: "pretty", animationDelay: "0.8s" }}>{s.over.text}</p>
-            <div className="flex justify-center mvIn" style={{ gap: 26, marginTop: 24, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.14)", animationDelay: "1.1s" }}>
+            <p className="mvIn" style={{ margin: "18px 0 0", padding: "13px 15px", fontSize: 14.5, lineHeight: 1.5, textAlign: "left", color: "rgba(233,223,200,1)", background: "rgba(24,15,18,.72)", borderLeft: `3px solid ${tone.ink}`, textWrap: "pretty", animationDelay: "0.8s" }}>{s.over.text}</p>
+            <div className="flex justify-center mvIn" style={{ gap: 30, marginTop: 18, paddingTop: 15, borderTop: "1px solid rgba(233,223,200,0.14)", animationDelay: "1.1s" }}>
               {stat(s.nightNum, s.nightNum === 1 ? "NIGHT" : "NIGHTS")}
               {stat(`${trueSigns} / 3`, "SIGNS FOUND")}
               {stat(aliveNpcs(s).length, "STILL LIVING", joined ? tone.ink : undefined)}
@@ -10240,21 +10281,21 @@ function MonsterVillage() {
             </div>
           )}
 
-          <div className="mvIn mt-4 rounded-lg p-3 flex gap-3 items-center" style={{ animationDelay: "0.9s", background: C.sky, border: `1px solid ${C.line}` }}>
-            <MonsterArt id={m.id} size={72} light />
-            <div>
-              <div className="mv-display" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>THE TRUTH</div>
-              <p className="mt-1" style={{ color: C.parch, fontSize: 13.5, lineHeight: 1.5 }}>
+          <div className="mvIn mt-4" style={{ animationDelay: "0.9s", display: "grid", gridTemplateColumns: "112px minmax(0,1fr)", gap: 14, alignItems: "center", padding: 13, background: C.paper2, borderTop: `3px solid ${s.over.win ? C.amber : C.red}`, borderBottom: `1px solid ${C.parchLine}`, boxShadow: "4px 5px 0 rgba(25,23,21,.1)" }}>
+            <MonsterArt id={m.id} size={108} flat />
+            <div style={{ minWidth: 0 }}>
+              <div className="mv-display" style={{ color: "#8A5A22", fontSize: 13.5, letterSpacing: 2 }}>THE TRUTH</div>
+              <p className="mt-1" style={{ color: C.ink, fontSize: 13.5, lineHeight: 1.45 }}>
                 <strong>{monsterNpc.name} {monsterNpc.role}</strong>, a <strong>{m.name}</strong>. The rite: <strong>{METHODS[m.method]}</strong>.
                 {s.npcs.filter((x) => x.turned).length > 0 && ` It changed ${s.npcs.filter((x) => x.turned).map((x) => x.name).join(", ")} while you searched.`}
               </p>
+              <div className="flex items-center gap-2 mt-2" style={{ color: C.inkDim, fontSize: 12.5 }}><Portrait id={monsterNpc.id} size={34} /><span>The face it wore</span></div>
             </div>
-            <div className="ml-auto shrink-0"><Portrait id={monsterNpc.id} size={48} /></div>
           </div>
 
           <div className="mvIn mt-4" style={{ animationDelay: "1.6s" }}>
             <div className="mv-display" style={{ color: C.amber, fontSize: 13.5, letterSpacing: 2 }}>THE NIGHTS AS THEY TRULY WERE</div>
-            <div className="mt-1 rounded-lg p-3" style={{ background: C.paper2, border: `1px solid ${C.parchLine}`, boxShadow: "1px 2px 0 rgba(25,23,21,.08)" }}>
+            <div className="mt-1" style={{ padding: "5px 0", borderTop: `1px solid ${C.parchLine}`, borderBottom: `1px solid ${C.parchLine}` }}>
               {s.nightLogs.map((log) => {
                 const d = s.deaths.find((x) => x.night === log.night && (x.kind === "slain" || x.kind === "drained"));
                 const t = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
@@ -11258,24 +11299,26 @@ function MonsterVillage() {
                 );
               })}
             </div>
-            <p style={{ margin: "9px 0 0", fontSize: 14, lineHeight: 1.45, color: C.inkDim }}>Tick what the nights show you; the book dims what cannot be. A red dot marks a sign witnessed by you or a truthful mouth. It still waits on your tick: marks can be planted, and mouths borrowed.</p>
+            <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.4, color: C.inkDim }}>Stamp what you trust. A red dot marks witnessed testimony; signs and mouths may still lie.</p>
             <div style={{ marginTop: 14, borderTop: `1px solid ${C.parchLine}` }} />
             <div className="flex items-baseline" style={{ gap: 10, marginTop: 18 }}>
               <span className="mv-display" style={{ fontSize: 19, letterSpacing: 0.6, whiteSpace: "nowrap" }}>Your reckoning</span>
               <span className="mv-display" style={{ marginLeft: "auto", fontSize: 11.5, letterSpacing: 1.2, whiteSpace: "nowrap", color: "#8A6E32" }}>STRIKE TO RULE OUT</span>
             </div>
-            {/* 15 creatures sit 5x3; the year The Hollowed walks, 16 sit 4x4 */}
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${gameMonsters(s).length > 15 ? 4 : 5}, minmax(0, 1fr))`, gap: "12px 3px", marginTop: 10 }}>
-              {gameMonsters(s).map((mm) => {
+            {/* One stable page: all sixteen plates always occupy the same
+                4x4 reckoning. The Hollowed is visible but sealed until the
+                first fifteen have been ended; it never enters the arithmetic
+                early and cannot be struck or selected while locked. */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px 5px", marginTop: 10 }}>
+              {MONSTERS.map((mm) => {
+                const locked = mm.id === "hollowed" && !s.hollowedIn;
                 const struckM = s.struck.includes(mm.id);
-                const ok = !struckM && compatM(mm);
+                const ok = !locked && !struckM && compatM(mm);
                 return (
-                  <button key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
-                    className="flex flex-col items-center" style={{ opacity: ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
-                    <MonsterArt id={mm.id} size={44} flat />
-                    {/* five to a row: "Doppelganger" and "Necromancer" have to
-                        stand clear of their neighbours at 360px wide */}
-                    <span style={{ width: "100%", padding: "0 3px", fontSize: 9, lineHeight: 1.2, color: C.ink, textAlign: "center", overflowWrap: "anywhere", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 400 }}>{mm.name}</span>
+                  <button key={mm.id} disabled={locked} onClick={() => !locked && setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
+                    className="flex flex-col items-center" style={{ opacity: locked ? 0.62 : ok ? 1 : 0.28, width: "100%", background: "transparent", border: "none", cursor: locked ? "not-allowed" : "pointer", padding: 0 }}>
+                    <MonsterArt id={mm.id} size={64} flat locked={locked} />
+                    {!locked && <span style={{ width: "100%", padding: "3px 2px 0", fontSize: 9.5, lineHeight: 1.15, color: C.ink, textAlign: "center", overflowWrap: "anywhere", textDecoration: ok ? "none" : "line-through", textDecorationColor: struckM ? C.red : C.ink, fontWeight: ok ? 700 : 500 }}>{mm.name}</span>}
                   </button>
                 );
               })}
@@ -11300,21 +11343,22 @@ function MonsterVillage() {
         {tab === "bestiary" && (
           <div>
             <p style={{ fontSize: 13.5, color: C.inkDim }} className="mb-1">Strike out what you no longer fear.</p>
-            {gameMonsters(s).map((mm) => {
+            {MONSTERS.map((mm) => {
+              const locked = mm.id === "hollowed" && !s.hollowedIn;
               const struckM = s.struck.includes(mm.id);
-              const ok = !struckM && compatM(mm);
+              const ok = !locked && !struckM && compatM(mm);
               return (
-                <div key={mm.id} onClick={() => setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
-                  className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: ok ? 1 : 0.35, cursor: "pointer" }}>
-                  <div className="shrink-0"><MonsterArt id={mm.id} size={60} flat /></div>
-                  <div>
+                <div key={mm.id} onClick={() => !locked && setS({ ...s, struck: struckM ? s.struck.filter((x) => x !== mm.id) : [...s.struck, mm.id] })}
+                  className="py-3 flex gap-3" style={{ borderBottom: `1px solid ${C.parchLine}`, opacity: locked ? 0.62 : ok ? 1 : 0.35, cursor: locked ? "not-allowed" : "pointer" }}>
+                  <div className="shrink-0"><MonsterArt id={mm.id} size={76} flat locked={locked} /></div>
+                  {!locked && <div>
                     <div className="flex items-baseline gap-3 flex-wrap">
                       <span className="mv-display" style={{ fontSize: 17.5, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
                       <span style={{ fontSize: 14.5, color: C.red, fontWeight: 700 }}>{METHODS[mm.method]}</span>
                     </div>
-                    <div style={{ fontSize: 14.5, color: C.inkDim }}>{mm.id === "mimic" ? <span style={{ fontStyle: "italic" }}>every sign there is, and never the same two nights running</span> : mm.signs.map((sg, si) => (<span key={sg}><span style={{ color: s.playerSigns.includes(sg) ? C.red : C.inkDim, fontWeight: s.playerSigns.includes(sg) ? 700 : 400 }}>{SIGNS[sg]}</span>{si < mm.signs.length - 1 ? " \u00b7 " : ""}</span>))}</div>
-                    <p style={{ fontSize: 13.5, lineHeight: 1.5 }} className="mt-1">{mm.lore}</p>
-                  </div>
+                    <div style={{ fontSize: 14, color: C.inkDim }}>{mm.id === "mimic" ? <span style={{ fontStyle: "italic" }}>every sign, never the same trail twice</span> : mm.signs.map((sg, si) => (<span key={sg}><span style={{ color: s.playerSigns.includes(sg) ? C.red : C.inkDim, fontWeight: s.playerSigns.includes(sg) ? 700 : 400 }}>{SIGNS[sg]}</span>{si < mm.signs.length - 1 ? " \u00b7 " : ""}</span>))}</div>
+                    <p style={{ fontSize: 13.5, lineHeight: 1.4 }} className="mt-1">{mm.lore}</p>
+                  </div>}
                 </div>
               );
             })}
@@ -12106,16 +12150,17 @@ function MonsterVillage() {
               lower half by up to half and made the bottom row of the grid read
               dimmer than the top - atmosphere over prose, a handicap over the
               wall you have to pick the creature out of. */}
-          <div style={{ position: "relative", zIndex: 7, marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
-            {gameMonsters(s).map((mm) => {
+          <div style={{ position: "relative", zIndex: 7, marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: "10px 7px" }}>
+            {MONSTERS.map((mm) => {
+              const locked = mm.id === "hollowed" && !s.hollowedIn;
               const struckM = s.struck.includes(mm.id);
               const dim = struckM || !compatM(mm);
               const sel = accuseType === mm.id;
               return (
-                <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="mv-btn flex flex-col items-center"
-                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
-                  <MonsterArt id={mm.id} size={42} light />
-                  <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                <button key={mm.id} disabled={locked} onClick={() => !locked && setAccuseType(mm.id)} className="mv-btn flex flex-col items-center"
+                  style={{ background: "transparent", border: "none", cursor: locked ? "not-allowed" : "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: locked ? 0.58 : dim && !sel ? 0.35 : 1 }}>
+                  <MonsterArt id={mm.id} size={64} locked={locked} />
+                  {!locked && <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.dim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>}
                 </button>
               );
             })}
@@ -12305,16 +12350,17 @@ function MonsterVillage() {
               <p className="heAccuseLead" style={{ fontSize: 14.5, lineHeight: 1.5, textWrap: "pretty" }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
               {/* ruled-out creatures stay pressable at 35%: the signs are the
                   player's own reading, and the game never decides for them */}
-              <div style={{ position: "relative", zIndex: 7, marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gridAutoRows: "min-content", gap: 8 }}>
-                {gameMonsters(s).map((mm) => {
+              <div style={{ position: "relative", zIndex: 7, marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: "10px 7px" }}>
+                {MONSTERS.map((mm) => {
+                  const locked = mm.id === "hollowed" && !s.hollowedIn;
                   const struckM = s.struck.includes(mm.id);
                   const dim = struckM || !compatM(mm);
                   const sel = accuseType === mm.id;
                   return (
-                    <button key={mm.id} onClick={() => setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
-                      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: dim && !sel ? 0.35 : 1 }}>
-                      <MonsterArt id={mm.id} size={42} light />
-                      <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.inkDim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>
+                    <button key={mm.id} disabled={locked} onClick={() => !locked && setAccuseType(mm.id)} className="flex flex-col items-center gap-1"
+                      style={{ background: "transparent", border: "none", cursor: locked ? "not-allowed" : "pointer", padding: "4px 2px", gap: 4, borderRadius: 10, boxShadow: sel ? `0 0 0 2px ${C.redBright}` : "none", opacity: locked ? 0.58 : dim && !sel ? 0.35 : 1 }}>
+                      <MonsterArt id={mm.id} size={64} locked={locked} />
+                      {!locked && <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: "center", color: sel ? C.redBright : C.inkDim, textDecoration: struckM ? "line-through" : "none" }}>{mm.name}</span>}
                     </button>
                   );
                 })}
