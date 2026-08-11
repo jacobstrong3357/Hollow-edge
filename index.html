@@ -5837,7 +5837,7 @@ const C = {
 
 /* Full-bleed art never hard-cuts: every strip that runs off the top of a
    screen fades out through this ramp instead of ending on a line. */
-const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 52%, rgba(0,0,0,0.6) 74%, rgba(0,0,0,0.2) 90%, transparent 100%)";
+const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 34%, rgba(0,0,0,.86) 44%, rgba(0,0,0,.58) 54%, rgba(0,0,0,.28) 64%, rgba(0,0,0,.08) 70%, transparent 74%)";
 /* the night card holds its art longer before letting go, so the dark below
    reads as the same dark rather than as the end of a picture */
 const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 62%, rgba(0,0,0,0.5) 88%, transparent 100%)";
@@ -7841,7 +7841,7 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
    banks of fog, the hour on a line at the top, and whatever the night is
    asking pinned to the bottom where the thumb is. A screen supplies only its
    own words; the dark is the same dark every time. */
-const NIGHT_SCENE_MASK = "linear-gradient(#000 46%, rgba(0,0,0,0) 97%)";
+const NIGHT_SCENE_MASK = "linear-gradient(#000 0%, #000 30%, rgba(0,0,0,.9) 42%, rgba(0,0,0,.7) 57%, rgba(0,0,0,.44) 72%, rgba(0,0,0,.2) 86%, transparent 100%)";
 /* Where the moon hangs. 342px is the composition the shell was drawn to at
    its full 448px width; the percentage takes over on any phone narrow enough
    that 342px would push the disc off the right edge. */
