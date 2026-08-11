@@ -6533,13 +6533,13 @@ const METHOD_FX = {
   crossroads: "sink", rest: "sink",
   hawthorn: "shrink", quicksilver: "shrink",
 };
-function MonsterDeath({ id, method, size = 120, light }) {
+function MonsterDeath({ id, method, size = 120, light, flat = false }) {
   const fx = METHOD_FX[method] || "dissolve";
   return (
     <div style={{ position: "relative", width: size, height: size }}>
       <div className="mvKillGround" />
       <div className={`mvKill-${fx}`} style={{ width: size, height: size }}>
-        <MonsterArt id={id} size={size} light={light} />
+        <MonsterArt id={id} size={size} light={light} flat={flat} />
       </div>
       {fx === "burn" && [0.15, 0.38, 0.6, 0.8].map((fr, i) => (
         <span key={i} className="mvEmber" style={{ left: `${fr * 100}%`, bottom: 10, animationDelay: `${0.6 + i * 0.5}s` }} />
@@ -9919,7 +9919,7 @@ function MonsterVillage() {
           <div className="relative max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
             <div className="shrink-0 text-center" style={{ padding: "calc(max(env(safe-area-inset-top),18px) + 10px) 22px 0" }}>
               <div className="mv-display mvIn" style={{ fontSize: 14.5, letterSpacing: 4.2, color: C.redBright, textShadow: "0 0 18px rgba(158,48,57,0.6)" }}>YOU DO NOT SEE THE DAWN</div>
-              <div className="mvIn" style={{ width: 208, margin: "14px auto 0", padding: "8px 8px 10px", background: C.paper, borderTop: `3px solid ${C.red}`, borderRadius: "3px 10px 5px 3px", boxShadow: "7px 9px 0 rgba(0,0,0,.28)", animationDelay: ".25s" }}>
+              <div className="mvIn" style={{ width: 208, margin: "14px auto 0", padding: "8px 8px 10px", background: C.parch, borderTop: `3px solid ${C.red}`, borderRadius: "3px 10px 5px 3px", boxShadow: "7px 9px 0 rgba(0,0,0,.28)", animationDelay: ".25s" }}>
                 <MonsterArt id={m.id} size={190} flat />
                 <div className="mv-display" style={{ marginTop: 3, fontSize: 15, letterSpacing: 2, color: C.ink }}>{m.name}</div>
               </div>
@@ -9927,7 +9927,7 @@ function MonsterVillage() {
             {/* A death is an epitaph under the plate, not loose copy marooned
                 beneath an icon. It owns the remaining height and scrolls only
                 when a rare long scene truly needs it. */}
-            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="flex-1 min-h-0 overflow-y-auto flex flex-col" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer", margin: "18px 22px 0", padding: "14px 16px 18px", background: "rgba(24,15,18,.76)", borderLeft: `3px solid ${C.red}` }}>
+            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="flex-1 min-h-0 overflow-y-auto flex flex-col" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer", margin: "18px 22px 0", padding: "14px 16px 18px", background: "rgba(24,15,18,.76)", borderTop: "1px solid rgba(233,223,200,.16)", borderBottom: "1px solid rgba(233,223,200,.1)" }}>
               {s.deathBeats.map((b, i) => (
                 <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.85 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.15).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
               ))}
@@ -10210,14 +10210,14 @@ function MonsterVillage() {
               {s.over.win ? "It is over." : joined ? "Hollow" : "It is over, and not in your favour."}
             </h1>
             <div className="flex justify-center mvIn" style={{ marginTop: 18, animationDelay: "0.5s" }}>
-              <span style={{ width: 238, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 9px 12px", background: C.paper, borderTop: `3px solid ${tone.ink}`, borderRadius: "3px 11px 5px 3px", boxShadow: "8px 9px 0 rgba(0,0,0,.22)" }}>
+              <span style={{ width: 238, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 9px 12px", background: C.parch, borderTop: `3px solid ${tone.ink}`, borderRadius: "3px 11px 5px 3px", boxShadow: "8px 9px 0 rgba(0,0,0,.22)" }}>
                 <span className="mv-display" style={{ alignSelf: "stretch", padding: "2px 4px 6px", fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.inkDim, borderBottom: `1px solid ${C.parchLine}` }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
-                {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={190} light /> : <MonsterArt id={m.id} size={190} flat />}
+                {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={190} light flat /> : <MonsterArt id={m.id} size={190} flat />}
                 <span className="mv-display" style={{ fontSize: 18, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.ink }}>{joined ? "You" : m.name}</span>
                 <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: s.over.win ? "#8A5A22" : C.red }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
               </span>
             </div>
-            <p className="mvIn" style={{ margin: "18px 0 0", padding: "13px 15px", fontSize: 14.5, lineHeight: 1.5, textAlign: "left", color: "rgba(233,223,200,1)", background: "rgba(24,15,18,.72)", borderLeft: `3px solid ${tone.ink}`, textWrap: "pretty", animationDelay: "0.8s" }}>{s.over.text}</p>
+            <p className="mvIn" style={{ margin: "18px 0 0", padding: "13px 15px", fontSize: 14.5, lineHeight: 1.5, textAlign: "left", color: "rgba(233,223,200,1)", background: "rgba(24,15,18,.72)", borderTop: "1px solid rgba(233,223,200,.16)", borderBottom: "1px solid rgba(233,223,200,.1)", textWrap: "pretty", animationDelay: "0.8s" }}>{s.over.text}</p>
             <div className="flex justify-center mvIn" style={{ gap: 30, marginTop: 18, paddingTop: 15, borderTop: "1px solid rgba(233,223,200,0.14)", animationDelay: "1.1s" }}>
               {stat(s.nightNum, s.nightNum === 1 ? "NIGHT" : "NIGHTS")}
               {stat(`${trueSigns} / 3`, "SIGNS FOUND")}
