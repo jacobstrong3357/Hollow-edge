@@ -8216,6 +8216,10 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heNightVillagePlate { filter:saturate(.92) contrast(1.03); }
 .heDay .mvGrainF { opacity:.11; mix-blend-mode:multiply; background-image:repeating-linear-gradient(97deg,rgba(25,23,21,.08) 0 1px,transparent 1px 5px); background-size:17px 19px; }
 .heDay .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 62%,rgba(58,45,28,.18) 100%); }
+.heDawnReveal .heDawnBody { isolation:isolate; }
+.heDawnReveal .heDawnBody::before { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,rgba(232,222,202,.045),transparent 34%),radial-gradient(ellipse at 50% 12%,rgba(217,164,65,.05),transparent 54%); }
+.heDawnReveal .heDawnDock { position:relative; z-index:7; width:100%; flex-shrink:0; background:linear-gradient(#181D31,#131728); border-top:1px solid ${C.line}; }
+.heDawnReveal .heDawnDockInner { padding:12px 16px max(env(safe-area-inset-bottom),21px); }
 .heDay .mvIvDock { box-shadow:0 -5px 0 rgba(25,23,21,.15),0 -12px 28px rgba(58,45,28,.18); }
 .heDay .mv-btn:not(.heActionCard):not(.heInkButton):not(.heDockButton):not(.heListChoice):not(.heImageChoice):not(.mvIvChip):not(.heExamTarget):not(.heDeathLook) { border-radius:2px !important; }
 .heDay .hePortrait { box-shadow:2px 3px 0 rgba(25,23,21,.18),0 0 0 1px rgba(25,23,21,.55) !important; }
@@ -12469,10 +12473,10 @@ function MonsterVillage() {
   if (s.dawn.length > 0 && !dawnDone && s.dawnSeenNight !== s.nightNum) {
     const dloc = (s.dawnScene && s.dawnScene.loc) || "Cottage";
     return (
-      <div className="fixed inset-0 mv-body flex flex-col" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
+      <div className="fixed inset-0 mv-body flex flex-col heDawnReveal" style={{ background: `linear-gradient(#1A1E2C, ${C.bg} 70%)`, color: C.text, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         {profileModal}
-        <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+        <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col relative">
           <div className="mvGrain" />
           <div className="relative px-4" style={{ flexShrink: 0, paddingTop: "max(env(safe-area-inset-top),21px)" }}>
             <div className="overflow-hidden relative" style={{ borderRadius: 14, border: `1px solid ${C.line}`, background: "linear-gradient(180deg, #1A1F36, #141829)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
@@ -12484,7 +12488,7 @@ function MonsterVillage() {
               <span className="mv-display absolute" style={{ left: 15, bottom: 10, fontSize: 17, letterSpacing: 3, color: C.parch, textShadow: "0 1px 8px #000" }}>AT DAWN · THE {dloc.toUpperCase()}</span>
             </div>
           </div>
-          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", WebkitOverflowScrolling: "touch" }}>
+          <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col heDawnBody" style={{ padding: "16px 20px 0", WebkitOverflowScrolling: "touch" }}>
             {/* every morning is the same deck, whether it carries a body or
                 only what the night turned up: one is not bigger news */}
             <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={acknowledgeDawn} />
@@ -12495,7 +12499,11 @@ function MonsterVillage() {
               </div>
             )}
           </div>
-          <Dock><DockBtn kind="commit" onClick={acknowledgeDawn}>FACE THE DAY</DockBtn></Dock>
+        </div>
+        <div className="heDawnDock mvIvDock">
+          <div className="max-w-md mx-auto w-full heDawnDockInner">
+            <DockBtn kind="commit" onClick={acknowledgeDawn}>FACE THE DAY</DockBtn>
+          </div>
         </div>
         <div className="mvVignette" />
         <div className="mvGrainF" />
