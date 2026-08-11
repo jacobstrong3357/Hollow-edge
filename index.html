@@ -5653,22 +5653,14 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "proof" && targetId) {
     const t = npcById(s, targetId);
     if (t) {
-      const seenLoc = (() => {
-        const ps = [...s.playerSaw].reverse().find((f) => f.id === targetId && f.loc && f.loc !== "home");
-        if (ps) return ps.loc;
-        const lg2 = [...s.nightLogs].reverse().find((l) => l.outMap && l.outMap[targetId] && l.outMap[targetId] !== "home");
-        return lg2 ? lg2.outMap[targetId] : null;
-      })();
-      /* every road offered here is one the player can actually walk: search
-         that ground by day, tail them by night, cross-check their story
-         against another mouth. Advice, never evidence - it names no sign. */
-      quote = seenLoc
-        ? `"Watch the ${seenLoc}, some night you feel it in your bones. ${t.name} was there once already, and the guilty go back to their own ground. Or turn the place over by daylight and see what the night left."`
-        : pickFreshIdx(`proofFallback:${id}`, [
-            `"Ask ${t.name} where the nights took them. Then ask whoever they name whether it's true. Liars forget who else was under the same sky."`,
-            `"Go out after dark and put yourself on ${t.name}'s road. A cold hour behind someone tells you more than a warm hour across their table."`,
-            `"Search the ground where the dead were found. A thing that kills leaves its hand on its own ground, sooner or later, and the daylight is yours to spend."`,
-          ]);
+      /* This follow-up is about proving a PERSON, not finding another creature
+         sign. Point at the routes that can really clear or expose a neighbour:
+         watch the door, follow a departure, then test tomorrow's account. */
+      quote = pickFreshIdx(`proofPerson:${id}`, [
+        `"Watch ${t.name}'s door after dark. If they stay in while the thing kills elsewhere, that clears them. If they leave, follow and remember the road. Tomorrow, ask where they went and check the answer against anyone they name."`,
+        `"Put yourself where ${t.name} cannot see you: across from their door tonight. A barred door through a killing clears a neighbour. An open one gives you a trail to follow, and a story to test in the morning."`,
+        `"Do not prove ${t.name} by turning over somebody else's ground. Watch them. Follow if they leave. Then ask for their night and press any answer that does not match what you saw."`,
+      ]);
     }
   }
 
@@ -5872,7 +5864,10 @@ const LOCATION_DAY_ART = {
   Graveyard: "assets/ink-v2/locations/graveyard-day-ink-v2.png",
   "Dark Forest": "assets/ink-v2/locations/dark-forest-day-ink-v2.png",
   "Old Church": "assets/ink-v2/locations/old-church-day-ink-v2.png",
-  "Village Square": "assets/ink-v2/locations/village-square-day-ink-v2.png",
+  /* Keep a cache key on the replacement Square plates. Earlier builds used
+     the village-wide panorama under these same filenames, and file:// tabs
+     otherwise keep serving that old drawing after the asset is replaced. */
+  "Village Square": "assets/ink-v2/locations/village-square-day-ink-v2.png?v=square-3",
   Tavern: "assets/ink-v2/locations/tavern-day-ink-v2.png",
   "Old Mill": "assets/ink-v2/locations/old-mill-day-ink-v2.png",
 };
@@ -5881,7 +5876,7 @@ const LOCATION_NIGHT_ART = {
   Graveyard: "assets/ink-v2/locations/graveyard-night-ink-v2.png",
   "Dark Forest": "assets/ink-v2/locations/dark-forest-night-ink-v2.png",
   "Old Church": "assets/ink-v2/locations/old-church-night-ink-v2.png",
-  "Village Square": "assets/ink-v2/locations/village-square-night-ink-v2.png",
+  "Village Square": "assets/ink-v2/locations/village-square-night-ink-v2.png?v=square-3",
   Tavern: "assets/ink-v2/locations/tavern-night-ink-v2.png",
   "Old Mill": "assets/ink-v2/locations/old-mill-night-ink-v2.png",
 };
@@ -5892,21 +5887,21 @@ const LOCATION_NIGHT_WALK_ART = {
   Graveyard: "assets/ink-v2/locations/graveyard-night-walk-ink-v3.png",
   "Dark Forest": "assets/ink-v2/locations/dark-forest-night-walk-ink-v3.png",
   "Old Church": "assets/ink-v2/locations/old-church-night-walk-ink-v3.png",
-  "Village Square": "assets/ink-v2/locations/village-square-night-walk-ink-v3.png",
+  "Village Square": "assets/ink-v2/locations/village-square-night-walk-ink-v3.png?v=square-3",
   Tavern: "assets/ink-v2/locations/tavern-night-walk-ink-v3.png",
   "Old Mill": "assets/ink-v2/locations/old-mill-night-walk-ink-v3.png",
 };
 const LOCATION_NIGHT_WALK_WOUND_ART = {
   burn: "assets/ink-v2/locations/old-church-burning-night-walk-ink-v3.png",
-  riot: "assets/ink-v2/locations/village-square-riot-night-walk-ink-v3.png",
-  fouled: "assets/ink-v2/locations/village-square-well-fouled-night-walk-ink-v3.png",
+  riot: "assets/ink-v2/locations/village-square-riot-night-walk-ink-v3.png?v=square-3",
+  fouled: "assets/ink-v2/locations/village-square-well-fouled-night-walk-ink-v3.png?v=square-3",
   shut: "assets/ink-v2/locations/tavern-shut-night-walk-ink-v3.png",
   flood: "assets/ink-v2/locations/old-mill-flooded-night-walk-ink-v3.png",
 };
 const LOCATION_WOUND_ART = {
   church_burned: "assets/ink-v2/locations/old-church-burned-ink-v2.png",
-  square_riot: "assets/ink-v2/locations/village-square-riot-ink-v2.png",
-  well_fouled: "assets/ink-v2/locations/village-square-well-fouled-ink-v2.png",
+  square_riot: "assets/ink-v2/locations/village-square-riot-ink-v2.png?v=square-3",
+  well_fouled: "assets/ink-v2/locations/village-square-well-fouled-ink-v2.png?v=square-3",
   tavern_shut: "assets/ink-v2/locations/tavern-shut-ink-v2.png",
   mill_flood: "assets/ink-v2/locations/old-mill-flooded-ink-v2.png",
 };
@@ -9964,12 +9959,12 @@ function MonsterVillage() {
             {/* the night itself, full bleed and fading out rather than cut:
                 the rite consuming the thing on a won night, the moonlit
                 village on every other */}
-            <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
+            <div className="heNightCinematicArt" style={{ position: "absolute", left: 0, right: 0, top: 0, aspectRatio: "16 / 9", WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
               {won ? (
-                <div className="flex justify-center items-center" style={{ height: 228, background: "linear-gradient(180deg,#241B1E,#161014)" }}>
+                <div className="flex justify-center items-center" style={{ height: "100%", background: "linear-gradient(180deg,#241B1E,#161014)" }}>
                   <MonsterDeath id={m.id} method={m.method} size={150} light />
                 </div>
-              ) : <NightScene height={228} />}
+              ) : <NightScene height="100%" />}
               <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(20,16,20,0) 44%, rgba(20,16,20,0.6) 84%, rgba(20,16,20,0.88) 100%)" : "linear-gradient(rgba(5,6,12,0) 44%, rgba(5,6,12,0.55) 84%, rgba(5,6,12,0.85) 100%)" }} />
             </div>
             <div className="mvFog" style={{ position: "absolute", left: "-10%", right: "-10%", top: 150, height: 180, background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(180,196,224,0.09), transparent 70%)", pointerEvents: "none" }} />
@@ -10034,8 +10029,8 @@ function MonsterVillage() {
       <div className="fixed inset-0 mv-body heNight heNightCinematic flex flex-col" style={{ background: "#080709", color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
-            <VillageScene height={228} />
+          <div className="heNightCinematicArt" style={{ position: "absolute", left: 0, right: 0, top: 0, aspectRatio: "16 / 9", WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
+            <VillageScene height="100%" />
             <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(8,7,9,0) 44%, rgba(8,7,9,0.6) 84%, rgba(8,7,9,0.9) 100%)" }} />
           </div>
           <div className="mvGrain" />
