@@ -8262,11 +8262,33 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heInterviewBriefing .heInterviewTargetName { color:var(--he-ink) !important; font-weight:650; }
 .heInterviewBriefing .mvIvDock { background:rgba(19,15,13,.97) !important; border-top:2px solid #9B8360 !important; }
 .heInterviewBriefing .mvIvDock button { color:var(--he-paper-light) !important; border-color:#B9A27C !important; background:rgba(243,233,214,.035) !important; }
+.heSearchBriefing { background:#D9C7A9 !important; color:var(--he-ink) !important; }
+.heSearchBriefing > .max-w-md::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/day-search-briefing-ink-v1.png') center/cover no-repeat; filter:saturate(.82) sepia(.05) contrast(1.02); opacity:.86; }
+.heSearchBriefing .heDayMastheadVeil.is-search { background:linear-gradient(180deg,rgba(17,13,10,.58) 0,rgba(38,29,21,.34) 106px,rgba(232,222,202,.72) 180px,rgba(232,222,202,.28) 42%,rgba(232,222,202,.08) 100%); pointer-events:none; }
+.heSearchBriefing .heDayMastheadCopy.is-search .heMastheadKicker { color:#E6B976 !important; text-shadow:0 1px 5px rgba(0,0,0,.9) !important; }
+.heSearchBriefing .heDayMastheadCopy.is-search .heMastheadTitle { color:var(--he-paper-light) !important; text-shadow:0 2px 9px rgba(0,0,0,.92) !important; }
+.heSearchBriefing .heDayMastheadCopy.is-search .heMastheadSub { color:#F0E3CE !important; font-size:14px !important; font-weight:600; text-shadow:0 1px 5px rgba(0,0,0,.92); }
+.heSearchBriefing .heSearchBody, .heSearchBriefing .mvIvDock { position:relative; z-index:2; }
+.heSearchBriefing .heSearchBrief { background:rgba(243,233,214,.94) !important; color:var(--he-ink) !important; border:1px solid rgba(25,23,21,.68) !important; box-shadow:3px 4px 0 rgba(25,23,21,.16); }
+.heSearchBriefing .heSearchBrief * { color:var(--he-ink) !important; text-shadow:none !important; }
+.heSearchBriefing .heSearchPicker { padding:12px; background:rgba(243,233,214,.92); border:1px solid rgba(25,23,21,.65); box-shadow:4px 5px 0 rgba(25,23,21,.18),0 14px 30px rgba(26,20,15,.18); }
+.heSearchBriefing .heDayLocationChoice { min-height:104px; }
+.heSearchBriefing .mvIvDock { background:rgba(19,15,13,.97) !important; border-top:2px solid #9B8360 !important; }
+.heSearchBriefing .mvIvDock button { color:var(--he-paper-light) !important; border-color:#B9A27C !important; background:rgba(243,233,214,.035) !important; }
 .heDeathScene { background:#D9CCB8 !important; color:var(--he-ink) !important; }
+.heDeathScene > .max-w-md { position:relative; isolation:isolate; overflow:hidden; }
+.heDeathScene > .max-w-md::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/death-sites-briefing-ink-v1.png') center/cover no-repeat; filter:saturate(.7) sepia(.08) contrast(1.06); opacity:.82; }
+.heDeathScene .heDeathHero, .heDeathScene .heDeathBody, .heDeathScene .mvIvDock { position:relative; z-index:2; }
 .heDeathScene p { color:#4F473D !important; }
-.heDeathScene .heDeathLook { min-height:54px; background:rgba(248,239,222,.97) !important; color:var(--he-ink) !important; border:1px solid rgba(119,43,43,.5) !important; box-shadow:2px 3px 0 rgba(25,23,21,.12); }
+.heDeathScene .heDeathBrief { background:rgba(243,233,214,.95) !important; color:var(--he-ink) !important; border:1px solid rgba(92,34,37,.6) !important; box-shadow:3px 4px 0 rgba(25,23,21,.17); }
+.heDeathScene .heDeathBrief * { color:var(--he-ink) !important; text-shadow:none !important; }
+.heDeathScene .heDeathFinding { background:rgba(243,233,214,.94) !important; border:1px solid rgba(92,34,37,.46); border-left:3px solid #C24450 !important; box-shadow:3px 4px 0 rgba(25,23,21,.14); }
+.heDeathScene .heDeathFinding p { color:var(--he-ink) !important; }
+.heDeathScene .heDeathPicker { padding:11px; background:rgba(243,233,214,.94); border:1px solid rgba(82,38,38,.62); box-shadow:4px 5px 0 rgba(25,23,21,.2),0 14px 30px rgba(26,20,15,.2); }
+.heDeathScene .heDeathLook { min-height:94px; padding:9px 4px !important; flex-direction:column; justify-content:center; gap:7px !important; background:rgba(248,239,222,.97) !important; color:var(--he-ink) !important; border:1px solid rgba(119,43,43,.5) !important; box-shadow:2px 3px 0 rgba(25,23,21,.12); }
 .heDeathScene .heDeathLook:hover { background:#FFF7E8 !important; border-color:#772B2B !important; transform:translateY(-1px) rotate(-.08deg); }
-.heDeathScene .heDeathLookLabel { color:var(--he-ink) !important; text-shadow:none !important; font-weight:650; }
+.heDeathScene .heDeathLookLabel { color:var(--he-ink) !important; text-shadow:none !important; font-size:11px !important; line-height:1.2; font-weight:650; text-align:center; }
+.heDeathScene .mvIvDock { background:rgba(31,17,18,.97) !important; border-top:2px solid rgba(119,43,43,.78) !important; }
 .heLocationPlate { position:relative; width:100%; overflow:hidden; background:#D8CAB3; isolation:isolate; }
 .heLocationPlate > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; user-select:none; }
 .heLocationPlateDay > img { filter:saturate(.94) sepia(.025) contrast(1.02); }
@@ -11414,12 +11436,12 @@ function MonsterVillage() {
      art never hard-cuts into the ground colour. */
   const dayMasthead = (kicker, title, sub, setting = "village") => (
     <>
-      {setting !== "lab" && setting !== "interview" && (
+      {setting !== "lab" && setting !== "interview" && setting !== "search" && (
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, WebkitMaskImage: DAY_STRIP_MASK, maskImage: DAY_STRIP_MASK }}>
           <DayStrip height={140} />
         </div>
       )}
-      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" || setting === "interview" ? undefined : { background: "linear-gradient(180deg,rgba(8,10,18,.16) 0,rgba(8,10,18,.48) 88px,rgba(232,222,202,.82) 150px,rgba(232,222,202,.2) 218px,transparent 286px)", pointerEvents: "none" }} />
+      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" || setting === "interview" || setting === "search" ? undefined : { background: "linear-gradient(180deg,rgba(8,10,18,.16) 0,rgba(8,10,18,.48) 88px,rgba(232,222,202,.82) 150px,rgba(232,222,202,.2) 218px,transparent 286px)", pointerEvents: "none" }} />
       <div className="mvGrain" />
       <div className={`relative heDayMastheadCopy is-${setting}`} style={{ flexShrink: 0, padding: "0 22px", paddingTop: setting === "lab" ? "calc(max(env(safe-area-inset-top),25px) + 10px)" : "max(env(safe-area-inset-top),25px)" }}>
         <span className="mv-display block heMastheadKicker" style={{ fontSize: 12, letterSpacing: 3.2, whiteSpace: "nowrap", color: C.amber }}>{kicker}</span>
@@ -11432,12 +11454,21 @@ function MonsterVillage() {
   const apKicker = () => `DAY ${s.dayNum} · ${s.ap === 1 ? "ONE ACTION LEFT" : s.ap === 2 ? "TWO ACTIONS" : `${s.ap} ACTIONS`}`;
 
   const searchModal = modal === "search" && (
-    <div className="fixed inset-0 z-40 mv-body flex flex-col" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+    <div className="fixed inset-0 z-40 mv-body heDay heSearchBriefing flex flex-col" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
-        {dayMasthead(apKicker(), "Search where by daylight?", "One place, one action.")}
-        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: "16px 20px 0", WebkitOverflowScrolling: "touch" }}>
-          <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoRows: "min-content", gap: 9, paddingBottom: 4 }}>
-            {LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l)))}
+        {dayMasthead(apKicker(), "Search where by daylight?", "One place, one action.", "search")}
+        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col heSearchBody" style={{ padding: "16px 20px 0", gap: 12, WebkitOverflowScrolling: "touch" }}>
+          <Plaque className="heSearchBrief" rule="bone">
+            <span className="mv-display" style={{ display: "block", fontSize: 13, letterSpacing: 2 }}>BEFORE YOU SET OUT</span>
+            <p style={{ margin: "5px 0 0", fontSize: 14, lineHeight: 1.45, textWrap: "pretty" }}>
+              Choose one place and turn it over while the light is honest. A second search may expose marks planted to mislead you.
+            </p>
+          </Plaque>
+          <div className="heSearchPicker" style={{ marginTop: "auto", marginBottom: 4 }}>
+            <span className="mv-display" style={{ display: "block", textAlign: "center", fontSize: 12, letterSpacing: 2.5, color: C.inkDim }}>· WHERE WILL YOU SEARCH ·</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoRows: "min-content", gap: 9, marginTop: 11 }}>
+              {LOCS.map((l) => dayLocBtn(l, () => runSearchScene(l), 68))}
+            </div>
           </div>
         </div>
         <Dock><DockBtn onClick={() => setModal(null)}>CLOSE</DockBtn></Dock>
@@ -11670,7 +11701,7 @@ function MonsterVillage() {
     return (
       <div className="fixed inset-0 z-30 mv-body flex flex-col heDeathScene" style={{ background: `linear-gradient(#D4C4B1, ${C.bg} 70%)`, color: C.text }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
-          <div className="px-4 pt-4" style={{ flexShrink: 0 }}>
+          <div className="px-4 pt-4 heDeathHero" style={{ flexShrink: 0 }}>
             <div className="overflow-hidden" style={{ borderRadius: 14, border: `1px solid ${C.line}`, background: "linear-gradient(180deg,#1F1622,#160F1A)", boxShadow: "0 10px 26px rgba(4,6,12,0.55)" }}>
               <div className="relative">
                 <DawnScene loc={loc} s={s} height={128} />
@@ -11682,23 +11713,30 @@ function MonsterVillage() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-5 pt-3" style={{ minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
-            <p style={{ fontSize: 14.5, color: C.dim }}>Look carefully before the village takes the body away.</p>
+          <div className="flex-1 overflow-y-auto px-5 pt-3 heDeathBody flex flex-col" style={{ minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+            {invest.findings.length === 0 && (
+              <Plaque className="heDeathBrief" rule="danger">
+                <span className="mv-display" style={{ display: "block", fontSize: 13, letterSpacing: 2 }}>BEFORE THEY LIFT THE BODY</span>
+                <p style={{ margin: "5px 0 0", fontSize: 14, lineHeight: 1.45, textWrap: "pretty" }}>
+                  The village is waiting with the cart. You have time for two careful looks before this place belongs to rumour.
+                </p>
+              </Plaque>
+            )}
             {invest.findings.map((f, i) => (
-              <div key={i} className="mt-3 rounded-lg px-3 py-2" style={{ background: "rgba(158,48,57,0.08)", borderLeft: `3px solid ${C.redBright}` }}>
+              <div key={i} className="mt-3 rounded-lg px-3 py-2 heDeathFinding" style={{ background: "rgba(158,48,57,0.08)", borderLeft: `3px solid ${C.redBright}` }}>
                 <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: C.redBright }}>{f.label.toUpperCase()}</div>
                 <p style={{ fontSize: 14, lineHeight: 1.5 }}>{i === invest.findings.length - 1 ? <SpokenText text={f.line} speed={35} /> : f.line}</p>
               </div>
             ))}
             {invest.left > 0 && (
-              <>
-                <div className="flex items-center justify-center gap-2 mt-4">
-                  <span className="mv-display" style={{ fontSize: 12, letterSpacing: 2.5, color: C.dim }}>LOOK CLOSER</span>
+              <div className="heDeathPicker" style={{ marginTop: "auto", marginBottom: 6 }}>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="mv-display" style={{ fontSize: 12, letterSpacing: 2.5, color: C.inkDim }}>· LOOK CLOSER ·</span>
                   <span className="inline-flex gap-1.5">
                     {[0, 1].map((i) => <span key={i} className="inline-block rounded-full" style={{ width: 8, height: 8, background: i < invest.left ? C.amber : "transparent", border: `1.5px solid ${i < invest.left ? C.amber : C.line}`, boxShadow: i < invest.left ? "0 0 6px rgba(217,164,65,0.45)" : "none" }} />)}
                   </span>
                 </div>
-                <div className="grid grid-cols-1 gap-2 mt-2.5">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 7, marginTop: 10 }}>
                   {INVEST_ACTS.filter((a) => !invest.used.includes(a.key)).map((a) => (
                     <button key={a.key} onClick={() => {
                       const { s: ns, line } = investLook(s, a.key);
@@ -11714,7 +11752,7 @@ function MonsterVillage() {
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             )}
             {/* what the body gave up, written down on the way out */}
             {(() => {
