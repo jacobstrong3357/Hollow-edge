@@ -9837,7 +9837,7 @@ function MonsterVillage() {
           <button onClick={toDay} className="mv-btn mv-body absolute" style={{ top: "max(env(safe-area-inset-top),23px)", right: 18, padding: "4px 10px", border: "none", borderRadius: 3, background: "rgba(8,10,18,0.55)", color: C.amber, fontSize: 13.5, cursor: "pointer", zIndex: 2 }}>skip ≫</button>
           <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 30px)" }}
             onClick={() => setBeatsRevealed(true)}>
-            <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: C.amber }}>THE VILLAGE GATHERS</span>
+            <span className="mv-display" style={{ alignSelf: "flex-start", padding: "4px 8px 5px", fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: C.parch, background: "rgba(8,7,9,.68)", borderLeft: `2px solid ${C.amber}`, textShadow: "0 1px 4px #000" }}>THE VILLAGE GATHERS</span>
             <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: fTitle.length > 12 ? 27 : 35, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{fTitle}</h1>
             <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} className="flex flex-col" style={{ flex: 1, minHeight: 0, gap: 9, marginTop: 13, paddingBottom: 8, overflowY: "auto" }}>
               {fBeats.map((b, i) => (
