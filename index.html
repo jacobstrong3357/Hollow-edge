@@ -8275,6 +8275,22 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heExamScreen .mvIvDock button { color:var(--he-paper-light) !important; border-color:#B9A27C !important; background:rgba(243,233,214,.035) !important; }
 .heExamScreen > .mvVignette { opacity:.2; }
 .heExamScreen > .mvGrainF { opacity:.07; }
+.heInterviewBriefing { background:#D9C7A9 !important; color:var(--he-ink) !important; }
+.heInterviewBriefing > .max-w-md::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/secrets-archive-ink-v1.png') center/cover no-repeat; filter:saturate(.78) sepia(.08) contrast(1.02); opacity:.72; }
+.heInterviewBriefing .heDayMastheadVeil.is-interview { background:linear-gradient(180deg,rgba(18,14,12,.34) 0,rgba(68,51,37,.22) 92px,rgba(232,222,202,.78) 178px,rgba(232,222,202,.92) 44%,rgba(232,222,202,.82) 100%); pointer-events:none; }
+.heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadKicker { color:#E6B976 !important; text-shadow:0 1px 5px rgba(0,0,0,.9) !important; }
+.heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadTitle { color:var(--he-paper-light) !important; text-shadow:0 2px 9px rgba(0,0,0,.92) !important; }
+.heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadSub { color:#EFE3CE !important; font-size:14px !important; font-weight:600; text-shadow:0 1px 5px rgba(0,0,0,.92); }
+.heInterviewBriefing .heInterviewBody, .heInterviewBriefing .mvIvDock { position:relative; z-index:2; }
+.heInterviewBriefing .heInterviewBrief { background:rgba(243,233,214,.94) !important; color:var(--he-ink) !important; border:1px solid rgba(25,23,21,.68) !important; box-shadow:3px 4px 0 rgba(25,23,21,.16); }
+.heInterviewBriefing .heInterviewBrief * { color:var(--he-ink) !important; text-shadow:none !important; }
+.heInterviewBriefing .heInterviewPicker { padding:12px; background:rgba(243,233,214,.9); border:1px solid rgba(25,23,21,.62); box-shadow:3px 4px 0 rgba(25,23,21,.16),0 12px 28px rgba(35,25,17,.15); }
+.heInterviewBriefing .heInterviewTarget { min-height:88px; padding:7px 4px 8px !important; background:rgba(248,239,222,.96) !important; color:var(--he-ink) !important; border:1px solid rgba(25,23,21,.62) !important; box-shadow:1px 2px 0 rgba(25,23,21,.13); }
+.heInterviewBriefing .heInterviewTarget:hover:not(:disabled) { background:#FFF7E8 !important; transform:translateY(-1px) rotate(-.12deg); }
+.heInterviewBriefing .heInterviewTarget:disabled { background:rgba(214,204,185,.82) !important; }
+.heInterviewBriefing .heInterviewTargetName { color:var(--he-ink) !important; font-weight:650; }
+.heInterviewBriefing .mvIvDock { background:rgba(19,15,13,.97) !important; border-top:2px solid #9B8360 !important; }
+.heInterviewBriefing .mvIvDock button { color:var(--he-paper-light) !important; border-color:#B9A27C !important; background:rgba(243,233,214,.035) !important; }
 .heDeathScene { background:#D9CCB8 !important; color:var(--he-ink) !important; }
 .heDeathScene p { color:#4F473D !important; }
 .heDeathScene .heDeathLook { min-height:54px; background:rgba(248,239,222,.97) !important; color:var(--he-ink) !important; border:1px solid rgba(119,43,43,.5) !important; box-shadow:2px 3px 0 rgba(25,23,21,.12); }
@@ -8305,6 +8321,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heNight .mv-btn:focus-visible, .heNight [role="button"]:focus-visible { outline-color:var(--he-paper-light); }
 @media (max-height:740px) { .heGate .relative.max-w-md { padding-left:16px; padding-right:16px; } .heGate .hePortrait { transform:scale(.9); } .heGameTitle { padding-top:6px; padding-bottom:8px; } .heGameTitle h1 { font-size:40px; } .heBlackBookCard { min-height:174px; padding-top:13px; } .heBookLore { display:none; } .heHomeMetaCard { min-height:68px; } .heHomeMetaNote { display:none; } }
 @media (max-height:680px) { .heExamScreen .heDayMastheadCopy.is-lab { padding-top:max(env(safe-area-inset-top),18px) !important; padding-bottom:9px; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadTitle { font-size:23px !important; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; } .heExamScreen .heExamBody { padding-top:10px !important; gap:9px !important; } .heExamScreen .heExamReader { padding-top:10px !important; padding-bottom:10px !important; } .heExamScreen .heExamPicker { margin-bottom:6px; padding:9px !important; } .heExamScreen .heExamTarget { min-height:80px; padding-top:5px !important; padding-bottom:5px !important; } }
+@media (max-height:680px) { .heInterviewBriefing .heDayMastheadCopy.is-interview { padding-top:max(env(safe-area-inset-top),18px) !important; } .heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadTitle { font-size:23px !important; } .heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; } .heInterviewBriefing .heInterviewBody { padding-top:10px !important; gap:8px !important; } .heInterviewBriefing .heInterviewBrief { padding-top:9px !important; padding-bottom:9px !important; } .heInterviewBriefing .heInterviewPicker { padding:8px !important; } .heInterviewBriefing .heInterviewTarget { min-height:78px; padding-top:5px !important; padding-bottom:5px !important; } }
 @media (max-width:350px) { .heGameTitleType { letter-spacing:1.9px; } .heGameTitleTag { letter-spacing:2.5px; } .heHomeMetaGrid { gap:6px; } .heHomeMetaCard { grid-template-columns:29px minmax(0,1fr) 8px; padding-left:6px; gap:6px; } .heHomeMetaIcon { width:28px; height:28px; } }
 /* Chrome on Android keeps its address bar inside 100vh, so a 100vh screen
    runs its last inch under the browser's own furniture. dvh is the visible
@@ -11369,12 +11386,12 @@ function MonsterVillage() {
      art never hard-cuts into the ground colour. */
   const dayMasthead = (kicker, title, sub, setting = "village") => (
     <>
-      {setting !== "lab" && (
+      {setting !== "lab" && setting !== "interview" && (
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, WebkitMaskImage: DAY_STRIP_MASK, maskImage: DAY_STRIP_MASK }}>
           <DayStrip height={140} />
         </div>
       )}
-      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" ? undefined : { background: "linear-gradient(180deg,rgba(8,10,18,.16) 0,rgba(8,10,18,.48) 88px,rgba(232,222,202,.82) 150px,rgba(232,222,202,.2) 218px,transparent 286px)", pointerEvents: "none" }} />
+      <div className={`absolute inset-0 heDayMastheadVeil is-${setting}`} style={setting === "lab" || setting === "interview" ? undefined : { background: "linear-gradient(180deg,rgba(8,10,18,.16) 0,rgba(8,10,18,.48) 88px,rgba(232,222,202,.82) 150px,rgba(232,222,202,.2) 218px,transparent 286px)", pointerEvents: "none" }} />
       <div className="mvGrain" />
       <div className={`relative heDayMastheadCopy is-${setting}`} style={{ flexShrink: 0, padding: "0 22px", paddingTop: setting === "lab" ? "calc(max(env(safe-area-inset-top),25px) + 10px)" : "max(env(safe-area-inset-top),25px)" }}>
         <span className="mv-display block heMastheadKicker" style={{ fontSize: 12, letterSpacing: 3.2, whiteSpace: "nowrap", color: C.amber }}>{kicker}</span>
@@ -11562,20 +11579,47 @@ function MonsterVillage() {
     setIv(null); setIvSub(null);
   };
 
-  const questionModal = modal === "question" && pickerShell("DAY " + s.dayNum + " · 1 ACTION, 3 QUESTIONS", "Interview whom?", (
-    <div className="flex flex-col gap-2">
-      {aliveNpcs(s).map((n) => {
-        /* Once the monster's worn face and the player have seen each other
-           (the watch-and-follow mutual sighting), it stops calmly receiving
-           visitors who know what they now know - it goes to ground instead
-           of sitting for questions. */
-        const evading = s.faceKnown === n.id && s.monsterSawYou;
-        const disabled = evading || s.questionedToday.includes(n.id);
-        const suffix = evading ? " · nowhere to be found" : s.questionedToday.includes(n.id) ? " · already questioned today" : (s.patience[n.id] <= 0 ? " · out of patience with you" : "");
-        return villagerBtn(n, () => startInterview(n.id), disabled, suffix);
-      })}
+  const questionModal = modal === "question" && (
+    <div className="fixed inset-0 z-40 mv-body flex flex-col heDay heInterviewBriefing" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
+        {dayMasthead(`DAY ${s.dayNum} · 1 ACTION · 3 QUESTIONS`, "Hold an interview",
+          "Choose one neighbour. Their patience is not endless.", "interview")}
+        <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col heInterviewBody" style={{ padding: "16px 20px 0", gap: 12, WebkitOverflowScrolling: "touch" }}>
+          <Plaque className="heInterviewBrief" rule="bone">
+            <span className="mv-display" style={{ display: "block", fontSize: 13, letterSpacing: 2 }}>BEFORE YOU KNOCK</span>
+            <p style={{ margin: "5px 0 0", fontSize: 14, lineHeight: 1.45, textWrap: "pretty" }}>
+              One visit spends an action. Ask about their movements, what they saw, or somebody else in the village. You will have three questions.
+            </p>
+          </Plaque>
+          <div className="heInterviewPicker" style={{ marginTop: "auto", marginBottom: 4 }}>
+            <span className="mv-display" style={{ display: "block", textAlign: "center", fontSize: 12, letterSpacing: 2.5, color: C.inkDim }}>· WHO WILL YOU QUESTION ·</span>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8, marginTop: 11 }}>
+              {aliveNpcs(s).map((n) => {
+                /* Once the monster's worn face and the player have seen each
+                   other, it no longer waits at home to be questioned. */
+                const evading = s.faceKnown === n.id && s.monsterSawYou;
+                const already = s.questionedToday.includes(n.id);
+                const disabled = evading || already;
+                const status = evading ? "GONE TO GROUND" : already ? "ASKED TODAY" : s.patience[n.id] <= 0 ? "NO PATIENCE" : n.role.replace(/^the /, "").toUpperCase();
+                return (
+                  <button key={n.id} onClick={() => !disabled && startInterview(n.id)} disabled={disabled}
+                    className="mv-btn mv-body mvIvChip heInterviewTarget"
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, borderRadius: 7, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1 }}>
+                    <Portrait id={n.id} size={46} turnedKnown={n.turned && n.known} disp={n.disp} />
+                    <span className="heInterviewTargetName" style={{ fontSize: 11.5, lineHeight: 1.1, textAlign: "center" }}>{n.name}</span>
+                    <span className="mv-display" style={{ fontSize: 7.5, lineHeight: 1.15, letterSpacing: 0.8, textAlign: "center", color: disabled ? C.dim : C.inkDim }}>{status}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <Dock><DockBtn onClick={() => setModal(null)}>LEAVE IT</DockBtn></Dock>
+      </div>
+      <div className="mvVignette" />
+      <div className="mvGrainF" />
     </div>
-  ), () => setModal(null), null, <DawnScene loc="Village Square" s={s} height={96} />);
+  );
 
   const interviewModal = iv && !(examRes && examRes.interview) && !(unbindRes && unbindRes.interview) && (
     <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
