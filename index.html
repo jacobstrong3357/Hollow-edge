@@ -12515,7 +12515,7 @@ function MonsterVillage() {
         {/* Every villager wears a bone nameplate. The plate's underline carries
             whatever the village knows about them, so a state is legible from
             the grid without reading a caption: bone is nothing known. */}
-        <div className="mt-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "6px 6px" }}>
+        <div className="mt-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "6px 6px", marginTop: 24 }}>
           {s.npcs.map((n) => {
             const struckP = s.struckNpcs.includes(n.id) && n.alive;
             /* Once the monster's own face is known, only that villager is
