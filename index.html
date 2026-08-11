@@ -6557,29 +6557,39 @@ function MonsterArt({ id, size = 64, flat = false, locked = false }) {
   );
 }
 
-/* The kill, seen: the creature's own art dying by the rite that ended it.
-   One animation family per method, so silver reads as a pierce, fire as a
-   burning, and the crossroads as the ground closing over it. */
-const METHOD_FX = {
-  silver: "pierce", stake: "pierce", iron: "pierce",
-  fire: "burn", grimoire: "burn", holy: "burn", effigy: "burn",
-  mirror: "shatter", bell: "shatter", backname: "shatter", phylactery: "shatter",
-  salt: "dissolve", exorcism: "dissolve",
-  crossroads: "sink", rest: "sink",
-  hawthorn: "shrink", quicksilver: "shrink",
+/* Every rite now has its own finished plate. The endings used to replay the
+   live bestiary art through CSS transforms (blur, shrink, sink, shatter),
+   which made the same victory look different on each screen and could leave
+   a half-faded creature behind. These authored plates are static: the night,
+   verdict and written record all remember precisely the same ending. */
+const MONSTER_DEATH_PLATES = {
+  werewolf: "werewolf.png", vampire: "vampire.png", wraith: "wraith.png", ghoul: "ghoul.png",
+  witch: "witch.png", demon: "demon.png", shifter: "shapeshifter.png", banshee: "banshee.png",
+  lich: "lich.png", revenant: "revenant.png", doppel: "doppelganger.png", hag: "night-hag.png",
+  necromancer: "necromancer.png", mimic: "mimic.png", succubus: "succubus.png", hollowed: "the-hollowed.png",
 };
-function MonsterDeath({ id, method, size = 120, light, flat = false }) {
-  const fx = METHOD_FX[method] || "dissolve";
+function MonsterDeath({ id, size = 120, flat = false }) {
+  const plate = MONSTER_DEATH_PLATES[id];
+  if (!plate) return <MonsterArt id={id} size={size} flat={flat} />;
+  const name = (MONSTERS.find((mm) => mm.id === id) || {}).name || id;
   return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      <div className="mvKillGround" />
-      <div className={`mvKill-${fx}`} style={{ width: size, height: size }}>
-        <MonsterArt id={id} size={size} light={light} flat={flat} />
-      </div>
-      {fx === "burn" && [0.15, 0.38, 0.6, 0.8].map((fr, i) => (
-        <span key={i} className="mvEmber" style={{ left: `${fr * 100}%`, bottom: 10, animationDelay: `${0.6 + i * 0.5}s` }} />
-      ))}
-      {fx === "pierce" && <div className="mvKillFlash" />}
+    <span className={`heMonsterDeath${flat ? " is-flat" : ""}`} style={{ width: size, height: size }}>
+      <img src={`assets/monster-defeated-v1/${plate}`} alt={`${name}, defeated`}
+        draggable="false" decoding="async" />
+    </span>
+  );
+}
+
+/* The village is allowed one small exhale after the horror is ended. These
+   live outside the death plate so the illustration remains an untouched
+   record; they are page furniture shared by the night and both dawn pages. */
+function VictoryWhimsy({ paper = false }) {
+  return (
+    <div className={`heVictoryWhimsy${paper ? " is-paper" : ""}`} aria-hidden="true">
+      <span className="heVictoryGhost vg-a"><i /><i /></span>
+      <span className="heVictoryGhost vg-b"><i /><i /></span>
+      <span className="heVictoryImp vi-a"><i /><i /></span>
+      <span className="heVictoryImp vi-b"><i /><i /></span>
     </div>
   );
 }
@@ -8605,25 +8615,62 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .mvLoom { animation: mvloom 6s ease forwards; transform-origin: 50% 100%; }
 @keyframes mvloom { from { opacity: 0; transform: scale(0.82) translateY(10px); filter: blur(4px); } to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
 @media (prefers-reduced-motion: reduce) { .mvLoom { animation: none; opacity: 1; } }
-.mvKillGround { position:absolute; left:15%; right:15%; bottom:4px; height:6px; border-radius:50%; background:#000; opacity:0.35; }
-.mvKillFlash { position:absolute; left:16%; top:6%; width:2.5px; height:72%; background:linear-gradient(#FFF6E0, rgba(233,223,200,0)); transform:rotate(26deg); opacity:0; animation: mvkflash 4s ease forwards; }
-@keyframes mvkflash { 0%,14% { opacity:0; } 18% { opacity:1; } 32% { opacity:0; } 100% { opacity:0; } }
-/* Every rite ends on a corpse, not an empty patch: the art dies on screen
-   and STAYS, dimmed and slumped, so the moment reads even if you look up
-   after the animation has finished. */
-.mvKill-burn { animation: mvkburn 4.5s ease-in forwards; }
-@keyframes mvkburn { 0% { filter:none; opacity:1; } 45% { filter: sepia(1) saturate(3) hue-rotate(-28deg) brightness(1.35); } 100% { filter: grayscale(1) brightness(0.35) blur(1px); opacity: 0.55; transform: translateY(8px) scale(0.94) scaleY(0.85); } }
-.mvKill-pierce { transform-origin: 50% 100%; animation: mvkpierce 4s ease-in forwards; }
-@keyframes mvkpierce { 0% { opacity:1; } 20% { transform:none; filter:none; } 26% { transform: translateX(4px); filter: brightness(1.8); } 34% { transform: translateX(-2px); } 100% { transform: translateY(12px) scaleY(0.7); filter: grayscale(1) brightness(0.55); opacity: 0.5; } }
-.mvKill-shatter { animation: mvkshatter 4s ease-in forwards; }
-@keyframes mvkshatter { 0% { opacity:1; } 35% { filter: brightness(1.7); transform:none; } 45% { transform: rotate(2.5deg); } 55% { transform: rotate(-3deg) scale(1.05); } 100% { transform: rotate(-4deg) translateY(10px) scaleY(0.8); filter: blur(1.5px) grayscale(1) brightness(0.6); opacity: 0.45; } }
-.mvKill-sink { transform-origin: 50% 100%; animation: mvksink 4.5s ease-in forwards; }
-@keyframes mvksink { 0%, 30% { transform:none; opacity:1; } 100% { transform: translateY(26px) scaleY(0.42); opacity: 0.55; filter: brightness(0.3) grayscale(0.8); } }
-.mvKill-shrink { animation: mvkshrink 4.5s ease-in forwards; }
-@keyframes mvkshrink { 0%, 30% { transform:none; opacity:1; } 100% { transform: scale(0.3) rotate(10deg) translateY(30px); opacity: 0.55; filter: grayscale(1) brightness(0.5); } }
-.mvKill-dissolve { animation: mvkdissolve 4.5s ease-in forwards; }
-@keyframes mvkdissolve { 0% { opacity:1; } 50% { filter: blur(1px); opacity: 0.8; } 100% { filter: blur(2.5px) grayscale(1) brightness(0.5); opacity: 0.4; transform: translateY(6px) scaleY(0.88); } }
-@media (prefers-reduced-motion: reduce) { .mvKill-burn, .mvKill-pierce, .mvKill-shatter, .mvKill-sink, .mvKill-shrink, .mvKill-dissolve, .mvKillFlash { animation: none; opacity: 0.45; filter: grayscale(1) brightness(0.5); } }
+/* The victory is an illustrated chapter, not a replayed CSS effect. The same
+   finished plate is carried from the reckoning into dawn and then into the
+   written record, so the player sees one continuous ending. */
+.heMonsterDeath {
+  position:relative; display:inline-flex; flex:0 0 auto; overflow:hidden;
+  box-sizing:border-box; isolation:isolate; background:#EFE3C8;
+  border:1px solid rgba(122,101,68,.66); border-radius:3px 10px 5px 3px;
+  box-shadow:6px 7px 0 rgba(0,0,0,.20);
+}
+.heMonsterDeath::after {
+  content:""; position:absolute; inset:5px; pointer-events:none;
+  border:1px solid rgba(91,72,47,.16); border-radius:2px 7px 3px 2px;
+}
+.heMonsterDeath img { display:block; width:100%; height:100%; object-fit:cover; }
+.heMonsterDeath.is-flat { border:0; border-radius:2px; box-shadow:none; background:#EFE3C8; }
+.heMonsterDeath.is-flat::after { display:none; }
+.heMonsterDeath.is-flat img {
+  mix-blend-mode:multiply;
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 68%,rgba(0,0,0,.94) 82%,transparent 100%);
+  mask-image:radial-gradient(ellipse at center,#000 68%,rgba(0,0,0,.94) 82%,transparent 100%);
+}
+.heVictoryNightArt { display:flex; flex-direction:column; align-items:center; gap:7px; margin:12px auto 10px; }
+.heVictoryNightArt .heMonsterDeath { width:min(42vw,168px) !important; height:min(42vw,168px) !important; }
+.heVictoryRite { color:#CFA556; font-size:9.5px; letter-spacing:1.8px; }
+.heVictoryVerdictCard { width:min(268px,82vw); }
+.heVictoryVerdictCard .heMonsterDeath { width:min(210px,64vw) !important; height:min(210px,64vw) !important; }
+.heVictoryChapter {
+  position:relative; isolation:isolate; overflow:hidden; padding:16px 15px 18px;
+  background:#EADDC0; border-top:3px solid #A56B28; border-bottom:1px solid #A28B69;
+  border-radius:3px 11px 5px 3px; box-shadow:5px 6px 0 rgba(25,23,21,.11);
+}
+.heVictoryChapter > *:not(.heVictoryWhimsy) { position:relative; z-index:2; }
+.heVictoryChapter .heMonsterDeath { width:min(176px,48vw) !important; height:min(176px,48vw) !important; }
+.heVictoryWhimsy { position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; opacity:.76; }
+.heVictoryGhost { position:absolute; width:20px; height:24px; border-radius:50% 50% 6px 6px; background:#E7D8B8; box-shadow:0 1px 0 rgba(0,0,0,.35); }
+.heVictoryGhost::after { content:""; position:absolute; left:2px; right:2px; bottom:-5px; height:10px; background:#E7D8B8; clip-path:polygon(0 0,25% 100%,50% 18%,75% 100%,100% 0); }
+.heVictoryGhost i { position:absolute; top:8px; width:3px; height:5px; border-radius:50%; background:#17151A; }
+.heVictoryGhost i:first-child { left:5px; } .heVictoryGhost i:last-child { right:5px; }
+.heVictoryGhost.vg-a { left:12px; top:18%; transform:rotate(-9deg) scale(.72); }
+.heVictoryGhost.vg-b { right:11px; top:59%; transform:rotate(8deg) scale(.55); }
+.heVictoryImp { position:absolute; width:17px; height:15px; border-radius:48% 48% 42% 42%; background:#18151B; }
+.heVictoryImp::before, .heVictoryImp::after { content:""; position:absolute; top:-5px; width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-bottom:7px solid #18151B; }
+.heVictoryImp::before { left:0; transform:rotate(-17deg); } .heVictoryImp::after { right:0; transform:rotate(17deg); }
+.heVictoryImp i { position:absolute; top:5px; width:2.5px; height:3px; border-radius:50%; background:#D7A03B; }
+.heVictoryImp i:first-child { left:4px; } .heVictoryImp i:last-child { right:4px; }
+.heVictoryImp.vi-a { left:7%; bottom:16%; transform:rotate(6deg) scale(.7); }
+.heVictoryImp.vi-b { right:6%; top:31%; transform:rotate(-7deg) scale(.52); }
+.heVictoryWhimsy.is-paper .heVictoryGhost { background:#B79E73; opacity:.52; }
+.heVictoryWhimsy.is-paper .heVictoryGhost::after { background:#B79E73; }
+.heVictoryWhimsy.is-paper .heVictoryImp { background:#4D4133; opacity:.52; }
+.heVictoryWhimsy.is-paper .heVictoryImp::before, .heVictoryWhimsy.is-paper .heVictoryImp::after { border-bottom-color:#4D4133; }
+@media (max-height:760px) {
+  .heVictoryNightArt { margin:7px auto 6px; }
+  .heVictoryNightArt .heMonsterDeath { width:min(31vh,140px) !important; height:min(31vh,140px) !important; }
+  .heVictoryVerdictCard .heMonsterDeath { width:min(29vh,174px) !important; height:min(29vh,174px) !important; }
+}
 
 /* BUTTONS — made by the same unsteady hand as the ink illustrations.
    Large controls get an imperfect second rule, mismatched corners and a very
@@ -9996,26 +10043,32 @@ function MonsterVillage() {
         <div className="fixed inset-0 mv-body heNight heNightCinematic flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
           <style>{CSS_ALL}</style>
           <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
-            {/* the night itself, full bleed and fading out rather than cut:
-                the rite consuming the thing on a won night, the moonlit
-                village on every other */}
-            <div className="heNightCinematicArt" style={{ position: "absolute", left: 0, right: 0, top: 0, aspectRatio: "16 / 9", WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
-              {won ? (
-                <div className="flex justify-center items-center" style={{ height: "100%", background: "linear-gradient(180deg,#241B1E,#161014)" }}>
-                  <MonsterDeath id={m.id} method={m.method} size={150} light />
-                </div>
-              ) : <NightScene height="100%" />}
-              <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(20,16,20,0) 44%, rgba(20,16,20,0.6) 84%, rgba(20,16,20,0.88) 100%)" : "linear-gradient(rgba(5,6,12,0) 44%, rgba(5,6,12,0.55) 84%, rgba(5,6,12,0.85) 100%)" }} />
-            </div>
+            {/* An ordinary night still opens over the village. A reckoning
+                instead gets a clean chapter plate below the title; the old
+                blurred, tilted death image behind the copy made the ending
+                feel like a broken transition rather than a finished rite. */}
+            {!won && (
+              <div className="heNightCinematicArt" style={{ position: "absolute", left: 0, right: 0, top: 0, aspectRatio: "16 / 9", WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
+                <NightScene height="100%" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(5,6,12,0) 44%, rgba(5,6,12,0.55) 84%, rgba(5,6,12,0.85) 100%)" }} />
+              </div>
+            )}
+            {won && <VictoryWhimsy />}
             <div className="mvFog" style={{ position: "absolute", left: "-10%", right: "-10%", top: 150, height: 180, background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(180,196,224,0.09), transparent 70%)", pointerEvents: "none" }} />
             <div className="mvGrain" />
             <button onClick={advance} className="mv-btn mv-body absolute" style={{ top: "max(env(safe-area-inset-top),23px)", right: 18, padding: "4px 10px", border: "none", borderRadius: 3, background: "rgba(8,10,18,0.55)", color: heroAccent, fontSize: 13.5, cursor: "pointer", zIndex: 2 }}>skip ≫</button>
-            <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 30px)" }}
+            <div className="relative flex-1 min-h-0 flex flex-col" style={{ zIndex: 2, padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 30px)" }}
               onClick={() => setBeatsRevealed(true)}>
               <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: "#AEB6D8" }}>
                 {beatsFirst ? "THE RITE UNRAVELS" : won ? "THE RECKONING" : `DAY ${s.dayNum} GIVES WAY`}
               </span>
               <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: title.length > 12 ? 27 : 35, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{title}</h1>
+              {won && (
+                <div className="heVictoryNightArt mvIn" style={{ animationDelay: "0.25s" }}>
+                  <MonsterDeath id={m.id} size={168} />
+                  <span className="mv-display heVictoryRite">THE RITE HOLDS · {METHODS[m.method]}</span>
+                </div>
+              )}
               <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} className="flex flex-col" style={{ flex: 1, minHeight: 0, gap: 9, marginTop: 13, paddingBottom: 8, overflowY: "auto" }}>
                 {beats.map((b, i) => (
                   <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: beatColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
@@ -10034,7 +10087,7 @@ function MonsterVillage() {
                 </span>
               </div>
             </div>
-            <div className="relative mvIvDock heDockSpill" style={{ flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
+            <div className="relative mvIvDock heDockSpill" style={{ zIndex: 2, flexShrink: 0, padding: "16px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", boxShadow: "none" }}>
               <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${total}s` }}>
                 <DockBtn kind={beatsFirst ? "destroy" : "commit"} onClick={advance}>{beatsFirst ? "AND THEN →" : "ONWARD →"}</DockBtn>
               </div>
@@ -10232,7 +10285,8 @@ function MonsterVillage() {
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse 74% 46% at 50% 34%, ${tone.glow} 0%, rgba(8,10,10,0.92) 62%, ${tone.ground} 100%)` }} />
           <div className="mvGrain" />
-          <div className="mvSafeCenter relative flex-1 min-h-0 flex flex-col text-center" style={{ padding: "14px 24px 18px", overflowY: "auto" }}>
+          {s.over.win && <VictoryWhimsy />}
+          <div className="mvSafeCenter relative flex-1 min-h-0 flex flex-col text-center" style={{ zIndex: 2, padding: "14px 24px 18px", overflowY: "auto" }}>
            {/* shrink-0: a run that earned four or five deeds makes this card
                taller than the screen, and a flex child that is allowed to
                shrink gets squeezed to fit instead of letting the column
@@ -10245,9 +10299,9 @@ function MonsterVillage() {
               {s.over.win ? "It is over." : joined ? "Hollow" : "It is over, and not in your favour."}
             </h1>
             <div className="flex justify-center mvIn" style={{ marginTop: 18, animationDelay: "0.5s" }}>
-              <span style={{ width: 238, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 9px 12px", background: C.parch, borderTop: `3px solid ${tone.ink}`, borderRadius: "3px 11px 5px 3px", boxShadow: "8px 9px 0 rgba(0,0,0,.22)" }}>
+              <span className="heVictoryVerdictCard" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 9px 12px", background: C.parch, borderTop: `3px solid ${tone.ink}`, borderRadius: "3px 11px 5px 3px", boxShadow: "8px 9px 0 rgba(0,0,0,.22)" }}>
                 <span className="mv-display" style={{ alignSelf: "stretch", padding: "2px 4px 6px", fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.inkDim, borderBottom: `1px solid ${C.parchLine}` }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
-                {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={190} light flat /> : <MonsterArt id={m.id} size={190} flat />}
+                {s.over.win ? <MonsterDeath id={m.id} size={210} flat /> : <MonsterArt id={m.id} size={190} flat />}
                 <span className="mv-display" style={{ fontSize: 18, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.ink }}>{joined ? "You" : m.name}</span>
                 {!joined && <span className="mv-display" style={{ marginTop: 1, fontSize: 9.5, lineHeight: 1.2, letterSpacing: 1.35, color: C.inkDim }}>WORE {monsterNpc.name.toUpperCase()}’S FACE</span>}
                 <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: s.over.win ? "#8A5A22" : C.red }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
@@ -10284,7 +10338,7 @@ function MonsterVillage() {
             )}
            </div>
           </div>
-          <div className="relative mvIvDock heDockSpill" style={{ flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
+          <div className="relative mvIvDock heDockSpill" style={{ zIndex: 2, flexShrink: 0, padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),27px)", display: "flex", flexDirection: "column", gap: 8, boxShadow: "none" }}>
             <button onClick={() => { setEpiCard(0); setEpiOpen(true); }} className="mv-btn mv-display w-full"
               style={{ borderRadius: 3, padding: "13px 0", background: `${tone.glow}`, border: `1px solid ${tone.ink}`, color: tone.ink, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>WHAT BECAME OF THEM</button>
             <button onClick={() => { setEpiOpen(false); setS(null); }} className="mv-btn mv-display w-full"
@@ -10310,10 +10364,12 @@ function MonsterVillage() {
           </div>
 
           {s.over.win && (
-            <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.sky, border: `1px solid ${C.line}` }}>
-              <div className="mv-display" style={{ color: C.redBright, fontSize: 13.5, letterSpacing: 2 }}>HOW IT ENDED</div>
-              <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} light /></div>
-              <p className="mt-1 text-center" style={{ fontSize: 15, color: C.parch }}>{METHOD_KILL_LINES[m.method]}</p>
+            <div className="heVictoryChapter mvIn mt-4 flex flex-col items-center" style={{ animationDelay: "0.6s" }}>
+              <VictoryWhimsy paper />
+              <div className="mv-display" style={{ color: "#8A5A22", fontSize: 13.5, letterSpacing: 2 }}>HOW IT ENDED</div>
+              <div className="mt-2"><MonsterDeath id={m.id} size={176} flat /></div>
+              <div className="mv-display mt-1" style={{ color: C.ink, fontSize: 17, letterSpacing: 1.1 }}>{m.name}</div>
+              <p className="mt-1 text-center" style={{ marginBottom: 0, fontSize: 15, lineHeight: 1.45, color: C.ink }}>{METHOD_KILL_LINES[m.method]}</p>
             </div>
           )}
 
