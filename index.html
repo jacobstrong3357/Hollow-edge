@@ -2582,6 +2582,18 @@ const monsterOf = (s) => MONSTERS.find((m) => m.id === s.monster.type);
    the answer. The Black Book on the title screen always shows all sixteen. */
 const gameMonsters = (s) => MONSTERS.filter((mm) => mm.id !== "hollowed" || (s && s.hollowedIn));
 const npcById = (s, id) => s.npcs.find((n) => n.id === id);
+/* A favour belongs to the neighbour who asked it. If that neighbour dies or
+   goes into hiding there is nobody left to answer at dawn, so the errand is
+   over rather than becoming an unreachable banner/modal in the saved run.
+   The watched neighbour may still die or disappear: what the player saw can
+   remain worth reporting to an available asker. */
+function cancelUnavailableFavour(s) {
+  if (!s || !s.sideQuest) return false;
+  const giver = npcById(s, s.sideQuest.giver);
+  if (giver && giver.alive && !giver.fled) return false;
+  s.sideQuest = null;
+  return true;
+}
 const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s.monster.vid);
 const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
 /* How many separate nights the village has watched you go by. Counts NIGHTS,
@@ -2924,6 +2936,9 @@ function sampleNight(s, m, n) {
 
 function resolveNight(prev, planIn, preEvents) {
   const s = JSON.parse(JSON.stringify(prev));
+  /* Also repairs older saves made while an unavailable favour-giver could
+     leave a permanent notice behind. */
+  cancelUnavailableFavour(s);
   s.deathBeats = null;
   s.deathAfterBeats = false;
   /* what happens once it is light and the village is awake and standing in
@@ -3144,6 +3159,9 @@ function resolveNight(prev, planIn, preEvents) {
   };
 
   const finish = () => {
+    /* Deaths and flight can happen anywhere in the night resolution. Apply
+       the favour invariant again after all of those rare paths settle. */
+    cancelUnavailableFavour(s);
     s.nightLogs.push({ night: n, active, huntLoc, outMap, secretOut, griefOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, odd: evOdd, fight: evFight, pair: evPair } : null });
     /* Cap the morning at five cards, keeping the most important: rank by pri
        (deaths, a villager marked, the note first), stable within a tier so the
@@ -4082,6 +4100,7 @@ function resolveNight(prev, planIn, preEvents) {
   /* --- side quest: did the player watch/follow the quest target tonight?
      The favour was asked for THIS night. Ignore it and the asker knows by
      morning, says so to your face, and thinks the less of you for it. --- */
+  cancelUnavailableFavour(s);
   if (s.sideQuest && !s.sideQuest.reported) {
     if (!s.sideQuest.due) {
       const qt = s.sideQuest.target;
@@ -5758,6 +5777,7 @@ function actAccuse(prev, id, typeId) {
     beats.push(METHOD_KILL_LINES[declared.method]);
     beats.push(`What dies in front of the village is not ${npc.name}. It has not been ${npc.name} for a long time.`);
     s.over = { win: true, reason: "won", text: `Right face, right name. ${npc.name} ${npc.role} was a ${m.name}, and its own rite ended it in front of everyone it fed on.` };
+    if (s.sideQuest && s.sideQuest.giver === id) s.sideQuest = null;
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
     return s;
   }
@@ -5774,6 +5794,7 @@ function actAccuse(prev, id, typeId) {
     }
     s.fled = true;
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, fled: true } : x));
+    cancelUnavailableFavour(s);
     beats.push(`The rite is performed. The circle closes. Nothing happens.`);
     beats.push(`${npc.name} looks at ${METHOD_CARRY[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
     beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Name it wrong once more and it comes for you, not them.");
@@ -5784,6 +5805,7 @@ function actAccuse(prev, id, typeId) {
   }
 
   s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
+  cancelUnavailableFavour(s);
   s.deaths.push({ night: s.nightNum, id, name: npc.name, kind: "executed" });
   s.wrongExecutions += 1;
   s.wrongGuesses += 1;
@@ -9420,6 +9442,8 @@ function MonsterVillage() {
   };
   const resume = () => {
     const run = savedRun, runWalk = savedWalk;
+    /* Migrate runs saved before unavailable favour-givers were cleaned up. */
+    cancelUnavailableFavour(run);
     setSavedRun(null); setSavedWalk(null); setS(run); resetUi();
     if (runWalk) setWalk(runWalk);
   };
@@ -9427,6 +9451,9 @@ function MonsterVillage() {
   const doAction = (fn) => {
     setModal(null); setAccusePick(null); setAccuseType(null); setProfile(null);
     const next = fn(s);
+    /* Keep the invariant at the common action boundary too: this covers any
+       future rare path that kills or hides a favour-giver during the day. */
+    cancelUnavailableFavour(next);
     const fresh = next.dayEvents.slice(s.dayEvents.length);
     setS(next);
     if (!next.over && next.phase !== "night" && fresh.length) setSheet(fresh);
@@ -12618,8 +12645,12 @@ function MonsterVillage() {
         </div>
       )}
 
-      {s.sideQuest && !s.sideQuest.reported && npcById(s, s.sideQuest.giver) && npcById(s, s.sideQuest.giver).alive && (() => {
+      {s.sideQuest && !s.sideQuest.reported && (() => {
         const giver = npcById(s, s.sideQuest.giver);
+        /* Render guard for old saves: state cleanup happens on the next game
+           transition, but an unavailable asker must never leave a dead link
+           on the current day screen. */
+        if (!giver || !giver.alive || giver.fled) return null;
         const sqTarget = npcById(s, s.sideQuest.target);
         /* once the night is behind you they are ON your step, and the banner
            is the way back to them if you dismissed the doorstep */
@@ -12681,7 +12712,7 @@ function MonsterVillage() {
                narrowed. It is never fewer than three faces, so it points and
                never proves. */
             const fits = n.alive && !faceK && fitsShape(s, n);
-            const hidingInk = "#70584B";
+            const hidingInk = C.redBright;
             const ring = n.alive && faceK === n.id ? C.redBright
               : s.mob && s.mob.target === n.id && n.alive ? C.red
               : fits && shapeCertain(s) ? C.amber
