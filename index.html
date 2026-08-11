@@ -8583,6 +8583,13 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
   border-radius:3px 6px 2px 5px / 5px 2px 6px 3px !important;
   box-shadow:3px 4px 0 rgba(18,14,10,.28), inset 0 0 0 1px rgba(212,170,112,.08);
 }
+/* Recap navigation should close the story quietly. Keep the outer handmade
+   rule, but let its second line recede so ONWARD is not the loudest object
+   after the final beat. */
+.heNightCinematic .heDockButton.mv-kind-commit {
+  box-shadow:2px 3px 0 rgba(0,0,0,.22),inset 0 0 0 1px rgba(212,170,112,.035);
+}
+.heNightCinematic .heDockButton.mv-kind-commit::after { opacity:.075; }
 .heNightPlanChoice:nth-child(even) { --he-btn-tilt:.12deg; }
 .heNightPlanChoice .heNightPlanIcon {
   width:32px;
@@ -9880,7 +9887,7 @@ function MonsterVillage() {
     const livingTonight = s.npcs.filter((n) => !n.fled && (n.alive
       || s.deaths.some((d) => d.id === n.id && d.night === s.nightNum && d.kind !== "turned"))).length;
     return (
-        <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
+        <div className="fixed inset-0 mv-body heNight heNightCinematic flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
           <style>{CSS_ALL}</style>
           <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
             {/* the night itself, full bleed and fading out rather than cut:
@@ -9913,11 +9920,11 @@ function MonsterVillage() {
               <div className="flex items-baseline" style={{ gap: 26, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
                 <span className="flex items-baseline" style={{ gap: 8 }}>
                   <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.parch }}>{s.nightNum}</span>
-                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
+                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
                 </span>
                 <span className="flex items-baseline" style={{ gap: 8, marginLeft: "auto" }}>
-                  <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.amber }}>{livingTonight}</span>
-                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>STILL LIVING</span>
+                  <span className="mv-display" style={{ fontSize: 21, lineHeight: 1, color: C.amber }}>{livingTonight}</span>
+                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>STILL LIVING</span>
                 </span>
               </div>
             </div>
@@ -9953,7 +9960,7 @@ function MonsterVillage() {
       ? "#F1E4C6"
       : `rgba(233,223,200,${(0.8 + (fBeats.length > 1 ? i / (fBeats.length - 1) : 1) * 0.2).toFixed(2)})`);
     return (
-      <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "#080709", color: C.parch, overflow: "hidden" }}>
+      <div className="fixed inset-0 mv-body heNight heNightCinematic flex flex-col" style={{ background: "#080709", color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
@@ -9975,11 +9982,11 @@ function MonsterVillage() {
             <div className="flex items-baseline" style={{ gap: 26, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
               <span className="flex items-baseline" style={{ gap: 8 }}>
                 <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.parch }}>{s.nightNum}</span>
-                <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
+                <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
               </span>
               <span className="flex items-baseline" style={{ gap: 8, marginLeft: "auto" }}>
-                <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.amber }}>{aliveNpcs(s).length}</span>
-                <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>STILL LIVING</span>
+                <span className="mv-display" style={{ fontSize: 21, lineHeight: 1, color: C.amber }}>{aliveNpcs(s).length}</span>
+                <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>STILL LIVING</span>
               </span>
             </div>
           </div>
