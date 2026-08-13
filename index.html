@@ -89,6 +89,8 @@
   }
 </script>
 
+<script src="v5-content.js"></script>
+
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 
@@ -97,7 +99,7 @@ const { useState, useEffect, useRef } = React;
 /* All synthesized. Wind under everything, a bell that counts the nights,
    a heartbeat when the dark gets close, and one chord each for dawn and ruin. */
 const Snd = {
-  enabled: false, built: false, heartLoop: null,
+  enabled: false, built: false, heartLoop: null, silenceHeld: false,
   async init() {
     if (this.built) return true;
     try {
@@ -123,6 +125,14 @@ const Snd = {
       this.chime = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 1.0 } }).connect(this.chimeVol);
       this.howlVol = new Tone.Volume(-20).toDestination();
       this.howl = new Tone.Synth({ oscillator: { type: "sine" }, portamento: 0.4, envelope: { attack: 0.4, decay: 0.8, sustain: 0.3, release: 1.8 } }).connect(this.howlVol);
+      this.woodVol = new Tone.Volume(-18).toDestination();
+      this.wood = new Tone.MembraneSynth({ pitchDecay: 0.08, octaves: 1.3, envelope: { attack: 0.004, decay: 0.38, sustain: 0, release: 0.22 } }).connect(this.woodVol);
+      this.foleyVol = new Tone.Volume(-23).toDestination();
+      this.foleyFilter = new Tone.Filter(1500, "lowpass").connect(this.foleyVol);
+      this.foleyNoise = new Tone.NoiseSynth({ noise: { type: "brown" }, envelope: { attack: 0.01, decay: 0.48, sustain: 0, release: 0.18 } }).connect(this.foleyFilter);
+      this.cricketVol = new Tone.Volume(-27).toDestination();
+      this.cricket = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.002, decay: 0.045, sustain: 0, release: 0.02 } }).connect(this.cricketVol);
+      this.sceneState = null;
       this.built = true;
       return true;
     } catch (e) { return false; }
@@ -205,9 +215,68 @@ const Snd = {
     this.chime.triggerAttackRelease("G4", 0.4, t);
     this.chime.triggerAttackRelease("B4", 0.5, t + 0.1);
   },
+  silence(on) {
+    if (!this.built || !this.enabled) return;
+    this.silenceHeld = !!on;
+    this.windVol.volume.rampTo(on ? -100 : -24, on ? 0.28 : 2.8);
+    if (on) this.beat(false);
+  },
+  knock() {
+    if (!this.built || !this.enabled) return;
+    const t = Tone.now() + 0.04;
+    this.wood.triggerAttackRelease("C1", "16n", t, 0.86);
+    this.wood.triggerAttackRelease("B0", "16n", t + 0.42, 0.66);
+  },
+  scene(next) {
+    this.sceneState = next || null;
+    if (!this.built || !this.enabled) return;
+    const proximity = next && next.proximity ? next.proximity : 0;
+    this.wind_(next && next.silence ? -100 : -30 + proximity * 5);
+  },
+  cue(id) {
+    if (!this.built || !this.enabled || !id) return;
+    const spec = (V5_CONTENT.audioCues || {})[id] || {};
+    const kind = spec.fallback || id;
+    const t = Tone.now() + 0.03;
+    if (kind === "silence") { this.silence(true); return; }
+    if (kind === "bell") { this.toll(1); return; }
+    if (kind === "howl") { this.wail(); return; }
+    if (kind === "breath" || kind === "breath_close" || kind === "whisper") {
+      this.foleyFilter.frequency.rampTo(kind === "breath_close" ? 520 : 760, 0.08);
+      this.foleyNoise.triggerAttackRelease(kind === "breath_close" ? 1.1 : 0.65, t, kind === "whisper" ? 0.32 : 0.58);
+      return;
+    }
+    if (["leaves", "earth", "branch", "cloth", "stone", "rope"].includes(kind)) {
+      this.foleyFilter.frequency.rampTo(kind === "stone" ? 2100 : kind === "cloth" ? 540 : 1100, 0.05);
+      this.foleyNoise.triggerAttackRelease(kind === "cloth" ? 0.34 : 0.18, t, kind === "earth" ? 0.85 : 0.55);
+      if (kind === "earth" || kind === "stone") this.wood.triggerAttackRelease(kind === "earth" ? "A0" : "E1", "32n", t + 0.03, 0.35);
+      return;
+    }
+    if (kind === "gate" || kind === "latch") {
+      this.wood.triggerAttackRelease(kind === "gate" ? "D1" : "G1", "8n", t, kind === "gate" ? 0.8 : 0.48);
+      if (kind === "gate") this.bell2.triggerAttackRelease("D3", 0.7, t + 0.08, 0.2);
+      return;
+    }
+    if (kind === "owl") {
+      this.cricket.triggerAttackRelease("G6", "32n", t, 0.32);
+      this.cricket.triggerAttackRelease("E6", "32n", t + 0.22, 0.24);
+      return;
+    }
+    if (kind === "crickets") {
+      [0, 0.12, 0.31, 0.45].forEach((off, i) => this.cricket.triggerAttackRelease(i % 2 ? "B6" : "G6", "64n", t + off, 0.17));
+      return;
+    }
+    if (kind === "bustle") {
+      this.foleyFilter.frequency.rampTo(920, 0.08);
+      this.foleyNoise.triggerAttackRelease(0.7, t, 0.18);
+      this.wood.triggerAttackRelease("G1", "32n", t + 0.24, 0.16);
+      return;
+    }
+    if (kind === "room") { this.wind_(-38); return; }
+  },
   async setEnabled(on) {
-    if (on) { const ok = await this.init(); if (!ok) return false; this.enabled = true; this.wind_(-30); return true; }
-    this.enabled = false;
+    if (on) { const ok = await this.init(); if (!ok) return false; this.enabled = true; this.silenceHeld = false; this.wind_(-30); return true; }
+    this.enabled = false; this.sceneState = null;
     if (this.built) { this.windVol.volume.value = -100; this.beat(false); }
     return false;
   },
@@ -1921,6 +1990,144 @@ const grievingFor = (s, id) => {
   return null;
 };
 
+/* ================= V5 SCENARIO / PERCEPTION / MEMORY =================
+   Authored scenes declare their requirements in v5-content.js. This engine
+   turns one declaration into three separate records:
+   - worldEvents: what actually happened;
+   - observations: what the player could honestly perceive;
+   - memories: what a villager remembers about the player.
+   Interviews read those ledgers later. No presentation branch is allowed to
+   rewrite the sampled truth. */
+const V5_CONTENT = (typeof window !== "undefined" && window.HE_V5_CONTENT) || { churchyardScenarios: [], audioCues: {} };
+const v5Fill = (text, vars) => String(text || "").replace(/\{(\w+)\}/g, (_, k) => vars[k] || "someone");
+const v5MonsterTags = (s) => {
+  const m = monsterOf(s);
+  const tags = new Set([DOOR_MANNER[m.id] || "haunt", m.reach === "home" ? "home" : "hunter"]);
+  if ((m.signs || []).includes("graves")) tags.add("grave");
+  if ((m.signs || []).includes("flora")) tags.add("flora");
+  if ((m.signs || []).includes("wail")) tags.add("voice");
+  if (m.attack === "turn" || m.attack === "both") tags.add("turner");
+  if ((m.hunts || []).includes("Old Church")) tags.add("church");
+  return tags;
+};
+const v5WeightedPick = (rows) => {
+  const total = rows.reduce((n, r) => n + Math.max(1, r.weight || 1), 0);
+  let roll = Math.random() * total;
+  for (const r of rows) { roll -= Math.max(1, r.weight || 1); if (roll <= 0) return r; }
+  return rows[rows.length - 1];
+};
+function v5ChurchyardActors(s, facts, def) {
+  const living = s.npcs.filter((x) => x.alive && !x.fled);
+  const here = living.filter((x) => (facts.outMap || {})[x.id] === "Old Church");
+  const one = (list) => list.length ? [pick(list).id] : [];
+  if (def.actorPool === "none") return [];
+  if (def.actorPool === "out_here") return one(here);
+  if (def.actorPool === "pair_out_here") return here.length >= 2 ? here.slice().sort(() => Math.random() - 0.5).slice(0, 2).map((x) => x.id) : [];
+  if (def.actorPool === "changed") return one(here.filter((x) => x.turned));
+  if (def.actorPool === "ansel") return one(here.filter((x) => x.id === "ansel"));
+  if (def.actorPool === "ansel_absent") {
+    const a = living.find((x) => x.id === "ansel");
+    return a && (facts.outMap || {}).ansel !== "Old Church" ? [a.id] : [];
+  }
+  if (def.actorPool === "tobias") return one(here.filter((x) => x.id === "tobias"));
+  if (def.actorPool === "healer") return one(here.filter((x) => x.id === "greta" || x.id === "falk"));
+  if (def.actorPool === "griever") return one(here.filter((x) => grievingFor(s, x.id)));
+  return [];
+}
+function v5PickPerception(def, facts) {
+  const modes = def.perceptions || ["partial"];
+  if (modes.length === 1) return modes[0];
+  const weighted = modes.map((mode) => {
+    let weight = 2;
+    if (!facts.wx && mode === "clear") weight += 5;
+    if (facts.wx === "fog" && (mode === "partial" || mode === "heard")) weight += 6;
+    if (facts.wx === "storm" && mode === "heard") weight += 5;
+    if (facts.wx === "frost" && mode === "clear") weight += 2;
+    return { mode, weight };
+  });
+  return v5WeightedPick(weighted).mode;
+}
+function sampleV5ChurchyardScenario(s, facts, night) {
+  const defs = V5_CONTENT.churchyardScenarios || [];
+  const tags = v5MonsterTags(s);
+  const used = new Set(s.scenarioHistory || []);
+  const candidates = [];
+  for (const def of defs) {
+    if (used.has(def.id)) continue;
+    const actorIds = v5ChurchyardActors(s, facts, def);
+    const needsActor = def.actorPool !== "none";
+    if (needsActor && !actorIds.length) continue;
+    if (def.when === "recent_death" && !(s.deaths || []).some((d) => FATAL_KINDS.includes(d.kind))) continue;
+    if (def.when === "pair_available" && actorIds.length < 2) continue;
+    if (def.when === "changed_available" && !actorIds.length) continue;
+    if (def.when === "active_night" && !facts.active) continue;
+    if (def.when === "out_here" && !actorIds.length) continue;
+    if (def.when === "ansel_absent" && !actorIds.length) continue;
+    const tagLift = (def.monsterTags || []).filter((t) => tags.has(t)).length * 2;
+    candidates.push({ def, actorIds, weight: Math.max(1, (def.weight || 1) + tagLift) });
+  }
+  if (!candidates.length) return null;
+  const chosen = v5WeightedPick(candidates);
+  const def = chosen.def;
+  const actors = chosen.actorIds.map((id) => npcById(s, id)).filter(Boolean);
+  const gr = actors[0] ? grievingFor(s, actors[0].id) : null;
+  const dead = gr && gr.dead ? gr.dead.name : ((s.deaths || []).slice(-1)[0] || {}).name || "the dead";
+  const vars = { actor: (actors[0] || {}).name || "someone", other: (actors[1] || {}).name || "someone else", dead };
+  const perception = v5PickPerception(def, facts);
+  return {
+    eventId: `n${night}:${def.id}:${Math.random().toString(36).slice(2, 7)}`,
+    scenarioId: def.id, night, location: "Old Church",
+    actorIds: chosen.actorIds, subjectId: chosen.actorIds[0] || null,
+    motive: def.when, monsterTags: (def.monsterTags || []).slice(),
+    perception, audio: (def.audio || []).slice(),
+    opening: v5Fill(def.opening, vars), silence: v5Fill(def.silence, vars),
+    reveal: v5Fill((def.reveal || {})[perception] || (def.reveal || {}).partial || (def.reveal || {}).heard, vars),
+    question: v5Fill(def.question, vars), honest: v5Fill(def.honest, vars), evasive: v5Fill(def.evasive, vars),
+    memory: v5Fill(def.memory, vars), vars,
+  };
+}
+function v5Observation(event, choice) {
+  if (!event) return null;
+  if (choice === "pass") return { id: `${event.eventId}:unobserved`, eventId: event.eventId, night: event.night, location: event.location, kind: "unobserved", confidence: "none", subjectId: null, source: "player", reason: "chose not to look" };
+  const kind = event.perception === "clear" ? "seen" : event.perception === "partial" ? "glimpse" : event.perception === "not_seen" ? "not_seen" : "heard";
+  const subjectId = (kind === "seen" || kind === "not_seen") ? event.subjectId : null;
+  return { id: `${event.eventId}:${kind}`, eventId: event.eventId, night: event.night, location: event.location, kind, confidence: kind === "seen" || kind === "not_seen" ? "certain" : kind === "glimpse" ? "uncertain" : "sensory", subjectId, source: "player", reason: event.perception };
+}
+function contextualQuestionsFor(s, npcId) {
+  const events = s.worldEvents || [];
+  const asked = new Set((s.askedLog[npcId] || []).filter((k) => k.includes(":context:")));
+  const out = [];
+  const directEvents = new Set((s.observations || [])
+    .filter((obs) => obs.subjectId === npcId && ["seen", "not_seen"].includes(obs.kind))
+    .map((obs) => obs.eventId));
+  const offeredEvents = new Set();
+  for (const obs of (s.observations || [])) {
+    if (obs.subjectId !== npcId || !["seen", "not_seen"].includes(obs.kind)) continue;
+    const event = events.find((e) => e.eventId === obs.eventId);
+    if (!event || !event.question) continue;
+    const id = `${event.eventId}:${obs.kind}`;
+    if (!asked.has(`${obs.night}:context:${id}`)) {
+      out.push({ id, night: obs.night, kind: obs.kind, label: event.question, event });
+      offeredEvents.add(event.eventId);
+    }
+  }
+  for (const mem of (s.memories || [])) {
+    if (mem.actorId !== npcId || mem.target !== "player") continue;
+    const event = events.find((e) => e.eventId === mem.eventId);
+    /* If you identified them, ask what THEY were doing. The reverse-memory
+       question exists only when they noticed you but you did not identify
+       them. One encounter therefore never becomes two versions of itself. */
+    if (!event || directEvents.has(event.eventId) || offeredEvents.has(event.eventId)) continue;
+    const id = `${event.eventId}:memory`;
+    const label = `You saw me at the ${event.location}. What did you think I was doing?`;
+    if (!asked.has(`${mem.night}:context:${id}`)) {
+      out.push({ id, night: mem.night, kind: "memory", label, event });
+      offeredEvents.add(event.eventId);
+    }
+  }
+  return out.sort((a, b) => b.night - a.night).slice(0, 6);
+}
+
 /* ---------- grief, and how badly it reads as evidence ----------
    One bespoke answer per villager for the death of someone they loved: their
    own voice, their own work, their own way of not coping. (dead-name) => line.
@@ -2774,6 +2981,7 @@ function newGame(veteran, hollowedUnlocked) {
     askedLog: {}, monsterClaims: {}, grudges: {},
     foundSigns: [], playerSigns: [], struckNpcs: [], locEvidence: Object.fromEntries(LOCS.map((l) => [l, []])),
     deaths: [], nightLogs: [], statements: [], playerSaw: [], clues: [], hardCleared: [],
+    worldEvents: [], observations: [], memories: [], scenarioHistory: [],
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
@@ -2787,6 +2995,7 @@ function newGame(veteran, hollowedUnlocked) {
        ever accrues when this is true, so the whole mechanic stays fully
        inert and undetectable for the majority of games where it isn't. -- */
     monsterFancies: Math.random() < 0.4, bond: 0, offerMade: false,
+    churchyardWatchSeen: false,
     coerceNote: null, monsterProtects: false, pendingOffer: null,
     offerBeats: [], noteExposedPending: false,
   };
@@ -3038,6 +3247,33 @@ function resolveNight(prev, planIn, preEvents) {
   const beats = [...preBeats];
   const mods = plan.mods || {};
   const monsterNpc = npcById(s, s.monster.vid);
+
+  /* Settle the authored Churchyard event without changing the sampled night.
+     Truth, perception and social memory remain separate; the scenario id is
+     retained only to prevent that event ever being selected again this run. */
+  if (mods.v5Scenario) {
+    const scene = mods.v5Scenario;
+    const obs = mods.v5Observation || v5Observation(scene, "pass");
+    const actor = scene.subjectId ? npcById(s, scene.subjectId) : null;
+    s.worldEvents = [...(s.worldEvents || []), scene];
+    s.observations = [...(s.observations || []), obs];
+    s.scenarioHistory = [...(s.scenarioHistory || []), scene.scenarioId];
+    s.churchyardWatchSeen = true;
+    if ((scene.actorIds || []).length && scene.memory) {
+      s.memories = [...(s.memories || []), ...scene.actorIds.map((actorId) => ({
+        eventId: scene.eventId, night: n, actorId, target: "player", kind: "churchyard", text: scene.memory,
+      }))];
+    }
+    if (actor && obs.kind === "seen") dawn.push(ev(`${actor.name} is waiting by the well before you arrive. “You saw me at the churchyard,” they say. “So ask what you came to ask. Do not let the village invent the answer for you.”`, actor.id, 2));
+    else if (actor && obs.kind === "not_seen") dawn.push(ev(`${actor.name} passes you at the well and stops. “You looked for me at the churchyard,” they say. “You did not find me. Those are not the same thing.”`, actor.id, 2));
+    else if (actor && obs.kind === "unobserved") dawn.push(ev(`${actor.name} is already at the well when you arrive. “You heard something in the churchyard and chose not to look,” they say, too quietly. “I wondered whether you would.”`, actor.id, 2));
+    else if (["glimpse", "heard"].includes(obs.kind)) dawn.push(ev("By morning, three villagers have three different names for the shape by the graves. None will say where they heard it. Your uncertainty has travelled farther than you did.", undefined, 2));
+    else if (!actor) dawn.push(ev("The Old Church gate is standing open at first light. Father Ansel's key is accounted for. The frost around the latch is unbroken, except for the mark of your own hand.", undefined, 2));
+  }
+  if (mods.churchDoor) {
+    s.clues.push(`Night ${n}: after the Old Church, something knocked at your door and vanished when you looked. It left no mark and proves nothing. The village knows where you sleep.`);
+    dawn.push(ev("Your door bears no mark in daylight. The bolt is still thrown. On the floor inside, beneath the shutter, lies one wet yew needle.", undefined, 2));
+  }
 
   /* -- the rare hide-beat spare: it truly was the horror, it truly had you,
      and it chose not to. That is not nothing: it knows your face now. -- */
@@ -4979,6 +5215,22 @@ function answerFor(s, id, night, q, targetId) {
   }
   s.askedLog[id].push(key);
 
+  if (q === "context") {
+    const eventId = String(targetId || "").replace(/:(seen|not_seen|memory)$/, "");
+    const event = (s.worldEvents || []).find((e) => e.eventId === eventId && e.actorIds && e.actorIds.includes(id));
+    if (!event) return { quote: `“I do not know what you think you saw.”`, mentions, claim, flag: null, foundSign, clue, followUps: [] };
+    const remembered = String(targetId || "").endsWith(":memory");
+    const evasive = isMonster || dispTier(npc.disp) === "hate" || (lying && chance(0.55));
+    if (remembered) {
+      const obs = (s.observations || []).find((o) => o.eventId === eventId);
+      if (evasive) quote = `“I saw a lantern moving where sensible people do not go. If you want me to turn that into a confession for you, you will have to supply it yourself.”`;
+      else if (obs && obs.kind === "unobserved") quote = `“I thought you heard me and chose not to turn. Fear, perhaps. Or restraint. I remember the choice more clearly than you remember the dark.”`;
+      else if (obs && ["glimpse", "heard"].includes(obs.kind)) quote = `“I thought you were listening for a name. You had the posture of someone who had seen too little and was already deciding how much of it to believe.”`;
+      else quote = `“I thought you were doing what everyone does now: watching the dark and hoping it would accuse somebody for you.”`;
+    } else quote = evasive ? event.evasive : event.honest;
+    return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps: [] };
+  }
+
   if ((s.patience[id] || 0) <= 0 && !isMonster && q !== "talk") {
     return { quote: pickFreshIdx(`refusal:${id}`, per.refusal), mentions, claim, flag: null, foundSign, clue, refused: true, followUps: [] };
   }
@@ -5749,7 +6001,7 @@ function answerFor(s, id, night, q, targetId) {
    lied about. `strange`, `mobwhy` and `mobview` do not - the answer key files
    them against a night because that is its fallback, but the questions are
    about the day you are standing in, and dating them would be a lie. */
-const NIGHT_QS = ["where", "saw", "sawAt", "about", "read", "press"];
+const NIGHT_QS = ["where", "saw", "sawAt", "about", "read", "press", "context"];
 
 const Q_LABELS = {
   where: "Where were you that night?",
@@ -5760,6 +6012,7 @@ const Q_LABELS = {
   suspect: "Who do you think is doing this?",
   strange: "Noticed anything strange lately?",
   press: "You lied to me. Why?",
+  context: "Ask about what happened at the churchyard",
   mobwhy: "Why this person? Why the rope?",
   mobview: "What do you make of the accusation?",
   craft: "craft",
@@ -7562,6 +7815,7 @@ function PersonReadings({ s, n, mood, only }) {
 
 function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, openNotes, free }) {
   const n = npcById(s, iv.id);
+  const contextQuestions = contextualQuestionsFor(s, iv.id);
   /* Every night this neighbour was in the village for is fair to ask about,
      not merely the last three: on Day 7 the interesting night is often Night
      2. The row scrolls sideways rather than wrapping, so the questions below
@@ -7813,6 +8067,16 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           {begun && !done && ivSub === "catN" && (
             <div>
               {subHead("THE NIGHTS")}
+              {contextQuestions.length > 0 && (
+                <div style={{ marginBottom: 11, paddingBottom: 11, borderBottom: `1px solid ${C.line}` }}>
+                  <p className="mv-display" style={{ margin: "0 0 7px", fontSize: 10.5, letterSpacing: 2, color: C.amber }}>WHAT YOU CAN ASK ABOUT</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {contextQuestions.map((cq) => (
+                      <Btn key={cq.id} small kind="amber" onClick={() => askQ("context", cq.id)}>{cq.label}</Btn>
+                    ))}
+                  </div>
+                </div>
+              )}
               {nightRow}
               <div className="grid grid-cols-2 gap-2">
                 <Btn small onClick={() => askQ("where")}>Where were you?</Btn>
@@ -8178,13 +8442,13 @@ const nightWound = (s, loc) =>
       : (s.wellFouled && loc === "Village Square") ? "fouled"
         : (s.breadRiot && loc === "Village Square") ? "riot"
           : null;
-function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, wound, wx, children }) {
+function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night", danger, wound, wx, watched, withheld, children }) {
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   const wd = NIGHT_WOUNDS[wound] || null;
   const sky = NIGHT_SKIES[wx] || null;
   const walkSource = LOCATION_NIGHT_WALK_WOUND_ART[wound] || LOCATION_NIGHT_WALK_ART[loc] || LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
   return (
-    <div className="fixed inset-0 z-40 mv-body heNight heNightShell flex flex-col" style={{ height: "100dvh", background: tn.bg, color: C.parch, overflow: "hidden" }}>
+    <div className={`fixed inset-0 z-40 mv-body heNight heNightShell flex flex-col${watched ? " heChurchyardWatched" : ""}${withheld ? " heNightWithheld" : ""}`} style={{ height: "100dvh", background: tn.bg, color: C.parch, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative heNightShellFrame" style={{ minHeight: 0, overflow: "hidden" }}>
         {/* The square plate includes authored sky and foreground. Narrow screens
             crop its added side margins rather than zooming the old panorama. */}
@@ -8198,9 +8462,10 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
         {wd && wd.art && wd.art(tn.veil)}
         <div className="mvFogA mvFogBank absolute" style={{ left: "-14%", right: "-14%", top: 140, height: 150, pointerEvents: "none" }} />
         <div className="mvFogB mvFogBank absolute" style={{ left: "-18%", right: "-18%", top: 194, height: 170, pointerEvents: "none", opacity: 0.75 }} />
+        {watched && <div className="heChurchyardPresence" aria-hidden="true"><i /><b /><span /></div>}
         <div className="mvGrain" />
         {danger && <div className="mvEdgeRed" />}
-        <div className="relative flex items-baseline" style={{ flexShrink: 0, gap: 10, padding: "0 22px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 26px)" }}>
+        <div className="relative flex items-baseline heNightTopline" style={{ flexShrink: 0, gap: 10, padding: "0 22px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 26px)" }}>
           <span className="mv-display" style={{ fontSize: 12, letterSpacing: 2.6, whiteSpace: "nowrap", color: danger ? C.redBright : "rgba(233,223,200,0.9)" }}>{kicker}</span>
           {onClose && (
             <button onClick={onClose} className="mv-btn mv-body" style={{ marginLeft: "auto", padding: "2px 1px", background: "rgba(7,9,16,.28)", border: "none", borderBottom: "1px solid rgba(233,223,200,0.48)", color: "rgba(233,223,200,0.84)", fontSize: 13.5, cursor: "pointer", textShadow: "0 1px 5px #000" }}>{closeLabel}</button>
@@ -8581,6 +8846,21 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
    between the sky and the bottom of the phone without scrolling, so its
    choices are set a shade smaller and tighter than the day's. */
 .mvNightTight .mv-btn { font-size: 15.5px; line-height: 1.4; padding-top: 8px; padding-bottom: 8px; }
+.heChurchyardPresence { position:absolute; z-index:1; inset:0; pointer-events:none; overflow:hidden; }
+.heChurchyardPresence i { position:absolute; left:-24px; top:54px; width:150px; height:210px; opacity:.38; border-left:11px solid #050509; border-radius:54% 0 0 0; transform:rotate(-8deg); animation:heBranchBreathe 12s ease-in-out infinite alternate; }
+.heChurchyardPresence i::before,.heChurchyardPresence i::after { content:""; position:absolute; left:12px; width:122px; height:78px; border-top:5px solid #050509; border-radius:50%; transform-origin:0 50%; }
+.heChurchyardPresence i::before { top:28px; transform:rotate(-24deg); } .heChurchyardPresence i::after { top:84px; transform:rotate(18deg); }
+.heChurchyardPresence b { position:absolute; right:14%; top:178px; width:8px; height:29px; opacity:.26; border-radius:50% 50% 12% 12%; background:#030306; box-shadow:0 0 24px rgba(0,0,0,.9); animation:heWatcherWait 9s ease-in-out infinite; }
+.heChurchyardPresence span { position:absolute; left:21%; top:166px; width:4px; height:4px; border-radius:50%; background:#d3a55b; box-shadow:0 0 14px 5px rgba(211,165,91,.2); animation:heLanternFail 8s ease-in-out infinite; }
+@keyframes heBranchBreathe { from { transform:rotate(-8deg) translateX(-3px); } to { transform:rotate(-5deg) translateX(5px); } }
+@keyframes heWatcherWait { 0%,58%,100% { opacity:.06; transform:translateX(5px); } 66%,88% { opacity:.4; transform:translateX(0); } }
+@keyframes heLanternFail { 0%,64%,100% { opacity:.6; } 68%,72% { opacity:.05; } 70%,78% { opacity:.85; } }
+.heNightWithheld .heNightTopline { opacity:.04; filter:blur(2px); transition:opacity .25s ease,filter .25s ease; }
+.heNightWithheld .mvCloud,.heNightWithheld .mvFogBank { animation-play-state:paused; }
+.heChurchBeat { position:relative; padding:14px 15px 15px; background:linear-gradient(105deg,rgba(8,8,12,.88),rgba(21,18,22,.72)); border-top:2px solid rgba(217,164,65,.58); box-shadow:4px 5px 0 rgba(0,0,0,.34),inset 0 0 0 1px rgba(233,223,200,.06); }
+.heChurchFace { display:flex; align-items:center; gap:12px; padding:11px; background:rgba(7,7,11,.82); border-top:2px solid rgba(217,164,65,.5); box-shadow:3px 4px 0 rgba(0,0,0,.36); }
+.heDoorCoda { padding:15px; background:linear-gradient(180deg,rgba(25,17,17,.8),rgba(7,7,10,.92)); border-top:2px solid rgba(194,68,80,.62); box-shadow:4px 5px 0 rgba(0,0,0,.38); }
+@media (prefers-reduced-motion: reduce) { .heChurchyardPresence i,.heChurchyardPresence b,.heChurchyardPresence span { animation:none; } .heChurchyardPresence b { opacity:.3; } .heNightWithheld .heNightTopline { opacity:.14; filter:none; } }
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
@@ -9677,6 +9957,13 @@ function MonsterVillage() {
          faith with the text (its ambient lines already say "nearer a song")
          and only on nights it is truly abroad. Everything else wails. */
       else if (stage === "sound") Snd.wail(walk && walk.facts.active && s && s.monster.type === "succubus" ? "song" : undefined);
+      else if (stage === "churchThreshold") {
+        Snd.scene({ location: "Old Church", weather: walk && walk.facts.wx, watched: true, proximity: 0.25 });
+        Snd.cue((((walk || {}).churchScenario || {}).audio || [])[0]);
+      }
+      else if (stage === "churchStill") { Snd.cue((((walk || {}).churchScenario || {}).audio || [])[1]); Snd.silence(true); }
+      else if (stage === "churchSeen") Snd.cue((((walk || {}).churchScenario || {}).audio || [])[2]);
+      else if (stage === "churchDoor") Snd.knock();
     }
     walkStageRef.current = stage;
   }, [walk && walk.stage]);
@@ -10632,8 +10919,11 @@ function MonsterVillage() {
     const company = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && (!lane || x.id !== lane.wid) && facts.outMap[x.id] === loc).map((x) => x.id);
     if (company.length) queue.push("company");
     queue.push("return");
+    const churchSlice = loc === "Old Church";
+    const churchScenario = churchSlice ? sampleV5ChurchyardScenario(s, facts, s.nightNum + 1) : null;
+    const churchDoorEligible = !!churchScenario && !s.churchyardWatchSeen && !(monsterOf(s).id === "wraith" && facts.active && loc !== facts.huntLoc);
     setModal(null);
-    setWalk({ mode: "out", loc, facts, mods: {}, queue, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
+    setWalk({ mode: "out", loc, facts, mods: churchScenario ? { v5Scenario: churchScenario } : {}, queue, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, churchSlice: !!churchScenario, churchScenario, churchDoorEligible, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: churchScenario ? "churchThreshold" : "depart" });
   };
 
   const commitWalk = (extra) => nightfall({ kind: "out", loc: extra.loc || walk.loc, mods: { ...walk.mods, ...extra, closureLine: walk.closureLine || null }, facts: walk.facts });
@@ -10995,17 +11285,21 @@ function MonsterVillage() {
       || ((walk.stage === "followed" || walk.stage === "reveal") && walk.followScene && walk.followScene.kind === "monster");
     const tenseLabel = walk.stage === "witness" ? (walk.witnessAct ? "DO NOT LOOK AWAY" : "SOMETHING IS CLOSE")
       : brushAt >= 4 ? "IT IS SPEAKING TO YOU" : brushAt >= 2 ? "IT IS AN ARM'S LENGTH AWAY" : "SOMETHING IS CLOSE";
-    const sceneLoc = walk.stage === "brush" ? ((walk.brushQuarry || {}).loc || walk.loc)
+    const sceneLoc = walk.stage === "churchDoor" ? "Cottage"
+      : walk.stage === "brush" ? ((walk.brushQuarry || {}).loc || walk.loc)
       : (walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")) ? walk.followScene.dest
       : isWatch ? (HOME_LOC[walk.targetId] || "Cottage") : walk.loc;
-    const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
+    const heroLabel = walk.stage === "churchDoor" ? "YOUR COTTAGE"
+      : isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
     const wxWord = walk.facts.wx ? { fog: "FOG", storm: "STORM COMING", frost: "HARD FROST" }[walk.facts.wx] : "CLEAR";
     return (
       <NightShell loc={sceneLoc} danger={tense} wound={nightWound(s, sceneLoc)} wx={walk.facts.wx}
+        watched={!isWatch && sceneLoc === "Old Church" && !!walk.churchSlice}
+        withheld={walk.stage === "churchStill"}
         kicker={`NIGHT ${s.nightNum + 1} · ${isWatch ? "THE WATCH" : "THE LANES"}`}>
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
           {/* where you are and what the sky is doing, on one line */}
-          <span style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+          <span style={{ display: "flex", alignItems: "baseline", gap: 9, opacity: walk.stage === "churchStill" ? 0.08 : 1, transition: "opacity .25s ease" }}>
             <span className="mv-display" style={{ fontSize: 12.5, letterSpacing: 3.2, whiteSpace: "nowrap", color: tense ? C.redBright : "rgba(233,223,200,0.75)" }}>{heroLabel}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: "rgba(233,223,200,0.72)" }}>{wxWord}</span>
           </span>
@@ -11023,6 +11317,41 @@ function MonsterVillage() {
             {walk.stage === "fate" && walk.fate && (
               <TensionReveal lines={walk.fate.lines} finale={walk.fate.finale} label={walk.fate.label} kind={walk.fate.kind} onDone={runFate} />
             )}
+
+            {!isWatch && walk.stage === "churchThreshold" && (
+              <div className="flex flex-col gap-2 heChurchBeat">
+                <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 3, color: C.nightAmber }}>THE CHURCHYARD · AFTER THE BELL</div>
+                {beat((walk.churchScenario || {}).opening)}
+                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: "churchStill", pre: [] })}>Enter the yew shadow →</Btn>
+              </div>
+            )}
+            {!isWatch && walk.stage === "churchStill" && (
+              <div className="flex flex-col gap-2 heChurchBeat">
+                <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 3.2, color: C.redBright }}>LISTEN</div>
+                {beat((walk.churchScenario || {}).silence, C.redBright)}
+                <Btn full kind="red" onClick={() => setWalk({ ...walk, stage: "churchSeen", pre: [] })}>Look toward the graves →</Btn>
+                <Btn full onClick={() => { Snd.silence(false); setWalk({ ...walk, mods: { ...walk.mods, v5Observation: v5Observation(walk.churchScenario, "pass") }, stage: "depart", pre: ["You keep your eyes on the road. Whatever the churchyard held, you choose not to give it a face."] }); }}>Keep walking. Do not look</Btn>
+              </div>
+            )}
+            {!isWatch && walk.stage === "churchSeen" && (() => {
+              const scene = walk.churchScenario || {};
+              const cw = scene.perception === "clear" && scene.subjectId ? npcById(s, scene.subjectId) : null;
+              return (
+                <div className="flex flex-col gap-2">
+                  <div className="heChurchFace">
+                    {cw && <Portrait id={cw.id} size={48} />}
+                    <div>
+                      {/* Scenario titles are authoring metadata only. The
+                          player gets a face, or uncertainty, never a named
+                          chapter announcing what the moment means. */}
+                      <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2.4, color: C.nightAmber }}>{cw ? cw.name.toUpperCase() : "SOMETHING BEYOND THE LANTERN"}</div>
+                      <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: 1.42, color: C.parch }}>{scene.reveal}</p>
+                    </div>
+                  </div>
+                  <Btn full kind="amber" onClick={() => { Snd.silence(false); setWalk({ ...walk, mods: { ...walk.mods, v5Observation: v5Observation(scene, "look") }, stage: "depart", pre: ["The wind begins again behind you, one branch at a time."] }); }}>Keep going. Carry only what you saw →</Btn>
+                </div>
+              );
+            })()}
 
             {!isWatch && walk.stage === "depart" && (
               <div className="flex flex-col gap-2">
@@ -11353,9 +11682,26 @@ function MonsterVillage() {
             {!isWatch && walk.stage === "return" && (
               <div className="flex flex-col gap-2">
                 {beat(walk.closureLine || pickFreshIdx("walkClosures", WALK_CLOSURES)(walk.loc))}
-                <Btn full kind="amber" onClick={() => commitWalk({})}>Head home, and bar the door →</Btn>
+                <Btn full kind="amber" onClick={() => walk.churchDoorEligible ? setWalk({ ...walk, stage: "churchDoor", doorIdx: 0, pre: [] }) : commitWalk({})}>Head home, and bar the door →</Btn>
               </div>
             )}
+            {!isWatch && walk.stage === "churchDoor" && (() => {
+              const lines = [
+                "Your bolt is half-thrown when something knocks. Twice. Not loudly. The sound of knuckles belonging to someone who expects to be admitted.",
+                "You lift the shutter. The lane is empty. At the far end, the churchyard gate is moving, though the wind is blowing the other way.",
+                "When you turn back, the knocking comes once from inside the room.",
+              ];
+              const idx = Math.min(walk.doorIdx || 0, lines.length - 1);
+              return (
+                <div className="flex flex-col gap-2 heDoorCoda">
+                  <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 3, color: C.redBright }}>YOUR DOOR · 2:13</div>
+                  {beat(lines[idx], idx === lines.length - 1 ? C.redBright : C.parch)}
+                  {idx < lines.length - 1
+                    ? <Btn full kind={idx === 0 ? "red" : "amber"} onClick={() => setWalk({ ...walk, doorIdx: idx + 1 })}>{idx === 0 ? "Look through the shutter →" : "Turn around →"}</Btn>
+                    : <Btn full kind="amber" onClick={() => commitWalk({ churchDoor: true })}>Keep the candle burning until dawn →</Btn>}
+                </div>
+              );
+            })()}
 
             {isWatch && walk.stage === "post" && (
               <div className="flex flex-col gap-2">
@@ -11900,6 +12246,12 @@ function MonsterVillage() {
     const npc = npcById(s2, id);
     const opener = [demeanorLine(s2, id), pickFreshIdx(`dispLine:${dispTier(npc.disp)}`, DISP_LINES[dispTier(npc.disp)])];
     if (npc.sawYouWatching) opener.push(`Before you can speak: "I saw you. The other night, in the lane, watching my door. So am I a suspect, then? Say it to my face."`);
+    const churchMemory = (s2.memories || []).filter((m2) => m2.actorId === id && m2.kind === "churchyard").slice(-1)[0];
+    const churchObservation = churchMemory && (s2.observations || []).find((o) => o.eventId === churchMemory.eventId);
+    if (churchMemory && churchObservation && churchObservation.kind === "seen") opener.push(`Before you can begin: "I remember the churchyard. You saw me, and I saw you decide to remember it."`);
+    else if (churchMemory && churchObservation && churchObservation.kind === "not_seen") opener.push(`Before you can begin: "You looked for me at the churchyard. You did not find me. Ask about the difference, if that is why you came."`);
+    else if (churchMemory && churchObservation && churchObservation.kind === "unobserved") opener.push(`Before you can begin: "I remember the churchyard. I remember you hearing something and choosing not to turn around."`);
+    else if (churchMemory) opener.push(`Before you can begin: "I remember your lantern in the churchyard. You may not have seen me. That does not mean I did not see you."`);
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
     /* the deepest cut of all: the player took their one secret and spent it */
     if (s2.secretSpread && s2.secretSpread[id] && s2.secretSpread[id].reached) opener.push(pickFreshIdx(`spreadOpener:${id}`, [
@@ -11917,15 +12269,17 @@ function MonsterVillage() {
     setIv({ id, night: valid.length ? valid[valid.length - 1] : s2.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })) });
   };
   const askQ = (q, targetId) => {
+    const contextQuestion = q === "context" ? contextualQuestionsFor(s, iv.id).find((cq) => cq.id === targetId) : null;
+    const questionNight = contextQuestion ? contextQuestion.night : iv.night;
     const prevDisp = (npcById(s, iv.id) || {}).disp || 0;
-    const { s: ns, ans } = applyAnswer(s, iv.id, iv.night, q, targetId);
+    const { s: ns, ans } = applyAnswer(s, iv.id, questionNight, q, targetId);
     /* -- Pass H: a soft warm chime whenever this question happened to lift
        their disposition (report-backs, gossip favours, and the like). Pure
        side effect off a before/after read, no change to applyAnswer itself. -- */
     if (((npcById(ns, iv.id) || {}).disp || 0) > prevDisp) Snd.warm();
     setS(ns); setIvSub(null);
-    const qLabel = q === "craft" ? PERSONA[iv.id].craftLabel : targetId ? Q_LABELS[q].replace("someone", npcById(s, targetId).name) : Q_LABELS[q];
-    setIv({ ...iv, left: iv.left - 1, transcript: [...iv.transcript, { q: qLabel, night: iv.night, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
+    const qLabel = q === "context" && contextQuestion ? contextQuestion.label : q === "craft" ? PERSONA[iv.id].craftLabel : targetId ? Q_LABELS[q].replace("someone", npcById(s, targetId).name) : Q_LABELS[q];
+    setIv({ ...iv, night: questionNight, left: iv.left - 1, transcript: [...iv.transcript, { q: qLabel, night: questionNight, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
   };
   /* free follow-up: does not touch iv.left, at most one per answered main question */
   const askFollowUp = (fu) => {
@@ -12623,6 +12977,7 @@ function MonsterVillage() {
     const facts = [];
     s.playerSaw.filter((f) => f.id === n.id).forEach((f) => facts.push({ o: f.night * 10, t: `Night ${f.night}: you saw them near the ${f.loc}.` }));
     (n.sawYouOut || []).forEach((e2) => facts.push({ o: e2.night * 10 + 2, t: `Night ${e2.night}: they ${e2.met ? "met you in the lanes, and will remember it" : `saw YOU abroad, near the ${e2.loc}. The village talks`}.` }));
+    (s.memories || []).filter((m2) => m2.actorId === n.id).forEach((m2) => facts.push({ o: m2.night * 10 + 3, t: `Night ${m2.night}: they ${m2.text}. They remember.` }));
     /* every night-scoped answer they have given you, filed under the night it
        was about - not only where they claim they were. What they say they saw
        is at least as useful, and it used to be nowhere on this page. */
