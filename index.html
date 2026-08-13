@@ -6528,9 +6528,11 @@ function MonsterArt({ id, size = 64, flat = false, locked = false }) {
   const plate = MONSTER_PLATES[id];
   if (!plate) return <LegacyMonsterArt id={id} size={size} flat={flat} />;
   const name = (MONSTERS.find((mm) => mm.id === id) || {}).name || id;
-  const plateFilter = locked
-    ? `${flat ? "brightness(1.04) " : ""}grayscale(1) contrast(.78)`
-    : flat ? "brightness(1.04)" : "none";
+  /* The authored plates carry transparent paper, so the journal's own
+     parchment shows through every drawing.  Do not brighten or feather the
+     flat plates here: either treatment creates a pale square around darker
+     source papers and washes out the fine ink at thumbnail size. */
+  const plateFilter = locked ? "grayscale(1) contrast(.78)" : "none";
   return (
     <span className="heMonsterPlate" style={{
       position: "relative", display: "inline-flex", flexShrink: 0, width: size, height: size,
@@ -6542,8 +6544,8 @@ function MonsterArt({ id, size = 64, flat = false, locked = false }) {
         draggable="false" decoding="async" style={{
           display: "block", width: "100%", height: "100%", objectFit: "cover",
           mixBlendMode: "normal", filter: plateFilter, opacity: locked ? 0.34 : 1,
-          WebkitMaskImage: flat ? "radial-gradient(ellipse at center,#000 62%,rgba(0,0,0,.92) 78%,transparent 100%)" : "none",
-          maskImage: flat ? "radial-gradient(ellipse at center,#000 62%,rgba(0,0,0,.92) 78%,transparent 100%)" : "none",
+          WebkitMaskImage: "none",
+          maskImage: "none",
         }} />
       {locked && (
         <span className="mv-display" style={{
