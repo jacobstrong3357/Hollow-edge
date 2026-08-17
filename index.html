@@ -2047,6 +2047,17 @@ function v5PickPerception(def, facts) {
   });
   return v5WeightedPick(weighted).mode;
 }
+function v5ActorMotive(s, facts, id) {
+  const npc = npcById(s, id);
+  const destination = (facts.outMap || {})[id] || "home";
+  const griefId = (facts.griefOut || {})[id];
+  if (id === s.monster.vid && facts.active) return { kind: "hunt", destination, subjectId: null };
+  if (griefId) return { kind: "grief", destination, subjectId: griefId };
+  if ((facts.secretOut || {})[id]) return { kind: "secret", destination, subjectId: null };
+  if (npc && npc.turned) return { kind: "changed", destination, subjectId: null };
+  if (facts.evn && destination === facts.eventLoc) return { kind: "gathering", destination, subjectId: facts.evn.id };
+  return { kind: "errand", destination, subjectId: null };
+}
 function sampleV5ChurchyardScenario(s, facts, night) {
   const defs = V5_CONTENT.churchyardScenarios || [];
   const tags = v5MonsterTags(s);
@@ -2074,11 +2085,12 @@ function sampleV5ChurchyardScenario(s, facts, night) {
   const dead = gr && gr.dead ? gr.dead.name : ((s.deaths || []).slice(-1)[0] || {}).name || "the dead";
   const vars = { actor: (actors[0] || {}).name || "someone", other: (actors[1] || {}).name || "someone else", dead };
   const perception = v5PickPerception(def, facts);
+  const actorMotives = Object.fromEntries(chosen.actorIds.map((id) => [id, v5ActorMotive(s, facts, id)]));
   return {
     eventId: `n${night}:${def.id}:${Math.random().toString(36).slice(2, 7)}`,
     scenarioId: def.id, night, location: "Old Church",
     actorIds: chosen.actorIds, subjectId: chosen.actorIds[0] || null,
-    motive: def.when, monsterTags: (def.monsterTags || []).slice(),
+    motive: def.when, actorMotives, timeSlot: 3, monsterTags: (def.monsterTags || []).slice(),
     perception, audio: (def.audio || []).slice(),
     opening: v5Fill(def.opening, vars), silence: v5Fill(def.silence, vars),
     reveal: v5Fill((def.reveal || {})[perception] || (def.reveal || {}).partial || (def.reveal || {}).heard, vars),
@@ -3263,6 +3275,15 @@ function resolveNight(prev, planIn, preEvents) {
       s.memories = [...(s.memories || []), ...scene.actorIds.map((actorId) => ({
         eventId: scene.eventId, night: n, actorId, target: "player", kind: "churchyard", text: scene.memory,
       }))];
+      /* This encounter is also a social fact. These villagers can place the
+         player at the church late in the night. An acknowledged meeting is
+         not generic suspicion, while timeSlot distinguishes an alibi from an
+         earlier lantern sighting. */
+      const sceneActors = new Set(scene.actorIds);
+      s.npcs = s.npcs.map((x) => sceneActors.has(x.id) ? {
+        ...x,
+        sawYouOut: [...(x.sawYouOut || []), { night: n, loc: scene.location, met: true, eventId: scene.eventId, timeSlot: scene.timeSlot || 1, nearAttack: !!scene.nearAttack }],
+      } : x);
     }
     if (actor && obs.kind === "seen") dawn.push(ev(`${actor.name} is waiting by the well before you arrive. “You saw me at the churchyard,” they say. “So ask what you came to ask. Do not let the village invent the answer for you.”`, actor.id, 2));
     else if (actor && obs.kind === "not_seen") dawn.push(ev(`${actor.name} passes you at the well and stops. “You looked for me at the churchyard,” they say. “You did not find me. Those are not the same thing.”`, actor.id, 2));
@@ -4054,7 +4075,7 @@ function resolveNight(prev, planIn, preEvents) {
         /* -- if the dead is someone the player met, followed or watched
            TONIGHT, the recap must say so plainly, not let the connection
            vanish into a generic scream. -- */
-        const crossedPaths = [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || [])].filter(Boolean).includes(victim.id);
+        const crossedPaths = [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || []), ...(((mods.v5Scenario || {}).actorIds) || [])].filter(Boolean).includes(victim.id);
         /* the watched-and-taken case is its own story: the player held that
            very door under watch and saw nothing. The recap must own that
            plainly (the kill came AFTER the watcher went home to bed), not
@@ -4078,8 +4099,14 @@ function resolveNight(prev, planIn, preEvents) {
              Kept to what was actually witnessed, and never fatal - the rope
              does not come for the player - but it costs standing with the
              people who loved them, and it is said to your face. -- */
-          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n));
-          if (tellers.length) {
+          const alibis = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n && e2.met && e2.nearAttack && e2.loc !== victimWhere));
+          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n && !e2.met));
+          if (alibis.length) {
+            const names = alibis.slice(0, 2).map((x) => x.name);
+            const entry = (alibis[0].sawYouOut || []).find((e2) => e2.night === n && e2.met && e2.nearAttack && e2.loc !== victimWhere);
+            const named = names.length === 1 ? names[0] : names[0] + " and " + names[1];
+            dawn.push(ev(named + (names.length === 1 ? " places" : " place") + " you at the " + entry.loc + " near the hour " + victim.name + " died at the " + victimWhere + ". The village may doubt your purpose, but not where you were.", alibis[0].id, 2));
+          } else if (tellers.length) {
             const teller = tellers[0];
             s.lastWith = { id: victim.id, name: victim.name, night: n, teller: teller.id };
             dawn.push(ev(`${teller.name} saw your lantern abroad the same night ${victim.name} died, and has done the arithmetic out loud: whoever else was near ${victim.name} at the end, you were. Nobody says the next part. Everybody has got to it.`, victim.id, 2));
@@ -10910,20 +10937,36 @@ function MonsterVillage() {
     let hideIsMonster = false;
     if (facts.active && (facts.huntLoc === loc || chance(0.25))) { queue.push("hide"); hideIsMonster = facts.huntLoc === loc; }
     else if (!facts.active && chance(0.12)) queue.push("hide");
+    const churchSlice = loc === "Old Church";
+    const churchScenario = churchSlice ? sampleV5ChurchyardScenario(s, facts, s.nightNum + 1) : null;
+    /* The authored Churchyard event is a destination node in the same route,
+       not a prologue which restarts the older walk. */
+    if (churchScenario) queue.push("churchThreshold");
     queue.push("approach");
     /* "company": every OTHER living villager (besides the monster, and
        besides whoever the "lane" node already covered) whose sampled
        destination for the night is this same location: decided here, once,
        from facts already locked in, never re-rolled. If nobody qualifies the
        stage is simply skipped (see goReturn). */
-    const company = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && (!lane || x.id !== lane.wid) && facts.outMap[x.id] === loc).map((x) => x.id);
+    const scenarioActors = new Set((churchScenario || {}).actorIds || []);
+    const company = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && (!lane || x.id !== lane.wid) && !scenarioActors.has(x.id) && facts.outMap[x.id] === loc).map((x) => x.id);
     if (company.length) queue.push("company");
     queue.push("return");
-    const churchSlice = loc === "Old Church";
-    const churchScenario = churchSlice ? sampleV5ChurchyardScenario(s, facts, s.nightNum + 1) : null;
-    const churchDoorEligible = !!churchScenario && !s.churchyardWatchSeen && !(monsterOf(s).id === "wraith" && facts.active && loc !== facts.huntLoc);
+    const route = queue.map((kind, slot) => ({
+      slot: slot + 1,
+      kind,
+      location: kind === "event" ? facts.eventLoc : kind === "lane" ? "Village lanes" : loc,
+      actorIds: kind === "lane" && lane ? [lane.wid] : kind === "churchThreshold" && churchScenario ? churchScenario.actorIds : kind === "company" ? company : [],
+    }));
+    const plannedChurchScenario = churchScenario ? {
+      ...churchScenario,
+      timeSlot: queue.indexOf("churchThreshold") + 1,
+      nearAttack: queue.indexOf("churchThreshold") + 1 === queue.indexOf("approach"),
+      route,
+    } : null;
+    const churchDoorEligible = !!plannedChurchScenario && !s.churchyardWatchSeen && !(monsterOf(s).id === "wraith" && facts.active && loc !== facts.huntLoc);
     setModal(null);
-    setWalk({ mode: "out", loc, facts, mods: churchScenario ? { v5Scenario: churchScenario } : {}, queue, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, churchSlice: !!churchScenario, churchScenario, churchDoorEligible, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: churchScenario ? "churchThreshold" : "depart" });
+    setWalk({ mode: "out", loc, facts, mods: plannedChurchScenario ? { v5Scenario: plannedChurchScenario } : {}, queue, route, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, churchSlice: !!plannedChurchScenario, churchScenario: plannedChurchScenario, churchDoorEligible, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
   };
 
   const commitWalk = (extra) => nightfall({ kind: "out", loc: extra.loc || walk.loc, mods: { ...walk.mods, ...extra, closureLine: walk.closureLine || null }, facts: walk.facts });
@@ -11330,7 +11373,11 @@ function MonsterVillage() {
                 <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 3.2, color: C.redBright }}>LISTEN</div>
                 {beat((walk.churchScenario || {}).silence, C.redBright)}
                 <Btn full kind="red" onClick={() => setWalk({ ...walk, stage: "churchSeen", pre: [] })}>Look toward the graves →</Btn>
-                <Btn full onClick={() => { Snd.silence(false); setWalk({ ...walk, mods: { ...walk.mods, v5Observation: v5Observation(walk.churchScenario, "pass") }, stage: "depart", pre: ["You keep your eyes on the road. Whatever the churchyard held, you choose not to give it a face."] }); }}>Keep walking. Do not look</Btn>
+                <Btn full onClick={() => {
+                  Snd.silence(false);
+                  const newMods = { ...walk.mods, v5Observation: v5Observation(walk.churchScenario, "pass") };
+                  advanceAfterSearch({ ...walk, mods: newMods }, newMods, ["You leave the churchyard without giving its shape a face. The road home feels watched."]);
+                }}>Leave without looking</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "churchSeen" && (() => {
@@ -11348,7 +11395,16 @@ function MonsterVillage() {
                       <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: 1.42, color: C.parch }}>{scene.reveal}</p>
                     </div>
                   </div>
-                  <Btn full kind="amber" onClick={() => { Snd.silence(false); setWalk({ ...walk, mods: { ...walk.mods, v5Observation: v5Observation(scene, "look") }, stage: "depart", pre: ["The wind begins again behind you, one branch at a time."] }); }}>Keep going. Carry only what you saw →</Btn>
+                  <Btn full kind="amber" onClick={() => {
+                    Snd.silence(false);
+                    const newMods = { ...walk.mods, v5Observation: v5Observation(scene, "look") };
+                    setWalk({ ...walk, mods: newMods, stage: nextStage(walk, "churchThreshold"), pre: ["You stay after the figure has gone. Now the ground must answer."] });
+                  }}>Stay. Search the churchyard →</Btn>
+                  <Btn full onClick={() => {
+                    Snd.silence(false);
+                    const newMods = { ...walk.mods, v5Observation: v5Observation(scene, "look") };
+                    advanceAfterSearch({ ...walk, mods: newMods }, newMods, ["The wind begins again behind you, one branch at a time."]);
+                  }}>Carry only what you saw. Go home</Btn>
                 </div>
               );
             })()}

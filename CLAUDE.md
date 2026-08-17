@@ -140,8 +140,11 @@ must name both WHO and WHAT before the village runs out of people.
   is passed through `mods` (e.g. `searchRoll`, `fateDeath`, `homeWatch`) and
   only "settled" (clues/dawn cards/state) in `resolveNight`.
 - **The night walk is a queue state machine** (`startWalk`): nodes
-  `depart → affliction? → lane? → event? → sound? → hide? → approach →
-  company? → return`, advanced by `nextStage(walk, fromType)`. Side scenes
+  `depart → affliction? → lane? → event? → sound? → hide? → destination →
+  approach? → company? → return`, advanced by `nextStage(walk, fromType)`.
+  The authored Churchyard encounter is a destination node in this queue, not
+  a separate pre-walk. Leaving it returns through company/home; staying to
+  search continues into `approach`, preserving the sampled danger. Side scenes
   (`followed`, `hailed`, `chased`, `listened`, `hidden`, `vigil`, `found`,
   `brush`, `mingled`) branch off and re-enter via `nextStage`/`goReturn`/
   `advanceAfterSearch`. `commitWalk`/`commitWatch` end the night via
@@ -215,7 +218,10 @@ must name both WHO and WHAT before the village runs out of people.
   floor), the barb said to your face when you ask anyone where they were
   *that* night (it replaces the ordinary lantern barb rather than stacking
   with it), and your name in the square the next time the mob forms. Still
-  never fatal.
+  never fatal. A mutually acknowledged destination encounter immediately
+  before the attack window is different: when that witness places the player
+  somewhere other than the body, it is an alibi and prevents the dead's kin
+  disposition loss. Earlier hails and unacknowledged lantern sightings do not.
 - **It knows which door is yours.** Once `s.monsterSawYou`, an active night
   can bring it to your threshold (0.35). It never enters and never kills
   there, whatever its `reach` — the barred door is the promise the game

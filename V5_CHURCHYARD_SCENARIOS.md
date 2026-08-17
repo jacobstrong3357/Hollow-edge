@@ -1,8 +1,11 @@
 # V5 Churchyard scenario system
 
-The Churchyard night walk now runs on the latest illustrated V5 interface.
-Authored scenario labels are development metadata only: the player experiences
-a place, a sound, a face, or an uncertainty, never a named chapter.
+The Churchyard night walk now runs on the latest illustrated V5 interface as
+one route. The authored encounter is a destination node after the lane,
+village-event, sound, and danger beats that apply that night. It is not a
+separate prologue followed by a second generic walk. Authored scenario labels
+remain development metadata only: the player experiences a place, a sound, a
+face, or an uncertainty, never a named chapter.
 
 ## Runtime ledgers
 
@@ -13,6 +16,8 @@ a place, a sound, a face, or an uncertainty, never a named chapter.
 
 The four ledgers must remain separate. A presentation choice cannot alter the
 sampled night, and hidden truth cannot leak into an interview or the Journal.
+Each world event also carries the route that led to it, the sampled motive for
+each participant, and its relative time slot.
 
 ## Non-repetition rules
 
@@ -31,6 +36,12 @@ Participant scenes draw only from villagers the sampled night already placed
 at the Old Church. Monster tags adjust weights but never exclusively gate a
 scene. The hidden host can give an evasive answer, but no scene or response is
 proof by itself.
+
+An acknowledged encounter immediately before the attack window can serve as a
+social alibi when somebody the player met earlier dies elsewhere. An
+unacknowledged lantern sighting may still feed village suspicion. The alibi
+changes testimony and prevents relationship damage; it never changes physical
+evidence or the hidden monster truth.
 
 ## Audio
 
