@@ -115,6 +115,35 @@ function take(state, wanted) {
   assert.strictEqual(state.currentBeat, null, "an uneventful next action must not repeat the previous presentation beat");
 })();
 
+(function guidedNightOffersAStoryCorridorNotTheWholeMap() {
+  var state = Director.createNight(baseConfig("guided-corridor"));
+  var guide = { target: "Old Church", kind: "search", intentDone: false, interacted: {} };
+  var actions = Director.guidedActions(state, guide);
+  assert.strictEqual(actions.length, 1, "leaving home is one committed beginning");
+  assert.strictEqual(actions[0].type, "LEAVE");
+  state = take(state, actions[0]);
+  actions = Director.guidedActions(state, guide);
+  assert(actions.length <= 3, "an ordinary scene never becomes a wall of controls");
+  assert.deepStrictEqual(actions.map(function (a) { return [a.type, a.to]; }), [["MOVE", "Old Church"]], "the player is led toward the declared errand rather than shown every road");
+  state = take(state, actions[0]);
+  actions = Director.guidedActions(state, guide);
+  assert.deepStrictEqual(actions.map(function (a) { return a.type; }), ["SEARCH"], "arrival frames the intended investigation");
+  state = take(state, actions[0]);
+  guide.intentDone = true;
+  actions = Director.guidedActions(state, guide);
+  assert.deepStrictEqual(actions.map(function (a) { return a.type; }), ["LISTEN", "WAIT", "GO_HOME"], "after the errand, staying or leaving are the only quiet choices");
+  var actorAction = Director.availableActions(state).find(function (a) { return a.type === "HAIL"; });
+  if (actorAction) {
+    actions = Director.guidedActions(state, { target: "Old Church", kind: "search", actorId: actorAction.actorId, intentDone: true, interacted: {} });
+    assert(actions.some(function (a) { return a.type === "HAIL"; }), "the framed villager can be greeted once");
+    var used = {};
+    used[actorAction.actorId + "|HAIL"] = true;
+    used[actorAction.actorId + "|FOLLOW"] = true;
+    actions = Director.guidedActions(state, { target: "Old Church", kind: "search", actorId: actorAction.actorId, intentDone: true, interacted: used });
+    assert(!actions.some(function (a) { return a.type === "HAIL" || a.type === "FOLLOW"; }), "the same villager interaction does not reappear at the next bend");
+  }
+})();
+
 (function discoveriesAreEarnedAndFair() {
   var config = baseConfig("discoveries");
   var state = Director.createNight(config);
@@ -205,6 +234,54 @@ function take(state, wanted) {
   if (state.phase === "threshold") state = take(state, { type: "KEEP_BARRED" });
   assert.strictEqual(state.phase, "complete");
   assert(state.player.alive);
+})();
+
+(function aWerewolfEscapeTransfersRatherThanCancelsTheKill() {
+  var config = {
+    seed: "werewolf-relentless",
+    night: 4,
+    slots: 7,
+    villagers: [{
+      id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+      motive: { id: "late-parcel", family: "work", destination: "Old Mill", reason: "deliver a parcel", object: "a tied parcel", depart: 0, duration: 7 }
+    }],
+    monster: { id: "werewolf", hostId: "greta", active: true, signs: ["claw", "bite", "tracks"], hunts: ["Old Mill"], attack: "kill", reach: "out", huntSlot: 3 },
+    currentFacts: { weather: "still", active: true, huntLoc: "Old Mill", attackSlot: 3, outMap: { rosa: "Old Mill" } }
+  };
+  var state = Director.createNight(config);
+  state.attackPriorities[3].player = 0.01;
+  state.attackPriorities[3].rosa = 0.9;
+  state.outcomes[3].chase.breakLine[0] = 0.9;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "MOVE", to: "Old Mill" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.phase, "threat");
+  assert.strictEqual(state.pendingThreat.victimId, "player", "the player is the werewolf's first quarry");
+  assert.strictEqual(state.pendingThreat.fallbackVictimId, "rosa", "the night already knows who remains exposed");
+  state = take(state, { type: "FLEE" });
+  state = take(state, { type: "BREAK_LINE" });
+  assert.strictEqual(state.phase, "returning", "the player really did escape");
+  assert(state.player.alive);
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "relentless_retarget" && event.victimId === "rosa"; }), "truth records why the quarry changed");
+  assert.strictEqual(state.ledgers.truth.filter(function (event) { return event.kind === "slain"; }).length, 1, "the third-night kill still lands exactly once");
+  assert.strictEqual(state.ledgers.truth.find(function (event) { return event.kind === "slain"; }).victimId, "rosa", "dawn receives the replacement victim rather than an empty hunt");
+
+  state = Director.createNight(config);
+  state.attackPriorities[3].rosa = 0.01;
+  state.attackPriorities[3].player = 0.9;
+  state.outcomes[3].intervene = 0.1;
+  state.outcomes[3].chase.breakLine[0] = 0.9;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "MOVE", to: "Old Mill" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.pendingThreat.victimId, "rosa", "the alternate branch catches a neighbour first");
+  state = take(state, { type: "INTERVENE" });
+  assert.strictEqual(state.phase, "chase", "a successful warning redirects the uninterruptible hunt onto the player");
+  assert.strictEqual(state.chase.fallbackVictimId, "rosa");
+  state = take(state, { type: "BREAK_LINE" });
+  assert(state.player.alive && state.ledgers.truth.some(function (event) { return event.kind === "slain" && event.victimId === "rosa"; }), "even a successful intervention changes the route of the kill, not the werewolf's rhythm");
 })();
 
 (function theThresholdIsSafeButNotQuiet() {
@@ -326,6 +403,7 @@ function take(state, wanted) {
   var state = Director.createNight(baseConfig("old-save"));
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state.version = 1;
+  delete state.monsterSchedule.relentless;
   delete state.visibility;
   delete state.chase;
   delete state.thresholdEvent;
@@ -335,6 +413,7 @@ function take(state, wanted) {
   restored = take(restored, { type: "WAIT" });
   assert.strictEqual(restored.version, 2);
   assert(restored.visibility && restored.thresholdEvent && restored.outcomes[1].chase, "the first action fills only the new deterministic fields");
+  assert.strictEqual(restored.monsterSchedule.relentless, false, "old monster schedules gain the deterministic rhythm flag without rerolling");
 })();
 
 console.log("v5-night-director: all tests passed");

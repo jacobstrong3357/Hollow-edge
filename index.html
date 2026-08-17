@@ -3164,13 +3164,30 @@ function sampleNight(s, m, n) {
     }
   }
   const huntLoc = active ? outMap[s.monster.vid] : null;
+  /* A werewolf's active third-night rhythm is a law, not a roll. Put one
+     living non-host villager on its final hunting ground now. If the player
+     becomes the first quarry and escapes, the Director already has somebody
+     physically exposed to inherit the hunt; dawn never invents a substitute. */
+  let relentlessVictimId = null;
+  if (active && m.id === "werewolf" && huntLoc) {
+    const exposed = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && outMap[npc.id] === huntLoc);
+    if (exposed.length) relentlessVictimId = pick(exposed).id;
+    else {
+      const candidates = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid);
+      if (candidates.length) {
+        const forced = pick(candidates);
+        outMap[forced.id] = huntLoc;
+        relentlessVictimId = forced.id;
+      }
+    }
+  }
   /* whether tonight's vantage could actually DECODE a crossed-paths secret
      errand (the "wait" watch), sampled here so the live walk and the recap
      agree. Half the time you only see a neighbour abroad, not the why:
      secrets should be a payoff, not a nightly harvest. */
   const secretCatch = {};
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.35);
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, griefOut, huntLoc, affliction };
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, griefOut, huntLoc, relentlessVictimId, affliction };
 }
 
 /* ================= V5 NIGHT DIRECTOR ADAPTER =================
@@ -3212,6 +3229,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   const rng = HE_DIRECTOR.createRng(seed + ":presentation");
   const realGroundSigns = monsterOf(s).signs.filter((sg) => sg !== "wail");
   const firstNightTarget = n === 1 && facts.active ? s.npcs.find((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && facts.outMap[npc.id] === facts.huntLoc) : null;
+  const guaranteedHuntTarget = facts.relentlessVictimId ? npcById(s, facts.relentlessVictimId) : firstNightTarget;
   const forcedBeats = [
     { id: `n${n}:whisper`, type: "whisper", slot: 1, location: "Village Square", text: DIRECTOR_WHISPERS[Math.floor(rng.next() * DIRECTOR_WHISPERS.length)] },
   ];
@@ -3231,7 +3249,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       disposition: npc.disp || 0, home: HOME_LOC[npc.id] || "Village Square",
       changed: !!npc.turned, afflicted: !!npc.turned,
       bonds: BONDS.filter((b) => b.a === npc.id || b.b === npc.id).map((b) => b.a === npc.id ? b.b : b.a),
-      motive: firstNightTarget && firstNightTarget.id === npc.id
+      motive: guaranteedHuntTarget && guaranteedHuntTarget.id === npc.id
         ? { ...(directorMotiveFor(s, facts, npc) || { id: `first-blood:${npc.id}`, family: "obligation", destination: facts.huntLoc, reason: "finish an errand promised before sunset", object: "a small parcel that never reached its door" }), depart: 2, duration: 5 }
         : directorMotiveFor(s, facts, npc),
     })),
@@ -3239,6 +3257,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       id: monsterOf(s).id, hostId: s.monster.vid, active: facts.active,
       signs: monsterOf(s).signs, hunts: monsterOf(s).hunts,
       reach: monsterOf(s).reach, attack: monsterOf(s).attack,
+      relentless: monsterOf(s).id === "werewolf",
     },
     player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou },
     recentSignatures: directorRecentSignatures(s), forcedBeats,
@@ -3246,7 +3265,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   const currentFacts = {
     weather: facts.wx || "still", active: facts.active, huntLoc: facts.huntLoc,
     outMap: facts.outMap, griefOut: facts.griefOut, secretOut: facts.secretOut,
-    eventLoc: facts.eventLoc, attackSlot,
+    eventLoc: facts.eventLoc, attackSlot, relentlessVictimId: facts.relentlessVictimId,
   };
   /* Compile a private preview only to place one mundane object on a route
      that really exists. Recompiling with the same seed is byte-stable; the
@@ -11171,6 +11190,7 @@ function MonsterVillage() {
         ? `You mean to watch ${npcById(s, openingIntent.id).name}'s door. The village may give you other reasons to move.`
         : `You mean to search the ${openingIntent.loc}. The road there belongs to everyone still awake.`,
       lastAction: null,
+      intentDone: false, interacted: {},
     });
     return true;
   };
@@ -11504,7 +11524,17 @@ function MonsterVillage() {
     else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
     else if (action.type === "ANSWER_DOOR") Snd.cue("whisper");
     else if (action.type === "REACH_HOME") Snd.cue("latch");
-    setWalk({ ...walk, director: next, lastAction: action, feedback, usedFeedback: feedback ? [...(walk.usedFeedback || []), feedback] : (walk.usedFeedback || []) });
+    const target = walk.openingIntent.kind === "watch" ? (HOME_LOC[walk.openingIntent.id] || "Village Square") : walk.openingIntent.loc;
+    const completesIntent = next.player.location === target && ((walk.openingIntent.kind === "watch" && ["WAIT", "FOLLOW"].includes(action.type)) || (walk.openingIntent.kind !== "watch" && action.type === "SEARCH"));
+    /* A hail or follow is one meaningful beat with that person tonight, not
+       a button that reappears at every bend and makes them repeat themself. */
+    const interactionKey = action.actorId ? `${action.actorId}|${action.type}` : null;
+    setWalk({
+      ...walk, director: next, lastAction: action, feedback,
+      intentDone: !!(walk.intentDone || completesIntent),
+      interacted: interactionKey ? { ...(walk.interacted || {}), [interactionKey]: true } : (walk.interacted || {}),
+      usedFeedback: feedback ? [...(walk.usedFeedback || []), feedback] : (walk.usedFeedback || []),
+    });
   };
 
   const directorBeatText = (director, beat) => {
@@ -11537,8 +11567,16 @@ function MonsterVillage() {
       const terminal = d.phase === "complete" || d.phase === "dead";
       const location = d.player.location === "Home" ? "Cottage" : (d.player.location || "Village Square");
       const danger = ["threat", "chase", "dead"].includes(d.phase) || (beat && ["threat", "flee", "aftermath"].includes(beat.type));
-      const actions = HE_DIRECTOR.availableActions(d);
       const actor = beat && beat.actorId ? npcById(s, beat.actorId) : null;
+      const intentTarget = walk.openingIntent.kind === "watch" ? (HOME_LOC[walk.openingIntent.id] || "Village Square") : walk.openingIntent.loc;
+      const focusedActions = HE_DIRECTOR.guidedActions(d, {
+        target: intentTarget,
+        kind: walk.openingIntent.kind,
+        actorId: actor && actor.id,
+        actorName: walk.openingIntent.kind === "watch" ? npcById(s, walk.openingIntent.id).name : null,
+        intentDone: !!walk.intentDone,
+        interacted: walk.interacted || {},
+      });
       const labels = { stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", whisper: "A VOICE IN THE DARK", delusion: "SOMETHING IS WRONG", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS" };
       const slotLabel = d.cursor < 0 ? "BEFORE THE LAST LIGHT" : d.cursor < 2 ? "AFTER THE BELL" : d.cursor < 4 ? "THE SMALL HOURS" : d.cursor < 6 ? "BEFORE DAWN" : "THE LAST DARK";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
@@ -11566,7 +11604,7 @@ function MonsterVillage() {
           </div>
           {!terminal && (
             <div className="flex flex-col" style={{ gap: 7, paddingBottom: 8 }}>
-              {actions.map((a, i) => (
+              {focusedActions.map((a, i) => (
                 <NightChoice key={`${a.type}:${a.to || a.actorId || i}`} quiet={a.tone === "quiet"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
                     <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN"].includes(a.type) ? "→" : a.type === "SEARCH" ? "⌕" : a.type === "LISTEN" ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : a.type === "ANSWER_DOOR" ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
@@ -13430,8 +13468,25 @@ function MonsterVillage() {
     const struckP = s.struckNpcs.includes(n.id);
     const facts = [];
     s.playerSaw.filter((f) => f.id === n.id).forEach((f) => facts.push({ o: f.night * 10, t: `Night ${f.night}: you saw them near the ${f.loc}.` }));
-    (n.sawYouOut || []).forEach((e2) => facts.push({ o: e2.night * 10 + 2, t: `Night ${e2.night}: they ${e2.met ? "met you in the lanes, and will remember it" : `saw YOU abroad, near the ${e2.loc}. The village talks`}.` }));
-    (s.memories || []).filter((m2) => m2.actorId === n.id).forEach((m2) => facts.push({ o: m2.night * 10 + 3, t: `Night ${m2.night}: they ${m2.text}. They remember.` }));
+    const laneMemories = new Map();
+    for (const e2 of (n.sawYouOut || [])) {
+      const key = `${e2.night}|${e2.loc}`;
+      const prior = laneMemories.get(key);
+      if (!prior || (!prior.met && e2.met)) laneMemories.set(key, e2);
+    }
+    for (const e2 of laneMemories.values()) facts.push({
+      o: e2.night * 10 + 2,
+      t: e2.met
+        ? `Night ${e2.night}: you met at the ${e2.loc}; they can place you there.`
+        : `Night ${e2.night}: they saw your lantern near the ${e2.loc}; you may not have seen them.`,
+    });
+    (s.memories || []).filter((m2) => m2.actorId === n.id && m2.kind !== "director").forEach((m2) => {
+      const relationshipText = m2.kind === "rescued" ? "they remember that you drew the danger away"
+        : m2.kind === "attempted_rescue" ? "they remember that you tried to reach them"
+        : m2.kind === "abandoned" ? "they remember that you chose the road home"
+        : String(m2.text || "they remember the encounter").replace(/^They\s+/, "they ").replace(/[.]+$/, "");
+      facts.push({ o: m2.night * 10 + 3, t: `Night ${m2.night}: ${relationshipText}.` });
+    });
     /* every night-scoped answer they have given you, filed under the night it
        was about - not only where they claim they were. What they say they saw
        is at least as useful, and it used to be nowhere on this page. */

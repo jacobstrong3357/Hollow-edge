@@ -393,6 +393,9 @@
       attackSlot: attackSlot,
       attack: monster.attack || "kill",
       attackMode: monster.attack === "both" ? (rng.next() < 0.5 ? "kill" : "turn") : (monster.attack || "kill"),
+      /* Some monsters have a rhythm the player may redirect but never cancel.
+         The werewolf's third-night hunt is the first such hard law. */
+      relentless: monster.relentless == null ? monster.id === "werewolf" : !!monster.relentless,
       reach: monster.reach || "out",
       route: route,
       locations: locations,
@@ -635,7 +638,7 @@
     return signs[Math.floor((state.outcomes[slot].sign || 0) * signs.length) % signs.length];
   }
 
-  function killVillager(state, victimId, slot, witnessed) {
+  function killVillager(state, victimId, slot, witnessed, locationOverride) {
     var victim = state.cast.find(function (x) { return x.id === victimId; });
     if (!victim || !victim.alive) return;
     var turned = state.monsterSchedule.attackMode === "turn";
@@ -644,12 +647,40 @@
       victim.afflicted = true;
     } else victim.alive = false;
     var sign = actualSign(state, slot);
-    var event = appendTruth(state, { id: "attack:" + slot + ":" + victimId, slot: slot, kind: turned ? "changed" : "slain", location: state.monsterSchedule.huntLoc, actors: [state.monsterSchedule.hostId, victimId].filter(Boolean), victimId: victimId, sign: sign, witnessed: !!witnessed });
+    var event = appendTruth(state, { id: "attack:" + slot + ":" + victimId, slot: slot, kind: turned ? "changed" : "slain", location: locationOverride || state.monsterSchedule.huntLoc, actors: [state.monsterSchedule.hostId, victimId].filter(Boolean), victimId: victimId, sign: sign, witnessed: !!witnessed });
     if (witnessed) {
       appendObservation(state, { eventId: event.id, slot: slot, kind: "attack_aftermath", location: event.location, actors: [victimId], clarity: "partial", reliability: "direct", sign: sign });
       appendBeat(state, makeBeat("aftermath:" + slot + ":" + victimId, "aftermath", slot, event.location,
         victim.name + " falls beyond the lantern. What moved there is already gone, but the ground keeps one mark.", { actorId: victimId, sign: sign, truthEventId: event.id }));
     }
+  }
+
+  function exposedFallback(state, slot, excluded) {
+    excluded = excluded || [];
+    var candidates = state.cast.filter(function (villager) {
+      var location = actorLocation(state, villager.id, slot);
+      return villager.alive && !villager.changed && villager.id !== state.monsterSchedule.hostId && excluded.indexOf(villager.id) < 0 && location && location !== HOME;
+    }).map(function (villager) { return villager.id; });
+    var victimId = chooseVictim(state, candidates, slot);
+    return victimId ? { victimId: victimId, location: actorLocation(state, victimId, slot) } : null;
+  }
+
+  function retargetRelentlessHunt(state, threat) {
+    if (!state.monsterSchedule.relentless || !threat || !threat.fallbackVictimId) return false;
+    var victim = state.cast.find(function (villager) { return villager.id === threat.fallbackVictimId; });
+    if (!victim || !victim.alive) return false;
+    appendTruth(state, {
+      id: "retarget:" + threat.slot + ":" + threat.fallbackVictimId,
+      slot: threat.slot,
+      kind: "relentless_retarget",
+      location: threat.fallbackLocation || state.monsterSchedule.huntLoc,
+      actors: [state.monsterSchedule.hostId, "player", threat.fallbackVictimId].filter(Boolean),
+      escapedId: threat.victimId === "player" ? "player" : null,
+      sparedId: threat.victimId,
+      victimId: threat.fallbackVictimId
+    });
+    killVillager(state, threat.fallbackVictimId, threat.slot, false, threat.fallbackLocation);
+    return true;
   }
 
   function processAttack(state, slot) {
@@ -660,13 +691,24 @@
     var playerHere = state.player.alive && state.player.location === location && state.player.location !== HOME;
     var candidates = villagers.concat(playerHere ? ["player"] : []);
     var victim = chooseVictim(state, candidates, slot);
+    /* A relentless hunt may leave its promised ground and take another
+       exposed villager, but it cannot dissolve into hunt_empty. */
+    if (!victim && monster.relentless) {
+      var remoteVictim = exposedFallback(state, slot, []);
+      if (remoteVictim) {
+        state.resolvedAttackSlots.push(slot);
+        killVillager(state, remoteVictim.victimId, slot, false, remoteVictim.location);
+        return;
+      }
+    }
     if (!victim) {
       state.resolvedAttackSlots.push(slot);
       appendTruth(state, { id: "hunt-empty:" + slot, slot: slot, kind: "hunt_empty", location: location, actors: [monster.hostId].filter(Boolean) });
       return;
     }
     if (playerHere) {
-      state.pendingThreat = { id: "threat:" + slot + ":" + victim, slot: slot, location: location, victimId: victim, kind: victim === "player" ? "player" : "witness", sign: actualSign(state, slot) };
+      var fallback = monster.relentless ? exposedFallback(state, slot, [victim]) : null;
+      state.pendingThreat = { id: "threat:" + slot + ":" + victim, slot: slot, location: location, victimId: victim, kind: victim === "player" ? "player" : "witness", sign: actualSign(state, slot), fallbackVictimId: fallback && fallback.victimId, fallbackLocation: fallback && fallback.location };
       state.phase = "threat";
       state.player.monsterSawYou = true;
       appendBeat(state, makeBeat(state.pendingThreat.id, "threat", slot, location,
@@ -747,6 +789,7 @@
 
   function upgradeStateInPlace(state) {
     if (!state) return state;
+    if (state.monsterSchedule && state.monsterSchedule.relentless == null) state.monsterSchedule.relentless = state.monsterSchedule.id === "werewolf";
     state.visibility = state.visibility || {};
     state.outcomes = state.outcomes || {};
     for (var slot = 0; slot < state.slots; slot += 1) {
@@ -787,7 +830,7 @@
     state.resolvedAttackSlots.push(threat.slot);
     state.pendingThreat = null;
     state.phase = "chase";
-    state.chase = { slot: threat.slot, step: 0, distance: 2, location: threat.location, history: [] };
+    state.chase = { slot: threat.slot, step: 0, distance: 2, location: threat.location, history: [], fallbackVictimId: threat.fallbackVictimId || null, fallbackLocation: threat.fallbackLocation || null };
     appendTruth(state, { id: "chase-start:" + threat.slot, slot: threat.slot, kind: "chase_started", location: threat.location, actors: [state.monsterSchedule.hostId, "player"].filter(Boolean) });
     appendBeat(state, makeBeat("chase-start-beat:" + threat.slot, "flee", threat.slot, threat.location,
       "You run. The first turn buys you darkness but not distance. Behind you, the road is learning your pace.", { outcome: "closing" }));
@@ -798,6 +841,7 @@
     var chase = state.chase;
     appendTruth(state, { id: "escape:" + chase.slot + ":" + action.type.toLowerCase(), slot: chase.slot, kind: "escape", method: action.type.toLowerCase(), location: chase.location, succeeded: true, chaseSteps: chase.step });
     appendBeat(state, makeBeat("chase-escape:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location, outcome, { outcome: "escaped" }));
+    retargetRelentlessHunt(state, chase);
     state.chase = null;
     state.phase = "returning";
     return state;
@@ -895,6 +939,18 @@
         appendBeat(state, makeBeat("intervene-beat:" + threat.slot, "flee", threat.slot, threat.location,
           saved ? "You shout. Your neighbour breaks for the wall, and the dark follows the louder courage instead of the easier body." : "You shout. The figure turns, but not quickly enough. The night takes the distance back.", { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
         if (!saved) killVillager(state, threat.victimId, threat.slot, true);
+        else if (state.monsterSchedule.relentless) {
+          /* The warning saves the neighbour from the first rush by making the
+             player the new quarry. If the player then escapes, the original
+             victim remains the deterministic second target. */
+          return startChase(state, {
+            slot: threat.slot,
+            location: threat.location,
+            victimId: "player",
+            fallbackVictimId: threat.victimId,
+            fallbackLocation: threat.location
+          });
+        }
       } else if (action.type === "IGNORE" || action.type === "FLEE") {
         appendTruth(state, { id: "abandon:" + threat.slot + ":" + threat.victimId, slot: threat.slot, kind: "abandonment", action: action.type, location: threat.location, actors: ["player", threat.victimId], victimId: threat.victimId });
         killVillager(state, threat.victimId, threat.slot, true);
@@ -916,6 +972,7 @@
     state.resolvedAttackSlots.push(threat.slot);
     state.pendingThreat = null;
     if (survival) {
+      retargetRelentlessHunt(state, threat);
       state.phase = "returning";
     } else {
       state.player.alive = false;
@@ -1013,6 +1070,59 @@
     });
     result.push(action("GO_HOME", "Go home and bar the door", "bone"));
     return result;
+  }
+
+  /* The simulation remains a complete village graph, but the night screen is
+     a directed dramatic corridor. The player may continue their declared
+     errand, interrupt the person presently framed by the scene, accept the
+     diversion of following them, stay once the errand is done, or go home.
+     Other legal roads continue to exist for schedules and monster movement;
+     they are deliberately not exposed as a permanent fast-travel menu. */
+  function guidedActions(state, guide) {
+    guide = guide || {};
+    var all = availableActions(state);
+    if (!state || state.phase === "dead" || state.phase === "complete") return [];
+    if (["threat", "chase", "threshold", "returning"].indexOf(state.phase) >= 0) return all;
+    var target = guide.target;
+    if (state.phase === "planned") {
+      var leave = all[0];
+      if (!leave) return [];
+      leave.label = guide.kind === "watch" ? "Set out for " + (guide.actorName || "their") + " door" : "Set out for the " + target;
+      return [leave];
+    }
+    var result = [];
+    var used = {};
+    function add(candidate, label) {
+      if (!candidate) return;
+      var key = candidate.type + "|" + (candidate.to || "") + "|" + (candidate.actorId || "");
+      if (used[key]) return;
+      used[key] = true;
+      var copy = clone(candidate);
+      if (label) copy.label = label;
+      result.push(copy);
+    }
+    var atTarget = !!target && state.player.location === target;
+    if (target && !atTarget) {
+      var path = shortestPath(state.graph, state.player.location, target);
+      var nextLocation = path[1];
+      add(all.find(function (item) { return item.type === "MOVE" && item.to === nextLocation; }), "Continue to the " + target);
+    }
+    if (atTarget && !guide.intentDone) {
+      if (guide.kind === "watch") add(all.find(function (item) { return item.type === "WAIT"; }), "Take up watch near " + (guide.actorName || "their") + " door");
+      else add(all.find(function (item) { return item.type === "SEARCH"; }), "Search the " + target);
+    }
+    if (guide.actorId) {
+      var hailKey = guide.actorId + "|HAIL";
+      var followKey = guide.actorId + "|FOLLOW";
+      if (!(guide.interacted || {})[hailKey]) add(all.find(function (item) { return item.type === "HAIL" && item.actorId === guide.actorId; }));
+      if (!(guide.interacted || {})[followKey]) add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }));
+    } else if (atTarget && guide.intentDone) {
+      add(all.find(function (item) { return item.type === "LISTEN"; }), "Stay and listen");
+      add(all.find(function (item) { return item.type === "WAIT"; }), "Wait a little longer");
+    }
+    if (guide.intentDone) add(all.find(function (item) { return item.type === "GO_HOME"; }));
+    if (!result.length) add(all.find(function (item) { return item.type === "WAIT"; }) || all.find(function (item) { return item.type === "GO_HOME"; }));
+    return result.slice(0, 3);
   }
 
   function safeId(value) {
@@ -1133,6 +1243,7 @@
     consequenceProjection: consequenceProjection,
     reduce: reduce,
     availableActions: availableActions,
+    guidedActions: guidedActions,
     actorAt: actorLocation,
     actorsAt: actorsAt,
     visibleState: visibleState,
