@@ -6132,6 +6132,12 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     </svg>
   );
 }
+/* One source of truth for the creature cards' night grounds. MonsterDeath
+   also paints this ground as a stationary layer: every rite dims, moves or
+   shrinks the art, but the card itself must not inherit a new colour from
+   whichever ending screen happens to be behind it. */
+const MONSTER_AURA = { werewolf: "#8A5A2A", vampire: "#8A2432", wraith: "#4A5E8A", ghoul: "#5A5030", witch: "#3E6A38", demon: "#8A2A18", shifter: "#5A4A6A", banshee: "#3E6E82", lich: "#2E6058", revenant: "#4A5040", doppel: "#585062", hag: "#3A4A5A", necromancer: "#3E5A48", mimic: "#5A3A5A", succubus: "#7A3050", hollowed: "#4A5E38" };
+
 function MonsterArt({ id, size = 64, light, flat }) {
   /* eyes glow out of the dark instead of sitting flat on it */
   const eye = (x, y, c = C.amber) => (
@@ -6408,7 +6414,7 @@ function MonsterArt({ id, size = 64, light, flat }) {
   /* each horror keeps its own night-colour: a radial aura fading to black,
      the same card the bestiary mock wore, so the art reads on parchment and
      on the dark screens alike without the old red halo or pale discs. */
-  const aura = { werewolf: "#8A5A2A", vampire: "#8A2432", wraith: "#4A5E8A", ghoul: "#5A5030", witch: "#3E6A38", demon: "#8A2A18", shifter: "#5A4A6A", banshee: "#3E6E82", lich: "#2E6058", revenant: "#4A5040", doppel: "#585062", hag: "#3A4A5A", necromancer: "#3E5A48", mimic: "#5A3A5A", succubus: "#7A3050", hollowed: "#4A5E38" }[id] || "#3A3550";
+  const aura = MONSTER_AURA[id] || "#3A3550";
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} style={{ display: "block" }}>
       <defs>
@@ -6462,7 +6468,7 @@ function MonsterVictory({ id, size = 120 }) {
   if (!source) return <MonsterArt id={id} size={size} light />;
   return (
     <img src={source} alt="" width={size} height={size} draggable="false"
-      decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover", borderRadius: 3 }} />
+      decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover", borderRadius: 3, background: C.paper }} />
   );
 }
 
@@ -6479,8 +6485,22 @@ const METHOD_FX = {
 };
 function MonsterDeath({ id, method, size = 120, light }) {
   const fx = METHOD_FX[method] || "dissolve";
+  const aura = MONSTER_AURA[id] || "#3A3550";
   return (
     <div style={{ position: "relative", width: size, height: size }}>
+      {/* This is the same aura drawn inside MonsterArt, held still underneath
+          it so opacity and transforms reveal the creature's own card rather
+          than the reckoning, plate or epilogue screen's unrelated ground. */}
+      <svg aria-hidden="true" viewBox="0 0 120 120" width={size} height={size} style={{ display: "block", position: "absolute", inset: 0 }}>
+        <defs>
+          <radialGradient id={`mvDeathAura-${id}`} cx="50%" cy="30%" r="92%">
+            <stop offset="0%" stopColor={aura} stopOpacity="0.36" />
+            <stop offset="55%" stopColor="#12152A" />
+            <stop offset="100%" stopColor="#05070F" />
+          </radialGradient>
+        </defs>
+        <rect x="2" y="2" width="116" height="116" rx="16" fill={`url(#mvDeathAura-${id})`} />
+      </svg>
       <div className="mvKillGround" />
       <div className={`mvKill-${fx}`} style={{ width: size, height: size }}>
         <MonsterArt id={id} size={size} light={light} />
@@ -10054,7 +10074,7 @@ function MonsterVillage() {
             </h1>
             <div className="flex justify-center mvIn" style={{ marginTop: 22, animationDelay: "0.5s" }}>
               <span style={{ width: 172, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, padding: "16px 12px 13px", background: tone.panel, borderTop: `2px solid ${tone.ink}`, borderRadius: 2 }}>
-                <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.dim }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
+                <span className="mv-display" style={{ fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: tone.ink }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
                 {s.over.win ? <MonsterDeath id={m.id} method={m.method} size={82} light /> : <MonsterVictory id={m.id} size={82} />}
                 <span className="mv-display" style={{ fontSize: 17, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.parch }}>{joined ? "You" : m.name}</span>
                 <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: tone.ink }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
@@ -10117,8 +10137,8 @@ function MonsterVillage() {
           </div>
 
           {s.over.win && (
-            <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: C.sky, border: `1px solid ${C.line}` }}>
-              <div className="mv-display" style={{ color: C.redBright, fontSize: 13.5, letterSpacing: 2 }}>HOW IT ENDED</div>
+            <div className="mvIn mt-4 rounded-lg p-4 flex flex-col items-center" style={{ animationDelay: "0.6s", background: tone.panel, border: `1px solid ${tone.ink}66`, borderTop: `2px solid ${tone.ink}` }}>
+              <div className="mv-display" style={{ color: tone.ink, fontSize: 13.5, letterSpacing: 2 }}>HOW IT ENDED</div>
               <div className="mt-2"><MonsterDeath id={m.id} method={m.method} size={132} light /></div>
               <p className="mt-1 text-center" style={{ fontSize: 15, color: C.parch }}>{METHOD_KILL_LINES[m.method]}</p>
             </div>
