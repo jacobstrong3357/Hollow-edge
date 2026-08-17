@@ -6980,6 +6980,51 @@ const INTERVIEW_ROOM_WOUND_ART = {
   liesel: "assets/ink-v2/interiors/taproom-shut-interior-ink-v2.webp",
   falk: "assets/ink-v2/interiors/surgery-sick-interior-ink-v2.webp",
 };
+
+/* A WebP is small, but waiting until a screen opens to request it still makes
+   the art visibly arrive after the words. Once the gate is interactive, warm
+   the browser cache in low-priority batches. Likely day-one art goes first;
+   the bestiary and ending sheets follow without competing with visible work. */
+const VILLAGER_ART_IDS = ["marta", "tobias", "ansel", "greta", "wilhelm", "liesel", "falk", "rosa"];
+const GAME_IMAGE_WARM_LIST = Array.from(new Set([
+  ...VILLAGER_ART_IDS.map((id) => `assets/ink-v1/portraits/${id}-ink-v1.webp`),
+  ...Object.values(LOCATION_DAY_ART),
+  "assets/ink-v2/scenes/day-masthead-panorama-ink-v2.webp",
+  ...Object.values(INTERVIEW_ROOM_ART),
+  ...Object.values(LOCATION_NIGHT_ART),
+  "assets/ink-v1/scenes/night-transition-ink-v1.webp",
+  ...Object.values(LOCATION_WOUND_ART),
+  ...Object.values(INTERVIEW_ROOM_WOUND_ART),
+  ...VILLAGER_ART_IDS.map((id) => `assets/ink-v1/skulls/${id}-skull-ink-v1.webp`),
+  "assets/ink-v1/scenes/secrets-archive-ink-v1.webp",
+  "assets/ink-v1/scenes/physicians-lab-ink-v3.webp",
+  ...Object.values(MONSTER_VICTORY_ART),
+]));
+let gameImageWarmStarted = false;
+function warmGameImageCache() {
+  if (gameImageWarmStarted || typeof window === "undefined" || typeof Image === "undefined") return;
+  gameImageWarmStarted = true;
+  let cursor = 0;
+  let active = 0;
+  const keepAlive = [];
+  const concurrency = 4;
+  const pump = () => {
+    while (active < concurrency && cursor < GAME_IMAGE_WARM_LIST.length) {
+      const img = new Image();
+      active += 1;
+      keepAlive.push(img);
+      img.decoding = "async";
+      try { img.fetchPriority = "low"; } catch (e) {}
+      const settled = () => { active -= 1; pump(); };
+      img.onload = settled;
+      img.onerror = settled;
+      img.src = GAME_IMAGE_WARM_LIST[cursor++];
+    }
+  };
+  const begin = () => pump();
+  if (window.requestIdleCallback) window.requestIdleCallback(begin, { timeout: 1200 });
+  else window.setTimeout(begin, 450);
+}
 function InterviewScene({ id, height = 92, afflicted }) {
   const source = (afflicted && INTERVIEW_ROOM_WOUND_ART[id]) || INTERVIEW_ROOM_ART[id] || INTERVIEW_ROOM_ART.marta;
   return (
@@ -9172,6 +9217,9 @@ function MonsterVillage() {
       setBootReady(true);
     })();
   }, []);
+
+  /* Begin the staged art warm-up only after React has painted the gate. */
+  useEffect(() => { warmGameImageCache(); }, []);
 
   /* -- persist the run after every change; a finished game clears it -- */
   useEffect(() => {
