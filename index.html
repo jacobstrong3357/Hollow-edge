@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Hollow's Edge</title>
 <meta name="description" content="A village. As many nights as it takes. Something among you." />
+<link rel="preload" href="assets/ink-v1/scenes/village-gate-ink-v1.webp" as="image" type="image/webp" fetchpriority="high" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -5955,7 +5956,7 @@ function Scene({ loc, kind, height = 150, unlit, moonless, source: suppliedSourc
   const source = suppliedSource || LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
   return (
     <div className={`heLocationPlate heLocationPlateNight${loc === "Village Square" ? " is-village-square" : ""}${unlit ? " is-unlit" : ""}${moonless ? " is-moonless" : ""}`} style={{ height }}>
-      <img src={source} alt="" draggable="false" />
+      <img src={source} alt="" draggable="false" decoding="async" />
       <span className="heLocationNightGrade" aria-hidden="true" />
       {unlit && <span className="heLocationUnlit" aria-hidden="true" />}
       {moonless && <span className="heLocationMoonless" aria-hidden="true" />}
@@ -6054,30 +6055,30 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
      keep the original reactive SVG below for death and revealed-monster
      states: those states need to change colour and carry their own marks. */
   const portraitArt = {
-    marta: "assets/ink-v1/portraits/marta-ink-v1.png",
-    tobias: "assets/ink-v1/portraits/tobias-ink-v1.png",
-    ansel: "assets/ink-v1/portraits/ansel-ink-v1.png",
-    greta: "assets/ink-v1/portraits/greta-ink-v1.png",
-    wilhelm: "assets/ink-v1/portraits/wilhelm-ink-v1.png",
-    liesel: "assets/ink-v1/portraits/liesel-ink-v1.png",
-    falk: "assets/ink-v1/portraits/falk-ink-v1.png",
-    rosa: "assets/ink-v1/portraits/rosa-ink-v1.png",
+    marta: "assets/ink-v1/portraits/marta-ink-v1.webp",
+    tobias: "assets/ink-v1/portraits/tobias-ink-v1.webp",
+    ansel: "assets/ink-v1/portraits/ansel-ink-v1.webp",
+    greta: "assets/ink-v1/portraits/greta-ink-v1.webp",
+    wilhelm: "assets/ink-v1/portraits/wilhelm-ink-v1.webp",
+    liesel: "assets/ink-v1/portraits/liesel-ink-v1.webp",
+    falk: "assets/ink-v1/portraits/falk-ink-v1.webp",
+    rosa: "assets/ink-v1/portraits/rosa-ink-v1.webp",
   }[id];
   const skullArt = {
-    marta: "assets/ink-v1/skulls/marta-skull-ink-v1.png",
-    tobias: "assets/ink-v1/skulls/tobias-skull-ink-v1.png",
-    ansel: "assets/ink-v1/skulls/ansel-skull-ink-v1.png",
-    greta: "assets/ink-v1/skulls/greta-skull-ink-v1.png",
-    wilhelm: "assets/ink-v1/skulls/wilhelm-skull-ink-v1.png",
-    liesel: "assets/ink-v1/skulls/liesel-skull-ink-v1.png",
-    falk: "assets/ink-v1/skulls/falk-skull-ink-v1.png",
-    rosa: "assets/ink-v1/skulls/rosa-skull-ink-v1.png",
+    marta: "assets/ink-v1/skulls/marta-skull-ink-v1.webp",
+    tobias: "assets/ink-v1/skulls/tobias-skull-ink-v1.webp",
+    ansel: "assets/ink-v1/skulls/ansel-skull-ink-v1.webp",
+    greta: "assets/ink-v1/skulls/greta-skull-ink-v1.webp",
+    wilhelm: "assets/ink-v1/skulls/wilhelm-skull-ink-v1.webp",
+    liesel: "assets/ink-v1/skulls/liesel-skull-ink-v1.webp",
+    falk: "assets/ink-v1/skulls/falk-skull-ink-v1.webp",
+    rosa: "assets/ink-v1/skulls/rosa-skull-ink-v1.webp",
   }[id];
   if (portraitArt) {
     const sourceArt = dead && skullArt ? skullArt : portraitArt;
     return (
       <span className={`hePortrait${dead ? " is-dead" : ""}${turnedKnown ? " is-changed" : ""}`} style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 2, background: C.paper2, boxShadow: "0 0 0 1px rgba(25,23,21,0.42), 0 2px 8px rgba(25,23,21,0.18)" }}>
-        <img src={sourceArt} alt="" width={size} height={size} draggable="false" style={{ display: "block", width: size, height: size, objectFit: "cover", filter: dead ? "contrast(1.05) saturate(0.82)" : turnedKnown ? "grayscale(0.86) contrast(1.18) sepia(0.12)" : "contrast(1.04) saturate(0.82)" }} />
+        <img src={sourceArt} alt="" width={size} height={size} draggable="false" decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover", filter: dead ? "contrast(1.05) saturate(0.82)" : turnedKnown ? "grayscale(0.86) contrast(1.18) sepia(0.12)" : "contrast(1.04) saturate(0.82)" }} />
         {!dead && turnedKnown && <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 38%, rgba(101,75,112,0.1), rgba(101,75,112,0.42))", mixBlendMode: "multiply", border: `2px solid ${C.turn}` }} />}
         {!dead && turnedKnown && <svg aria-hidden="true" viewBox="0 0 100 100" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}><path d="M2 91 C18 78 12 58 30 50 C20 35 31 20 43 8 M98 89 C80 76 88 57 69 49 C82 32 68 17 58 4" stroke="#33263A" strokeWidth="2.4" fill="none" opacity="0.72" /></svg>}
       </span>
@@ -6524,6 +6525,36 @@ const MONSTER_PLATES = {
   lich: "lich.png", revenant: "revenant.png", doppel: "doppelganger.png", hag: "night-hag.png",
   necromancer: "necromancer.png", mimic: "mimic.png", succubus: "succubus.png", hollowed: "the-hollowed.png",
 };
+
+/* When the horror wins it gets the authored full-page victory sheet, not the
+   ordinary in-game suspect portrait. The filenames predate the runtime's
+   shortened ids, so keep the translation explicit here. */
+const MONSTER_VICTORY_ART = {
+  werewolf: "assets/monster-victory/werewolf.webp",
+  vampire: "assets/monster-victory/vampire.webp",
+  wraith: "assets/monster-victory/wraith.webp",
+  ghoul: "assets/monster-victory/ghoul.webp",
+  witch: "assets/monster-victory/witch.webp",
+  demon: "assets/monster-victory/demon.webp",
+  shifter: "assets/monster-victory/shapeshifter.webp",
+  banshee: "assets/monster-victory/banshee.webp",
+  lich: "assets/monster-victory/lich.webp",
+  revenant: "assets/monster-victory/revenant.webp",
+  doppel: "assets/monster-victory/doppelganger.webp",
+  hag: "assets/monster-victory/night-hag.webp",
+  necromancer: "assets/monster-victory/necromancer.webp",
+  mimic: "assets/monster-victory/mimic.webp",
+  succubus: "assets/monster-victory/succubus.webp",
+  hollowed: "assets/monster-victory/hollowed.webp",
+};
+function MonsterVictory({ id, size = 120 }) {
+  const source = MONSTER_VICTORY_ART[id];
+  if (!source) return <MonsterArt id={id} size={size} light />;
+  return (
+    <img src={source} alt="" width={size} height={size} draggable="false"
+      decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover", borderRadius: 3 }} />
+  );
+}
 function MonsterArt({ id, size = 64, flat = false, locked = false }) {
   const plate = MONSTER_PLATES[id];
   if (!plate) return <LegacyMonsterArt id={id} size={size} flat={flat} />;
@@ -7067,27 +7098,27 @@ function LegacyInterviewScene({ id, height = 92, afflicted }) {
    tools, lived-in marks and small things watching from the edges. Event-state
    art keeps the same room and changes only what happened to it. */
 const INTERVIEW_ROOM_ART = {
-  marta: "assets/ink-v2/interiors/bakery-interior-ink-v2.png",
-  tobias: "assets/ink-v2/interiors/grave-shed-interior-ink-v2.png",
-  ansel: "assets/ink-v2/interiors/old-church-interior-ink-v2.png",
-  greta: "assets/ink-v2/interiors/stillroom-interior-ink-v2.png",
-  wilhelm: "assets/ink-v2/interiors/forge-interior-ink-v2.png",
-  liesel: "assets/ink-v2/interiors/taproom-interior-ink-v2.png",
-  falk: "assets/ink-v2/interiors/surgery-interior-ink-v2.png",
-  rosa: "assets/ink-v2/interiors/sewing-room-interior-ink-v2.png",
+  marta: "assets/ink-v2/interiors/bakery-interior-ink-v2.webp",
+  tobias: "assets/ink-v2/interiors/grave-shed-interior-ink-v2.webp",
+  ansel: "assets/ink-v2/interiors/old-church-interior-ink-v2.webp",
+  greta: "assets/ink-v2/interiors/stillroom-interior-ink-v2.webp",
+  wilhelm: "assets/ink-v2/interiors/forge-interior-ink-v2.webp",
+  liesel: "assets/ink-v2/interiors/taproom-interior-ink-v2.webp",
+  falk: "assets/ink-v2/interiors/surgery-interior-ink-v2.webp",
+  rosa: "assets/ink-v2/interiors/sewing-room-interior-ink-v2.webp",
 };
 const INTERVIEW_ROOM_WOUND_ART = {
-  marta: "assets/ink-v2/interiors/bakery-rioted-interior-ink-v2.png",
-  ansel: "assets/ink-v2/interiors/old-church-burned-interior-ink-v2.png",
-  greta: "assets/ink-v2/interiors/stillroom-sick-interior-ink-v2.png",
-  liesel: "assets/ink-v2/interiors/taproom-shut-interior-ink-v2.png",
-  falk: "assets/ink-v2/interiors/surgery-sick-interior-ink-v2.png",
+  marta: "assets/ink-v2/interiors/bakery-rioted-interior-ink-v2.webp",
+  ansel: "assets/ink-v2/interiors/old-church-burned-interior-ink-v2.webp",
+  greta: "assets/ink-v2/interiors/stillroom-sick-interior-ink-v2.webp",
+  liesel: "assets/ink-v2/interiors/taproom-shut-interior-ink-v2.webp",
+  falk: "assets/ink-v2/interiors/surgery-sick-interior-ink-v2.webp",
 };
 function InterviewScene({ id, height = 92, afflicted }) {
   const source = (afflicted && INTERVIEW_ROOM_WOUND_ART[id]) || INTERVIEW_ROOM_ART[id] || INTERVIEW_ROOM_ART.marta;
   return (
     <div className={`heInteriorBanner${afflicted && INTERVIEW_ROOM_WOUND_ART[id] ? " is-wounded" : ""}`} style={{ height }}>
-      <img src={source} alt="" draggable="false" />
+      <img src={source} alt="" draggable="false" decoding="async" />
       <span className="heInteriorPaperVeil" aria-hidden="true" />
     </div>
   );
@@ -7117,7 +7148,7 @@ function DawnScene({ loc, s, height = 190 }) {
   const source = wounded || LOCATION_DAY_ART[loc] || LOCATION_DAY_ART.Cottage;
   return (
     <div className={`heLocationPlate heLocationPlateDay${loc === "Village Square" ? " is-village-square" : ""}${wounded ? " is-wounded" : ""}`} style={{ height }}>
-      <img src={source} alt="" draggable="false" />
+      <img src={source} alt="" draggable="false" decoding="async" />
       <span className="heLocationPaperVeil" aria-hidden="true" />
     </div>
   );
@@ -7346,7 +7377,7 @@ function NightScene({ height = 190 }) { return <VillageScene height={height} nig
 /* A sliver of the village in morning light, behind the day header. */
 function DayStrip({ height = 64 }) {
   return (
-    <div className="heDayVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundColor: "#C9B9A5", backgroundImage: "linear-gradient(rgba(232,222,202,.02),rgba(25,23,21,.46)),url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.png')", backgroundBlendMode: "multiply,normal", backgroundSize: "100% auto", backgroundRepeat: "no-repeat", backgroundPosition: "center top" }} />
+    <div className="heDayVillagePlate" aria-hidden="true" style={{ width: "100%", height, backgroundColor: "#C9B9A5", backgroundImage: "linear-gradient(rgba(232,222,202,.02),rgba(25,23,21,.46)),url('assets/ink-v2/scenes/day-masthead-panorama-ink-v2.webp')", backgroundBlendMode: "multiply,normal", backgroundSize: "100% auto", backgroundRepeat: "no-repeat", backgroundPosition: "center top" }} />
   );
 }
 
@@ -7895,7 +7926,7 @@ function Btn({ children, onClick, disabled, kind = "ghost", full, small, center 
 function HomeScene({ veteran }) {
   return (
     <div className="mvHomeScene" aria-hidden="true">
-      <img className="heGatePlate" src="assets/ink-v1/scenes/village-gate-ink-v1.png" alt="" draggable="false" />
+      <img className="heGatePlate" src="assets/ink-v1/scenes/village-gate-ink-v1.webp" alt="" draggable="false" decoding="async" fetchPriority="high" />
       {[["11%","17%",0],["82%","22%",1.1],["19%","35%",2.2],["76%","40%",3.4],["29%","52%",4.1],["67%","55%",5.3]].map(([left,top,delay], i) => (
         <span key={i} className="heLittleGhost" style={{ left, top, animationDelay: `${delay}s` }}><i /><i /></span>
       ))}
@@ -8320,7 +8351,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heGate .heHomeDrawer h1, .heGate .heHomeDrawer p, .heGate .heHomeDrawer .mv-display { color:var(--he-paper-light) !important; text-shadow:none !important; }
 .heGate .heHomeDrawer button:not(.mvHomeGate) { border-color:rgba(232,222,202,.28) !important; }
 .heDrawer-secrets { position:fixed; isolation:isolate; background:#0E0B09 !important; }
-.heDrawer-secrets::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/secrets-archive-ink-v1.png') center/cover no-repeat; filter:saturate(.76) sepia(.08) contrast(1.04); opacity:.58; }
+.heDrawer-secrets::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:url('assets/ink-v1/scenes/secrets-archive-ink-v1.webp') center/cover no-repeat; filter:saturate(.76) sepia(.08) contrast(1.04); opacity:.58; }
 .heDrawer-secrets::after { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:linear-gradient(180deg,rgba(12,9,8,.78) 0,rgba(12,9,8,.66) 25%,rgba(12,9,8,.36) 48%,rgba(12,9,8,.72) 84%,rgba(12,9,8,.96) 100%); }
 .heDrawer-secrets > .max-w-md { position:relative; z-index:1; }
 .heDrawer-secrets .heHomeDrawerBody { padding-left:16px !important; padding-right:16px !important; }
@@ -8351,7 +8382,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heLittleGhost i:first-child { left:5px; } .heLittleGhost i:last-child { right:5px; }
 @keyframes heGhost { from { transform:translateY(0) rotate(-2deg); opacity:.5; } to { transform:translateY(-5px) rotate(2deg); opacity:.82; } }
 .heDay { color:var(--he-ink) !important; }
-.heDay::before { content:""; position:fixed; inset:0; pointer-events:none; background:url('assets/ink-v1/scenes/village-gate-ink-v1.png') center/cover no-repeat; opacity:.035; mix-blend-mode:multiply; }
+.heDay::before { content:""; position:fixed; inset:0; pointer-events:none; background:url('assets/ink-v1/scenes/village-gate-ink-v1.webp') center/cover no-repeat; opacity:.035; mix-blend-mode:multiply; }
 .heDay > .max-w-md, .heDay .max-w-md { position:relative; }
 .heDayVillagePlate { filter:sepia(.08) saturate(.86) contrast(1.04); }
 .heDayBannerPlate { background-color:#C9B9A5; filter:sepia(.035) saturate(.88) contrast(1.05); }
@@ -9465,6 +9496,17 @@ function MonsterVillage() {
     } catch (e) {}
   }, [walk, s && s.gameId, bootReady]);
 
+  /* The ending sheet is known from the first moment of a run. Fetch that one
+     image quietly while the player is investigating, so a loss never lands
+     on an empty card; all other artwork remains demand-loaded. */
+  useEffect(() => {
+    const source = s && s.monster && MONSTER_VICTORY_ART[s.monster.type];
+    if (!source || typeof Image === "undefined") return;
+    const img = new Image();
+    img.decoding = "async";
+    img.src = source;
+  }, [s && s.gameId]);
+
   const saveMeta = async (next) => {
     setMeta(next);
     try { await window.storage.set("mv-black-book", JSON.stringify(next)); } catch (e) {}
@@ -10303,7 +10345,7 @@ function MonsterVillage() {
             <div className="flex justify-center mvIn" style={{ marginTop: 18, animationDelay: "0.5s" }}>
               <span className="heVictoryVerdictCard" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "9px 9px 12px", background: C.parch, borderTop: `3px solid ${tone.ink}`, borderRadius: "3px 11px 5px 3px", boxShadow: "8px 9px 0 rgba(0,0,0,.22)" }}>
                 <span className="mv-display" style={{ alignSelf: "stretch", padding: "2px 4px 6px", fontSize: 9.5, letterSpacing: 1.8, whiteSpace: "nowrap", color: C.inkDim, borderBottom: `1px solid ${C.parchLine}` }}>{joined ? "WHAT IT IS NOW" : s.over.win ? "HOW IT ENDED" : "WHAT IT WAS"}</span>
-                {s.over.win ? <MonsterDeath id={m.id} size={210} flat /> : <MonsterArt id={m.id} size={190} flat />}
+                {s.over.win ? <MonsterDeath id={m.id} size={210} flat /> : <MonsterVictory id={m.id} size={190} />}
                 <span className="mv-display" style={{ fontSize: 18, letterSpacing: 1.2, whiteSpace: "nowrap", color: C.ink }}>{joined ? "You" : m.name}</span>
                 {!joined && <span className="mv-display" style={{ marginTop: 1, fontSize: 9.5, lineHeight: 1.2, letterSpacing: 1.35, color: C.inkDim }}>WORE {monsterNpc.name.toUpperCase()}’S FACE</span>}
                 <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.4, whiteSpace: "nowrap", color: s.over.win ? "#8A5A22" : C.red }}>{joined ? "THE WATCHER" : METHODS[m.method]}</span>
