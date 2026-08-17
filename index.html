@@ -6085,9 +6085,11 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
     const sourceArt = dead && skullArt ? skullArt : portraitArt;
     return (
       <span className={`hePortrait${dead ? " is-dead" : ""}${turnedKnown ? " is-changed" : ""}`} style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 2, background: C.paper2, boxShadow: "0 0 0 1px rgba(25,23,21,0.42), 0 2px 8px rgba(25,23,21,0.18)" }}>
-        <img src={sourceArt} alt="" width={size} height={size} draggable="false" decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover", filter: dead ? "contrast(1.05) saturate(0.82)" : turnedKnown ? "grayscale(0.86) contrast(1.18) sepia(0.12)" : "contrast(1.04) saturate(0.82)" }} />
-        {!dead && turnedKnown && <span aria-hidden="true" style={{ position: "absolute", inset: 0, boxSizing: "border-box", background: "radial-gradient(circle at 50% 38%, rgba(101,75,112,0.1), rgba(101,75,112,0.42))", mixBlendMode: "multiply", border: `2px solid ${C.turn}` }} />}
-        {!dead && turnedKnown && <svg aria-hidden="true" viewBox="0 0 100 100" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}><path d="M2 91 C18 78 12 58 30 50 C20 35 31 20 43 8 M98 89 C80 76 88 57 69 49 C82 32 68 17 58 4" stroke="#33263A" strokeWidth="2.4" fill="none" opacity="0.72" /></svg>}
+        <img src={sourceArt} alt="" width={size} height={size} draggable="false" decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover", filter: dead ? "contrast(1.05) saturate(0.82)" : "contrast(1.04) saturate(0.82)" }} />
+        {/* Being known-changed is a state marker, not a replacement face.
+            Keep the authored villager portrait intact and let violet alone
+            carry what the player has learned. */}
+        {!dead && turnedKnown && <span className="heChangedPortraitRule" aria-hidden="true" style={{ position: "absolute", inset: 0, boxSizing: "border-box", border: `3px solid ${C.turn}`, boxShadow: "inset 0 0 0 1px rgba(243,233,214,.42)" }} />}
       </span>
     );
   }
@@ -8586,6 +8588,102 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 @media (max-height:680px) { .heExamScreen .heDayMastheadCopy.is-lab { padding-top:max(env(safe-area-inset-top),18px) !important; padding-bottom:9px; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadTitle { font-size:23px !important; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; } .heExamScreen .heExamBody { padding-top:10px !important; gap:9px !important; } .heExamScreen .heExamReader { padding-top:10px !important; padding-bottom:10px !important; } .heExamScreen .heExamPicker { margin-bottom:6px; padding:9px !important; } .heExamScreen .heExamTarget { min-height:80px; padding-top:5px !important; padding-bottom:5px !important; } }
 @media (max-height:680px) { .heInterviewBriefing .heDayMastheadCopy.is-interview { padding-top:max(env(safe-area-inset-top),18px) !important; } .heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadTitle { font-size:23px !important; } .heInterviewBriefing .heDayMastheadCopy.is-interview .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; } .heInterviewBriefing .heInterviewBody { padding-top:10px !important; gap:8px !important; } .heInterviewBriefing .heInterviewBrief { padding-top:9px !important; padding-bottom:9px !important; } .heInterviewBriefing .heInterviewPicker { padding:8px !important; } .heInterviewBriefing .heInterviewTarget { min-height:78px; padding-top:5px !important; padding-bottom:5px !important; } }
 @media (max-width:350px) { .heGameTitleType { letter-spacing:1.9px; } .heGameTitleTag { letter-spacing:2.5px; } .heHomeMetaGrid { gap:6px; } .heHomeMetaCard { grid-template-columns:29px minmax(0,1fr) 8px; padding-left:6px; gap:6px; } .heHomeMetaIcon { width:28px; height:28px; } }
+
+/* The Rite of Unbinding borrows the examination's screen frame, but not its
+   card stack. It is one working, told on one sheet, with the changed person
+   shown once. The picker is deliberately opaque over the church drawing so
+   choosing a life never depends on reading through scenery. */
+.heExamScreen.heUnbindScreen { background:#D4C7B2 !important; }
+.heUnbindScreen > .max-w-md::before {
+  background:url('assets/ink-v2/interiors/old-church-interior-ink-v2.webp') center/cover no-repeat !important;
+  filter:saturate(.68) sepia(.08) contrast(1.05) !important;
+  opacity:.52 !important;
+}
+.heUnbindScreen .heDayMastheadVeil.is-church {
+  background:linear-gradient(180deg,rgba(18,14,15,.72) 0,rgba(31,23,25,.59) 112px,rgba(212,199,178,.86) 190px,rgba(212,199,178,.16) 290px,transparent 390px);
+  pointer-events:none;
+}
+.heUnbindScreen .heDayMastheadCopy.is-church {
+  padding-bottom:15px;
+  background:linear-gradient(90deg,rgba(20,15,16,.7),rgba(20,15,16,.24) 82%,transparent);
+  border-bottom:1px solid rgba(243,233,214,.26);
+}
+.heUnbindScreen .heDayMastheadCopy.is-church .heMastheadKicker { color:#D7A85D !important; text-shadow:0 1px 5px #000 !important; }
+.heUnbindScreen .heDayMastheadCopy.is-church .heMastheadTitle { color:#FFF4DE !important; text-shadow:0 2px 8px #000 !important; }
+.heUnbindScreen .heDayMastheadCopy.is-church .heMastheadSub { color:#F0E3CE !important; font-size:14px !important; font-weight:600; text-shadow:0 1px 5px #000 !important; }
+.heUnbindScreen .heExamBody {
+  padding:16px 16px 0 !important;
+  gap:12px !important;
+  background:linear-gradient(180deg,rgba(224,213,193,.15),rgba(224,213,193,.48) 28%,rgba(224,213,193,.7));
+}
+.heUnbindIntro {
+  padding:13px 14px 14px;
+  color:var(--he-ink);
+  background:rgba(247,238,220,.97);
+  border:1px solid rgba(25,23,21,.76);
+  border-top:4px solid #654B70;
+  box-shadow:4px 5px 0 rgba(25,23,21,.18);
+}
+.heUnbindIntroTitle { display:block; color:#5E4269; font-size:12px; letter-spacing:2.2px; }
+.heUnbindIntro p { margin:6px 0 0; color:#413A32 !important; font-size:14px; line-height:1.45; }
+.heUnbindPicker {
+  margin-top:auto;
+  padding:13px 12px 12px;
+  background:rgba(247,238,220,.98);
+  border:1px solid rgba(25,23,21,.78);
+  box-shadow:4px 5px 0 rgba(25,23,21,.2),0 14px 30px rgba(26,20,15,.22);
+}
+.heUnbindPickerTitle { display:block; color:var(--he-ink); font-size:12px; letter-spacing:2.4px; text-align:center; }
+.heUnbindTargetList { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.heUnbindTarget {
+  width:100%;
+  min-height:72px;
+  display:grid;
+  grid-template-columns:54px minmax(0,1fr) 18px;
+  align-items:center;
+  gap:12px;
+  padding:8px 10px;
+  text-align:left;
+  color:var(--he-ink) !important;
+  background:#FFF7E8 !important;
+  border:1px solid #675071 !important;
+  border-left:5px solid #654B70 !important;
+  box-shadow:2px 3px 0 rgba(25,23,21,.14);
+  cursor:pointer;
+}
+.heUnbindTarget:hover { background:#FFFDF4 !important; transform:translateY(-1px); }
+.heUnbindTargetName { display:block; color:var(--he-ink); font-size:17px; line-height:1.05; }
+.heUnbindTargetRole { display:block; margin-top:3px; color:#514A40; font-size:13px; line-height:1.2; }
+.heUnbindTargetState { display:inline-block; margin-top:5px; padding:2px 6px; color:#FFF4DE; background:#654B70; font-size:9.5px; letter-spacing:1.5px; }
+.heUnbindTargetArrow { color:#654B70; font:27px/1 Georgia,serif; }
+.heUnbindResult {
+  overflow:hidden;
+  color:var(--he-ink);
+  background:rgba(247,238,220,.98);
+  border:1px solid rgba(25,23,21,.8);
+  border-top:5px solid #654B70;
+  box-shadow:5px 6px 0 rgba(25,23,21,.2),0 16px 34px rgba(26,20,15,.24);
+}
+.heUnbindResultHead { display:flex; align-items:center; gap:12px; padding:13px 14px; background:#E5D7BF; border-bottom:1px solid #9D8A6A; }
+.heUnbindResultKicker { display:block; color:#6A3440; font-size:10px; letter-spacing:2px; }
+.heUnbindResultName { margin:3px 0 0; color:var(--he-ink); font-size:21px; line-height:1; letter-spacing:.5px; }
+.heUnbindStory { padding:2px 15px 5px; }
+.heUnbindStoryBeat { display:grid; grid-template-columns:22px minmax(0,1fr); gap:10px; padding:12px 0; border-bottom:1px solid rgba(124,112,94,.45); }
+.heUnbindStoryBeat:last-child { border-bottom:0; }
+.heUnbindStoryBeat.is-aftermath { margin:3px -8px 0; padding:11px 8px; background:rgba(101,75,112,.08); }
+.heUnbindStoryMark { color:#654B70; font-size:11px; letter-spacing:1px; }
+.heUnbindStoryBeat p { margin:0; color:var(--he-ink) !important; font-size:14.5px; line-height:1.48; text-wrap:pretty; }
+@media (max-height:680px) {
+  .heUnbindScreen .heDayMastheadCopy.is-church { padding-top:max(env(safe-area-inset-top),18px) !important; padding-bottom:10px; }
+  .heUnbindScreen .heDayMastheadCopy.is-church .heMastheadTitle { font-size:23px !important; }
+  .heUnbindScreen .heDayMastheadCopy.is-church .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; }
+  .heUnbindScreen .heExamBody { padding-top:10px !important; gap:9px !important; }
+  .heUnbindIntro { padding:9px 11px 10px; }
+  .heUnbindPicker { padding:9px; }
+  .heUnbindTarget { min-height:64px; grid-template-columns:48px minmax(0,1fr) 16px; padding:6px 8px; }
+  .heUnbindTarget .hePortrait { width:48px !important; height:48px !important; }
+  .heUnbindStoryBeat { padding:9px 0; }
+}
 /* Chrome on Android keeps its address bar inside 100vh, so a 100vh screen
    runs its last inch under the browser's own furniture. dvh is the visible
    viewport; vh stays as the fallback for anything that has not heard of it. */
@@ -12459,27 +12557,52 @@ function MonsterVillage() {
     }
     const target = unbindRes ? npcById(s, unbindRes.id) : null;
     return (
-      <div className="fixed inset-0 z-30 mv-body flex flex-col heExamScreen" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
+      <div className="fixed inset-0 z-30 mv-body flex flex-col heExamScreen heUnbindScreen" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
           {dayMasthead(`DAY ${s.dayNum} · THE WHOLE DAY`, unbindRes ? "The circle is broken" : "The Rite of Unbinding",
             unbindRes ? `${(target || {}).name} did not come back from it.` : "Call one changed neighbour back, if the old words still can.", "church")}
           <div className="relative flex-1 min-h-0 overflow-y-auto flex flex-col heExamBody" style={{ padding: "18px 20px 0", gap: 14, WebkitOverflowScrolling: "touch" }}>
             {unbindRes ? (
-              (unbindRes.beats || []).map((e, i) => (
-                <Plaque key={i} className="mvIvIn heExamResult" rule="change"
-                  portrait={<Portrait id={e.pid || unbindRes.id} size={40} dead={target && !target.alive} turnedKnown={target && target.turned && target.known} />}>
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{e.t}</p>
-                </Plaque>
-              ))
+              <section className="heUnbindResult mvIvIn" aria-label={`Rite result for ${(target || {}).name || "the changed villager"}`}>
+                <div className="heUnbindResultHead">
+                  {target && <Portrait id={target.id} size={54} turnedKnown={target.turned && target.known} />}
+                  <div style={{ minWidth: 0 }}>
+                    <span className="mv-display heUnbindResultKicker">{target && target.alive ? (target.cured ? "CALLED BACK" : "THE RITE FAILED") : "LOST TO THE RITE"}</span>
+                    <h2 className="mv-display heUnbindResultName">{(target || {}).name}</h2>
+                  </div>
+                </div>
+                <div className="heUnbindStory">
+                  {(unbindRes.beats || []).map((e, i, all) => (
+                    <div key={i} className={`heUnbindStoryBeat${i === all.length - 1 ? " is-aftermath" : ""}`}>
+                      <span className="mv-display heUnbindStoryMark" aria-hidden="true">{ROMAN[i] || "·"}</span>
+                      <p>{e.t}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
             ) : (
               <>
-                <Plaque rule="change">
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch }}>
+                <div className="heUnbindIntro">
+                  <span className="mv-display heUnbindIntroTitle">BEFORE THE CIRCLE IS DRAWN</span>
+                  <p>
                     This takes every hour left today and can be tried on each of the changed only once. If it fails, the thing they carry feels the working and does not forgive it.
                   </p>
-                </Plaque>
-                <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8, paddingBottom: 4 }}>
-                  {eligibleUnbind.map((n) => villagerBtn(n, () => runUnbind(n.id)))}
+                </div>
+                <div className="heUnbindPicker">
+                  <span className="mv-display heUnbindPickerTitle">WHO SHOULD ENTER THE CIRCLE?</span>
+                  <div className="heUnbindTargetList">
+                    {eligibleUnbind.map((n) => (
+                      <button key={n.id} onClick={() => runUnbind(n.id)} className="mv-btn mv-body heUnbindTarget" aria-label={`Begin the Rite of Unbinding with ${n.name}`}>
+                        <Portrait id={n.id} size={54} turnedKnown />
+                        <span style={{ minWidth: 0 }}>
+                          <span className="mv-display heUnbindTargetName">{n.name}</span>
+                          <span className="heUnbindTargetRole">{n.role}</span>
+                          <span className="mv-display heUnbindTargetState">CHANGED · ONE ATTEMPT</span>
+                        </span>
+                        <span className="heUnbindTargetArrow" aria-hidden="true">›</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
