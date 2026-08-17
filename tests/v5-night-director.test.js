@@ -100,11 +100,32 @@ function take(state, wanted) {
   var hail = Director.availableActions(state).find(function (x) { return x.type === "HAIL"; });
   assert(hail, "a co-located villager should be hail-able");
   var beforeDelay = state.delays[hail.actorId] || 0;
+  var beforeHailSlot = state.cursor;
   state = take(state, { type: "HAIL", actorId: hail.actorId });
+  assert.strictEqual(state.cursor, beforeHailSlot, "speaking inside a scene must not consume a whole hour of night");
   assert.strictEqual(state.delays[hail.actorId], beforeDelay + 1, "hailing must delay the villager by one slot");
   assert(state.ledgers.truth.some(function (x) { return x.kind === "hailed"; }), "truth records the mutual meeting");
   assert(state.ledgers.observations.some(function (x) { return x.kind === "meeting"; }), "player observation records the meeting");
   assert(state.ledgers.memories[hail.actorId].some(function (x) { return x.acknowledged; }), "villager memory records an acknowledged alibi-grade meeting");
+})();
+
+(function aGatheringIsOneSceneRatherThanAQueueOfVillagers() {
+  var config = baseConfig("bonfire-crowd");
+  config.monster.active = false;
+  config.player = {};
+  config.forcedBeats = [];
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "Village Square", falk: "Village Square", ansel: "Village Square" } };
+  config.gathering = { id: "bonfire", name: "bonfire", location: "Village Square", text: "A great bonfire is built in the square. Everyone pretends it is only for warmth." };
+  config.encounterBudget = 2;
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert.strictEqual(state.currentBeat.type, "atmosphere");
+  assert(/bonfire/.test(state.currentBeat.text), "the player sees the gathering that later testimony may name");
+  assert.strictEqual(state.beats.filter(function (beat) { return beat.type === "encounter"; }).length, 0, "the crowd does not arrive as a stack of individual interruptions");
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  assert(state.presentedActorIds.length <= 2, "only a small cast is individually framed during one night");
 })();
 
 (function presentationBeatDoesNotRepeatAcrossEmptyActions() {
@@ -332,7 +353,7 @@ function take(state, wanted) {
   state = take(state, { type: "HAIL", actorId: "falk" });
   state = take(state, { type: "MOVE", to: "Graveyard" });
   state = take(state, { type: "HAIL", actorId: "rosa" });
-  state = take(state, { type: "WAIT" });
+  while (state.phase === "active" && state.cursor < state.monsterSchedule.attackSlot) state = take(state, { type: "WAIT" });
   assert.strictEqual(state.phase, "threat");
   assert.strictEqual(state.pendingThreat.victimId, "rosa", "the timetable, hail delay and seeded priority make Rosa the traceable target");
   assert(state.ledgers.memories.falk.length && state.ledgers.memories.ansel.length, "Falk and Ansel remember the player's church visit independently");
@@ -367,7 +388,7 @@ function take(state, wanted) {
   }];
   config.monster.active = false;
   config.currentFacts = { weather: "still", active: false, outMap: { falk: "Old Church" } };
-  config.forcedBeats = [{ id: "falk-note", type: "clue", slot: 3, location: "Village Square", actorId: "falk", text: "A folded medical note lies in the mud." }];
+  config.forcedBeats = [{ id: "falk-note", type: "clue", slot: 2, location: "Village Square", actorId: "falk", text: "A folded medical note lies in the mud." }];
   var state = Director.createNight(config);
   state.visibility[0].falk = true;
   state.visibility[1].falk = true;

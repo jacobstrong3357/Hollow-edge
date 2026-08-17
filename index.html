@@ -2277,10 +2277,13 @@ const GRIEF_DAWN_DRY = [
   (nm, d) => `${nm} was the only one at the graveside who did not want holding, and the village finds that interesting rather than sad. Grief does stranger things than stand up straight.`,
 ];
 
-/* Where a villager's own roof already stands. Never offered as their random
-   night errand and never phrased as somewhere they went "out" to: Liesel
-   sleeps above the taproom, Ansel in the vestry. */
-const HOME_LOC = { liesel: "Tavern", ansel: "Old Church" };
+/* Where each villager's own roof stands on the playable map. These origins
+   keep a door-watch tied to the actual forest edge, mill, church or square
+   instead of silently treating every unlisted cottage as the well. */
+const HOME_LOC = {
+  hazel: "Village Square", tobias: "Graveyard", ansel: "Old Church", greta: "Dark Forest",
+  wilhelm: "Old Mill", liesel: "Tavern", falk: "Village Square", rosa: "Village Square",
+};
 
 const NPC_LORE = {
   marta: { who: "Baker. Born here, widowed here, and up before the village every morning of her life.", bio: "Took over the bakery when her husband was lost to the river three winters past. Up before every dawn; the first lit window in the village is hers, and she sees who comes home at first light.", body: "A small, quick woman, flour to the elbows, slight as a reed." },
@@ -3260,6 +3263,11 @@ function compileDirectorNight(s, facts, openingIntent) {
       relentless: monsterOf(s).id === "werewolf",
     },
     player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou },
+    gathering: facts.evn && facts.eventLoc ? {
+      id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
+      text: facts.evn.intro,
+    } : null,
+    encounterBudget: 2,
     recentSignatures: directorRecentSignatures(s), forcedBeats,
   };
   const currentFacts = {
@@ -3399,13 +3407,17 @@ function resolveNight(prev, planIn, preEvents) {
       const agenda = director.schedules && director.schedules[actorId];
       const motive = agenda && agenda.motive;
       const reason = motive && motive.reason ? motive.reason : "finish a private errand before the bell";
-      const object = motive && motive.object && motive.object !== "nothing" ? ` I had ${motive.object}.` : "";
+      const privateErrand = !!(motive && motive.secret);
       return {
         eventId: thread.eventId, night: n, location: thread.location, kind: "director_encounter",
         actorIds: actorId ? [actorId] : [], subjectId: actorId || null,
         question: `At the ${thread.location}, why were you out?`,
-        honest: `“I went out to ${reason}.${object} You may dislike the hour. It does not change the errand.”`,
+        honest: `“I went out to ${reason}. You may dislike the hour. It does not change the errand.”`,
         evasive: `“You saw me on a road. You did not see why. Do not make a confession out of a lantern.”`,
+        reaffirm: privateErrand
+          ? `“I told you then: it was private. Seeing me twice does not make it yours.”`
+          : `“I told you then: I went out to ${reason}. My answer has not changed with the daylight.”`,
+        acknowledged: !!thread.acknowledged, privateErrand,
         directorKind: thread.kind, sourceEventIds: thread.sourceEventIds,
       };
     });
@@ -5518,7 +5530,11 @@ function answerFor(s, id, night, q, targetId) {
     if (!event) return { quote: `“I do not know what you think you saw.”`, mentions, claim, flag: null, foundSign, clue, followUps: [] };
     const remembered = String(targetId || "").endsWith(":memory");
     const evasive = isMonster || dispTier(npc.disp) === "hate" || (lying && chance(0.55));
-    if (remembered) {
+    /* A mutual conversation is settled testimony. They may have lied in the
+       road, but daylight cannot make them forget the explanation they chose
+       and replace it with a generic denial that contradicts the lived scene. */
+    if (event.kind === "director_encounter" && event.acknowledged) quote = event.reaffirm || event.honest;
+    else if (remembered) {
       const obs = (s.observations || []).find((o) => o.eventId === eventId);
       if (evasive) quote = `“I saw a lantern moving where sensible people do not go. If you want me to turn that into a confession for you, you will have to supply it yourself.”`;
       else if (obs && obs.kind === "unobserved") quote = `“I thought you heard me and chose not to turn. Fear, perhaps. Or restraint. I remember the choice more clearly than you remember the dark.”`;
@@ -9152,12 +9168,13 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 @keyframes heBranchBreathe { from { transform:rotate(-8deg) translateX(-3px); } to { transform:rotate(-5deg) translateX(5px); } }
 @keyframes heWatcherWait { 0%,58%,100% { opacity:.06; transform:translateX(5px); } 66%,88% { opacity:.4; transform:translateX(0); } }
 @keyframes heLanternFail { 0%,64%,100% { opacity:.6; } 68%,72% { opacity:.05; } 70%,78% { opacity:.85; } }
-.heNightWithheld .heNightTopline { opacity:.04; filter:blur(2px); transition:opacity .25s ease,filter .25s ease; }
+.heNightWithheld .heNightTopline { animation:heInterfaceReturns .9s ease-out both; }
 .heNightWithheld .mvCloud,.heNightWithheld .mvFogBank { animation-play-state:paused; }
+@keyframes heInterfaceReturns { 0%,38% { opacity:.04; filter:blur(2px); } 100% { opacity:1; filter:none; } }
 .heChurchBeat { position:relative; padding:14px 15px 15px; background:linear-gradient(105deg,rgba(8,8,12,.88),rgba(21,18,22,.72)); border-top:2px solid rgba(217,164,65,.58); box-shadow:4px 5px 0 rgba(0,0,0,.34),inset 0 0 0 1px rgba(233,223,200,.06); }
 .heChurchFace { display:flex; align-items:center; gap:12px; padding:11px; background:rgba(7,7,11,.82); border-top:2px solid rgba(217,164,65,.5); box-shadow:3px 4px 0 rgba(0,0,0,.36); }
 .heDoorCoda { padding:15px; background:linear-gradient(180deg,rgba(25,17,17,.8),rgba(7,7,10,.92)); border-top:2px solid rgba(194,68,80,.62); box-shadow:4px 5px 0 rgba(0,0,0,.38); }
-@media (prefers-reduced-motion: reduce) { .heChurchyardPresence i,.heChurchyardPresence b,.heChurchyardPresence span { animation:none; } .heChurchyardPresence b { opacity:.3; } .heNightWithheld .heNightTopline { opacity:.14; filter:none; } }
+@media (prefers-reduced-motion: reduce) { .heChurchyardPresence i,.heChurchyardPresence b,.heChurchyardPresence span { animation:none; } .heChurchyardPresence b { opacity:.3; } .heNightWithheld .heNightTopline { animation:none; opacity:1; filter:none; } }
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
@@ -11551,8 +11568,8 @@ function MonsterVillage() {
       if ((actor.disp || 0) >= 2) return `“A promise I made before all this,” ${actor.name} says. “Private does not mean monstrous. Not yet.”`;
       return `“A private errand,” ${actor.name} says. “You may follow me or you may believe me. You do not get both.”`;
     }
-    const edge = (actor.disp || 0) <= -1 ? " Must fear answer questions now?" : (actor.disp || 0) >= 1 ? " Walk with me a little, if you need to see it done." : " That is the whole of it.";
-    return `“I came out to ${motive.reason},” ${actor.name} says. “I have ${motive.object || "nothing worth hiding"}.”${edge}`;
+    const edge = (actor.disp || 0) <= -1 ? " That is reason enough. I will not turn it into a confession for you." : (actor.disp || 0) >= 1 ? " Walk with me a little, if you need to see it done." : " That is the whole of it.";
+    return `“I came out to ${motive.reason},” ${actor.name} says.${edge}`;
   };
 
   const commitDirector = () => nightfall({
@@ -11577,7 +11594,7 @@ function MonsterVillage() {
         intentDone: !!walk.intentDone,
         interacted: walk.interacted || {},
       });
-      const labels = { stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", whisper: "A VOICE IN THE DARK", delusion: "SOMETHING IS WRONG", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS" };
+      const labels = { atmosphere: "THE VILLAGE ABROAD", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", whisper: "A VOICE IN THE DARK", delusion: "SOMETHING IS WRONG", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS" };
       const slotLabel = d.cursor < 0 ? "BEFORE THE LAST LIGHT" : d.cursor < 2 ? "AFTER THE BELL" : d.cursor < 4 ? "THE SMALL HOURS" : d.cursor < 6 ? "BEFORE DAWN" : "THE LAST DARK";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
       const foundCount = d.found.stamps.length + d.found.clues.length + d.found.whispers.length;

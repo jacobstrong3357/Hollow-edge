@@ -509,6 +509,9 @@
         route: [{ slot: -1, location: HOME }]
       },
       currentFacts: facts,
+      gathering: config.gathering ? Object.assign({ shown: false }, clone(config.gathering)) : null,
+      presentedActorIds: [],
+      encounterBudget: config.encounterBudget == null ? 2 : Math.max(0, Number(config.encounterBudget)),
       beats: [],
       currentBeat: null,
       pendingThreat: null,
@@ -609,11 +612,19 @@
       }));
   }
 
+  function discoveryReveals(beat, action) {
+    return (beat.type === "stamp" || beat.type === "clue") ? action.type === "SEARCH" : beat.type === "whisper" ? action.type === "LISTEN" : beat.type === "delusion";
+  }
+
   function processDiscoveries(state, action, slot) {
+    /* A public gathering is the scene on first arrival. Do not let a random
+       private sensation overwrite it and leave the player hearing testimony
+       tomorrow about an event the interface never showed. */
+    if (state.currentBeat && state.currentBeat.type === "atmosphere" && state.gathering && state.gathering.shown) return;
     var key = slot + "|" + state.player.location;
     var entries = state.discoverySchedule[key] || [];
     entries.forEach(function (beat) {
-      var reveal = (beat.type === "stamp" || beat.type === "clue") ? action.type === "SEARCH" : beat.type === "whisper" ? action.type === "LISTEN" : beat.type === "delusion";
+      var reveal = discoveryReveals(beat, action);
       if (!reveal) return;
       if (beat.type === "stamp" && state.found.stamps.length) return;
       var shown = appendBeat(state, clone(beat));
@@ -723,9 +734,39 @@
   function arrive(state, action, slot) {
     state.player.route.push({ slot: slot, location: state.player.location, action: action.type });
     appendTruth(state, { id: "player:" + slot + ":" + action.type.toLowerCase(), slot: slot, kind: "player_action", action: action.type, location: state.player.location, actorId: action.actorId || null });
-    actorsAt(state, state.player.location, slot).filter(function (v) { return v.id !== state.monsterSchedule.hostId || slot !== state.monsterSchedule.attackSlot; }).forEach(function (v) {
+    var present = actorsAt(state, state.player.location, slot).filter(function (v) { return v.id !== state.monsterSchedule.hostId || slot !== state.monsterSchedule.attackSlot; });
+    var gatheringShown = false;
+    if (state.gathering && !state.gathering.shown && state.gathering.location === state.player.location) {
+      state.gathering.shown = true;
+      gatheringShown = true;
+      var gatheringTruth = appendTruth(state, {
+        id: "gathering:" + slot + ":" + state.gathering.id,
+        slot: slot,
+        kind: "gathering_seen",
+        location: state.player.location,
+        actors: present.map(function (villager) { return villager.id; }),
+        gatheringId: state.gathering.id
+      });
+      appendObservation(state, { eventId: gatheringTruth.id, slot: slot, kind: "gathering", location: state.player.location, actors: [], clarity: "clear", reliability: "direct", text: state.gathering.text });
+      appendBeat(state, makeBeat("gathering-beat:" + slot + ":" + state.gathering.id, "atmosphere", slot, state.player.location, state.gathering.text, {
+        truthEventId: gatheringTruth.id,
+        meta: { gatheringId: state.gathering.id, gatheringName: state.gathering.name }
+      }));
+    }
+    var framedId = null;
+    var visible = present.filter(function (villager) { return playerCanSeeActor(state, villager.id, slot); });
+    var discoveryKey = slot + "|" + state.player.location;
+    var priorityDiscovery = (state.discoverySchedule[discoveryKey] || []).some(function (beat) { return discoveryReveals(beat, action); });
+    if (!gatheringShown && !priorityDiscovery && action.actorId && visible.some(function (villager) { return villager.id === action.actorId; })) framedId = action.actorId;
+    else if (!gatheringShown && !priorityDiscovery && ["LEAVE", "MOVE", "WAIT"].indexOf(action.type) >= 0 && state.presentedActorIds.length < state.encounterBudget) {
+      framedId = visible.filter(function (villager) { return state.presentedActorIds.indexOf(villager.id) < 0; }).sort(function (a, b) {
+        return (state.attackPriorities[slot][a.id] || 1) - (state.attackPriorities[slot][b.id] || 1);
+      }).map(function (villager) { return villager.id; })[0] || null;
+    }
+    if (framedId && state.presentedActorIds.indexOf(framedId) < 0) state.presentedActorIds.push(framedId);
+    present.forEach(function (v) {
       var acknowledged = action.type === "HAIL" && action.actorId === v.id;
-      recordEncounter(state, v, slot, acknowledged, acknowledged ? "hailed" : "crossed_paths", acknowledged || playerCanSeeActor(state, v.id, slot));
+      recordEncounter(state, v, slot, acknowledged, acknowledged ? "hailed" : "crossed_paths", acknowledged || v.id === framedId);
     });
     processDiscoveries(state, action, slot);
     processAttack(state, slot);
@@ -790,6 +831,9 @@
   function upgradeStateInPlace(state) {
     if (!state) return state;
     if (state.monsterSchedule && state.monsterSchedule.relentless == null) state.monsterSchedule.relentless = state.monsterSchedule.id === "werewolf";
+    if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
+    state.presentedActorIds = state.presentedActorIds || [];
+    if (state.encounterBudget == null) state.encounterBudget = 2;
     state.visibility = state.visibility || {};
     state.outcomes = state.outcomes || {};
     for (var slot = 0; slot < state.slots; slot += 1) {
@@ -1003,6 +1047,19 @@
       appendTruth(next, { id: "go-home:" + next.cursor, slot: next.cursor, kind: "returned_home", location: HOME });
       return settleAfterReturn(next);
     }
+    if (action.type === "HAIL") {
+      /* Conversation is a reaction inside the current scene, not another
+         hour of night. It can change the villager's later timing without
+         stealing one of the player's few route beats. */
+      var hailed = next.cast.find(function (villager) { return villager.id === action.actorId; });
+      if (!hailed) return invalid(next, action, "There is nobody there to answer.");
+      appendTruth(next, { id: "player:" + next.cursor + ":hail:" + action.actorId, slot: next.cursor, kind: "player_action", action: "HAIL", location: next.player.location, actorId: action.actorId });
+      next.actionHistory.push({ slot: next.cursor, type: "HAIL", to: null, actorId: action.actorId });
+      recordEncounter(next, hailed, next.cursor, true, "hailed", true);
+      if (next.presentedActorIds.indexOf(hailed.id) < 0) next.presentedActorIds.push(hailed.id);
+      next.delays[action.actorId] = (next.delays[action.actorId] || 0) + 1;
+      return next;
+    }
     var slot = next.cursor + 1;
     if (action.type === "LEAVE") {
       next.phase = "active";
@@ -1012,8 +1069,6 @@
     } else if (action.type === "FOLLOW") {
       var destination = actorLocation(next, action.actorId, slot);
       next.player.location = destination && destination !== HOME ? destination : next.player.location;
-    } else if (action.type === "HAIL") {
-      next.delays[action.actorId] = (next.delays[action.actorId] || 0) + 1;
     }
     next.cursor = slot;
     next.actionHistory.push({ slot: slot, type: action.type, to: action.to || null, actorId: action.actorId || null });
