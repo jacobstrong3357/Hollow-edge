@@ -6,6 +6,10 @@
 <title>Hollow's Edge</title>
 <meta name="description" content="A village. As many nights as it takes. Something among you." />
 <link rel="preload" href="assets/ink-v1/scenes/village-gate-ink-v1.webp" as="image" type="image/webp" fetchpriority="high" />
+<link rel="preload" href="assets/monster-concepts-v1/necromancer.webp" as="image" type="image/webp" />
+<link rel="preload" href="assets/monster-concepts-v1/mimic.webp" as="image" type="image/webp" />
+<link rel="preload" href="assets/monster-concepts-v1/succubus.webp" as="image" type="image/webp" />
+<link rel="preload" href="assets/monster-concepts-v1/the-hollowed.webp" as="image" type="image/webp" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -7127,8 +7131,10 @@ const INTERVIEW_ROOM_WOUND_ART = {
    the browser cache in low-priority batches. Likely day-one art goes first;
    the bestiary and ending sheets follow without competing with visible work. */
 const VILLAGER_ART_IDS = ["marta", "tobias", "ansel", "greta", "wilhelm", "liesel", "falk", "rosa"];
+const PRIORITY_MONSTER_PLATE_IDS = ["necromancer", "mimic", "succubus", "hollowed"];
 const GAME_IMAGE_WARM_LIST = Array.from(new Set([
   ...VILLAGER_ART_IDS.map((id) => `assets/ink-v1/portraits/${id}-ink-v1.webp`),
+  ...PRIORITY_MONSTER_PLATE_IDS.map((id) => `assets/monster-concepts-v1/${MONSTER_PLATES[id]}`),
   ...Object.values(LOCATION_DAY_ART),
   "assets/ink-v2/scenes/day-masthead-panorama-ink-v2.webp",
   ...Object.values(INTERVIEW_ROOM_ART),
@@ -7567,7 +7573,7 @@ function PersonReadings({ s, n, mood, only }) {
   );
 }
 
-function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, openNotes, free }) {
+function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, beginInterview, openNotes, free }) {
   const n = npcById(s, iv.id);
   /* Every night this neighbour was in the village for is fair to ask about,
      not merely the last three: on Day 7 the interesting night is often Night
@@ -7897,7 +7903,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
             ))}
           {!begun && (
             <>
-              <Btn full center kind="amber" onClick={() => setIv({ ...iv, begun: true })}><span className="mv-display" style={{ letterSpacing: 2 }}>BEGIN THE INTERVIEW</span></Btn>
+              <Btn full center kind="amber" onClick={beginInterview || (() => setIv({ ...iv, begun: true }))}><span className="mv-display" style={{ letterSpacing: 2 }}>BEGIN THE INTERVIEW</span></Btn>
               <div className="mt-2 text-center">
                 <button onClick={endInterview} className="mv-body" style={{ background: "transparent", border: "none", color: C.parchLine, fontSize: 13.5, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>Take your leave instead</button>
               </div>
@@ -8240,7 +8246,7 @@ function NightChoice({ children, onClick, quiet, plan, icon }) {
     </button>
   );
   return (
-    <button onClick={onClick} className="mv-btn mv-body heNightChoice" style={{
+    <button onClick={onClick} className={`mv-btn mv-body heNightChoice ${quiet ? "heNightChoice--quiet" : "heNightChoice--primary"}`} style={{
       borderRadius: 4, padding: "9px 13px", textAlign: "left", fontSize: 14, cursor: "pointer",
       background: quiet ? "rgba(10,12,24,0.55)" : "rgba(217,164,65,0.1)",
       border: `1px solid ${quiet ? C.line : C.nightAmber}`,
@@ -8972,6 +8978,56 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heActionCard:disabled { opacity:.58 !important; filter:saturate(.28) contrast(.88) !important; box-shadow:2px 3px 0 rgba(25,23,21,.12); }
 .heActionCard:disabled::after { background:repeating-linear-gradient(104deg,transparent 0 8px,rgba(243,233,214,.025) 8px 9px); }
 .heActionCard:disabled .heActionCardHint { color:#918777 !important; }
+
+/* This doorstep scene is daylight parchment, even though it reuses the
+   sentence-shaped NightChoice control. Give both answers a complete day
+   treatment so neither disappears into the paper behind it. */
+.heDayFavourScreen .heNightChoice {
+  min-height:48px;
+  color:var(--he-paper-light) !important;
+  background:linear-gradient(103deg,#211c17,#12100e) !important;
+  border:1px solid #7f552c !important;
+  border-top:2px solid #b47a38 !important;
+  text-shadow:0 1px 1px #000;
+}
+.heDayFavourScreen .heNightChoice--quiet {
+  color:var(--he-ink) !important;
+  background:rgba(243,233,214,.96) !important;
+  border-color:var(--he-rule) !important;
+  border-top-color:var(--he-ink) !important;
+  text-shadow:none;
+}
+.heDeathScene .heDeathCartWait {
+  margin:12px 0 4px !important;
+  padding:9px 11px;
+  color:var(--he-ink) !important;
+  background:rgba(243,233,214,.95);
+  border:1px solid rgba(82,38,38,.55);
+  border-left:3px solid var(--he-blood);
+  box-shadow:2px 3px 0 rgba(25,23,21,.15);
+}
+.heJournalCloseTop {
+  display:block;
+  margin:0 0 9px auto;
+  padding:5px 9px;
+  color:var(--he-ink);
+  background:rgba(243,233,214,.9);
+  border:1px solid var(--he-rule);
+  font-size:11px;
+  letter-spacing:1.5px;
+  cursor:pointer;
+}
+@media (max-width:350px) and (max-height:620px) {
+  .heDayHeaderFrame { height:66px; }
+  .heDayMainContent { padding-bottom:170px !important; }
+  .heActionCard { min-height:58px; padding-top:8px !important; padding-bottom:8px !important; }
+  .heActionCardHint { font-size:11.5px !important; line-height:1.22 !important; }
+  .heActionGrid { gap:6px !important; }
+  .heAccuseLead { padding:7px 9px 8px; font-size:13px !important; line-height:1.35 !important; }
+  .heAccuseMonsterGrid { margin-top:0 !important; padding-top:6px !important; gap:4px 5px !important; }
+  .heAccuseMonsterGrid button { padding:2px 1px !important; gap:2px !important; }
+  .heAccuseMonsterGrid .heMonsterPlate { width:48px !important; height:48px !important; }
+}
 `;
 const CSS_ALL = fontStyles + EXTRA_CSS;
 
@@ -9199,7 +9255,7 @@ const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fas
    player can read it in one breath instead of being handed a manual. */
 const HOW_TO_PLAY = [
   { h: "THE GOAL", b: "One of your eight neighbours is not what they seem. Learn who it is, and what horror wears their face, then accuse them so the rite can end it." },
-  { h: "THE RHYTHM", b: "Two actions by day: question a villager, search a place, examine the dead. By night, bar your door, watch someone's, or walk the dark yourself. Hunt it too openly and it hunts you back." },
+  { h: "THE RHYTHM", b: "Two actions by day: hold an interview, search a place, investigate a fresh death, or have someone examined for the change. By night, bar your door, watch someone's, or walk the dark yourself. Hunt it too openly and it hunts you back." },
   { h: "WINNING AND LOSING", b: "Name the right person AND the right creature together and it ends. Get either wrong and an innocent may hang, or you might. Let too many nights pass and the village runs out of people." },
   { h: "IF YOU GET STUCK", b: "The Journal, at the bottom of the screen, keeps your signs, your struck-off suspects, and a full Help tab with the fine print." },
 ];
@@ -10178,7 +10234,7 @@ function MonsterVillage() {
                 </span>
                 <span className="flex items-baseline" style={{ gap: 8, marginLeft: "auto" }}>
                   <span className="mv-display" style={{ fontSize: 21, lineHeight: 1, color: C.amber }}>{livingTonight}</span>
-                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>STILL LIVING</span>
+                  <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>STILL COUNTED</span>
                 </span>
               </div>
             </div>
@@ -11432,6 +11488,7 @@ function MonsterVillage() {
   const journal = tab && (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(8,10,18,0.85)" }} onClick={() => setTab(null)}>
       <div className="mt-auto rounded-t-xl p-4 max-h-[85vh] overflow-y-auto mv-body" style={{ background: C.parch, color: C.ink, WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => setTab(null)} className="mv-display heJournalCloseTop" aria-label="Close journal">CLOSE ×</button>
         {/* four tabs, one row. These are labels in a fixed strip, not prose:
             they are sized to fit the strip and do not follow the body up. */}
         <div className="flex gap-1.5" style={{ paddingBottom: 8, marginBottom: 12, borderBottom: `1px solid ${C.parchLine}` }}>
@@ -11701,11 +11758,9 @@ function MonsterVillage() {
      interactive style as the night walk, instead of a result sheet. */
   const runSearchScene = (loc) => {
     setModal(null);
-    const next = actSearch(s, loc);
-    /* keep who said what: portraits ride along with the beats */
-    const fresh = next.dayEvents.slice(s.dayEvents.length);
-    setS(next);
-    setDayScene({ loc, beats: fresh, stage: "arrive", idx: 0, open: pickFreshIdx("daySearchOpen", [
+    /* Choosing a destination is still reversible. The daylight is committed
+       only when the player chooses how to work the place. */
+    setDayScene({ loc, beats: [], stage: "arrive", idx: 0, open: pickFreshIdx("daySearchOpen", [
       (l) => `The ${l} lies open under the morning light, ordinary and unhelpful, keeping whatever it keeps. The daylight is yours. How will you spend it?`,
       (l) => `Morning light is honest light, and the ${l} sits in it looking like it has nothing to hide. That is what everything looks like now. The daylight is yours. How will you spend it?`,
       (l) => `You reach the ${l} with the dew still down, before the village can trample whatever the night left. The daylight is yours. How will you spend it?`,
@@ -11794,6 +11849,13 @@ function MonsterVillage() {
     const beats = dayScene.beats || [];
     const arriving = dayScene.stage !== "beats";
     const idx = Math.min(dayScene.idx || 0, Math.max(0, beats.length - 1));
+    const beginSearch = (st) => {
+      const next = actSearch(s, dayScene.loc);
+      /* keep who said what: portraits ride along with the beats */
+      const fresh = next.dayEvents.slice(s.dayEvents.length);
+      setS(next);
+      setDayScene({ ...dayScene, beats: fresh, stage: "beats", styleLine: st.line(dayScene.loc), idx: 0 });
+    };
     /* A beat is either something the morning does around you (prose, with the
        neighbour's face beside it where there is one) or something the search
        REPORTS, which gets a ruled plaque and, for a sign, the stamp chip that
@@ -11840,7 +11902,7 @@ function MonsterVillage() {
                 <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8, paddingBottom: 4 }}>
                   <span className="mv-display text-center" style={{ fontSize: 12, letterSpacing: 2.5, color: C.dim }}>· CHOOSE HOW TO WORK THE PLACE ·</span>
                   {Object.entries(DAY_SEARCH_STYLES).map(([k, st]) => (
-                    <button key={k} onClick={() => setDayScene({ ...dayScene, stage: "beats", styleLine: st.line(dayScene.loc), idx: 0 })}
+                    <button key={k} onClick={() => beginSearch(st)}
                       className="mv-btn mv-body mvIvChip" style={{ display: "flex", alignItems: "center", textAlign: "left", padding: 14, background: C.sky, border: `1px solid ${C.line}`, borderRadius: 8, cursor: "pointer" }}>
                       <span style={{ fontSize: 14, lineHeight: 1.35, color: C.parch }}>{st.label}</span>
                     </button>
@@ -11874,7 +11936,6 @@ function MonsterVillage() {
   /* --- interview --- */
   const startInterview = (id) => {
     const s2 = JSON.parse(JSON.stringify(s));
-    s2.ap -= 1; s2.questionedToday.push(id);
     const npc = npcById(s2, id);
     const opener = [demeanorLine(s2, id), pickFreshIdx(`dispLine:${dispTier(npc.disp)}`, DISP_LINES[dispTier(npc.disp)])];
     if (npc.sawYouWatching) opener.push(`Before you can speak: "I saw you. The other night, in the lane, watching my door. So am I a suspect, then? Say it to my face."`);
@@ -11890,9 +11951,17 @@ function MonsterVillage() {
     else if (id === "ansel" && (s2.burned || []).includes("Old Church")) opener.push(AFFLICTION_OPENER.ansel(npc.name));
     else if ((id === "greta" || id === "falk") && s2.wellFouled) opener.push(AFFLICTION_OPENER[id](npc.name));
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
-    setS(s2); setModal(null); setIvOpenerOpen(false);
+    setModal(null); setIvOpenerOpen(false);
     const valid = s2.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
-    setIv({ id, night: valid.length ? valid[valid.length - 1] : s2.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })) });
+    setIv({ id, night: valid.length ? valid[valid.length - 1] : s2.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })), committed: false });
+  };
+  const beginInterview = () => {
+    if (!iv || iv.committed) { if (iv) setIv({ ...iv, begun: true }); return; }
+    const s2 = JSON.parse(JSON.stringify(s));
+    s2.ap -= 1;
+    if (!s2.questionedToday.includes(iv.id)) s2.questionedToday.push(iv.id);
+    setS(s2);
+    setIv({ ...iv, begun: true, committed: true });
   };
   const askQ = (q, targetId) => {
     const prevDisp = (npcById(s, iv.id) || {}).disp || 0;
@@ -11933,7 +12002,8 @@ function MonsterVillage() {
   };
   const endInterview = () => {
     const npc = npcById(s, iv.id);
-    if (!s.sideQuest && npc && npc.alive && !npc.fled && npc.disp >= 1 && chance(0.4)) {
+    const interviewBegan = iv.begun || iv.transcript.some((t) => t.q);
+    if (interviewBegan && !s.sideQuest && npc && npc.alive && !npc.fled && npc.disp >= 1 && chance(0.4)) {
       const targets = s.npcs.filter((x) => x.alive && !x.fled && x.id !== iv.id);
       if (targets.length) {
         const target = pick(targets);
@@ -11992,15 +12062,12 @@ function MonsterVillage() {
   const interviewModal = iv && !(examRes && examRes.interview) && !(unbindRes && unbindRes.interview) && (
     <InterviewView s={s} iv={iv} setIv={setIv} ivSub={ivSub} setIvSub={setIvSub}
       openerOpen={ivOpenerOpen} setOpenerOpen={setIvOpenerOpen}
-      askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endInterview}
+      askQ={askQ} askFollowUp={askFollowUp} showNote={showNote} endInterview={endInterview} beginInterview={beginInterview}
       openNotes={() => setProfile(iv.id)} />
   );
 
   /* --- death scene investigation --- */
   const openInvest = () => {
-    const s2 = JSON.parse(JSON.stringify(s));
-    s2.ap -= 1; s2.investigatedNight = s2.nightNum;
-    setS(s2);
     setInvest({ left: 2, used: [], findings: [] });
   };
   const investModal = invest && freshDeath && (() => {
@@ -12048,7 +12115,15 @@ function MonsterVillage() {
                 <div className="grid grid-cols-2 gap-2 mt-2.5">
                   {INVEST_ACTS.filter((a) => !invest.used.includes(a.key)).map((a) => (
                     <button key={a.key} onClick={() => {
-                      const { s: ns, line } = investLook(s, a.key);
+                      /* Opening the scene is free; the first careful look is
+                         the point at which this daylight is actually spent. */
+                      const base = invest.left === 2 ? (() => {
+                        const committed = JSON.parse(JSON.stringify(s));
+                        committed.ap -= 1;
+                        committed.investigatedNight = committed.nightNum;
+                        return committed;
+                      })() : s;
+                      const { s: ns, line } = investLook(base, a.key);
                       /* which sign this look turned up, if any: it stamps on
                          the way out, never on the plaque, so the finding is
                          read as prose before it becomes a label */
@@ -12076,7 +12151,7 @@ function MonsterVillage() {
                 </div>
               );
             })()}
-            {invest.left <= 0 && <p className="mt-3" style={{ fontSize: 14.5, color: C.dim, fontStyle: "italic" }}>{tb && tb.alive && !tb.fled ? "Old Tobias is waiting with the cart. There is no more time." : "The burial detail is waiting with the cart. There is no more time."}</p>}
+            {invest.left <= 0 && <p className="mt-3 heDeathCartWait" style={{ fontSize: 14.5, color: C.dim, fontStyle: "italic" }}>{tb && tb.alive && !tb.fled ? "Old Tobias is waiting with the cart. There is no more time." : "The burial detail is waiting with the cart. There is no more time."}</p>}
           </div>
           <Dock tone="bruise"><DockBtn kind="commit" onClick={() => setInvest(null)}>STEP AWAY FROM THE BODY</DockBtn></Dock>
         </div>
@@ -12523,7 +12598,7 @@ function MonsterVillage() {
               <p className="heAccuseLead" style={{ fontSize: 14.5, lineHeight: 1.5, textWrap: "pretty" }}>Right on both counts ends it tonight. Wrong on either, and the village pays.</p>
               {/* ruled-out creatures stay pressable at 35%: the signs are the
                   player's own reading, and the game never decides for them */}
-              <div style={{ position: "relative", zIndex: 7, marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: "10px 7px" }}>
+              <div className="heAccuseMonsterGrid" style={{ position: "relative", zIndex: 7, marginTop: "auto", paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: "10px 7px" }}>
                 {MONSTERS.map((mm) => {
                   const locked = mm.id === "hollowed" && !s.hollowedIn;
                   const struckM = s.struck.includes(mm.id);
@@ -12928,7 +13003,7 @@ function MonsterVillage() {
         );
       })()}
 
-      <div className="max-w-md mx-auto px-4 pb-32">
+      <div className="max-w-md mx-auto px-4 pb-32 heDayMainContent">
         {/* The night's recap belongs to the dawn reveal (once) and the journal's
             Nights log (summarised, in the Journal). The day homepage keeps only
             the active-danger warnings, never the full recap. */}
