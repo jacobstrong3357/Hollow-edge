@@ -3361,7 +3361,7 @@ function resolveNight(prev, planIn, preEvents) {
      interviews and social systems. This is deliberately one-way: the legacy
      resolver may format the morning, but it cannot invent a different night. */
   if (director) {
-    const encounters = (director.ledgers.truth || []).filter((e) => ["hailed", "crossed_paths"].includes(e.kind));
+    const encounters = (director.ledgers.truth || []).filter((e) => ["hailed", "crossed_paths", "passed_unseen"].includes(e.kind));
     const directorEvents = encounters.map((e) => {
       const actorId = (e.actors || []).find((id) => id !== "player");
       const actor = npcById(s, actorId);
@@ -3397,6 +3397,7 @@ function resolveNight(prev, planIn, preEvents) {
     s.worldEvents = [...(s.worldEvents || []), ...directorEvents];
     s.observations = [...(s.observations || []), ...directorObservations];
     s.memories = [...(s.memories || []), ...directorMemories];
+    s.monsterSawYou = !!(s.monsterSawYou || director.player.monsterSawYou);
     s.nightHistory = [...(s.nightHistory || []), {
       night: n,
       signatures: [...new Set(director.usedSignatures || [])],
@@ -3411,6 +3412,11 @@ function resolveNight(prev, planIn, preEvents) {
     for (const clue of (director.found.clues || [])) s.clues.push(`Night ${n}: ${clue.text}`);
     for (const whisper of (director.found.whispers || [])) s.clues.push(`Night ${n}, heard at the ${whisper.location}: ${whisper.text} A voice is not proof.`);
     for (const delusion of (director.found.delusions || [])) s.clues.push(`Night ${n}, an uncertain memory: ${delusion.text}`);
+    const thresholdChoice = (director.ledgers.truth || []).find((e) => e.kind === "threshold_choice");
+    if (thresholdChoice) {
+      s.doorVisits = (s.doorVisits || 0) + 1;
+      if (thresholdChoice.action !== "KEEP_BARRED") s.clues.push(`Night ${n}: something followed you to your door and tested the threshold. ${director.thresholdEvent && (thresholdChoice.action === "ANSWER_DOOR" ? director.thresholdEvent.answer : director.thresholdEvent.look)} It left no physical proof.`);
+    }
     /* sawYouOut remains a compatibility projection only. The Director's
        memory ledger is the source; disposition will decide later whether a
        living witness actually speaks for the player. */
@@ -10153,7 +10159,7 @@ function MonsterVillage() {
 
   /* -- heartbeat when the walk turns dangerous -- */
   useEffect(() => {
-    const directorDanger = walk && walk.mode === "director" && walk.director && ["threat", "dead"].includes(walk.director.phase);
+    const directorDanger = walk && walk.mode === "director" && walk.director && ["threat", "chase", "dead"].includes(walk.director.phase);
     const danger = walk && (directorDanger || walk.stage === "hide" || walk.stage === "hidden" || walk.stage === "fate" || (walk.stage === "chased" && walk.facts.active) || (walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc));
     Snd.beat(!!danger);
   }, [walk]);
@@ -10167,6 +10173,7 @@ function MonsterVillage() {
     const stage = directorBeat ? `director:${directorBeat.id}` : walk && walk.mode === "director" ? `director:${walk.director.phase}:${walk.director.cursor}` : walk && walk.stage;
     if (stage !== walkStageRef.current) {
       if (directorBeat && directorBeat.type === "threat") { Snd.silence(true); Snd.danger(); }
+      else if (directorBeat && directorBeat.type === "doorstep") { Snd.silence(true); Snd.knock(); }
       else if (directorBeat && directorBeat.type === "whisper") Snd.cue("whisper");
       else if (directorBeat && directorBeat.type === "stamp") Snd.cue("earth");
       else if (directorBeat && directorBeat.type === "delusion") { Snd.silence(true); Snd.cue("breath_close"); }
@@ -11414,6 +11421,7 @@ function MonsterVillage() {
       HAIL: ["Your greeting travels farther than it should. For a moment, nobody owns the answering silence."],
       FOLLOW: ["You let their lantern keep one bend ahead. They never once look back."],
       GO_HOME: ["You choose your own door while you can still remember which road reaches it."],
+      REACH_HOME: ["Your hand finds the latch. The bolt is the loudest thing in the village."],
       HIDE: ["You make yourself smaller than your breathing."],
       FLEE: ["The road becomes impact, breath and the refusal to look behind."],
       INTERVENE: ["You put your voice between a neighbour and the dark."],
@@ -11430,9 +11438,12 @@ function MonsterVillage() {
     const feedback = emitted ? null : directorFallbackLine(action, next, walk.usedFeedback || []);
     if (action.type === "LISTEN") Snd.cue("whisper");
     else if (action.type === "MOVE") Snd.cue(["Old Church", "Graveyard"].includes(action.to) ? "gate" : action.to === "Dark Forest" ? "crickets" : ["Village Square", "Tavern"].includes(action.to) ? "bustle" : "leaves");
-    else if (action.type === "FOLLOW" || action.type === "FLEE") Snd.cue("leaves");
+    else if (["FOLLOW", "FLEE", "RUN", "BREAK_LINE"].includes(action.type)) Snd.cue(action.type === "BREAK_LINE" ? "gate" : "leaves");
     else if (action.type === "SEARCH") Snd.cue("earth");
     else if (action.type === "HAIL") Snd.cue("bustle");
+    else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
+    else if (action.type === "ANSWER_DOOR") Snd.cue("whisper");
+    else if (action.type === "REACH_HOME") Snd.cue("latch");
     setWalk({ ...walk, director: next, lastAction: action, feedback, usedFeedback: feedback ? [...(walk.usedFeedback || []), feedback] : (walk.usedFeedback || []) });
   };
 
@@ -11465,10 +11476,10 @@ function MonsterVillage() {
       const beat = d.currentBeat;
       const terminal = d.phase === "complete" || d.phase === "dead";
       const location = d.player.location === "Home" ? "Cottage" : (d.player.location || "Village Square");
-      const danger = d.phase === "threat" || d.phase === "dead" || (beat && ["threat", "flee", "aftermath"].includes(beat.type));
+      const danger = ["threat", "chase", "dead"].includes(d.phase) || (beat && ["threat", "flee", "aftermath"].includes(beat.type));
       const actions = HE_DIRECTOR.availableActions(d);
       const actor = beat && beat.actorId ? npcById(s, beat.actorId) : null;
-      const labels = { stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", whisper: "A VOICE IN THE DARK", delusion: "SOMETHING IS WRONG", threat: "TOO CLOSE", flee: "RUN", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS" };
+      const labels = { stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", whisper: "A VOICE IN THE DARK", delusion: "SOMETHING IS WRONG", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS" };
       const slotLabel = d.cursor < 0 ? "BEFORE THE LAST LIGHT" : d.cursor < 2 ? "AFTER THE BELL" : d.cursor < 4 ? "THE SMALL HOURS" : d.cursor < 6 ? "BEFORE DAWN" : "THE LAST DARK";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
       const foundCount = d.found.stamps.length + d.found.clues.length + d.found.whispers.length;
@@ -11498,7 +11509,7 @@ function MonsterVillage() {
               {actions.map((a, i) => (
                 <NightChoice key={`${a.type}:${a.to || a.actorId || i}`} quiet={a.tone === "quiet"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
-                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{a.type === "MOVE" || a.type === "LEAVE" ? "→" : a.type === "SEARCH" ? "⌕" : a.type === "LISTEN" ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : a.type === "GO_HOME" ? "⌂" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
+                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN"].includes(a.type) ? "→" : a.type === "SEARCH" ? "⌕" : a.type === "LISTEN" ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : a.type === "ANSWER_DOOR" ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
                     <span>{a.label}</span>
                   </span>
                 </NightChoice>

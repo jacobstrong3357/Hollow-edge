@@ -11,7 +11,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  var VERSION = 1;
+  var VERSION = 2;
   var DEFAULT_SLOTS = 7;
   var HOME = "Home";
   var SIGNS = ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"];
@@ -97,6 +97,33 @@
     "A familiar figure waits ahead with their back to you. You reach the place and find a pollarded tree.",
     "Your footprints continue ahead of you for six steps, wet and fresh. They end when you stop looking at them.",
     "The church bell swings without sound. For a moment you remember being inside it. The memory is not yours."
+  ];
+
+  var THRESHOLD_EVENTS = [
+    {
+      kind: "knock",
+      text: "Three knocks touch the door. When you reach the shutter, the fourth does not come.",
+      look: "You ease the shutter wide enough for one eye. The step is empty. Something moves away only after you stop looking for movement.",
+      answer: "‘Who is there?’ The words leave your mouth. From the other side, in your own voice: ‘Nobody now.’"
+    },
+    {
+      kind: "breath",
+      text: "Breathing gathers against the door, slow and tired, as though something has followed you home and leaned its forehead to the wood.",
+      look: "The breathing stops when the shutter moves. The frost on the outer latch is already melting.",
+      answer: "You ask what it wants. The breath takes the shape of a laugh and moves to the window beside you."
+    },
+    {
+      kind: "latch",
+      text: "The outer latch lifts once, settles, then lifts again with exquisite care. The bolt does not move.",
+      look: "Nothing stands on the step. The latch hangs perfectly still until you turn your back on it.",
+      answer: "You tell it the door is barred. Something outside tests the sentence with one gentle push, then leaves."
+    },
+    {
+      kind: "familiar_voice",
+      text: "A familiar voice says your name from the step. It belongs to somebody you left alive in the village. It does not ask to come in.",
+      look: "The step is empty. Far down the lane, a figure reaches the corner without making the walk between.",
+      answer: "You answer the voice by name. It repeats the name back as though trying it for size, then goes quiet."
+    }
   ];
 
   var STAMP_TEXT = {
@@ -488,17 +515,34 @@
       usedSignatures: used,
       actionHistory: [],
       outcomes: {},
+      visibility: {},
       discoverySchedule: {}
     };
     cast.forEach(function (v) { state.ledgers.memories[v.id] = []; });
     for (var s = 0; s < slots; s += 1) {
+      state.visibility[s] = {};
+      cast.forEach(function (villager) {
+        var clearChance = state.weather === "fog" ? 0.48 : state.weather === "storm" ? 0.68 : 0.94;
+        state.visibility[s][villager.id] = keyedNumber(seed, "visibility:" + s + ":" + villager.id) < clearChance;
+      });
       state.outcomes[s] = {
         flee: keyedNumber(seed, "outcome:" + s + ":flee"),
         hide: keyedNumber(seed, "outcome:" + s + ":hide"),
         intervene: keyedNumber(seed, "outcome:" + s + ":intervene"),
-        sign: keyedNumber(seed, "outcome:" + s + ":sign")
+        sign: keyedNumber(seed, "outcome:" + s + ":sign"),
+        chase: {
+          run: [0, 1, 2].map(function (step) { return keyedNumber(seed, "outcome:" + s + ":chase:run:" + step); }),
+          breakLine: [0, 1, 2].map(function (step) { return keyedNumber(seed, "outcome:" + s + ":chase:break:" + step); }),
+          hide: [0, 1, 2].map(function (step) { return keyedNumber(seed, "outcome:" + s + ":chase:hide:" + step); }),
+          distract: [0, 1, 2].map(function (step) { return keyedNumber(seed, "outcome:" + s + ":chase:distract:" + step); })
+        }
       };
     }
+    state.chase = null;
+    state.thresholdEvent = Object.assign({
+      roll: keyedNumber(seed, "threshold:appears"),
+      resolved: false
+    }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]));
     state.discoverySchedule = makeDiscoverySchedule(seed, state, config, rng);
     state.ledgers.truth.push({ id: "night-plan", slot: -1, kind: "plan", weather: state.weather, active: monsterSchedule.active, huntLoc: monsterSchedule.huntLoc, attackSlot: monsterSchedule.attackSlot });
     return state;
@@ -539,12 +583,21 @@
     return "They remember a familiar lantern but cannot swear what you intended.";
   }
 
-  function recordEncounter(state, villager, slot, acknowledged, kind) {
-    var id = "encounter:" + slot + ":" + villager.id + ":" + (acknowledged ? "met" : "seen");
+  function playerCanSeeActor(state, actorId, slot) {
+    /* Version-one saves predate visibility. Treat their already-lived roads
+       as clear instead of retroactively hiding people the player could hail. */
+    if (!state.visibility || !state.visibility[slot] || state.visibility[slot][actorId] == null) return true;
+    return !!state.visibility[slot][actorId];
+  }
+
+  function recordEncounter(state, villager, slot, acknowledged, kind, playerSaw) {
+    var seen = acknowledged || playerSaw !== false;
+    var id = "encounter:" + slot + ":" + villager.id + ":" + (acknowledged ? "met" : seen ? "seen" : "unseen");
     if (state.ledgers.truth.some(function (x) { return x.id === id; })) return;
-    var truth = appendTruth(state, { id: id, slot: slot, kind: kind || "crossed_paths", location: state.player.location, actors: ["player", villager.id], acknowledged: !!acknowledged });
-    appendObservation(state, { eventId: truth.id, slot: slot, kind: acknowledged ? "meeting" : "sighting", location: state.player.location, actors: [villager.id], clarity: acknowledged ? "clear" : "partial", reliability: "direct" });
+    var truth = appendTruth(state, { id: id, slot: slot, kind: seen ? (kind || "crossed_paths") : "passed_unseen", location: state.player.location, actors: ["player", villager.id], acknowledged: !!acknowledged, playerSaw: seen });
+    if (seen) appendObservation(state, { eventId: truth.id, slot: slot, kind: acknowledged ? "meeting" : "sighting", location: state.player.location, actors: [villager.id], clarity: acknowledged ? "clear" : "partial", reliability: "direct" });
     state.ledgers.memories[villager.id].push({ eventId: truth.id, slot: slot, subject: "player", kind: acknowledged ? "meeting" : "sighting", location: state.player.location, clarity: acknowledged ? "clear" : "partial", acknowledged: !!acknowledged, interpretation: memoryInterpretation(villager, acknowledged) });
+    if (!seen) return;
     appendBeat(state, makeBeat(id, "encounter", slot, state.player.location,
       acknowledged ? villager.name + " stops beneath your lantern and answers your greeting." : "A familiar figure crosses your lantern at the edge of the road.", {
         actorId: villager.id,
@@ -629,18 +682,42 @@
     state.player.route.push({ slot: slot, location: state.player.location, action: action.type });
     appendTruth(state, { id: "player:" + slot + ":" + action.type.toLowerCase(), slot: slot, kind: "player_action", action: action.type, location: state.player.location, actorId: action.actorId || null });
     actorsAt(state, state.player.location, slot).filter(function (v) { return v.id !== state.monsterSchedule.hostId || slot !== state.monsterSchedule.attackSlot; }).forEach(function (v) {
-      recordEncounter(state, v, slot, action.type === "HAIL" && action.actorId === v.id, action.type === "HAIL" ? "hailed" : "crossed_paths");
+      var acknowledged = action.type === "HAIL" && action.actorId === v.id;
+      recordEncounter(state, v, slot, acknowledged, acknowledged ? "hailed" : "crossed_paths", acknowledged || playerCanSeeActor(state, v.id, slot));
     });
     processDiscoveries(state, action, slot);
     processAttack(state, slot);
   }
 
-  function finishIfNeeded(state) {
-    if (state.phase === "active" && state.cursor >= state.slots - 1) {
-      state.phase = "complete";
-      state.player.location = HOME;
+  function completeNight(state) {
+    state.phase = "complete";
+    state.player.location = HOME;
+    if (!state.ledgers.truth.some(function (e) { return e.id === "night-complete"; })) {
       appendTruth(state, { id: "night-complete", slot: state.cursor, kind: "returned_home", location: HOME });
     }
+    return state;
+  }
+
+  function beginThresholdOrComplete(state) {
+    var threshold = state.thresholdEvent;
+    var eligible = state.player.alive && state.player.monsterSawYou && threshold && !threshold.resolved && threshold.roll < 0.48;
+    if (!eligible) return completeNight(state);
+    state.phase = "threshold";
+    state.player.location = HOME;
+    appendTruth(state, { id: "threshold-arrival:" + state.cursor, slot: state.cursor, kind: "threshold_arrival", location: HOME, thresholdKind: threshold.kind });
+    var shown = appendBeat(state, makeBeat("threshold:" + state.cursor + ":" + threshold.kind, "doorstep", state.cursor, HOME, threshold.text, {
+      signature: semanticSignature({ family: "threshold", location: HOME, interaction: threshold.kind, outcome: "unanswered" })
+    }));
+    if (!shown) {
+      threshold.resolved = true;
+      threshold.suppressed = true;
+      return completeNight(state);
+    }
+    return state;
+  }
+
+  function finishIfNeeded(state) {
+    if (state.phase === "active" && state.cursor >= state.slots - 1) beginThresholdOrComplete(state);
   }
 
   function settleAfterReturn(state) {
@@ -659,14 +736,152 @@
         state.phase = "active";
       }
     }
-    state.phase = "complete";
-    return state;
+    return beginThresholdOrComplete(state);
   }
 
   function invalid(state, action, reason) {
     var copy = clone(state);
     copy.lastError = { action: action && action.type, reason: reason };
     return copy;
+  }
+
+  function upgradeStateInPlace(state) {
+    if (!state) return state;
+    state.visibility = state.visibility || {};
+    state.outcomes = state.outcomes || {};
+    for (var slot = 0; slot < state.slots; slot += 1) {
+      state.visibility[slot] = state.visibility[slot] || {};
+      (state.cast || []).forEach(function (villager) {
+        if (state.visibility[slot][villager.id] == null) state.visibility[slot][villager.id] = true;
+      });
+      state.outcomes[slot] = state.outcomes[slot] || {};
+      if (!state.outcomes[slot].chase) {
+        state.outcomes[slot].chase = {
+          run: [0, 1, 2].map(function (step) { return keyedNumber(state.seed, "outcome:" + slot + ":chase:run:" + step); }),
+          breakLine: [0, 1, 2].map(function (step) { return keyedNumber(state.seed, "outcome:" + slot + ":chase:break:" + step); }),
+          hide: [0, 1, 2].map(function (step) { return keyedNumber(state.seed, "outcome:" + slot + ":chase:hide:" + step); }),
+          distract: [0, 1, 2].map(function (step) { return keyedNumber(state.seed, "outcome:" + slot + ":chase:distract:" + step); })
+        };
+      }
+    }
+    if (!Object.prototype.hasOwnProperty.call(state, "chase")) state.chase = null;
+    if (!state.thresholdEvent) {
+      state.thresholdEvent = Object.assign({
+        roll: keyedNumber(state.seed, "threshold:appears"),
+        resolved: false
+      }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(state.seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]));
+    }
+    state.version = VERSION;
+    return state;
+  }
+
+  function upgradeState(state) {
+    return upgradeStateInPlace(clone(state));
+  }
+
+  function chaseDistanceWord(distance) {
+    return distance <= 1 ? "at your shoulder" : distance === 2 ? "closing" : "losing ground";
+  }
+
+  function startChase(state, threat) {
+    state.resolvedAttackSlots.push(threat.slot);
+    state.pendingThreat = null;
+    state.phase = "chase";
+    state.chase = { slot: threat.slot, step: 0, distance: 2, location: threat.location, history: [] };
+    appendTruth(state, { id: "chase-start:" + threat.slot, slot: threat.slot, kind: "chase_started", location: threat.location, actors: [state.monsterSchedule.hostId, "player"].filter(Boolean) });
+    appendBeat(state, makeBeat("chase-start-beat:" + threat.slot, "flee", threat.slot, threat.location,
+      "You run. The first turn buys you darkness but not distance. Behind you, the road is learning your pace.", { outcome: "closing" }));
+    return state;
+  }
+
+  function finishChaseEscape(state, action, outcome) {
+    var chase = state.chase;
+    appendTruth(state, { id: "escape:" + chase.slot + ":" + action.type.toLowerCase(), slot: chase.slot, kind: "escape", method: action.type.toLowerCase(), location: chase.location, succeeded: true, chaseSteps: chase.step });
+    appendBeat(state, makeBeat("chase-escape:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location, outcome, { outcome: "escaped" }));
+    state.chase = null;
+    state.phase = "returning";
+    return state;
+  }
+
+  function finishChaseDeath(state, action) {
+    var chase = state.chase;
+    appendTruth(state, { id: "escape:" + chase.slot + ":" + action.type.toLowerCase(), slot: chase.slot, kind: "escape", method: action.type.toLowerCase(), location: chase.location, succeeded: false, chaseSteps: chase.step });
+    appendBeat(state, makeBeat("chase-caught:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location,
+      "The lane gives you one more stride. The thing behind you does not need it.", { outcome: "caught" }));
+    state.player.alive = false;
+    state.phase = "dead";
+    state.chase = null;
+    appendTruth(state, { id: "player-death:" + chase.slot, slot: chase.slot, kind: "player_slain", location: chase.location, actors: [state.monsterSchedule.hostId, "player"].filter(Boolean) });
+    return state;
+  }
+
+  function resolveChase(state, action) {
+    var chase = state.chase;
+    if (!chase) return invalid(state, action, "There is no pursuit to resolve.");
+    var legal = availableActions(state).some(function (x) { return x.type === action.type && (!x.to || x.to === action.to); });
+    if (!legal) return invalid(state, action, "That escape route is not open.");
+    var step = Math.min(chase.step, 2);
+    var tape = state.outcomes[chase.slot].chase;
+    var key = action.type === "BREAK_LINE" ? "breakLine" : action.type === "DISTRACT" ? "distract" : action.type.toLowerCase();
+    var roll = tape[key][step];
+    var delta = 0;
+    if (action.type === "RUN") delta = roll >= 0.3 ? 1 : -1;
+    else if (action.type === "BREAK_LINE") delta = roll >= 0.45 ? 2 : -1;
+    else if (action.type === "HIDE") delta = roll >= 0.55 ? 3 : -2;
+    else if (action.type === "DISTRACT") delta = roll >= 0.4 ? 1 : -1;
+    chase.step += 1;
+    chase.distance += delta;
+    if (action.to) {
+      state.player.location = action.to;
+      chase.location = action.to;
+      state.player.route.push({ slot: chase.slot, location: action.to, action: action.type, chaseStep: chase.step });
+    }
+    chase.history.push({ step: chase.step, action: action.type, to: action.to || null, delta: delta });
+    appendTruth(state, { id: "chase-step:" + chase.slot + ":" + chase.step, slot: chase.slot, kind: "chase_step", action: action.type, location: chase.location, distance: chase.distance, result: delta > 0 ? "gained" : "lost" });
+    if (chase.distance >= 4) {
+      var escapedText = action.type === "HIDE"
+        ? "You fold into a gap between wall and hedge. Breathing passes close enough to move your hair, then carries on without you."
+        : action.type === "BREAK_LINE"
+          ? "You cut through a yard, vault a low wall and leave your lantern burning on the wrong road. The tread follows the light."
+          : action.type === "DISTRACT"
+            ? "The thing follows the sound you made instead of the body that made it. By the time it learns the difference, your door is near."
+            : "You choose a road without looking and reach the first barred gate with one breath left. Nothing crosses into the light behind you.";
+      return finishChaseEscape(state, action, escapedText);
+    }
+    if (chase.distance <= 0 || chase.step >= 3) return finishChaseDeath(state, action);
+    appendBeat(state, makeBeat("chase-beat:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location,
+      delta > 0
+        ? "For three heartbeats the tread falls back. Then it finds the road again. It is " + chaseDistanceWord(chase.distance) + "."
+        : "The turn costs you. The breathing behind you is " + chaseDistanceWord(chase.distance) + ", patient and horribly even.",
+      { outcome: delta > 0 ? "distance_gained" : "distance_lost" }));
+    return state;
+  }
+
+  function resolveThreshold(state, action) {
+    var threshold = state.thresholdEvent;
+    if (!threshold || threshold.resolved) return invalid(state, action, "Nothing is waiting at the threshold.");
+    var text;
+    if (action.type === "KEEP_BARRED") text = "You leave the shutter closed and keep one hand on the bolt. Whatever waits outside gives up before you do.";
+    else if (action.type === "LOOK_THROUGH") text = threshold.look;
+    else if (action.type === "ANSWER_DOOR") text = threshold.answer;
+    else return invalid(state, action, "The door remains between you and it.");
+    threshold.resolved = true;
+    threshold.choice = action.type;
+    appendTruth(state, { id: "threshold-choice:" + state.cursor, slot: state.cursor, kind: "threshold_choice", action: action.type, location: HOME, thresholdKind: threshold.kind });
+    var beat = appendBeat(state, makeBeat("threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), action.type === "ANSWER_DOOR" ? "whisper" : "doorstep", state.cursor, HOME, text, {
+      signature: semanticSignature({ family: "threshold", location: HOME, interaction: threshold.kind, outcome: action.type.toLowerCase() })
+    }));
+    appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: [], clarity: action.type === "KEEP_BARRED" ? "partial" : "clear", reliability: "sensory", text: text });
+    if (action.type === "ANSWER_DOOR" && beat) state.found.whispers.push(clone(beat));
+    return completeNight(state);
+  }
+
+  function resolveReturn(state, action) {
+    if (action.type !== "REACH_HOME") return invalid(state, action, "Only your own door matters now.");
+    state.player.location = HOME;
+    state.player.route.push({ slot: state.cursor, location: HOME, action: "REACH_HOME" });
+    appendTruth(state, { id: "reached-home:" + state.cursor, slot: state.cursor, kind: "returned_home", location: HOME });
+    return beginThresholdOrComplete(state);
   }
 
   function resolveThreat(state, action) {
@@ -687,11 +902,11 @@
       state.resolvedAttackSlots.push(threat.slot);
       state.pendingThreat = null;
       state.phase = "active";
-      state.player.location = action.type === "FLEE" ? HOME : state.player.location;
-      if (action.type === "FLEE") state.phase = "complete";
+      if (action.type === "FLEE") state.phase = "returning";
       return state;
     }
     if (action.type !== "FLEE" && action.type !== "HIDE") return invalid(state, action, "Run or hide.");
+    if (action.type === "FLEE") return startChase(state, threat);
     var roll = action.type === "FLEE" ? outcome.flee : outcome.hide;
     var survival = action.type === "FLEE" ? roll >= 0.18 : roll >= 0.25;
     appendTruth(state, { id: "escape:" + threat.slot + ":" + action.type.toLowerCase(), slot: threat.slot, kind: "escape", method: action.type.toLowerCase(), location: threat.location, succeeded: survival });
@@ -700,9 +915,7 @@
     state.resolvedAttackSlots.push(threat.slot);
     state.pendingThreat = null;
     if (survival) {
-      state.player.location = HOME;
-      state.player.route.push({ slot: threat.slot, location: HOME, action: action.type });
-      state.phase = "complete";
+      state.phase = "returning";
     } else {
       state.player.alive = false;
       state.phase = "dead";
@@ -713,13 +926,16 @@
 
   function reduce(state, action) {
     if (!state || !action || !action.type) return invalid(state || {}, action || {}, "An action type is required.");
-    var next = clone(state);
+    var next = upgradeStateInPlace(clone(state));
     /* currentBeat is a one-action presentation payload, not a sticky scene.
        Clear it before advancing so an uneventful move cannot repeat the last
        villager's words or discovery on the following screen. */
     next.currentBeat = null;
     next.lastError = null;
     if (next.phase === "dead" || next.phase === "complete") return invalid(next, action, "The night has ended.");
+    if (next.phase === "threshold") return resolveThreshold(next, action);
+    if (next.phase === "returning") return resolveReturn(next, action);
+    if (next.phase === "chase") return resolveChase(next, action);
     if (next.phase === "threat") return resolveThreat(next, action);
     var legal = availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
@@ -767,6 +983,22 @@
       ];
       return [action("FLEE", "Run", "danger"), action("HIDE", "Hide and hold your breath", "quiet")];
     }
+    if (state.phase === "chase") {
+      var chaseActions = [];
+      (state.graph[state.player.location] || []).filter(function (to) { return to !== HOME; }).forEach(function (to) {
+        chaseActions.push(action("RUN", "Run for the " + to, "danger", { to: to }));
+      });
+      chaseActions.push(action("BREAK_LINE", "Cut through a yard and break sight", "danger"));
+      chaseActions.push(action("HIDE", "Leave the lantern and hide", "quiet"));
+      chaseActions.push(action("DISTRACT", "Throw something down the other road", "quiet"));
+      return chaseActions;
+    }
+    if (state.phase === "threshold") return [
+      action("KEEP_BARRED", "Keep the shutter closed", "quiet"),
+      action("LOOK_THROUGH", "Look through the shutter", "quiet"),
+      action("ANSWER_DOOR", "Answer without opening", "danger")
+    ];
+    if (state.phase === "returning") return [action("REACH_HOME", "Reach your door and throw the bolt", "amber")];
     var result = [];
     (state.graph[state.player.location] || []).filter(function (to) { return to !== HOME; }).forEach(function (to) {
       result.push(action("MOVE", "Go to the " + to, "bone", { to: to }));
@@ -774,7 +1006,7 @@
     result.push(action("WAIT", "Wait and watch", "quiet"));
     result.push(action("SEARCH", "Search by lantern", "amber"));
     result.push(action("LISTEN", "Lower the lantern and listen", "quiet"));
-    actorsAt(state, state.player.location, state.cursor).forEach(function (v) {
+    actorsAt(state, state.player.location, state.cursor).filter(function (v) { return playerCanSeeActor(state, v.id, state.cursor); }).forEach(function (v) {
       result.push(action("HAIL", "Hail " + v.name, "bone", { actorId: v.id }));
       result.push(action("FOLLOW", "Follow " + v.name, "quiet", { actorId: v.id }));
     });
@@ -795,7 +1027,9 @@
       actions: availableActions(state),
       found: clone(state.found),
       observations: clone(state.ledgers.observations),
-      pendingThreat: state.pendingThreat ? { kind: state.pendingThreat.kind, victimId: state.pendingThreat.victimId, location: state.pendingThreat.location } : null
+      pendingThreat: state.pendingThreat ? { kind: state.pendingThreat.kind, victimId: state.pendingThreat.victimId, location: state.pendingThreat.location } : null,
+      chase: state.chase ? { step: state.chase.step, distance: state.chase.distance, location: state.chase.location } : null,
+      threshold: state.phase === "threshold" && state.thresholdEvent ? { kind: state.thresholdEvent.kind } : null
     };
   }
 
@@ -832,6 +1066,7 @@
     livingCast: livingCast,
     createNight: createNight,
     fromExistingFacts: fromExistingFacts,
+    upgradeState: upgradeState,
     reduce: reduce,
     availableActions: availableActions,
     actorAt: actorLocation,

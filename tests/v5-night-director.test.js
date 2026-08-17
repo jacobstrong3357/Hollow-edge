@@ -168,6 +168,51 @@ function take(state, wanted) {
   assert(resolved.beats.some(function (b) { return b.type === "flee" || b.type === "aftermath"; }), "the consequence has a renderable flee or aftermath beat");
 })();
 
+(function playerFlightBecomesARealChase() {
+  var state = Director.createNight(baseConfig("chase-0"));
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "MOVE", to: "Old Church" });
+  state = take(state, { type: "MOVE", to: "Graveyard" });
+  state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.pendingThreat.victimId, "player");
+  var sampled = JSON.stringify(state.outcomes[state.pendingThreat.slot].chase);
+  state = take(state, { type: "FLEE" });
+  assert.strictEqual(state.phase, "chase", "running opens a pursuit instead of resolving survival in one click");
+  assert(Director.availableActions(state).some(function (a) { return a.type === "RUN" && a.to; }), "the chase offers real adjacent routes");
+  assert(Director.availableActions(state).some(function (a) { return a.type === "BREAK_LINE"; }));
+  state = take(state, { type: "BREAK_LINE" });
+  assert.notStrictEqual(state.phase, "dead", "this seeded route breaks line of sight");
+  assert.strictEqual(JSON.stringify(state.outcomes[3].chase), sampled, "the chase consumes its named tape without rerolling it");
+  assert(state.ledgers.truth.some(function (e) { return e.kind === "chase_started"; }));
+  assert(state.ledgers.truth.some(function (e) { return e.kind === "chase_step"; }));
+  assert(state.ledgers.truth.some(function (e) { return e.kind === "escape" && e.succeeded; }));
+  assert.strictEqual(state.phase, "returning", "the escape result remains visible before the threshold transition");
+  state = take(state, { type: "REACH_HOME" });
+  if (state.phase === "threshold") state = take(state, { type: "KEEP_BARRED" });
+  assert.strictEqual(state.phase, "complete");
+  assert(state.player.alive);
+})();
+
+(function theThresholdIsSafeButNotQuiet() {
+  var config = baseConfig("door-2");
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home" } };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  assert.strictEqual(state.phase, "threshold");
+  assert.strictEqual(state.currentBeat.type, "doorstep");
+  assert.deepStrictEqual(Director.availableActions(state).map(function (a) { return a.type; }), ["KEEP_BARRED", "LOOK_THROUGH", "ANSWER_DOOR"]);
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert.strictEqual(state.phase, "complete");
+  assert(state.player.alive, "the barred cottage remains a hard safety promise");
+  assert.strictEqual(state.found.whispers.length, 1, "answering may preserve a voice, never a physical stamp");
+  assert.strictEqual(state.found.stamps.length, 0);
+  assert(state.ledgers.truth.some(function (e) { return e.kind === "threshold_choice"; }));
+})();
+
 (function goingHomeDoesNotStopTheVillageClock() {
   var state = Director.createNight(baseConfig("home-is-not-pause"));
   state = take(state, { type: "LEAVE", to: "Village Square" });
@@ -186,6 +231,11 @@ function take(state, wanted) {
     weather: "fog", active: true, huntLoc: "Graveyard", attackSlot: 5,
     outMap: { rosa: "Graveyard", falk: "Old Church", ansel: "Old Church", greta: "Graveyard" }
   });
+  /* This acceptance route proves a particular causal chain. Visibility itself
+     has a separate test below, so keep every intended witness identifiable. */
+  Object.keys(state.visibility).forEach(function (slot) {
+    Object.keys(state.visibility[slot]).forEach(function (actorId) { state.visibility[slot][actorId] = true; });
+  });
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "MOVE", to: "Old Church" });
   state = take(state, { type: "HAIL", actorId: "falk" });
@@ -200,6 +250,24 @@ function take(state, wanted) {
   assert(state.ledgers.truth.some(function (e) { return e.kind === "slain" && e.victimId === "rosa" && e.location === "Graveyard"; }), "the lived attack, not a dawn roll, fixes Rosa's fate and location");
 })();
 
+(function fogCanCreateOneSidedSightings() {
+  var config = baseConfig("one-sided-fog");
+  config.villagers = [{
+    id: "falk", name: "Doctor Falk", role: "the Physician", alive: true,
+    home: "Village Square", motive: { id: "late-call", family: "medicine", destination: "Old Church", reason: "answer a late call", object: "a medical bag", depart: 2, duration: 2 }
+  }];
+  config.monster.active = false;
+  config.currentFacts = { weather: "fog", active: false, outMap: { falk: "Old Church" } };
+  var state = Director.createNight(config);
+  state.visibility[0].falk = false;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  var event = state.ledgers.truth.find(function (e) { return e.kind === "passed_unseen"; });
+  assert(event && event.actors.includes("falk"), "the world records who passed the player unseen");
+  assert(!state.ledgers.observations.some(function (o) { return o.eventId === event.id; }), "the player journal cannot identify someone hidden by fog");
+  assert(state.ledgers.memories.falk.some(function (m) { return m.eventId === event.id; }), "the villager can still remember seeing the player's lantern");
+  assert(!Director.availableActions(state).some(function (a) { return a.actorId === "falk" && ["HAIL", "FOLLOW"].includes(a.type); }), "an unseen villager cannot be hailed or followed by name");
+})();
+
 (function semanticsPenaliseRepetition() {
   var sig = Director.semanticSignature({ family: "grief", actorId: "rosa", location: "Graveyard", interaction: "errand", outcome: "unresolved" });
   assert(Director.noveltyScore(sig, [sig]) < Director.noveltyScore(sig, []), "exact semantic repetition is heavily penalised");
@@ -208,11 +276,26 @@ function take(state, wanted) {
 })();
 
 (function browserAndNodeSurface() {
-  assert.strictEqual(Director.version, 1);
+  assert.strictEqual(Director.version, 2);
   var state = Director.createNight(baseConfig("visible"));
   var visible = Director.visibleState(state);
   assert(Array.isArray(visible.actions));
   assert(!Object.prototype.hasOwnProperty.call(visible, "monsterSchedule"), "visible state must not leak hidden monster truth");
+})();
+
+(function versionOneWalksUpgradeWithoutRerolling() {
+  var state = Director.createNight(baseConfig("old-save"));
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state.version = 1;
+  delete state.visibility;
+  delete state.chase;
+  delete state.thresholdEvent;
+  Object.keys(state.outcomes).forEach(function (slot) { delete state.outcomes[slot].chase; });
+  var restored = JSON.parse(JSON.stringify(state));
+  assert(Director.availableActions(restored).some(function (a) { return a.type === "WAIT"; }), "an old save remains playable before its first upgraded action");
+  restored = take(restored, { type: "WAIT" });
+  assert.strictEqual(restored.version, 2);
+  assert(restored.visibility && restored.thresholdEvent && restored.outcomes[1].chase, "the first action fills only the new deterministic fields");
 })();
 
 console.log("v5-night-director: all tests passed");
