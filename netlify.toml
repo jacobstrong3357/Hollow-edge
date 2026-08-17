@@ -12,3 +12,11 @@
   to = "/"
   status = 404
   force = true
+
+# The game now serves compact WebP derivatives while retaining the PNG files
+# as source masters. Let repeat visits reuse those derivatives without a
+# network round-trip; one week keeps art revisions under stable filenames sane.
+[[headers]]
+  for = "/assets/*.webp"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
