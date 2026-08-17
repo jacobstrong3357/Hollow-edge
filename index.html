@@ -2110,18 +2110,25 @@ function contextualQuestionsFor(s, npcId) {
   const events = s.worldEvents || [];
   const asked = new Set((s.askedLog[npcId] || []).filter((k) => k.includes(":context:")));
   const out = [];
+  const directKinds = ["seen", "not_seen", "evidence"];
   const directEvents = new Set((s.observations || [])
-    .filter((obs) => obs.subjectId === npcId && ["seen", "not_seen"].includes(obs.kind))
+    .filter((obs) => obs.subjectId === npcId && directKinds.includes(obs.kind))
     .map((obs) => obs.eventId));
   const offeredEvents = new Set();
+  const offeredShapes = new Set();
   for (const obs of (s.observations || [])) {
-    if (obs.subjectId !== npcId || !["seen", "not_seen"].includes(obs.kind)) continue;
+    if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) continue;
     const event = events.find((e) => e.eventId === obs.eventId);
     if (!event || !event.question) continue;
     const id = `${event.eventId}:${obs.kind}`;
-    if (!asked.has(`${obs.night}:context:${id}`)) {
+    const shape = `${obs.night}|${obs.kind === "evidence" ? "evidence" : "where"}|${event.location}|${event.question}`;
+    if (asked.has(`${obs.night}:context:${id}`)) {
+      offeredEvents.add(event.eventId);
+      offeredShapes.add(shape);
+    } else if (!offeredShapes.has(shape)) {
       out.push({ id, night: obs.night, kind: obs.kind, label: event.question, event });
       offeredEvents.add(event.eventId);
+      offeredShapes.add(shape);
     }
   }
   for (const mem of (s.memories || [])) {
@@ -2133,9 +2140,14 @@ function contextualQuestionsFor(s, npcId) {
     if (!event || directEvents.has(event.eventId) || offeredEvents.has(event.eventId)) continue;
     const id = `${event.eventId}:memory`;
     const label = `You saw me at the ${event.location}. What did you think I was doing?`;
-    if (!asked.has(`${mem.night}:context:${id}`)) {
+    const shape = `${mem.night}|memory|${event.location}`;
+    if (asked.has(`${mem.night}:context:${id}`)) {
+      offeredEvents.add(event.eventId);
+      offeredShapes.add(shape);
+    } else if (!offeredShapes.has(shape)) {
       out.push({ id, night: mem.night, kind: "memory", label, event });
       offeredEvents.add(event.eventId);
+      offeredShapes.add(shape);
     }
   }
   return out.sort((a, b) => b.night - a.night).slice(0, 6);
@@ -2994,7 +3006,7 @@ function newGame(veteran, hollowedUnlocked) {
     askedLog: {}, monsterClaims: {}, grudges: {},
     foundSigns: [], playerSigns: [], struckNpcs: [], locEvidence: Object.fromEntries(LOCS.map((l) => [l, []])),
     deaths: [], nightLogs: [], statements: [], playerSaw: [], clues: [], hardCleared: [],
-    worldEvents: [], observations: [], memories: [], scenarioHistory: [],
+    worldEvents: [], observations: [], memories: [], relationshipEvents: [], scenarioHistory: [],
     /* V5 nights remember semantic shapes rather than titles. The Director
        uses these signatures to avoid rebuilding the same encounter flow. */
     nightSchema: 1, nightHistory: [],
@@ -3361,24 +3373,26 @@ function resolveNight(prev, planIn, preEvents) {
      interviews and social systems. This is deliberately one-way: the legacy
      resolver may format the morning, but it cannot invent a different night. */
   if (director) {
-    const encounters = (director.ledgers.truth || []).filter((e) => ["hailed", "crossed_paths", "passed_unseen"].includes(e.kind));
-    const directorEvents = encounters.map((e) => {
-      const actorId = (e.actors || []).find((id) => id !== "player");
-      const actor = npcById(s, actorId);
+    const projection = HE_DIRECTOR.consequenceProjection(director);
+    const encounters = projection.encounters || [];
+    const directorEvents = encounters.map((thread) => {
+      const actorId = thread.actorId;
       const agenda = director.schedules && director.schedules[actorId];
       const motive = agenda && agenda.motive;
       const reason = motive && motive.reason ? motive.reason : "finish a private errand before the bell";
       const object = motive && motive.object && motive.object !== "nothing" ? ` I had ${motive.object}.` : "";
       return {
-        eventId: e.id, night: n, location: e.location, kind: "director_encounter",
+        eventId: thread.eventId, night: n, location: thread.location, kind: "director_encounter",
         actorIds: actorId ? [actorId] : [], subjectId: actorId || null,
-        question: `I met you at the ${e.location}. Why were you out?`,
+        question: `At the ${thread.location}, why were you out?`,
         honest: `“I went out to ${reason}.${object} You may dislike the hour. It does not change the errand.”`,
         evasive: `“You saw me on a road. You did not see why. Do not make a confession out of a lantern.”`,
-        directorKind: e.kind,
+        directorKind: thread.kind, sourceEventIds: thread.sourceEventIds,
       };
     });
-    const directorObservations = (director.ledgers.observations || []).map((o) => {
+    const sourceEncounterIds = new Set(encounters.flatMap((thread) => thread.sourceEventIds || []));
+    const findingBeatIds = new Set((projection.findings || []).map((finding) => finding.beatId));
+    const directorObservations = (director.ledgers.observations || []).filter((o) => !sourceEncounterIds.has(o.eventId) && !findingBeatIds.has(o.beatId)).map((o) => {
       const subjectId = (o.actors || []).find((id) => id !== "player") || null;
       return {
         id: `n${n}:${o.beatId || o.eventId || "observation"}`,
@@ -3388,20 +3402,66 @@ function resolveNight(prev, planIn, preEvents) {
         subjectId, source: o.reliability === "unreliable" ? "affliction" : "player",
         text: o.text || null,
       };
-    });
-    const directorMemories = Object.entries(director.ledgers.memories || {}).flatMap(([actorId, entries]) => entries.map((mem) => ({
-      eventId: mem.eventId, night: n, actorId, target: "player", kind: "director",
-      location: mem.location, confidence: mem.clarity, acknowledged: !!mem.acknowledged,
-      text: mem.interpretation,
+    }).concat(encounters.filter((thread) => thread.playerSaw).map((thread) => ({
+      id: `${thread.eventId}:seen`, eventId: thread.eventId, night: n, location: thread.location,
+      kind: "seen", confidence: thread.acknowledged ? "certain" : "partial",
+      subjectId: thread.actorId, source: "player", text: null,
     })));
-    s.worldEvents = [...(s.worldEvents || []), ...directorEvents];
-    s.observations = [...(s.observations || []), ...directorObservations];
-    s.memories = [...(s.memories || []), ...directorMemories];
+    const directorMemories = encounters.map((thread) => ({
+      eventId: thread.eventId, night: n, actorId: thread.actorId, target: "player", kind: "director",
+      location: thread.location, confidence: thread.clarity, acknowledged: !!thread.acknowledged,
+      timeSlot: thread.lastSlot, nearAttack: Math.abs(thread.lastSlot - director.monsterSchedule.attackSlot) <= 1,
+      text: thread.interpretation,
+    }));
+    const findingEvents = (projection.findings || []).map((finding) => {
+      const agenda = director.schedules && director.schedules[finding.actorId];
+      const motive = agenda && agenda.motive;
+      const object = motive && motive.object && motive.object !== "nothing" ? motive.object : "something tied to your errand";
+      const reason = motive && motive.reason ? motive.reason : "finish a private errand";
+      return {
+        eventId: finding.eventId, night: n, location: finding.location, kind: "director_finding",
+        actorIds: [finding.actorId], subjectId: finding.actorId,
+        question: `I found ${object} at the ${finding.location}. Why was it there?`,
+        honest: `“It is mine. I carried it because I went out to ${reason}. I must have dropped it.”`,
+        evasive: `“You found a thing in the road and brought it to my door. That does not make it mine.”`,
+        findingText: finding.text,
+      };
+    });
+    const findingObservations = (projection.findings || []).map((finding) => ({
+      id: `${finding.eventId}:evidence`, eventId: finding.eventId, night: n, location: finding.location,
+      kind: "evidence", confidence: "certain", subjectId: finding.actorId, source: "player", text: finding.text,
+    }));
+    const relationshipEvents = (projection.relationships || []).map((rel) => ({ ...rel, night: n, acknowledged: false }));
+    const relationshipMemories = relationshipEvents.map((rel) => ({
+      eventId: rel.eventId, night: n, actorId: rel.actorId, target: "player", kind: rel.kind,
+      location: rel.location, confidence: "certain", acknowledged: true,
+      text: rel.kind === "rescued" ? "They remember the player drawing the danger away." : rel.kind === "attempted_rescue" ? "They remember the player trying to reach them." : "They remember the player choosing the road home.",
+    }));
+    s.worldEvents = [...(s.worldEvents || []), ...directorEvents, ...findingEvents];
+    s.observations = [...(s.observations || []), ...directorObservations, ...findingObservations];
+    s.memories = [...(s.memories || []), ...directorMemories, ...relationshipMemories];
+    s.relationshipEvents = [...(s.relationshipEvents || []), ...relationshipEvents];
+    for (const rel of relationshipEvents) {
+      const target = npcById(s, rel.actorId);
+      const directorTarget = (director.cast || []).find((actor) => actor.id === rel.actorId);
+      if (!target) continue;
+      if (rel.kind === "rescued") {
+        s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 2) } : npc);
+        dawn.push(ev(`${target.name} reaches first light because you called into the dark and gave them the road. They remember exactly whose voice they followed.`, target.id, 2));
+      } else if (rel.kind === "attempted_rescue" && directorTarget && directorTarget.alive) {
+        s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
+      } else if (rel.kind === "abandoned" && directorTarget && directorTarget.alive) {
+        s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) - 2) } : npc);
+        dawn.push(ev(`${target.name} came back from the dark remembering that you were close enough to help, and chose not to.`, target.id, 2));
+      } else if (rel.kind === "abandoned") {
+        s.clues.push(`Night ${n}: you left ${target.name} to what was moving in the ${rel.location}. Nobody has accused you of it. You know.`);
+      }
+    }
     s.monsterSawYou = !!(s.monsterSawYou || director.player.monsterSawYou);
     s.nightHistory = [...(s.nightHistory || []), {
       night: n,
       signatures: [...new Set(director.usedSignatures || [])],
-      actors: [...new Set(encounters.flatMap((e) => (e.actors || []).filter((id) => id !== "player")))],
+      actors: [...new Set(encounters.map((thread) => thread.actorId))],
       locations: [...new Set((director.player.route || []).map((r) => r.location).filter((l) => l && l !== "Home"))],
       outcome: director.phase === "dead" ? "player_slain" : ((director.ledgers.truth || []).find((e) => e.kind === "slain" || e.kind === "changed") || {}).kind || "safe",
     }];
@@ -3420,10 +3480,9 @@ function resolveNight(prev, planIn, preEvents) {
     /* sawYouOut remains a compatibility projection only. The Director's
        memory ledger is the source; disposition will decide later whether a
        living witness actually speaks for the player. */
-    const memoriesByActor = new Map(directorMemories.map((mem) => [mem.actorId, mem]));
     s.npcs = s.npcs.map((npc) => {
-      const mem = memoriesByActor.get(npc.id);
-      return mem ? { ...npc, sawYouOut: [...(npc.sawYouOut || []), { night: n, loc: mem.location, met: mem.acknowledged, eventId: mem.eventId, timeSlot: (director.ledgers.truth.find((e) => e.id === mem.eventId) || {}).slot, nearAttack: Math.abs(((director.ledgers.truth.find((e) => e.id === mem.eventId) || {}).slot || -9) - director.monsterSchedule.attackSlot) <= 1 }] } : npc;
+      const memories = directorMemories.filter((mem) => mem.actorId === npc.id);
+      return memories.length ? { ...npc, sawYouOut: [...(npc.sawYouOut || []), ...memories.map((mem) => ({ night: n, loc: mem.location, met: mem.acknowledged, eventId: mem.eventId, timeSlot: mem.timeSlot, nearAttack: mem.nearAttack }))] } : npc;
     });
     if (!director.player.alive) {
       s.over = { win: false, reason: "lost", text: "The village heard you running. It did not hear you reach your door." };
@@ -4260,7 +4319,8 @@ function resolveNight(prev, planIn, preEvents) {
         /* -- if the dead is someone the player met, followed or watched
            TONIGHT, the recap must say so plainly, not let the connection
            vanish into a generic scream. -- */
-        const crossedPaths = [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || []), ...(((mods.v5Scenario || {}).actorIds) || [])].filter(Boolean).includes(victim.id);
+        const directorCrossedPaths = !!(director && (director.ledgers.truth || []).some((event) => ["hailed", "crossed_paths", "passed_unseen"].includes(event.kind) && (event.actors || []).includes(victim.id)));
+        const crossedPaths = directorCrossedPaths || [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || []), ...(((mods.v5Scenario || {}).actorIds) || [])].filter(Boolean).includes(victim.id);
         /* the watched-and-taken case is its own story: the player held that
            very door under watch and saw nothing. The recap must own that
            plainly (the kill came AFTER the watcher went home to bed), not
@@ -4285,7 +4345,7 @@ function resolveNight(prev, planIn, preEvents) {
              does not come for the player - but it costs standing with the
              people who loved them, and it is said to your face. -- */
           const alibis = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (!director || (x.disp || 0) >= 0) && (x.sawYouOut || []).some((e2) => e2.night === n && e2.met && e2.nearAttack && e2.loc !== victimWhere));
-          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n && !e2.met));
+          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n && !e2.met && (!director || (e2.nearAttack && e2.loc === victimWhere))));
           if (alibis.length) {
             const names = alibis.slice(0, 2).map((x) => x.name);
             const entry = (alibis[0].sawYouOut || []).find((e2) => e2.night === n && e2.met && e2.nearAttack && e2.loc !== victimWhere);
@@ -5434,7 +5494,7 @@ function answerFor(s, id, night, q, targetId) {
   s.askedLog[id].push(key);
 
   if (q === "context") {
-    const eventId = String(targetId || "").replace(/:(seen|not_seen|memory)$/, "");
+    const eventId = String(targetId || "").replace(/:(seen|not_seen|evidence|memory)$/, "");
     const event = (s.worldEvents || []).find((e) => e.eventId === eventId && e.actorIds && e.actorIds.includes(id));
     if (!event) return { quote: `“I do not know what you think you saw.”`, mentions, claim, flag: null, foundSign, clue, followUps: [] };
     const remembered = String(targetId || "").endsWith(":memory");
@@ -12639,6 +12699,13 @@ function MonsterVillage() {
     else if (churchMemory && churchObservation && churchObservation.kind === "not_seen") opener.push(`Before you can begin: "You looked for me at the churchyard. You did not find me. Ask about the difference, if that is why you came."`);
     else if (churchMemory && churchObservation && churchObservation.kind === "unobserved") opener.push(`Before you can begin: "I remember the churchyard. I remember you hearing something and choosing not to turn around."`);
     else if (churchMemory) opener.push(`Before you can begin: "I remember your lantern in the churchyard. You may not have seen me. That does not mean I did not see you."`);
+    const nightConsequence = [...(s2.relationshipEvents || [])].reverse().find((rel) => rel.actorId === id && !rel.acknowledged);
+    if (nightConsequence) {
+      if (nightConsequence.kind === "rescued") opener.push(`They do not make you ask about the ${nightConsequence.location}. "I heard you call. I took the road because it was your voice. I am here because you did not stay quiet."`);
+      else if (nightConsequence.kind === "attempted_rescue") opener.push(`They look at you for a long moment. "You tried to reach me in the ${nightConsequence.location}. Trying is not nothing. It is not the same as getting there."`);
+      else if (nightConsequence.kind === "abandoned") opener.push(`They leave you standing. "I saw you choose. Do not tell me about fear; I was there too. You had a road home. You took it."`);
+      s2.relationshipEvents = (s2.relationshipEvents || []).map((rel) => rel.eventId === nightConsequence.eventId ? { ...rel, acknowledged: true } : rel);
+    }
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
     /* the deepest cut of all: the player took their one secret and spent it */
     if (s2.secretSpread && s2.secretSpread[id] && s2.secretSpread[id].reached) opener.push(pickFreshIdx(`spreadOpener:${id}`, [

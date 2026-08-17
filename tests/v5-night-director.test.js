@@ -146,6 +146,8 @@ function take(state, wanted) {
     var victim = state.cast.find(function (v) { return v.id === victimId; });
     assert(victim.alive && victim.changed, "a turning attack keeps the changed villager physically present");
     assert(state.ledgers.truth.some(function (x) { return x.victimId === victimId && x.kind === "changed"; }));
+    assert(state.ledgers.truth.some(function (x) { return x.victimId === victimId && x.kind === "abandonment"; }), "leaving a neighbour is durable relationship truth, not merely attack presentation");
+    assert(Director.consequenceProjection(state).relationships.some(function (x) { return x.actorId === victimId && x.kind === "abandoned"; }));
   } else {
     assert.strictEqual(state.pendingThreat.victimId, "player", "the only alternate target is the player");
   }
@@ -166,6 +168,18 @@ function take(state, wanted) {
   assert.strictEqual(JSON.stringify(resolved.outcomes), snapshot, "resolving a threat must not reroll sampled outcomes");
   assert(resolved.ledgers.truth.some(function (x) { return x.kind === "escape" || x.kind === "intervention" || x.kind === "slain"; }), "the consequence is written into truth");
   assert(resolved.beats.some(function (b) { return b.type === "flee" || b.type === "aftermath"; }), "the consequence has a renderable flee or aftermath beat");
+})();
+
+(function interventionProjectsAsARescueRelationship() {
+  var state = Director.createNight(baseConfig("relationship-rescue"));
+  state.phase = "threat";
+  state.cursor = 2;
+  state.player.location = "Dark Forest";
+  state.pendingThreat = { id: "forced-threat", slot: 2, location: "Dark Forest", victimId: "falk", kind: "witness", sign: "tracks" };
+  state.outcomes[2].intervene = 0.1;
+  state = Director.reduce(state, { type: "INTERVENE" });
+  var relationship = Director.consequenceProjection(state).relationships.find(function (rel) { return rel.actorId === "falk"; });
+  assert(relationship && relationship.kind === "rescued" && relationship.succeeded, "a successful intervention becomes a durable rescue relationship");
 })();
 
 (function playerFlightBecomesARealChase() {
@@ -266,6 +280,31 @@ function take(state, wanted) {
   assert(!state.ledgers.observations.some(function (o) { return o.eventId === event.id; }), "the player journal cannot identify someone hidden by fog");
   assert(state.ledgers.memories.falk.some(function (m) { return m.eventId === event.id; }), "the villager can still remember seeing the player's lantern");
   assert(!Director.availableActions(state).some(function (a) { return a.actorId === "falk" && ["HAIL", "FOLLOW"].includes(a.type); }), "an unseen villager cannot be hailed or followed by name");
+})();
+
+(function adjacentEncountersBecomeOneHumanConversation() {
+  var config = baseConfig("coalesced-encounters");
+  config.villagers = [{
+    id: "falk", name: "Doctor Falk", role: "the Physician", alive: true,
+    home: "Village Square", motive: { id: "late-call", family: "medicine", destination: "Old Church", reason: "answer a late call", object: "a medical bag", depart: 3, duration: 2 }
+  }];
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { falk: "Old Church" } };
+  config.forcedBeats = [{ id: "falk-note", type: "clue", slot: 3, location: "Village Square", actorId: "falk", text: "A folded medical note lies in the mud." }];
+  var state = Director.createNight(config);
+  state.visibility[0].falk = true;
+  state.visibility[1].falk = true;
+  state.visibility[2].falk = true;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "HAIL", actorId: "falk" });
+  state = take(state, { type: "SEARCH" });
+  var projection = Director.consequenceProjection(state);
+  assert.strictEqual(projection.encounters.length, 1, "three adjacent clock ticks at one place become one interview thread");
+  assert.strictEqual(projection.encounters[0].sourceEventIds.length, 4, "the compact thread retains every truth event for timing audits");
+  assert(projection.encounters[0].acknowledged, "a hail upgrades the whole thread to a clear mutual memory");
+  assert.strictEqual(projection.findings.length, 1, "an actor-linked physical clue becomes an evidence question candidate");
+  assert.strictEqual(projection.findings[0].actorId, "falk");
 })();
 
 (function semanticsPenaliseRepetition() {

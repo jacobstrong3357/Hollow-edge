@@ -896,6 +896,7 @@
           saved ? "You shout. Your neighbour breaks for the wall, and the dark follows the louder courage instead of the easier body." : "You shout. The figure turns, but not quickly enough. The night takes the distance back.", { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
         if (!saved) killVillager(state, threat.victimId, threat.slot, true);
       } else if (action.type === "IGNORE" || action.type === "FLEE") {
+        appendTruth(state, { id: "abandon:" + threat.slot + ":" + threat.victimId, slot: threat.slot, kind: "abandonment", action: action.type, location: threat.location, actors: ["player", threat.victimId], victimId: threat.victimId });
         killVillager(state, threat.victimId, threat.slot, true);
         appendBeat(state, makeBeat("flee-witness:" + threat.slot, "flee", threat.slot, threat.location, "You run while the sound behind you becomes an event the village must survive in the morning.", { actorId: threat.victimId, outcome: "abandoned" }));
       } else return invalid(state, action, "Choose whether to intervene or leave.");
@@ -1014,6 +1015,68 @@
     return result;
   }
 
+  function safeId(value) {
+    return String(value || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unknown";
+  }
+
+  /* The simulation records every occupied time-slot because timing matters
+     to attacks and alibis. Dawn and interviews need a human-sized projection:
+     one thread per person and place, with the strongest mutual recognition
+     retained. This prevents three adjacent clock ticks from becoming three
+     versions of the same question. */
+  function consequenceProjection(state) {
+    var groups = {};
+    var encounterKinds = ["hailed", "crossed_paths", "passed_unseen"];
+    (state.ledgers.truth || []).filter(function (event) { return encounterKinds.indexOf(event.kind) >= 0; }).forEach(function (event) {
+      var actorId = (event.actors || []).find(function (id) { return id !== "player"; });
+      if (!actorId) return;
+      var key = actorId + "|" + event.location;
+      if (!groups[key]) groups[key] = {
+        eventId: "n" + state.night + ":encounter:" + safeId(actorId) + ":" + safeId(event.location),
+        actorId: actorId,
+        location: event.location,
+        firstSlot: event.slot,
+        lastSlot: event.slot,
+        acknowledged: false,
+        playerSaw: false,
+        sourceEventIds: [],
+        seenSlots: [],
+        unseenSlots: []
+      };
+      var group = groups[key];
+      group.firstSlot = Math.min(group.firstSlot, event.slot);
+      group.lastSlot = Math.max(group.lastSlot, event.slot);
+      group.acknowledged = group.acknowledged || !!event.acknowledged;
+      group.playerSaw = group.playerSaw || event.playerSaw !== false;
+      group.sourceEventIds.push(event.id);
+      (event.playerSaw === false ? group.unseenSlots : group.seenSlots).push(event.slot);
+    });
+    var encounters = Object.keys(groups).map(function (key) {
+      var group = groups[key];
+      var memories = (state.ledgers.memories[group.actorId] || []).filter(function (memory) { return group.sourceEventIds.indexOf(memory.eventId) >= 0; });
+      var strongest = memories.find(function (memory) { return memory.acknowledged; }) || memories[memories.length - 1] || null;
+      group.kind = group.acknowledged ? "hailed" : group.playerSaw ? "crossed_paths" : "passed_unseen";
+      group.clarity = group.acknowledged ? "clear" : "partial";
+      group.interpretation = strongest && strongest.interpretation || null;
+      return group;
+    }).sort(function (a, b) { return a.firstSlot - b.firstSlot || a.actorId.localeCompare(b.actorId); });
+
+    var relationships = [];
+    (state.ledgers.truth || []).forEach(function (event) {
+      if (event.kind === "intervention") {
+        var rescuedId = (event.actors || []).find(function (id) { return id !== "player"; });
+        if (rescuedId) relationships.push({ eventId: event.id, actorId: rescuedId, kind: event.succeeded ? "rescued" : "attempted_rescue", succeeded: !!event.succeeded, slot: event.slot, location: event.location });
+      } else if (event.kind === "abandonment") {
+        relationships.push({ eventId: event.id, actorId: event.victimId, kind: "abandoned", action: event.action, slot: event.slot, location: event.location });
+      }
+    });
+
+    var findings = (state.found.clues || []).filter(function (beat) { return !!beat.actorId; }).map(function (beat) {
+      return { eventId: "n" + state.night + ":finding:" + safeId(beat.id), actorId: beat.actorId, location: beat.location, slot: beat.slot, text: beat.text, beatId: beat.id };
+    });
+    return { encounters: encounters, relationships: relationships, findings: findings };
+  }
+
   function visibleState(state) {
     return {
       version: state.version,
@@ -1067,6 +1130,7 @@
     createNight: createNight,
     fromExistingFacts: fromExistingFacts,
     upgradeState: upgradeState,
+    consequenceProjection: consequenceProjection,
     reduce: reduce,
     availableActions: availableActions,
     actorAt: actorLocation,
