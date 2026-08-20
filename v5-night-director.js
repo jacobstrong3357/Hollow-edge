@@ -11,7 +11,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  var VERSION = 2;
+  var VERSION = 3;
   var DEFAULT_SLOTS = 7;
   var HOME = "Home";
   var SIGNS = ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"];
@@ -97,6 +97,29 @@
     "A familiar figure waits ahead with their back to you. You reach the place and find a pollarded tree.",
     "Your footprints continue ahead of you for six steps, wet and fresh. They end when you stop looking at them.",
     "The church bell swings without sound. For a moment you remember being inside it. The memory is not yours."
+  ];
+
+  var DELUSION_SEQUENCES = [
+    [
+      "Your footprints continue six paces ahead of you.",
+      "The last print turns sideways, as though whoever made it stopped to watch you approach.",
+      "You raise the lantern. There are no prints ahead—only your own behind. The road is unbroken mud. It was not real."
+    ],
+    [
+      "Every shutter on the lane opens together.",
+      "A face waits in each black square, all of them wearing the same expression.",
+      "A cart rattles through the lane. The shutters are closed and dust lies thick on every latch. No one was there."
+    ],
+    [
+      "Someone you buried is standing beneath the next tree.",
+      "They lift one hand and point behind you.",
+      "You turn back. The road is empty. When you face the tree again, it is only a torn coat caught on a branch. You did not see the dead."
+    ],
+    [
+      "The church bell swings above you without making a sound.",
+      "For one breath you remember being inside it while something struck the bronze around you.",
+      "Then sound returns: insects, wind, your own pulse. The bell is still. The memory was not yours, and it was not real."
+    ]
   ];
 
   var THRESHOLD_EVENTS = [
@@ -397,6 +420,7 @@
          The werewolf's third-night hunt is the first such hard law. */
       relentless: monster.relentless == null ? monster.id === "werewolf" : !!monster.relentless,
       reach: monster.reach || "out",
+      voice: clone(monster.voice || { mode: "silent" }),
       route: route,
       locations: locations,
       maskedHostSlots: active ? [attackSlot] : []
@@ -445,7 +469,14 @@
         var location = locs[l];
         var key = slot + "|" + location;
         if (table[key] && table[key].length) continue;
-        var present = stateLike.cast.filter(function (v) { return stateLike.schedules[v.id].slots[slot] === location; });
+        var present = stateLike.cast.filter(function (v) {
+          var schedule = stateLike.schedules[v.id];
+          if (!schedule || schedule.slots[slot] !== location) return false;
+          /* A private errand is not automatically a discoverable secret.
+             It enters the clue pool only when the legacy night's own
+             secret-catch roll authorised a real reveal. */
+          return schedule.motive.family !== "secret" || !!(v.dialogue && v.dialogue.revealsSecret);
+        });
         if (present.length && keyedNumber(seed, "clue:" + key) < 0.19) {
           var clueActor = rng.pick(present);
           add(roleClue(clueActor, stateLike.schedules[clueActor.id], slot, location));
@@ -456,7 +487,10 @@
           if (sign) add(makeBeat("stamp:" + key, "stamp", slot, location, STAMP_TEXT[sign], { sign: sign }));
         }
         if (keyedNumber(seed, "whisper:" + key) < 0.12) add(makeBeat("whisper:" + key, "whisper", slot, location, rng.pick(WHISPERS)));
-        if (stateLike.player.afflicted && keyedNumber(seed, "delusion:" + key) < 0.24) add(makeBeat("delusion:" + key, "delusion", slot, location, rng.pick(DELUSIONS), { reliability: "unreliable" }));
+        if (stateLike.player.afflicted && keyedNumber(seed, "delusion:" + key) < 0.24) {
+          var sequence = rng.pick(DELUSION_SEQUENCES);
+          add(makeBeat("delusion:" + key, "delusion", slot, location, sequence.join(" "), { reliability: "unreliable", meta: { fragments: sequence.slice(), resolvedAsUnreal: true } }));
+        }
       }
     }
     return table;
@@ -466,7 +500,7 @@
     config = config || {};
     var seed = config.seed == null ? "hollows-edge-night" : config.seed;
     var rng = createRng(seed);
-    var slots = Math.max(4, Number(config.slots || DEFAULT_SLOTS));
+    var slots = Math.max(3, Number(config.slots || DEFAULT_SLOTS));
     var facts = clone(config.currentFacts || {});
     var graph = clone(config.graph || DEFAULT_GRAPH);
     var cast = livingCast(config.villagers || []);
@@ -511,6 +545,7 @@
       currentFacts: facts,
       gathering: config.gathering ? Object.assign({ shown: false }, clone(config.gathering)) : null,
       presentedActorIds: [],
+      followedActorIds: [],
       encounterBudget: config.encounterBudget == null ? 2 : Math.max(0, Number(config.encounterBudget)),
       beats: [],
       currentBeat: null,
@@ -613,7 +648,11 @@
   }
 
   function discoveryReveals(beat, action) {
-    return (beat.type === "stamp" || beat.type === "clue") ? action.type === "SEARCH" : beat.type === "whisper" ? action.type === "LISTEN" : beat.type === "delusion";
+    return beat.type === "atmosphere" ? true
+      : (beat.type === "stamp" || beat.type === "clue") ? action.type === "SEARCH"
+      : beat.type === "whisper" ? action.type === "LISTEN"
+        : beat.type === "watch" ? (action.type === "WAIT" || action.type === "KEEP_WATCH")
+          : beat.type === "delusion";
   }
 
   function processDiscoveries(state, action, slot) {
@@ -622,18 +661,20 @@
        tomorrow about an event the interface never showed. */
     if (state.currentBeat && state.currentBeat.type === "atmosphere" && state.gathering && state.gathering.shown) return;
     var key = slot + "|" + state.player.location;
-    var entries = state.discoverySchedule[key] || [];
+    var entries = (state.discoverySchedule[key] || []).concat(state.discoverySchedule[slot + "|*"] || []);
     entries.forEach(function (beat) {
       var reveal = discoveryReveals(beat, action);
       if (!reveal) return;
       if (beat.type === "stamp" && state.found.stamps.length) return;
-      var shown = appendBeat(state, clone(beat));
+      var presented = clone(beat);
+      if (presented.location === "*") presented.location = state.player.location;
+      var shown = appendBeat(state, presented);
       if (!shown) return;
       if (beat.type === "stamp") state.found.stamps.push({ sign: beat.sign, slot: slot, location: beat.location, beatId: beat.id });
-      if (beat.type === "clue") state.found.clues.push(clone(beat));
-      if (beat.type === "whisper") state.found.whispers.push(clone(beat));
-      if (beat.type === "delusion") state.found.delusions.push(clone(beat));
-      appendObservation(state, { eventId: beat.truthEventId || null, beatId: beat.id, slot: slot, kind: beat.type, location: beat.location, actors: beat.actorId ? [beat.actorId] : [], clarity: beat.type === "delusion" ? "unstable" : "clear", reliability: beat.type === "delusion" ? "unreliable" : "direct", sign: beat.sign || null, text: beat.text });
+      if (beat.type === "clue") state.found.clues.push(clone(presented));
+      if (beat.type === "whisper") state.found.whispers.push(clone(presented));
+      if (beat.type === "delusion") state.found.delusions.push(clone(presented));
+      appendObservation(state, { eventId: beat.truthEventId || null, beatId: beat.id, slot: slot, kind: beat.type, location: presented.location, actors: beat.actorId ? [beat.actorId] : [], clarity: beat.type === "delusion" ? "unstable" : "clear", reliability: beat.type === "delusion" ? "unreliable" : "direct", sign: beat.sign || null, text: beat.text });
     });
   }
 
@@ -663,6 +704,18 @@
       appendObservation(state, { eventId: event.id, slot: slot, kind: "attack_aftermath", location: event.location, actors: [victimId], clarity: "partial", reliability: "direct", sign: sign });
       appendBeat(state, makeBeat("aftermath:" + slot + ":" + victimId, "aftermath", slot, event.location,
         victim.name + " falls beyond the lantern. What moved there is already gone, but the ground keeps one mark.", { actorId: victimId, sign: sign, truthEventId: event.id }));
+    } else if (state.player.location !== HOME) {
+      /* An unwitnessed attack must still disturb the lived night. This is
+         intentionally sensory rather than evidential: the player hears the
+         village react, but dawn is still where a victim and place are named. */
+      var farText = event.location === "home"
+        ? "A dog begins barking behind the houses. One by one the other dogs join it. Then every one of them stops."
+        : "Somewhere beyond your lantern, a cry is cut short. A door opens. Another voice calls a name you cannot make out.";
+      appendBeat(state, makeBeat("distant-attack:" + slot + ":" + victimId, "atmosphere", slot, state.player.location, farText, {
+        truthEventId: event.id,
+        meta: { heardOnly: true }
+      }));
+      appendObservation(state, { eventId: event.id, slot: slot, kind: "heard", location: state.player.location, actors: [], clarity: "sensory", reliability: "direct", text: farText });
     }
   }
 
@@ -699,6 +752,14 @@
     if (!monster.active || slot !== monster.attackSlot || state.resolvedAttackSlots.indexOf(slot) >= 0) return;
     var location = monster.huntLoc;
     var villagers = actorsAt(state, location, slot).filter(function (v) { return v.id !== monster.hostId && v.alive && !v.changed; }).map(function (v) { return v.id; });
+    /* A curse, dream-rider or other home-reaching horror does not require its
+       victim to stand on the host's hunting ground. Its hunt location is the
+       source of the night, not a collision tile. */
+    if (monster.reach === "home") {
+      villagers = state.cast.filter(function (v) {
+        return v.alive && !v.changed && v.id !== monster.hostId;
+      }).map(function (v) { return v.id; });
+    }
     var playerHere = state.player.alive && state.player.location === location && state.player.location !== HOME;
     var candidates = villagers.concat(playerHere ? ["player"] : []);
     var victim = chooseVictim(state, candidates, slot);
@@ -714,21 +775,104 @@
     }
     if (!victim) {
       state.resolvedAttackSlots.push(slot);
-      appendTruth(state, { id: "hunt-empty:" + slot, slot: slot, kind: "hunt_empty", location: location, actors: [monster.hostId].filter(Boolean) });
+      var emptyTruth = appendTruth(state, { id: "hunt-empty:" + slot, slot: slot, kind: "hunt_empty", location: location, actors: [monster.hostId].filter(Boolean) });
+      if (state.player.location !== HOME) {
+        var nearby = state.player.location === location;
+        var voiceMode = monster.voice && monster.voice.mode;
+        var missText = nearby
+          ? (voiceMode === "beast"
+            ? "The crickets stop together. Wet breath sounds once beyond the lantern, followed by a low growl and the scrape of weight turning away. It found no body here."
+            : voiceMode === "speaker"
+              ? "The crickets stop together. A small laugh moves along the hedge, disappointed, and a voice says, ‘Nobody, then.’ It moves on."
+              : "The crickets stop together. Something crosses the far boundary of your lantern, finds no living body there, and moves on without a sound.")
+          : (voiceMode === "speaker"
+            ? "Far off, a gate turns. A laugh answers it from somewhere else, then the village noise slowly returns."
+            : voiceMode === "beast"
+              ? "Far off, dogs erupt into barking. Beneath them is one deep, breathless growl. Both sounds move away from the houses."
+              : "The village sound thins. Far off, a gate gives one long complaint, then the dogs begin answering something you cannot hear.");
+        appendBeat(state, makeBeat("hunt-empty-beat:" + slot, "atmosphere", slot, state.player.location, missText, {
+          truthEventId: emptyTruth.id,
+          meta: { nearMiss: nearby }
+        }));
+        appendObservation(state, { eventId: emptyTruth.id, slot: slot, kind: "heard", location: state.player.location, actors: [], clarity: nearby ? "partial" : "sensory", reliability: "direct", text: missText });
+      }
       return;
     }
-    if (playerHere) {
+    var victimAtHunt = victim === "player" || actorLocation(state, victim, slot) === location;
+    if (playerHere && victimAtHunt) {
       var fallback = monster.relentless ? exposedFallback(state, slot, [victim]) : null;
       state.pendingThreat = { id: "threat:" + slot + ":" + victim, slot: slot, location: location, victimId: victim, kind: victim === "player" ? "player" : "witness", sign: actualSign(state, slot), fallbackVictimId: fallback && fallback.victimId, fallbackLocation: fallback && fallback.location };
       state.phase = "threat";
       state.player.monsterSawYou = true;
+      var threatVoice = monster.voice && monster.voice.mode;
+      var playerThreatText = threatVoice === "beast"
+        ? "The village sound cuts out. Wet breath gathers behind you; a growl starts so low you feel it through the road. Something is between you and home."
+        : threatVoice === "speaker"
+          ? "The village sound cuts out. A soft giggle comes from the road behind you. ‘There you are,’ something says."
+          : "The village sound cuts out. Something is between you and the road home. It makes no breath, no tread, nothing you can follow.";
       appendBeat(state, makeBeat(state.pendingThreat.id, "threat", slot, location,
-        victim === "player" ? "The village sound cuts out. Something is between you and the road home." : "A shape closes the distance behind " + (state.cast.find(function (x) { return x.id === victim; }) || { name: "your neighbour" }).name + ". It has not seen your choice yet.",
+        victim === "player" ? playerThreatText : "A shape closes the distance behind " + (state.cast.find(function (x) { return x.id === victim; }) || { name: "your neighbour" }).name + ". It has not seen your choice yet.",
         { actorId: victim === "player" ? null : victim, sign: state.pendingThreat.sign }));
       return;
     }
     state.resolvedAttackSlots.push(slot);
-    killVillager(state, victim, slot, false);
+    var victimLocation = actorLocation(state, victim, slot);
+    if (monster.reach === "home" && victimLocation === HOME) victimLocation = "home";
+    killVillager(state, victim, slot, false, victimLocation || location);
+  }
+
+  function recordFollow(state, actorId, slot) {
+    var villager = state.cast.find(function (v) { return v.id === actorId; });
+    var schedule = state.schedules[actorId];
+    if (!villager || !schedule) return;
+    var dialogue = villager.dialogue || {};
+    var destination = schedule.motive.destination === HOME ? state.player.location : schedule.motive.destination;
+    var event = appendTruth(state, {
+      id: "followed:" + slot + ":" + actorId,
+      slot: slot,
+      kind: "followed",
+      location: destination,
+      actors: ["player", actorId],
+      actorId: actorId,
+      acknowledged: false,
+      playerSaw: true,
+      motiveFamily: schedule.motive.family,
+      revealedSecret: !!dialogue.revealsSecret,
+      secretSummary: dialogue.secretSummary || null
+    });
+    appendObservation(state, { eventId: event.id, slot: slot, kind: dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: "clear", reliability: "direct", text: dialogue.follow || null });
+    state.ledgers.memories[actorId].push({ eventId: event.id, slot: slot, subject: "player", kind: "followed", location: destination, clarity: "uncertain", acknowledged: false, interpretation: "They may not know whether the lantern behind them was yours." });
+    appendBeat(state, makeBeat("follow-beat:" + slot + ":" + actorId, "follow", slot, destination,
+      dialogue.follow || (villager.name + " reaches the " + destination + " and completes a small, human errand before turning home."), {
+        actorId: actorId,
+        truthEventId: event.id,
+        meta: { motiveFamily: schedule.motive.family, revealedSecret: !!dialogue.revealsSecret }
+      }));
+    if (state.followedActorIds.indexOf(actorId) < 0) state.followedActorIds.push(actorId);
+  }
+
+  function resolveFollow(state, action) {
+    var schedule = state.schedules[action.actorId];
+    if (!schedule) return invalid(state, action, "There is nobody there to follow.");
+    var destination = schedule.motive.destination;
+    var targetSlot = state.cursor + 1;
+    for (var probe = state.cursor + 1; probe < state.slots; probe += 1) {
+      targetSlot = probe;
+      if (actorLocation(state, action.actorId, probe) === destination) break;
+    }
+    for (var slot = state.cursor + 1; slot <= targetSlot; slot += 1) {
+      var actorLoc = actorLocation(state, action.actorId, slot);
+      if (actorLoc && actorLoc !== HOME) state.player.location = actorLoc;
+      state.cursor = slot;
+      state.player.route.push({ slot: slot, location: state.player.location, action: "FOLLOW", actorId: action.actorId });
+      processAttack(state, slot);
+      if (state.phase !== "active") return state;
+    }
+    state.actionHistory.push({ slot: state.cursor, type: "FOLLOW", to: state.player.location, actorId: action.actorId });
+    appendTruth(state, { id: "player:" + state.cursor + ":follow", slot: state.cursor, kind: "player_action", action: "FOLLOW", location: state.player.location, actorId: action.actorId });
+    recordFollow(state, action.actorId, state.cursor);
+    finishIfNeeded(state);
+    return state;
   }
 
   function arrive(state, action, slot) {
@@ -758,7 +902,7 @@
     var discoveryKey = slot + "|" + state.player.location;
     var priorityDiscovery = (state.discoverySchedule[discoveryKey] || []).some(function (beat) { return discoveryReveals(beat, action); });
     if (!gatheringShown && !priorityDiscovery && action.actorId && visible.some(function (villager) { return villager.id === action.actorId; })) framedId = action.actorId;
-    else if (!gatheringShown && !priorityDiscovery && ["LEAVE", "MOVE", "WAIT"].indexOf(action.type) >= 0 && state.presentedActorIds.length < state.encounterBudget) {
+    else if (!gatheringShown && !priorityDiscovery && ["LEAVE", "MOVE", "WAIT", "KEEP_WATCH"].indexOf(action.type) >= 0 && state.presentedActorIds.length < state.encounterBudget) {
       framedId = visible.filter(function (villager) { return state.presentedActorIds.indexOf(villager.id) < 0; }).sort(function (a, b) {
         return (state.attackPriorities[slot][a.id] || 1) - (state.attackPriorities[slot][b.id] || 1);
       }).map(function (villager) { return villager.id; })[0] || null;
@@ -769,6 +913,7 @@
       recordEncounter(state, v, slot, acknowledged, acknowledged ? "hailed" : "crossed_paths", acknowledged || v.id === framedId);
     });
     processDiscoveries(state, action, slot);
+    if (action.type === "FOLLOW" && action.actorId) recordFollow(state, action.actorId, slot);
     processAttack(state, slot);
   }
 
@@ -833,6 +978,7 @@
     if (state.monsterSchedule && state.monsterSchedule.relentless == null) state.monsterSchedule.relentless = state.monsterSchedule.id === "werewolf";
     if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
     state.presentedActorIds = state.presentedActorIds || [];
+    state.followedActorIds = state.followedActorIds || [];
     if (state.encounterBudget == null) state.encounterBudget = 2;
     state.visibility = state.visibility || {};
     state.outcomes = state.outcomes || {};
@@ -870,6 +1016,24 @@
     return distance <= 1 ? "at your shoulder" : distance === 2 ? "closing" : "losing ground";
   }
 
+  function pursuitText(state, moment, distance, gained) {
+    var voice = state.monsterSchedule.voice || { mode: "silent" };
+    if (moment === "start") {
+      if (voice.mode === "beast") return "You run. Claws strike the road behind you; one vast breath breaks into a growl and gathers speed.";
+      if (voice.mode === "speaker") return "You run. Something laughs—not loudly, only close—and calls after you in a voice pleased that you understood.";
+      return "You run. No footfall follows. Your shadow still shortens from behind as though something is gaining on the lantern.";
+    }
+    if (voice.mode === "beast") return gained
+      ? "The panting falls back for three breaths, then the claws find the road again. It is " + chaseDistanceWord(distance) + "."
+      : "The turn costs you. Hot breath and the scrape of claws are " + chaseDistanceWord(distance) + ".";
+    if (voice.mode === "speaker") return gained
+      ? "The laughter falls back, then your name arrives clearly from the next turning. It is " + chaseDistanceWord(distance) + "."
+      : "The voice behind you says, ‘Wrong road.’ It is " + chaseDistanceWord(distance) + ", delighted and unhurried.";
+    return gained
+      ? "For three heartbeats your shadow belongs to you again. Then it stretches forward. The silence is " + chaseDistanceWord(distance) + "."
+      : "The lane is perfectly silent. Something without tread or breath is " + chaseDistanceWord(distance) + ".";
+  }
+
   function startChase(state, threat) {
     state.resolvedAttackSlots.push(threat.slot);
     state.pendingThreat = null;
@@ -877,7 +1041,7 @@
     state.chase = { slot: threat.slot, step: 0, distance: 2, location: threat.location, history: [], fallbackVictimId: threat.fallbackVictimId || null, fallbackLocation: threat.fallbackLocation || null };
     appendTruth(state, { id: "chase-start:" + threat.slot, slot: threat.slot, kind: "chase_started", location: threat.location, actors: [state.monsterSchedule.hostId, "player"].filter(Boolean) });
     appendBeat(state, makeBeat("chase-start-beat:" + threat.slot, "flee", threat.slot, threat.location,
-      "You run. The first turn buys you darkness but not distance. Behind you, the road is learning your pace.", { outcome: "closing" }));
+      pursuitText(state, "start"), { outcome: "closing", meta: { voiceMode: (state.monsterSchedule.voice || {}).mode || "silent" } }));
     return state;
   }
 
@@ -938,10 +1102,8 @@
     }
     if (chase.distance <= 0 || chase.step >= 3) return finishChaseDeath(state, action);
     appendBeat(state, makeBeat("chase-beat:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location,
-      delta > 0
-        ? "For three heartbeats the tread falls back. Then it finds the road again. It is " + chaseDistanceWord(chase.distance) + "."
-        : "The turn costs you. The breathing behind you is " + chaseDistanceWord(chase.distance) + ", patient and horribly even.",
-      { outcome: delta > 0 ? "distance_gained" : "distance_lost" }));
+      pursuitText(state, "step", chase.distance, delta > 0),
+      { outcome: delta > 0 ? "distance_gained" : "distance_lost", meta: { voiceMode: (state.monsterSchedule.voice || {}).mode || "silent" } }));
     return state;
   }
 
@@ -1060,15 +1222,28 @@
       next.delays[action.actorId] = (next.delays[action.actorId] || 0) + 1;
       return next;
     }
+    if (action.type === "KEEP_WATCH") {
+      /* Waiting is a dramatic skip, not a seven-click tax. The hidden village
+         continues slot by slot; control returns at the next visible encounter,
+         disturbance, discovery, threat, or dawn. */
+      var startingBeats = next.beats.length;
+      while (next.phase === "active" && next.cursor < next.slots - 1) {
+        var watchSlot = next.cursor + 1;
+        next.cursor = watchSlot;
+        next.actionHistory.push({ slot: watchSlot, type: "KEEP_WATCH", to: null, actorId: null });
+        arrive(next, { type: "KEEP_WATCH" }, watchSlot);
+        finishIfNeeded(next);
+        if (next.phase !== "active" || next.beats.length > startingBeats) break;
+      }
+      return next;
+    }
+    if (action.type === "FOLLOW") return resolveFollow(next, action);
     var slot = next.cursor + 1;
     if (action.type === "LEAVE") {
       next.phase = "active";
       next.player.location = action.to || "Village Square";
     } else if (action.type === "MOVE") {
       next.player.location = action.to;
-    } else if (action.type === "FOLLOW") {
-      var destination = actorLocation(next, action.actorId, slot);
-      next.player.location = destination && destination !== HOME ? destination : next.player.location;
     }
     next.cursor = slot;
     next.actionHistory.push({ slot: slot, type: action.type, to: action.to || null, actorId: action.actorId || null });
@@ -1117,6 +1292,7 @@
       result.push(action("MOVE", "Go to the " + to, "bone", { to: to }));
     });
     result.push(action("WAIT", "Wait and watch", "quiet"));
+    result.push(action("KEEP_WATCH", "Keep watch until something changes", "quiet"));
     result.push(action("SEARCH", "Search by lantern", "amber"));
     result.push(action("LISTEN", "Lower the lantern and listen", "quiet"));
     actorsAt(state, state.player.location, state.cursor).filter(function (v) { return playerCanSeeActor(state, v.id, state.cursor); }).forEach(function (v) {
@@ -1171,12 +1347,12 @@
       var followKey = guide.actorId + "|FOLLOW";
       if (!(guide.interacted || {})[hailKey]) add(all.find(function (item) { return item.type === "HAIL" && item.actorId === guide.actorId; }));
       if (!(guide.interacted || {})[followKey]) add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }));
+      if (guide.intentDone) add(all.find(function (item) { return item.type === "KEEP_WATCH"; }));
     } else if (atTarget && guide.intentDone) {
-      add(all.find(function (item) { return item.type === "LISTEN"; }), "Stay and listen");
-      add(all.find(function (item) { return item.type === "WAIT"; }), "Wait a little longer");
+      add(all.find(function (item) { return item.type === "KEEP_WATCH"; }));
     }
     if (guide.intentDone) add(all.find(function (item) { return item.type === "GO_HOME"; }));
-    if (!result.length) add(all.find(function (item) { return item.type === "WAIT"; }) || all.find(function (item) { return item.type === "GO_HOME"; }));
+    if (!result.length) add(all.find(function (item) { return item.type === "KEEP_WATCH"; }) || all.find(function (item) { return item.type === "GO_HOME"; }));
     return result.slice(0, 3);
   }
 
@@ -1191,7 +1367,7 @@
      versions of the same question. */
   function consequenceProjection(state) {
     var groups = {};
-    var encounterKinds = ["hailed", "crossed_paths", "passed_unseen"];
+    var encounterKinds = ["hailed", "crossed_paths", "passed_unseen", "followed"];
     (state.ledgers.truth || []).filter(function (event) { return encounterKinds.indexOf(event.kind) >= 0; }).forEach(function (event) {
       var actorId = (event.actors || []).find(function (id) { return id !== "player"; });
       if (!actorId) return;
@@ -1213,6 +1389,7 @@
       group.lastSlot = Math.max(group.lastSlot, event.slot);
       group.acknowledged = group.acknowledged || !!event.acknowledged;
       group.playerSaw = group.playerSaw || event.playerSaw !== false;
+      group.followed = group.followed || event.kind === "followed";
       group.sourceEventIds.push(event.id);
       (event.playerSaw === false ? group.unseenSlots : group.seenSlots).push(event.slot);
     });
@@ -1220,10 +1397,18 @@
       var group = groups[key];
       var memories = (state.ledgers.memories[group.actorId] || []).filter(function (memory) { return group.sourceEventIds.indexOf(memory.eventId) >= 0; });
       var strongest = memories.find(function (memory) { return memory.acknowledged; }) || memories[memories.length - 1] || null;
-      group.kind = group.acknowledged ? "hailed" : group.playerSaw ? "crossed_paths" : "passed_unseen";
+      group.kind = group.acknowledged ? "hailed" : group.followed ? "followed" : group.playerSaw ? "crossed_paths" : "passed_unseen";
       group.clarity = group.acknowledged ? "clear" : "partial";
       group.interpretation = strongest && strongest.interpretation || null;
       return group;
+    });
+    /* If the player deliberately followed someone, that complete scene is
+       the interview memory. Do not also ask about an incidental glimpse of
+       the same person on the road unless they openly hailed each other. */
+    var followedActors = {};
+    encounters.forEach(function (group) { if (group.followed) followedActors[group.actorId] = true; });
+    encounters = encounters.filter(function (group) {
+      return group.followed || group.acknowledged || !followedActors[group.actorId];
     }).sort(function (a, b) { return a.firstSlot - b.firstSlot || a.actorId.localeCompare(b.actorId); });
 
     var relationships = [];
@@ -1239,7 +1424,17 @@
     var findings = (state.found.clues || []).filter(function (beat) { return !!beat.actorId; }).map(function (beat) {
       return { eventId: "n" + state.night + ":finding:" + safeId(beat.id), actorId: beat.actorId, location: beat.location, slot: beat.slot, text: beat.text, beatId: beat.id };
     });
-    return { encounters: encounters, relationships: relationships, findings: findings };
+    var secrets = (state.ledgers.truth || []).filter(function (event) {
+      return event.kind === "followed" && event.revealedSecret;
+    }).map(function (event) {
+      return { eventId: event.id, actorId: event.actorId, location: event.location, slot: event.slot, summary: event.secretSummary || null };
+    });
+    (state.beats || []).filter(function (beat) {
+      return beat.type === "watch" && beat.actorId && beat.meta && beat.meta.revealsSecret;
+    }).forEach(function (beat) {
+      secrets.push({ eventId: beat.id, actorId: beat.actorId, location: beat.location, slot: beat.slot, summary: beat.meta.secretSummary || null });
+    });
+    return { encounters: encounters, relationships: relationships, findings: findings, secrets: secrets };
   }
 
   function visibleState(state) {

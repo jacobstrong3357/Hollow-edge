@@ -152,7 +152,7 @@ function take(state, wanted) {
   state = take(state, actions[0]);
   guide.intentDone = true;
   actions = Director.guidedActions(state, guide);
-  assert.deepStrictEqual(actions.map(function (a) { return a.type; }), ["LISTEN", "WAIT", "GO_HOME"], "after the errand, staying or leaving are the only quiet choices");
+  assert.deepStrictEqual(actions.map(function (a) { return a.type; }), ["KEEP_WATCH", "GO_HOME"], "after the errand, one meaningful watch replaces a stack of empty time buttons");
   var actorAction = Director.availableActions(state).find(function (a) { return a.type === "HAIL"; });
   if (actorAction) {
     actions = Director.guidedActions(state, { target: "Old Church", kind: "search", actorId: actorAction.actorId, intentDone: true, interacted: {} });
@@ -180,6 +180,119 @@ function take(state, wanted) {
   invalidConfig.forcedBeats = [{ type: "stamp", slot: 0, location: "Village Square", sign: "claw" }];
   var invalidState = Director.createNight(invalidConfig);
   assert(!Object.keys(invalidState.discoverySchedule).some(function (key) { return invalidState.discoverySchedule[key].some(function (b) { return b.sign === "claw"; }); }), "a sign the monster does not leave must be rejected");
+})();
+
+(function keepingWatchSkipsFillerButNotEvents() {
+  var config = baseConfig("watch-forward");
+  config.monster.active = false;
+  config.player = {};
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home", falk: "Old Church", ansel: "home" } };
+  config.forcedBeats = [{ id: "late-watch", type: "watch", slot: 4, location: "Village Square", actorId: "rosa", text: "A back door opens after hours of stillness." }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  var before = state.cursor;
+  state = take(state, { type: "KEEP_WATCH" });
+  assert(state.cursor > before + 1, "one keep-watch choice advances across empty clock slots");
+  assert.strictEqual(state.currentBeat.id, "late-watch", "the simulation returns control at the next authored event");
+})();
+
+(function nightsMayBeShortWithoutAdvertisingTheirLengthToTheWorldModel() {
+  var config = baseConfig("short-night");
+  config.slots = 3;
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home", falk: "home", ansel: "home" } };
+  var state = Director.createNight(config);
+  assert.strictEqual(state.slots, 3, "the Director accepts a genuinely short three-beat night");
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  assert.strictEqual(state.phase, "complete", "a quiet night can end promptly when the player returns home");
+})();
+
+(function uncaughtPrivateErrandsDoNotLeakIntoIncidentalClues() {
+  for (var i = 0; i < 120; i += 1) {
+    var config = baseConfig("private-stays-private:" + i);
+    config.monster.active = false;
+    config.villagers = [{
+      id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+      motive: { id: "hidden-pages", family: "secret", destination: "Old Church", reason: "hide a packet of pages", object: "a packet of pages", depart: 0, duration: 6, secret: true },
+      dialogue: { revealsSecret: false }
+    }];
+    config.currentFacts = { weather: "still", active: false, outMap: { rosa: "Old Church" }, secretOut: { rosa: true } };
+    var state = Director.createNight(config);
+    var leaked = Object.keys(state.discoverySchedule).some(function (key) {
+      return state.discoverySchedule[key].some(function (beat) { return beat.type === "clue" && beat.actorId === "rosa"; });
+    });
+    assert(!leaked, "a secret errand only becomes a clue after the established catch gate succeeds");
+  }
+})();
+
+(function hallucinationsCarryTheirOwnExplicitCorrection() {
+  var config = baseConfig("unreal-memory");
+  config.monster.active = false;
+  config.forcedBeats = [{
+    id: "false-road", type: "delusion", slot: 0, location: "Village Square",
+    text: "The road changes and changes back.",
+    meta: { fragments: ["The road changes.", "It changes back.", "It was not real."], resolvedAsUnreal: true }
+  }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert.strictEqual(state.currentBeat.type, "delusion");
+  assert.strictEqual(state.currentBeat.meta.resolvedAsUnreal, true);
+  assert(/not real/i.test(state.currentBeat.meta.fragments[state.currentBeat.meta.fragments.length - 1]), "the last beat plainly corrects the hallucination");
+})();
+
+(function followingRevealsARealSceneAndInterviewThread() {
+  var config = baseConfig("follow-payoff");
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "Graveyard", falk: "home", ansel: "home" } };
+  config.villagers = [{
+    id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+    motive: { id: "hidden-pages", family: "secret", destination: "Graveyard", reason: "hide a packet of pages", object: "a packet of pages", depart: 1, duration: 5, secret: true },
+    dialogue: { follow: "Rosa buries a packet of pages beneath the wall.", revealsSecret: true, secretSummary: "she writes under another name" }
+  }];
+  var state = Director.createNight(config);
+  Object.keys(state.visibility).forEach(function (slot) { state.visibility[slot].rosa = true; });
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  assert.strictEqual(state.currentBeat.type, "follow");
+  assert(/packet of pages/.test(state.currentBeat.text), "following shows what the villager actually does");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "followed" && event.actorId === "rosa"; }));
+  var projection = Director.consequenceProjection(state);
+  assert(projection.encounters.some(function (event) { return event.actorId === "rosa" && event.followed; }), "the follow becomes a daylight interview thread");
+  assert(projection.secrets.some(function (event) { return event.actorId === "rosa"; }), "an actually witnessed secret survives into the village state");
+})();
+
+(function homeReachingHuntsDoNotRequireAStreetCollision() {
+  var config = {
+    seed: "witch-at-the-window", night: 6, slots: 7,
+    villagers: [
+      { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true },
+      { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true }
+    ],
+    monster: { id: "witch", hostId: "greta", active: true, signs: ["hex", "flora", "graves"], hunts: ["Old Church"], attack: "kill", reach: "home" },
+    currentFacts: { weather: "still", active: true, huntLoc: "Old Church", attackSlot: 3, outMap: { rosa: "home", falk: "home" } }
+  };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  var attack = state.ledgers.truth.find(function (event) { return event.kind === "slain"; });
+  assert(attack, "a home-reaching active hunt must land even when the hunting ground is empty");
+  assert.strictEqual(attack.location, "home", "dawn finds a behind-the-door victim at home");
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "hunt_empty"; }));
+})();
+
+(function anEmptyOutdoorHuntStillDisturbsTheLivedNight() {
+  var config = {
+    seed: "empty-ghoul-ground", night: 5, slots: 5,
+    villagers: [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }],
+    monster: { id: "ghoul", hostId: "greta", active: true, signs: ["tracks", "graves"], hunts: ["Graveyard"], attack: "kill", reach: "out" },
+    currentFacts: { weather: "still", active: true, huntLoc: "Graveyard", attackSlot: 2, outMap: { rosa: "home" } }
+  };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "KEEP_WATCH" });
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "hunt_empty"; }));
+  assert(state.beats.some(function (beat) { return beat.id.indexOf("hunt-empty-beat") === 0; }), "an active miss has a sensory near-miss rather than invisible bookkeeping");
 })();
 
 (function turningDoesNotFalselyKillTheVictim() {
@@ -413,7 +526,7 @@ function take(state, wanted) {
 })();
 
 (function browserAndNodeSurface() {
-  assert.strictEqual(Director.version, 2);
+  assert.strictEqual(Director.version, 3);
   var state = Director.createNight(baseConfig("visible"));
   var visible = Director.visibleState(state);
   assert(Array.isArray(visible.actions));
@@ -432,7 +545,7 @@ function take(state, wanted) {
   var restored = JSON.parse(JSON.stringify(state));
   assert(Director.availableActions(restored).some(function (a) { return a.type === "WAIT"; }), "an old save remains playable before its first upgraded action");
   restored = take(restored, { type: "WAIT" });
-  assert.strictEqual(restored.version, 2);
+  assert.strictEqual(restored.version, 3);
   assert(restored.visibility && restored.thresholdEvent && restored.outcomes[1].chase, "the first action fills only the new deterministic fields");
   assert.strictEqual(restored.monsterSchedule.relentless, false, "old monster schedules gain the deterministic rhythm flag without rerolling");
 })();
