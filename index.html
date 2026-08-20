@@ -2611,6 +2611,7 @@ function freshIndex(key, len, memory = 2) {
 }
 function pickFreshIdx(key, arr, memory = 2) { return arr[freshIndex(key, arr.length, memory)]; }
 const chance = (p) => Math.random() < p;
+const capFirst = (text) => text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 /* Deterministic pick for text that must NOT change between renders of the
    same state (e.g. a villager's mood line on their profile card). */
 const stableIdx = (str, len) => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return len ? h % len : 0; };
@@ -10258,7 +10259,7 @@ function MonsterVillage() {
                         <div className="mt-2 flex flex-col gap-1.5">
                           {pool.map((sec, i) => (
                             <p key={i} style={{ fontSize: 14, color: found.includes(i) ? "rgba(233,223,200,1)" : C.dim, fontStyle: found.includes(i) ? "normal" : "italic" }}>
-                              {found.includes(i) ? sec.short : "????? - not yet learned"}
+                              {found.includes(i) ? capFirst(sec.short) : "????? - not yet learned"}
                             </p>
                           ))}
                         </div>
