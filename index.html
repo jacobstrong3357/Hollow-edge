@@ -6618,12 +6618,12 @@ const MONSTER_VICTORY_ART = {
   hollowed: "assets/monster-victory/hollowed.webp",
 };
 function MonsterVictory({ id, size = 120, green = false }) {
-  /* Victory cards sit on parchment already. Use the transparent concept
-     plates for every creature so no authored image brings its own square
-     paper background along with it. */
-  const source = MONSTER_PLATES[id]
-    ? `assets/monster-concepts-v1/${MONSTER_PLATES[id]}`
-    : MONSTER_VICTORY_ART[id];
+  /* Victory cards keep their authored full-scene illustrations, but use the
+     transparent-backed derivatives so their baked parchment does not bring
+     a square image background into the card. */
+  const source = MONSTER_VICTORY_ART[id]
+    ? MONSTER_VICTORY_ART[id].replace("assets/monster-victory/", "assets/monster-victory-transparent/")
+    : null;
   if (!source) return <MonsterArt id={id} size={size} light />;
   return (
     <span style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 3, background: "transparent" }}>
