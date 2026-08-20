@@ -3206,11 +3206,29 @@ const DIRECTOR_WHISPERS = [
   "Someone near your left shoulder asks whether you have checked the grave. There is nobody near your left shoulder.",
 ];
 const DIRECTOR_DELUSIONS = [
-  ["One shutter opens.", "Then every shutter opens.", "You raise the lantern.", "Every shutter is closed. The road is empty. It was not real."],
-  ["A dead neighbour waits at the end of the lane.", "They lift one hand to you.", "You blink.", "Only a tree stands there. It was not real."],
-  ["Your wet footprints continue ahead of you.", "Six steps. Seven.", "You stop walking.", "The prints are gone. They were not real."],
-  ["The road becomes your childhood hallway.", "The church door becomes your bedroom door.", "You touch the latch.", "Your hand meets a cold gate. The hallway was not real."],
+  ["A figure stands at the edge of the woods, waving slowly.", "You raise the lantern and take one step closer.", "Only a tree. There is nobody there."],
+  ["A giggling sound comes from the leaves.", "You move closer. The sound stops.", "Only trampled leaves. Something was there."],
+  ["Rustling moves through the hedge beside you.", "You turn the lantern on it.", "Nothing there. The hedge is still."],
+  ["A child-sized shape crosses the road ahead.", "You hurry to the place it vanished.", "Only a dropped mitten, wet with dew."],
 ];
+const DIRECTOR_INTENT_LINES = {
+  search: [
+    (loc) => `You leave with one intention: search the ${loc}.`,
+    (loc) => `You set out for the ${loc} to search it before dawn.`,
+    (loc) => `Tonight you search the ${loc}. Nothing else is promised.`,
+  ],
+  watch: [
+    (name) => `You leave to watch ${name}'s door.`,
+    (name) => `You take up a position outside ${name}'s house.`,
+    (name) => `Tonight you watch ${name}. You keep your distance and wait.`,
+  ],
+};
+function directorIntentLine(s, intent) {
+  const rows = DIRECTOR_INTENT_LINES[intent.kind] || DIRECTOR_INTENT_LINES.search;
+  const key = `director-intent:${s.gameId}:${s.nightNum + 1}:${intent.kind}:${intent.loc || intent.id}`;
+  const value = intent.kind === "watch" ? (npcById(s, intent.id) || {}).name || "their" : intent.loc;
+  return pickFreshIdx(key, rows)(value);
+}
 /* Monster temperament governs presentation, never proof. Several horrors
    share each voice, so a laugh or growl narrows the mood without solving the
    Black Book. Beasts do not suddenly deliver polished threats; talkers enjoy
@@ -3345,7 +3363,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   } else {
     const persona = DIRECTOR_PERSONA_HAIL[npc.id] || ((nm, c) => `“I have an errand at the ${c.dest},” ${nm} says. “Walk with me if you mean kindness. Go home if you mean questions.”`);
     hail = persona(npc.name, ctx);
-    follow = `${npc.name} reaches the ${dest} and you finally see the shape of the errand: ${ctx.reason}. ${ctx.object === "nothing" ? "They work quickly, glancing toward every sound." : `They set down ${ctx.object} and work by the smallest possible light.`} It is ordinary, private, and dangerous only because the village has made darkness dangerous.`;
+    follow = `${npc.name} works at the ${dest}: ${ctx.reason}. ${ctx.object === "nothing" ? "They finish quickly and go home." : `They set down ${ctx.object} and work by the smallest possible light.`}`;
     honest = `“I went out to ${ctx.reason}. You saw the work, so ask me what still troubles you.”`;
     evasive = `“You followed me far enough to see a human errand. If you require guilt as well, bring your own.”`;
     question = `I followed you to the ${dest}. Was ${ctx.reason} the whole reason?`;
@@ -3743,7 +3761,7 @@ function resolveNight(prev, planIn, preEvents) {
     }
     for (const clue of (director.found.clues || [])) s.clues.push(`Night ${n}: ${clue.text}`);
     for (const whisper of (director.found.whispers || [])) s.clues.push(`Night ${n}, heard at the ${whisper.location}: ${whisper.text} A voice is not proof.`);
-    for (const delusion of (director.found.delusions || [])) s.clues.push(`Night ${n}, a hallucination: ${delusion.text} The final observation confirmed that it was not real.`);
+    for (const delusion of (director.found.delusions || [])) s.clues.push(`Night ${n}, an uncertain sight: ${delusion.text}`);
     const thresholdChoice = (director.ledgers.truth || []).find((e) => e.kind === "threshold_choice");
     if (thresholdChoice) {
       s.doorVisits = (s.doorVisits || 0) + 1;
@@ -11455,9 +11473,7 @@ function MonsterVillage() {
     Snd.scene({ location: "Village Square", weather: facts.wx, proximity: 0.05 });
     setWalk({
       mode: "director", facts, director, openingIntent,
-      feedback: openingIntent.kind === "watch"
-        ? `You mean to watch ${npcById(s, openingIntent.id).name}'s door. The village may give you other reasons to move.`
-        : `You mean to search the ${openingIntent.loc}. The road there belongs to everyone still awake.`,
+      feedback: directorIntentLine(s, openingIntent),
       lastAction: null,
       intentDone: false, interacted: {},
     });
@@ -11762,32 +11778,24 @@ function MonsterVillage() {
 
   const directorFallbackLine = (action, next, used) => {
     const place = next.player.location || "Village Square";
-    const localWait = {
-      "Old Church": "You hold beneath the bell until candlelight shifts behind the vestry glass. Someone is awake in there, but not praying.",
-      "Graveyard": "You hold beside the wall. Soil settles somewhere beyond it with the soft weight of a foot being lifted.",
-      "Dark Forest": "You wait under the first trees. The leaves keep moving after the wind has gone elsewhere.",
-      "Old Mill": "You wait by the dead wheel. Water knocks wood from below, and once something knocks back.",
-      "Tavern": "You wait under the tavern eaves. A chair scrapes upstairs; the taproom has been empty for an hour.",
-      "Village Square": "You keep the well between you and the lanes. Three different doors open a finger's width, see your lantern, and close again.",
-    }[place] || "You keep still long enough for the village to forget you are watching.";
     const lines = {
-      LEAVE: ["You lift the latch. Cold air enters before you do.", "Your door closes behind you with the small final sound of a decision."],
-      MOVE: [`You take the road toward the ${action.to}. The village rearranges itself beyond the lantern.`, `Wet leaves give underfoot on the way to the ${action.to}. Somewhere behind you, another tread stops.`],
-      WAIT: [localWait],
-      KEEP_WATCH: [localWait],
-      SEARCH: [`At the ${place}, the lantern finds scuffed mud, a recently handled latch, and no mark you can honestly call inhuman.`, `You search the ${place} until your knees ache. Somebody has been here; the hour and purpose remain theirs.`],
-      LISTEN: [`You lower the lantern at the ${place}. Beneath the ordinary night is a second rhythm—too faint to decide whether it is breath, leaves, or pursuit.`, `You listen until the ${place} separates into water, timber, insects and one soft sound that stops whenever you name it.`],
-      HAIL: ["Your greeting travels farther than it should. For a moment, nobody owns the answering silence."],
-      FOLLOW: ["You let their lantern keep one bend ahead. They never once look back."],
-      GO_HOME: ["You choose your own door while you can still remember which road reaches it."],
-      REACH_HOME: ["Your hand finds the latch. The bolt is the loudest thing in the village."],
-      HIDE: ["You make yourself smaller than your breathing."],
-      FLEE: ["The road becomes impact, breath and the refusal to look behind."],
-      INTERVENE: ["You put your voice between a neighbour and the dark."],
-      IGNORE: ["You keep still. The choice makes a sound anyway."],
+      LEAVE: ["You leave for the Village Square.", "You step into the night."],
+      MOVE: [`You go to the ${action.to}.`, `You continue toward the ${action.to}.`],
+      WAIT: ["You watch for a long time. Nothing happens, so you head home.", "You wait. Nothing comes. You go home."],
+      KEEP_WATCH: ["You watch for a long time. Nothing happens, so you head home.", "You keep watch. Nothing moves. You head home."],
+      SEARCH: [`You search the ${place}. Nothing catches the lantern.`, `You search the ${place}. You find only ordinary traces.`],
+      LISTEN: [`You listen at the ${place}. Nothing answers.`, `You listen. A sound stops. You find nothing.`],
+      HAIL: ["You say hello. They answer quietly."],
+      FOLLOW: ["You follow them into the dark."],
+      GO_HOME: ["You go home.", "You head home and bar the door."],
+      REACH_HOME: ["You reach your door and throw the bolt."],
+      HIDE: ["You hide and hold your breath."],
+      FLEE: ["You run for home."],
+      INTERVENE: ["You shout a warning."],
+      IGNORE: ["You stay back."],
     }[action.type] || ["The hour moves, whether you do or not."];
     const fresh = lines.find((line) => !(used || []).includes(line));
-    return fresh || `${lines[0]} The bell has moved another hour toward dawn.`;
+    return fresh || lines[0];
   };
 
   const actDirector = (action) => {
@@ -11863,29 +11871,25 @@ function MonsterVillage() {
         interacted: walk.interacted || {},
       });
       const recognition = d.phase === "threat" && d.pendingThreat && d.pendingThreat.kind === "recognition";
-      const labels = { atmosphere: "THE VILLAGE ABROAD", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: "BEHIND THE SHUTTER", whisper: "A VOICE IN THE DARK", delusion: "WHAT YOUR EYES INSISTED", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "WHERE THEY REALLY WENT" };
+      const labels = { atmosphere: "THE VILLAGE ABROAD", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: "BEHIND THE SHUTTER", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "WHERE THEY REALLY WENT" };
       const nightRatio = d.cursor < 0 ? -1 : d.cursor / Math.max(1, d.slots - 1);
       const slotLabel = nightRatio < 0 ? "BEFORE THE LAST LIGHT" : nightRatio < .28 ? "AFTER THE BELL" : nightRatio < .7 ? "THE SMALL HOURS" : "BEFORE DAWN";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
       const delusionFragments = beat && beat.type === "delusion" && beat.meta && beat.meta.fragments;
-      const foundCount = d.found.stamps.length + d.found.clues.length + d.found.whispers.length;
       return (
         <NightShell loc={location} kicker={slotLabel} tone={danger ? "siege" : "night"} danger={danger} wound={nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
           <div style={{ minHeight: "clamp(235px,34dvh,295px)", flexShrink: 0 }} />
-          <div className="flex items-center" style={{ gap: 8, marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
+          <div style={{ marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
             <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
-            <span style={{ height: 1, flex: 1, background: "rgba(233,223,200,.2)" }} />
-            <span className="mv-display" style={{ fontSize: 10, letterSpacing: 1.2 }}>{foundCount ? `${foundCount} KEPT` : "NOTHING KEPT"}</span>
           </div>
           <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
               {actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: danger ? C.redBright : beat && beat.type === "delusion" ? "#C0A8D8" : C.nightAmber }}>{beat ? (labels[beat.type] || "THE ROAD") : terminal ? (d.phase === "dead" ? "THE ROAD ENDS" : "BEHIND YOUR BOLT") : "YOUR INTENTION"}</div>
+                <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: danger ? C.redBright : beat && beat.type === "delusion" ? "#C0A8D8" : C.nightAmber }}>{beat ? (labels[beat.type] || "THE ROAD") : terminal ? (d.phase === "dead" ? "THE ROAD ENDS" : "BEHIND YOUR BOLT") : "THE ROAD"}</div>
                 {delusionFragments ? (
                   <div style={{ marginTop: 7 }}>
                     {delusionFragments.map((fragment, i) => <p key={i} style={{ margin: i ? "5px 0 0" : 0, fontSize: i === delusionFragments.length - 1 ? 15.5 : 16.5, lineHeight: 1.4, color: i === delusionFragments.length - 1 ? "#D8CAE6" : C.parch, fontStyle: i === delusionFragments.length - 1 ? "normal" : "italic" }}>{fragment}</p>)}
-                    <div className="mv-display" style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(192,168,216,.3)", color: "#C0A8D8", fontSize: 9.5, letterSpacing: 1.7 }}>HALLUCINATION · NOT EVIDENCE</div>
                   </div>
                 ) : <p style={{ margin: "6px 0 0", fontSize: 16.5, lineHeight: 1.48, color: C.parch, fontStyle: beat && beat.type === "whisper" ? "italic" : "normal" }}>{displayText || (terminal ? "The door closes. Whatever remained in the village must now wait for morning." : "The village is moving before you are.")}</p>}
                 {beat && beat.type === "stamp" && beat.sign && <div style={{ marginTop: 10 }}><StampChip sign={beat.sign} /></div>}
