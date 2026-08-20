@@ -221,6 +221,19 @@ const Snd = {
 
 const LOCS = ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Tavern", "Old Mill"];
 
+/* A location name is not an exposure state. The Tavern and Old Church each
+   have an interior and outdoor ground around them; reach rules must use the
+   latter fact, while maps, evidence and art continue to use the stable LOCS
+   key. These labels are nouns on purpose, so existing "at the ..." prose can
+   name the exact site without awkward articles. */
+const placeNoun = (loc, exposure = "outdoor") => {
+  if (loc === "Tavern") return exposure === "indoor" ? "Tavern taproom" : "Tavern yard";
+  if (loc === "Old Church") return exposure === "indoor" ? "Old Church nave" : "churchyard";
+  if (loc === "Old Mill") return exposure === "indoor" ? "Old Mill floor" : "Old Mill yard";
+  return loc;
+};
+const canReachExposure = (m, exposure) => m.reach === "home" || exposure !== "indoor";
+
 const SIGNS = {
   claw: "Claw Marks", tracks: "Strange Tracks", bite: "Bite Marks",
   cold: "Cold Aura", flora: "Blighted Plants",
@@ -589,17 +602,19 @@ const QUIET_DAWN = [
   "No dead this morning. The village still counts itself twice in the square, out loud, to be sure.",
   "Dawn, and nothing. Someone says a fed thing sleeps, and then wishes aloud that they hadn't said it.",
   "No bell. No blood. The relief lasts exactly as far as everyone's own front step, and dies there.",
-  "Everyone lives. Somewhere it is choosing, and taking its time about it. Nobody says this. Everybody is thinking it.",
-  "The night gave nothing back and took nothing you can find. You trust it less than the bad nights. The bad nights are at least honest.",
+  "Everyone answers the morning count. Nobody was killed, taken, or found changed overnight.",
+  "The night took no one you can find. The searchers check every house, shed and ditch before they believe it.",
   "The bell does not ring. The whole village stands in the square anyway, waiting for a name that never comes.",
-  "Dawn comes up the colour of a healing bruise. Every door opens on a living face, and the village hardly knows what to do with the mercy.",
-  "No bell at dawn. No crowd. Whatever it wanted last night, it was not a life, and that is as close to good news as this village gets anymore.",
+  "Every door opens on a living face. For once the gravedigger has no new work, and the village calls that mercy.",
+  "No bell at dawn and no body found. Doors still stay barred until the sun clears the roofs.",
   "Everyone answers the morning count, and for once nobody's voice shakes doing it. It will shake again tomorrow.",
-  "Somebody stands at the gate a long while, reading the frost like a bad letter, and says only what the gravediggers have always said: quiet nights are when it is choosing.",
+  "The gate, lanes and frost are searched before breakfast. No blood, no broken door, no missing neighbour. Nothing useful either.",
   "No one dead. The morning is spent on smaller arguments instead: whose dog, whose gate, whose fault, everyone grateful for a quarrel small enough to win.",
   "All accounted for at the well. Greta says a fed thing rests and a fasting thing chooses, and is told to keep her lore to herself, and is right.",
 ];
-const AT = (w) => (w && w !== "home" ? `, out by the ${w}` : "");
+const AT = (w) => (w && w !== "home"
+  ? (/\b(taproom|nave|floor)\b/i.test(w) ? `, inside the ${w}` : `, out by the ${w}`)
+  : "");
 const SCREAM_LINES = [
   (w) => `A scream${AT(w)} that starts as a name and ends with no shape left in it. The ordinary night keeps going.`,
   (w) => `Something wet gives way${AT(w)}. One high sound, cut off mid-note, like a fiddle string snapping.`,
@@ -622,17 +637,17 @@ const SCREAM_LINES = [
 const BODY_FOUND = [
   (v, w) => `${v.name} is found ${w === "home" ? "in the ruin of their own bed" : `at the ${w}, in pieces the crows reached first`}. The man who found them is sick twice before he can go for help.`,
   (v, w) => `${v.name} is dead${w === "home" ? ", taken through a door that shows no forcing" : `, out at the ${w}`}. The man who lifts the sheet looks one long moment, and will not lift it again for anyone.`,
-  (v, w) => `They needed two sheets for ${v.name}, and would not say why in front of the children. Everyone in earshot understood anyway.`,
+  (v, w) => `${v.name} is found ${w === "home" ? "in their own bed" : `at the ${w}`}. The body is badly torn; the bearers need two sheets before they can move it.`,
   (v, w) => `${v.name} was found ${w === "home" ? "at home" : `at the ${w}`} with the eyes still open, fixed on something none of them could see. The lids are closed twice. Twice they come open again.`,
-  (v, w) => `The ground had to be scrubbed where ${v.name} was found${w === "home" ? "" : `, out at the ${w}`}. The boy who carried the water has not stopped washing his own hands since.`,
+  (v, w) => `${v.name} is found ${w === "home" ? "at home" : `at the ${w}`}. Blood has soaked the floor or ground around them, and the village spends the morning scrubbing it away.`,
   (v, w) => `${v.name}, dead ${w === "home" ? "behind their own bolted door" : `at the ${w}`}. The crowd stands in a ring around the body a long while. No one offers to be first to touch it.`,
   (v, w) => `${v.name} ${v.role} is found dead at dawn, ${w === "home" ? "in their own bed, soaked through" : `at the ${w}, torn open`}. A child sees it before anyone can stop her.`,
   (v, w) => `They find ${v.name} at first light, ${w === "home" ? "behind a door still bolted from the inside" : `out at the ${w}`}. One of the searchers refuses burial duty from now on.`,
   (v, w) => `${v.name} is dead. ${w === "home" ? "Taken at home, shutters latched, no sign of how." : `Found at the ${w}, where no one should have been.`} Someone in the square will not stop screaming long enough to be led away.`,
   (v, w) => `Word goes door to door before the sun is up: ${v.name}, ${w === "home" ? "dead in the wreck of their own bed" : `dead at the ${w}`}. The man who carried the body will not describe the weight of it.`,
   (v, w) => `${v.name} is found ${w === "home" ? "in their bed" : `at the ${w}`}, opened from throat to belt, and arranged. Nothing hungry did that. Something proud did.`,
-  (v, w) => `Too little blood where ${v.name} lies, and far too much twenty feet away, dragged in a wide fan, as if the dying were walked a while in something's grip before being let finish.`,
-  (v, w) => `${v.name}'s hands are ruined, palms and fingers opened to the bone. Falk says it quietly: "They fought. A long time. They were alive for all of it." Then he shuts the bag.`,
+  (v, w) => `${v.name} is found ${w === "home" ? "at home" : `at the ${w}`}. A broad trail of blood leads twenty feet to the body; they were dragged while still bleeding.`,
+  (v, w) => `${v.name} is found ${w === "home" ? "at home" : `at the ${w}`}, hands cut to the bone from fighting back. Falk studies them and says, "They fought for a long time."`,
 ];
 const NO_BODY = [
   "No one is dead. Someone's dog is gone, though. The chain was bitten through, not broken, and its owner keeps calling for it in a smaller and smaller voice.",
@@ -643,8 +658,8 @@ const NO_BODY = [
   "No one was found dead this morning. The village breathes out. Perhaps too soon.",
   "No body at dawn. Folk call it a mercy, and bar their doors again by noon anyway.",
   "The night took no one, or so it seems. The dogs have not stopped whining since first light.",
-  "Dawn comes, and everyone answers their name. And yet the morning feels lighter by one soul, and no one can say why.",
-  "Nothing found. Nothing missing. One of the women swears her dough would not rise, and stares at you as if that meant something.",
+  "Dawn comes and everyone answers their name. The count is complete, but Tobias repeats it twice before anyone is willing to leave the square.",
+  "Nothing found and nobody missing. The baker's dough failed in the night; frightened neighbours argue over whether that matters. Nobody knows.",
 ];
 /* Sharper variants for a no-body morning after a turning: the arithmetic
    itself starts to look wrong, without anyone quite able to say why. */
@@ -654,14 +669,14 @@ const NO_BODY_SHARP = [
   "No body. But someone did the sums this morning: who's thinner than they were, who laughs a half-beat late now, who answers to their own name a little slower. No one liked the total.",
 ];
 const SEARCH_NOTHING = [
-  (l) => `The ${l} gives you nothing but the feeling, all night, of standing where something else prefers to stand.`,
+  (l) => `You search the ${l} until the bell. You find no print, wound, disturbed earth or other mark worth recording.`,
   (l) => `Nothing at the ${l}. On the road home, though, every dog you pass is awake, and silent, and watching the same direction.`,
   (l) => `You go over the ${l} inch by inch until your lantern gutters low, and the ground gives up nothing but cold and your own tracks, doubled back on themselves.`,
   (l) => `Hours at the ${l}, and nothing for it but wet boots and a racing heart at every fox.`,
   (l) => `The ${l} keeps its secrets tonight. If anything passed through, it left nothing you can find by lantern light.`,
-  (l) => `You crouch at the ${l} until your knees lock, certain something is about to resolve out of the dark, and nothing ever does. The certainty does not leave with you.`,
-  (l) => `Whatever passed through the ${l} tonight left the ground exactly as it found it. That, itself, begins to feel like a kind of message.`,
-  (l) => `You search the ${l} until your own shadow starts looking wrong to you, and call it a night before you can decide whether it is.`,
+  (l) => `You keep watch at the ${l} until your knees lock. Nobody arrives and nothing moves beyond ordinary rats and branches.`,
+  (l) => `You quarter the ${l} twice. If anything passed through tonight, it left no mark you can distinguish from ordinary traffic.`,
+  (l) => `You search the ${l} by lantern light, checking walls, ground and hedges. The only tracks you can follow are your own.`,
   (l) => `Nothing at the ${l} to read tonight. On the way home you notice you have memorised the quickest route out of the village, without ever deciding to.`,
   (l) => `The ${l} offers you one hour of cold and one moment of terror over what proves to be a sack on a post. You cuff the sack twice out of spite and head home.`,
   (l) => `You give the ${l} until the bell, and it gives you nothing back. Whatever ground the thing keeps, it did not keep this ground tonight.`,
@@ -674,23 +689,23 @@ const CARTER_LINES = [
   (l) => `Two field hands say they heard someone running the ${l} road in the dark. Running from, or running to, they could not say.`,
 ];
 const GOSSIP = [
-  `A voice through shutters, flat with exhaustion: "\u2026third night I've heard it breathing under the\u2026 no, I won't look\u2026"`,
-  `"\u2026found all the hens' heads and none of the rest of them," someone whispers, and is hushed so fast it must be true.`,
-  `From a dark doorway: "\u2026promised the children it can't come in. What I couldn't promise them\u2026"`,
-  `Half a prayer through a wall, the same words going round: "\u2026keep it walking past, keep it walking past\u2026"`,
-  `Low voices behind shutters as you pass: "\u2026swear I heard it too, right under the\u2026"`,
-  `A fragment of whisper through a cracked door: "\u2026won't say the name aloud. Not after what\u2026"`,
-  `Two voices, hushed, urgent: "\u2026the priest knows more than he\u2026no, listen to me\u2026"`,
-  `Half a sentence carries on the wind: "\u2026seen the state of the well water? Since when does\u2026"`,
+  `Through closed shutters, someone says they have heard breathing beneath their window for three nights. Another voice begs them not to look tonight.`,
+  `Someone whispers that every hen in one coop was killed and none was eaten. The neighbour answering says fear has made the story larger each time.`,
+  `From a dark doorway, a parent admits promising the children that barred doors are safe. The other adult asks what happens if the promise is wrong.`,
+  `Behind one wall, a family repeats the same prayer: "Keep it walking past this door." Nobody inside sounds convinced.`,
+  `Two neighbours compare what they heard under the eaves last night. Their descriptions disagree about everything except that neither slept afterward.`,
+  `A woman says she will not speak a suspect's name after dark. Her husband answers that refusing to name people has never made them safer.`,
+  `Two voices argue about Father Ansel. One says the priest knows more than he admits; the other says sleeplessness is not knowledge.`,
+  `At an upstairs window, someone warns that the well water smells wrong. A second voice says it always smells wrong after rain.`,
   `Someone is crying quietly behind a barred door, and someone else is telling them to stop.`,
   `From an upper window, a child's voice: "\u2026but WHO knocks three times and then\u2026" and a hand pulls the shutter to.`,
   `"\u2026counted the shrouds the needle's been asked for," someone whispers. "Twice\u2026"`,
   `A snatch of argument: "\u2026we should all sleep in the church." "All in one place for it? Think."`,
 ];
 const GOSSIP_NAMED = [
-  (name) => `A whisper through shutters: "\u2026${name}, of all people? No, I won't hear it\u2026"`,
-  (name) => `Two low voices: "\u2026just saying, ${name} wasn't at the burying. Who misses a burying\u2026"`,
-  (name) => `"\u2026watch ${name}'s chimney," someone murmurs. "Cold three nights running. Where do they cook?"`,
+  (name) => `A whisper through shutters names ${name}. The answer comes at once: fear is not evidence, and neither of them saw anything.`,
+  (name) => `Two neighbours note that ${name} missed the burial. One calls it suspicious; the other remembers ${name} was working.`,
+  (name) => `Someone says ${name}'s chimney has been cold for three nights. Nobody in the room knows whether ${name} was even home.`,
 ];
 /* ---------- the daylight search, lived ----------
    A daytime search is a scene, not a die roll: the village is awake around
@@ -703,7 +718,7 @@ const DAY_SEARCH_STYLES = {
   listen: { label: "Stand a while, and let the place talk", line: (l) => `You find a spot at the edge of the ${l} and stand in it, longer than feels reasonable, letting the place forget you are there before you start looking.` },
 };
 const DAY_SEARCH_FOLK = [
-  (nm, l) => `${nm} is at the ${l} too, on some business of their own, and gives you a nod that says everyone's errands are strange now.`,
+  (nm, l) => `${nm} crosses the ${l} carrying a basket, pauses to ask what you have checked, then points out a strip of ground you missed. Nothing is there.`,
   (nm, l) => `You cross paths with ${nm} partway through. Neither of you asks what the other is looking for. Neither of you has to.`,
   (nm, l) => `${nm} watches you work the ground for a while before moving on. "Find it," they say, quietly, and do not stop to hear an answer.`,
   (nm, l) => `${nm} passes with a basket and does not stop, but their eyes go to the same corners yours do. Everyone reads the ground now.`,
@@ -711,11 +726,11 @@ const DAY_SEARCH_FOLK = [
   (nm, l) => `Halfway through the morning, ${nm} appears with something wrapped in cloth: bread, still warm. "You're the only one doing anything," they say, and go before you can argue with either half of that.`,
 ];
 const DAY_GOSSIP = [
-  `Two women pass with baskets, voices low: "\u2026counted the candles in the church and there's one gone missing\u2026" They hush when they see you looking.`,
-  `From over a wall: "\u2026won't let the children past the well anymore, not since\u2026" The voices move off before the since.`,
-  `A knot of men by the fence: "\u2026said the milk turned in the pail the same morning it happened. The pail, mind\u2026" They scatter to their work when you straighten up.`,
-  `Somewhere behind you: "\u2026asked the priest, and the priest said pray. That's when I knew he didn't know either\u2026"`,
-  `"\u2026third dog this week gone off its feed," someone says, passing, and someone else answers with nothing at all.`,
+  `Two women count the candles carried from the church and find one missing. Neither remembers whether the count was right to begin with.`,
+  `Over a wall, a parent says the children are forbidden near the well after dusk. The reason given is fear, not anything witnessed there.`,
+  `Men by the fence argue over milk that turned in one pail on the morning of a death. One blames the pail; the others prefer the story.`,
+  `Behind you, someone says Father Ansel answered a question with prayer. The reply: "Then he does not know either."`,
+  `A passer-by says a third dog has stopped eating this week. Nobody can agree whether the dogs belong to the same lane.`,
   `Two children run by playing a counting game you have never heard, and the words of it snag on you: "\u2026one for the door and one for the dark and one for the one who knocks\u2026" They made it up this week. Children always know first.`,
 ];
 /* small, quiet traces the thing leaves in the daylight: never a sign, never
@@ -923,6 +938,26 @@ const DEATH_SCENES = {
   ],
 };
 
+/* A live walk may already have shown the face, the change and the chase.
+   In that case the death screen is a continuation, not a fresh entrance.
+   Keep the monster-specific final beat from the shared scene and replace
+   only the redundant opening/reveal with the state the player just lived. */
+function playerDeathBeats(m, nm, where, ctx) {
+  const full = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(nm, where);
+  if (!ctx || !ctx.encounterBegun) return full;
+  let opening;
+  if (ctx.kind === "flee") opening = `You run from ${nm} at the ${where}. Behind you, the revealed thing gives chase at once. It catches you before you reach the next lane.`;
+  else if (ctx.kind === "watch") opening = `You stay hidden one breath too long. ${nm}, no longer human, looks straight at your hiding place and crosses the ${where} before you can rise.`;
+  else if (ctx.kind === "confront") opening = `You step out and call ${nm} by name. The thing wearing that face turns fully toward you and closes the distance before you can retreat.`;
+  else if (ctx.kind === "wrongRite") opening = `The wrong rite is still in your hands when you run. ${nm}'s revealed shape follows, laughing, and catches you at the ${where}.`;
+  else if (ctx.kind === "offer") opening = `You refuse. ${nm} already has you cornered at the ${where}; it stops waiting and tightens its hold.`;
+  else if (ctx.kind === "hide") opening = `You leave your hiding place and press on toward the ${where}. The presence that passed you turns back, finds you in the open, and blocks the road home.`;
+  else opening = ctx.action === "shadow"
+    ? `You hold to the shadows at the ${where}, but it has already found your outline. It turns from its work and comes straight to you.`
+    : `You press closer at the ${where}. It lifts its head, sees you clearly, and rushes before you can step back.`;
+  return [opening, ...(ctx.revealed ? full.slice(2) : full.slice(1))];
+}
+
 /* Two wrong names is one too many: on the second, the thing stops feeding on
    the village and comes for the one who kept naming it wrong. Appends a death
    scene to the given beats and sets the loss. */
@@ -938,8 +973,8 @@ function monsterKillsAccuser(s, beats, intro, where) {
      (whose encounter was already lived in the lanes), this one is NOT shown
      immediately; the JUDGMENT beats run, then the dark. */
   s.deathAfterBeats = true;
-  s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(mn ? mn.name : "it", where || "square");
-  s.over = { win: false, reason: "slain", text: `Twice you named it wrong, and the second time was one too many. It stopped feeding on the village and came for you the same night, and the neighbours whose trust you had spent did not come when you called.` };
+  s.deathBeats = playerDeathBeats(m, mn ? mn.name : "it", where || "square");
+  s.over = { win: false, reason: "slain", text: `You named it wrong twice. The second time, it stopped feeding on the village and came for you. No neighbour answered.` };
 }
 
 /* ---------- Pass G2: the offer ----------
@@ -1426,19 +1461,19 @@ const SOUND_CHASE_MUNDANE = [
   "Behind the hedge you find a ewe on her back in the ditch, kicking, absurd, alive. You right her, and she blunders off. If anything watched, it kept its opinions to itself.",
 ];
 const QUIET_APPROACH_LINES = [
-  (l) => `The ${l} lies quiet under the moon, the kind of quiet that has to be maintained. The dark hours are yours to spend. How?`,
-  (l) => `Moonlight lays the ${l} out like something on a table, still and not to be trusted. The dark hours are yours to spend. How?`,
-  (l) => `Nothing moves at the ${l}. That is not the same as nothing being here. The dark hours are yours to spend. How?`,
-  (l) => `The ${l} is empty, and holds its emptiness like a breath. The dark hours are yours to spend. How?`,
-  (l) => `You arrive at the ${l} and nothing greets you but stillness. The dark hours are yours to spend. How?`,
-  (l) => `Frost, moon, stone, and not one living sound: the ${l} is a held pose. The dark hours are yours to spend. How?`,
-  (l) => `The ${l} at this hour belongs to whatever wants it most. Tonight you are claiming it. The dark hours are yours to spend. How?`,
-  (l) => `The ${l} is empty when you reach it, the frost unbroken except one line of prints that is not yours. The dark hours are yours to spend. How?`,
-  (l) => `An owl works the far side of the ${l}, unbothered - the best sign yet: the owls leave when IT walks. The dark hours are yours to spend. How?`,
-  (l) => `The moon comes clear of the cloud as you reach the ${l}, laying every stone and rut open to be read. The dark hours are yours to spend. How?`,
-  (l) => `Your lantern is the only light at the ${l}, and makes the dark around it two shades darker. The dark hours are yours to spend. How?`,
-  (l) => `Nothing at the ${l} but cold and your own long shadow. Whatever came before you has been and gone. The dark hours are yours to spend. How?`,
-  (l) => `You come at the ${l} the back way and stand at its edge, matching each shadow against the shape you remember by day. The dark hours are yours to spend. How?`,
+  (l) => `You reach the ${l}. The road, walls and ground are empty in the moonlight. Search for marks, take a vantage, or walk the boundary?`,
+  (l) => `Moonlight shows the whole ${l}: no person, no lantern, no fresh movement. How will you search it?`,
+  (l) => `Nothing moves at the ${l}. You can inspect the ground, wait for someone to arrive, or circle the outer lanes.`,
+  (l) => `The ${l} is empty when you arrive. Wind moves one loose gate; everything else is still. How will you spend the watch?`,
+  (l) => `You arrive at the ${l} and hear only rats behind a wall. There is no immediate danger in sight. Where do you begin?`,
+  (l) => `Frost covers the ${l}. No living sound carries, and every old footprint is sharp enough to inspect. How will you search?`,
+  (l) => `Nobody else is visible at the ${l}. You have time to search the ground or choose a place to watch.`,
+  (l) => `The ${l} is empty. One line of prints crosses the frost, too weathered to read from here. How do you investigate?`,
+  (l) => `An owl hunts at the far side of the ${l}. It does not react to you or to anything else nearby. How will you search?`,
+  (l) => `The moon clears the cloud and exposes every stone and rut at the ${l}. Choose where to put the light first.`,
+  (l) => `Your lantern is the only light at the ${l}. You can use it on the ground, hood it and wait, or patrol the boundary.`,
+  (l) => `At the ${l}, you find cold ground and your own shadow. No fresh disturbance is visible from the road. How do you proceed?`,
+  (l) => `You approach the ${l} from the back and stop at its edge. No one is present; the ground is yours to examine.`,
 ];
 
 const RUMOR_STRANGE = [
@@ -1718,35 +1753,35 @@ const FOLLOW_TURNED_SCENES = [
   (nm, dest) => `${nm} walks to the ${dest} the way the sleepless walk: no errand, no haste. Once there, they stand with their face tipped up to the dark, mouth moving around words that don't carry. Your legs go numb long before their patience does.`,
   (nm, dest) => `At the ${dest}, ${nm} kneels, lays both palms flat against the cold ground, listening through their hands to something you cannot hear. When they rise, they say something soft to the dark. You are certain it was thanks.`,
 ];
-/* Following an innocent on a blameless night is not a dead end: it is a
+/* Following an ordinary-looking errand is not a dead end: it is a
    window into who these people are. None of these carry a monster tell; some
    are the disguised thing on a quiet night, wearing its humanity well. */
 const FOLLOW_PLAIN_SCENES = [
-  (nm, dest) => `${nm}'s errand proves brief and blameless: to the ${dest} and back, meeting no one. ${nm} heads straight home and bars the door.`,
-  (nm, dest) => `${nm} does some small human errand badly by moonlight at the ${dest} - drops things, curses softly, hurries - and heads home like somebody who knows exactly how stupid it was to be out. You know that walk.`,
-  (nm, dest) => `Whatever took ${nm} to the ${dest} takes ten minutes and harms no one, and they spend the walk home checking over their shoulder at everything but the shadow you're standing in.`,
-  (nm, dest) => `${nm} goes to the ${dest} and just sits, alone in the cold, a long time. Some griefs need a place that isn't home. You leave them to it, feeling like a thief for watching.`,
-  (nm, dest) => `${nm} walks to the ${dest} and back and to it again, no errand, just motion, the way people move when the house holds one too many empty chairs.`,
+  (nm, dest) => `${nm}'s errand is brief: to the ${dest} and back, meeting no one. ${nm} heads straight home and bars the door.`,
+  (nm, dest) => `At the ${dest}, ${nm} repairs a loose latch by moonlight, drops the nail twice, swears, and hurries straight home when it holds.`,
+  (nm, dest) => `${nm} leaves a wrapped loaf at a door by the ${dest}, knocks once, then walks home checking over both shoulders. Nobody answers while you watch.`,
+  (nm, dest) => `${nm} sits alone at the ${dest} for nearly an hour, crying quietly and wiping their face whenever footsteps sound in the lane.`,
+  (nm, dest) => `${nm} walks between the ${dest} and home three times without entering either, too restless to stay indoors and too frightened to stop moving.`,
   (nm, dest) => `At the ${dest}, ${nm} drinks alone from a flask, joyless and methodical, muttering to someone who is not there. Grief, or guilt, or only the drink.`,
   (nm, dest) => `${nm}'s whole errand is to stand at the ${dest} and look back at the village, counting the lit windows as if making sure of them, then go home.`,
-  (nm, dest) => `At the ${dest}, ${nm} tends to something in the dark - a grave, a sick animal, hard to say - with a gentleness you'd never have guessed from daylight.`,
+  (nm, dest) => `At the ${dest}, ${nm} kneels beside a limping dog, cleans its paw, and ties a strip of cloth around the cut before letting it go.`,
   (nm, dest) => `${nm} meets someone at the ${dest}: two people who should not be seen together, standing too close, parting too carefully. Whose business it is, is theirs.`,
   (nm, dest) => `At the ${dest}, ${nm} prays - not the Sunday kind, the desperate kind, fast and bargaining. You hope something is listening.`,
   (nm, dest) => `${nm} leaves something at the ${dest}, food by the shape of it, and slips off quick so no one need thank them. You did not know that about ${nm}.`,
   (nm, dest) => `${nm} reaches the ${dest}, does nothing you can name, and weeps once, briefly, the way someone does who has learned to do it quietly. Then wipes their face and walks home steady.`,
   (nm, dest) => `${nm} goes to the ${dest} and digs by hooded lantern: a small hole, a tin box into it or out of it, and home again. Savings, most like.`,
-  (nm, dest) => `At the ${dest}, ${nm} paces out distances, heel to toe, muttering numbers, and marks a spot with a stone. Like a person choosing their own grave plot ahead of the rush.`,
-  (nm, dest) => `${nm} carries a bundle to the ${dest} and comes back without it. Watching their shoulders on the way home, you decide some deliveries are none of yours.`,
+  (nm, dest) => `At the ${dest}, ${nm} measures a rectangle heel to toe, mutters the dimensions twice, and marks all four corners with stones before leaving.`,
+  (nm, dest) => `${nm} carries a bundle to the ${dest}, leaves it beside a shuttered cottage, knocks, and walks away before the door opens.`,
   (nm, dest) => `Halfway to the ${dest}, ${nm} loses their nerve at a sound you never heard, and half-runs home. The honestly frightened move exactly like that.`,
   (nm, dest) => `${nm} stands at the ${dest} and practises, quietly, what to say to somebody: apologising, or accusing, trying the words at different sizes.`,
 ];
-/* The morning-after journal echo for a blameless follow: it teaches you a
+/* The morning-after journal echo for an ordinary-looking follow: it teaches you a
    villager, and pointedly not the monster. */
 const DAWN_PLAIN_FOLLOW = [
-  (nm, dest) => `You followed ${nm} to the ${dest} last night. Whatever it was, it was human, and private, and not the thing you are hunting.`,
-  (nm, dest) => `You followed ${nm} to the ${dest} and came home knowing them a little better, and the monster not at all.`,
-  (nm, dest) => `You followed ${nm} to the ${dest}. Ordinary business, or a private grief. Either way, no sign of the thing in it.`,
-  (nm, dest) => `You trailed ${nm} to the ${dest} and learned something of who they are. None of it points where you need it to.`,
+  (nm, dest) => `You followed ${nm} to the ${dest} and watched an ordinary private errand. That accounts for the hour; it does not prove what ${nm} is.`,
+  (nm, dest) => `You followed ${nm} to the ${dest}. What you saw explains why they were out, but neither clears nor condemns them.`,
+  (nm, dest) => `You watched ${nm} at the ${dest}: private business, no attack and no visible transformation. That is all the night established.`,
+  (nm, dest) => `You trailed ${nm} to the ${dest} and saw exactly what they did there. A harmless-looking errand is still not proof of innocence.`,
 ];
 const HAIL_MONSTER_LINES = [
   (nm, dest) => `${nm} stops. Considers you. "Dangerous night for a walk," they say, pleasantly. "For you, I mean." The smile takes one beat too long, and you want a wall at your back.`,
@@ -1767,7 +1802,7 @@ const HAIL_PLAIN_LINES = [
   (nm, dest) => `${nm} spins with a fist half-raised, then sags. "Don't. DO not." A breath. "The ${dest}. Quick errand, then home behind the bolt, same as you should be. We never met, agreed?"`,
   (nm, dest) => `${nm} rounds on you, breath gone ragged. "Sweet mercy. Do NOT do that." They will not say where they are bound, then say it anyway: "The ${dest}. Don't ask. Get home."`,
   (nm, dest) => `"Who goes-" ${nm}'s voice cracks, and they laugh at themselves, shaky and furious. "Fine guard I'd make. The ${dest}, if it's your business, which it isn't."`,
-  (nm, dest) => `${nm} does not startle so much as sag, like someone braced for worse all week. "Oh. You." A breath. "The ${dest}. If anyone asks, you never saw me."`,
+  (nm, dest) => `${nm} sags instead of stepping back, as if braced for worse all week. "Oh. You." A breath. "The ${dest}. If anyone asks, you never saw me."`,
 ];
 const LANE_CHAT_LINES = [
   `"Seen? I've seen everyone's business but my own, lately. Which is to say - nothing you'd want to hear standing in a lane."`,
@@ -1785,19 +1820,19 @@ const LANE_CHAT_LINES = [
 const QUIET_WATCH_LINES = [
   (nm) => `${nm}'s window stays lit a long while, then goes dark, ordinary as any night before all this.`,
   (nm) => `Nothing moves at ${nm}'s door. Somewhere a dog barks twice and stops. That is the whole of your night.`,
-  (nm) => `The cold gets into your feet before anything else does. ${nm}'s house gives up nothing at all.`,
+  (nm) => `The cold gets into your feet. ${nm}'s door stays shut, both windows stay dark, and nobody approaches the house.`,
   (nm) => `A shadow crosses ${nm}'s shutter once - an arm, a head, someone banking a fire - then the ordinary business of a house going to sleep.`,
   (nm) => `You count the church bell's hours against ${nm}'s dark windows and lose track after two. Nothing enters. Nothing leaves.`,
-  (nm) => `Hour on hour, ${nm}'s house does what houses do: ticks, settles, breathes smoke at the sky. Not caught tonight.`,
+  (nm) => `Hour on hour, smoke thins from ${nm}'s chimney. The door never opens and nobody crosses the yard.`,
   (nm) => `Rain starts, stops, starts again. ${nm}'s roof drips in front of your face the whole night, and nothing crosses their door but a cat.`,
-  (nm) => `Twice you nearly doze, and jerk awake with your heart going. ${nm}'s house stands exactly as before, both times: dark, shut, blameless.`,
+  (nm) => `Twice you nearly doze and jerk awake. Both times ${nm}'s house is unchanged: dark, shut, with no tracks crossing the step.`,
   (nm) => `A late candle moves through ${nm}'s house for an hour, room to room. Then it goes out, and the house is like every other on the lane.`,
   (nm) => `By dawn you know ${nm}'s house better than your own: which fence board leans, which shutter sits crooked. Nothing worth the cold it cost.`,
 ];
 const RETIRE_LINES = [
   (nm) => `${nm}'s candle gutters out behind the shutter and does not relight. Whatever this night holds, it is not for them.`,
   (nm) => `The last light in ${nm}'s house dies, and joins the rest of the sleeping lane. Tonight is not the night they show anything.`,
-  (nm) => `${nm}'s chimney smoke thins to nothing, and the house settles into the dark like every honest house on the lane.`,
+  (nm) => `${nm}'s chimney smoke thins to nothing. The door has not opened during your watch, and nobody has entered.`,
   (nm) => `Behind the shutters, ${nm}'s fire burns down to embers and no one tends it. Asleep, then. Your cold feet cast the deciding vote: home.`,
   (nm) => `The cold finally outbids your patience. ${nm}'s house has done nothing all night but be a house.`,
   (nm) => `Somewhere behind ${nm}'s shutters, someone banks a fire and takes a candle up to bed, ordinary as bread. You take your numb feet home.`,
@@ -1806,12 +1841,12 @@ const RETIRE_LINES = [
 /* Even a stay-home watch can turn something up: an unsettled, sleepless
    house that gives you a feeling if not a fact. Ambiguous on purpose. */
 const WATCH_RESTLESS = [
-  (nm) => `${nm} never slept. A candle lit, snuffed, lit again, their shadow crossing the shutter hour on hour, like something kept awake by its own company.`,
-  (nm) => `Twice in the night ${nm} cracked the shutter and stood looking out at nothing, or everything, and twice drew it shut as though they'd heard you think.`,
-  (nm) => `${nm}'s house was too quiet: no fire banked, no tread, no cough. A stillness held on purpose, the way you hold a breath.`,
-  (nm) => `Long after every honest candle died, ${nm}'s stayed lit, and something moved behind it that did not move the way sleep moves.`,
+  (nm) => `${nm} never sleeps. They light and snuff the same candle three times and cross between the bed and window until dawn.`,
+  (nm) => `Twice in the night ${nm} opens the shutter, scans the lane in both directions, then closes and bars it again.`,
+  (nm) => `${nm}'s house stays completely quiet: no fire banked, no footsteps, no cough. The door and shutters remain closed.`,
+  (nm) => `Long after every other candle dies, ${nm}'s stays lit. Their shadow passes the window every few minutes, pacing the same short route.`,
   (nm) => `Once, in the worst hour, ${nm} opened their door and stood in the gap, looking out at the dark. Then shut it, and shot the bolt.`,
-  (nm) => `A sound came from ${nm}'s house in the small hours you have been trying to name since: weeping, or laughing, or one smothering the other.`,
+  (nm) => `In the small hours a broken sound comes from ${nm}'s house. It begins like laughter, ends in sobbing, and does not come again.`,
   (nm) => `${nm}'s dog was put out at midnight and scratched at the door until dawn. It was not let back in.`,
 ];
 /* One roll for what a stay-home watch turns up, so the live walk and the
@@ -1834,23 +1869,23 @@ function rollHomeWatch(s, id, outMap) {
 }
 
 const EVENTS = [
-  { id: "harvest", name: "harvest festival", loc: "Village Square", intro: "Against all sense, the harvest festival goes ahead. Fiddle music, cider, and every laugh a little too loud." },
-  { id: "vigil", name: "saint's vigil", loc: "Old Church", intro: "Candles fill the church for the saint's vigil. The singing can be heard from every lane, thin and brave." },
-  { id: "tavernnight", name: "tavern night", loc: "Tavern", intro: "Liesel throws the tavern open and stands the first round. Fear makes for good business and better singing." },
-  { id: "wake", name: "wake", loc: "Old Church", intro: "A wake is held for the dead. Ale, black clothes, and stories told about the departed until the candles drown." },
-  { id: "bonfire", name: "bonfire", loc: "Village Square", intro: "A great bonfire is built in the square. Old timers say some things will not cross firelight. Everyone pretends that is not why it was built." },
-  { id: "market", name: "market eve", loc: "Village Square", intro: "Stalls go up for tomorrow's market, and half the village lingers among them in the last light, buying nothing, leaving slowly." },
-  { id: "procession", name: "lantern procession", loc: "Village Square", intro: "Father Ansel leads a lantern procession around the village bounds, a moving ring of small lights against a very large dark." },
-  { id: "huntparty", name: "hunting party", loc: "Dark Forest", intro: "The bolder men take dogs and torches into the forest to hunt whatever can be hunted. The dogs do not want to go." },
-  { id: "shelter", name: "night of shelter", loc: "Old Church", intro: "By common consent, many bring blankets to the church to sleep under one roof, in numbers, in God's sight." },
-  { id: "feast", name: "betrothal feast", loc: "Tavern", intro: "A betrothal feast, of all things, defiant and half mad. There is dancing. There is also a man by the door counting who came." },
-  { id: "cards", name: "card night", loc: "Tavern", intro: "Cards at the tavern, played for pennies and company. Nobody wants to win. Nobody wants to go home." },
-  { id: "choir", name: "choir practice", loc: "Old Church", intro: "Choir practice, held at dusk out of stubbornness. The old hymns, sung a little faster than they are written." },
-  { id: "pedlar", name: "pedlar's visit", loc: "Village Square", intro: "A pedlar arrives before dusk with ribbons, knives and news, and the whole village turns out to touch something from elsewhere." },
-  { id: "boarding", name: "boarding-up", loc: "Village Square", intro: "Hammers till dark: the village turns out together to board windows and mend shutters, lending ladders, sharing nails, watching the sun." },
-  { id: "sweep", name: "torch search", loc: "Graveyard", intro: "Torches at dusk: a search party sweeps the graveyard end to end, poking the hedges, calling out finds." },
-  { id: "millgrind", name: "grain weighing", loc: "Old Mill", intro: "The last of the season's grain is weighed and bagged at the mill by lantern-light, the whole village turning out to see the harvest counted honestly." },
-  { id: "millrace", name: "millrace clearing", loc: "Old Mill", intro: "The millrace is cleared of leaves and silt before the frost can jam it, a cold wet job the young men draw lots for and the old men supervise from dry ground." },
+  { id: "harvest", name: "harvest festival", loc: "Village Square", exposure: "outdoor", intro: "Against all sense, the harvest festival goes ahead in the open square. Fiddle music, cider, and every laugh a little too loud." },
+  { id: "vigil", name: "saint's vigil", loc: "Old Church", exposure: "indoor", intro: "Inside the Old Church, candles fill the nave for the saint's vigil. The singing reaches every lane, thin and brave." },
+  { id: "tavernnight", name: "tavern night", loc: "Tavern", exposure: "indoor", intro: "Inside the Tavern, Liesel stands the first round. Fear makes for good business and louder singing." },
+  { id: "wake", name: "wake", loc: "Old Church", exposure: "indoor", intro: "A wake fills the Old Church nave: ale, black clothes, and stories about the departed until the candles drown." },
+  { id: "bonfire", name: "bonfire", loc: "Village Square", exposure: "outdoor", intro: "A great bonfire is built in the open square. Old timers say some things will not cross firelight. Everyone pretends that is not why it was built." },
+  { id: "market", name: "market eve", loc: "Village Square", exposure: "outdoor", intro: "Stalls go up in the square for tomorrow's market, and half the village lingers among them in the last light, buying nothing, leaving slowly." },
+  { id: "procession", name: "lantern procession", loc: "Village Square", exposure: "outdoor", intro: "Father Ansel leads a lantern procession around the village bounds, a moving ring of small lights against a very large dark." },
+  { id: "huntparty", name: "hunting party", loc: "Dark Forest", exposure: "outdoor", intro: "The bolder men take dogs and torches into the forest to hunt whatever can be hunted. The dogs do not want to go." },
+  { id: "shelter", name: "night of shelter", loc: "Old Church", exposure: "indoor", intro: "Inside the Old Church, families spread blankets across the nave to sleep under one roof, in numbers, in God's sight." },
+  { id: "feast", name: "betrothal feast", loc: "Tavern", exposure: "indoor", intro: "A betrothal feast fills the Tavern taproom, defiant and half mad. There is dancing, and a man by the door counting who came." },
+  { id: "cards", name: "card night", loc: "Tavern", exposure: "indoor", intro: "Inside the Tavern, cards are played for pennies and company. Nobody wants to win. Nobody wants to go home." },
+  { id: "choir", name: "choir practice", loc: "Old Church", exposure: "indoor", intro: "Choir practice goes ahead inside the Old Church. The old hymns are sung faster than they are written." },
+  { id: "pedlar", name: "pedlar's visit", loc: "Village Square", exposure: "outdoor", intro: "A pedlar arrives before dusk with ribbons, knives and news, and the whole village gathers around his cart in the square." },
+  { id: "boarding", name: "boarding-up", loc: "Village Square", exposure: "outdoor", intro: "Hammers sound across the square until dark as neighbours board windows and mend shutters, sharing ladders and nails." },
+  { id: "sweep", name: "torch search", loc: "Graveyard", exposure: "outdoor", intro: "Torches at dusk: a search party sweeps the graveyard end to end, poking the hedges and calling out finds." },
+  { id: "millgrind", name: "grain weighing", loc: "Old Mill", exposure: "indoor", intro: "Inside the Old Mill, the season's last grain is weighed and bagged by lantern light while the village watches the count." },
+  { id: "millrace", name: "millrace clearing", loc: "Old Mill", exposure: "outdoor", intro: "Outside the Old Mill, villagers clear leaves and silt from the millrace before frost can jam it." },
 ];
 const EVENT_INCIDENT_FIGHT = [
   (a, b) => `Late on, ${a} and ${b} come to blows over something no one afterwards can name. It takes three others to part them.`,
@@ -1861,11 +1896,11 @@ const EVENT_INCIDENT_PAIR = [
   (a, b) => `When the crowd thins, ${a} walks ${b} home the long way. People notice. People always notice.`,
 ];
 const EVENT_KILL = [
-  (evn, v) => `The ${evn} is still loud when word passes through it like a cold draught: ${v} is not among them anymore. ${v} is found later, past the edge of the firelight, where the music did not reach.`,
-  (evn, v) => `Somewhere under the noise of the ${evn}, ${v} slips away, or is drawn away. By the time anyone thinks to look, there is only what the night left, and ${v} beside it.`,
-  (evn, v) => `The revelry covers a great deal. It covered whatever came for ${v}, who does not walk home from the ${evn} at all.`,
-  (evn, v) => `In the thick of the ${evn}, with every soul accounted for and none of them watching, ${v} is taken from the middle of the crowd, and no one can say how.`,
-  (evn, v) => `The music at the ${evn} falters and dies on one long scream from beyond the lanterns. They find ${v} before the crowd can be held back, and so half the village sees what was done, and how much of it there is, and how far it was spread. Nobody who saw it says the word aloud. The word is "played with."`,
+  (evn, v, site) => `The ${evn} is still loud when someone notices ${v} is missing. They find ${v} dead at the ${site}, only paces from the crowd. Nobody saw them leave.`,
+  (evn, v, site) => `Under the noise of the ${evn}, ${v} gives one short cry. By the time the crowd reaches the ${site}, ${v} is dead and whatever struck them is gone.`,
+  (evn, v, site) => `${v} is seen at the ${evn}, then not seen at all. Before the last song ends, the body is found at the ${site}.`,
+  (evn, v, site) => `In the thick of the ${evn}, the lights fail for three breaths. When they return, ${v} lies dead at the ${site}, surrounded by people who saw nothing.`,
+  (evn, v, site) => `A scream cuts through the ${evn} from the ${site}. The crowd finds ${v} before anyone can hold them back, and everyone sees what was done.`,
 ];
 const EVENT_DAWN = [
   (evn) => `The morning after the ${evn}, heads ache and tongues wag about who came, who did not, and who left early.`,
@@ -2016,10 +2051,10 @@ const GRIEF_TURNED = [
    face that had every reason to go. So following someone to a grave tells
    you what they did and never what they are. (mourner, dead) => beat. */
 const GRIEF_WALK = [
-  (nm, d) => `${nm} does not go to the ${'Graveyard'} so much as arrive at it, and stops at one plot, and stands. No lantern. No words you can hear. An hour of that, and then home the long way.`,
-  (nm, d) => `You find ${nm} sitting on the wall by ${d}'s plot with their coat open to the cold, doing nothing whatever, in the manner of somebody who has run out of places to put it.`,
-  (nm, d) => `${nm} has brought something small and is arranging it on the turned earth over ${d}, twice, and then a third time, until it is right. Then they stand there and let it be right.`,
-  (nm, d) => `${nm} talks to ${d}'s grave for a long while, quietly and steadily, the way you would talk to somebody in the next room. Once, they laugh. That is the part you take home with you.`,
+  (nm, d) => `${nm} goes straight to ${d}'s grave without a lantern. They stand at the headstone for an hour, speaking no words you can hear, then walk home alone.`,
+  (nm, d) => `You find ${nm} sitting beside ${d}'s grave, crying quietly. Between breaths they whisper apologies to the headstone and stay there for nearly an hour.`,
+  (nm, d) => `${nm} places a small bundle of flowers on ${d}'s grave, rearranges it three times, then kneels with both hands pressed into the turned earth.`,
+  (nm, d) => `${nm} talks to ${d}'s grave for nearly an hour, recounting the day's small news. Once they laugh at a remembered answer; a moment later they are crying again.`,
 ];
 /* hailed at the graveside: no reason to lie, and it helps them not at all */
 const GRIEF_HAIL = [
@@ -2044,7 +2079,7 @@ const GRIEF_WHERE_LIE = [
 const GRIEF_DAWN_MOURNER = [
   (nm, d) => `${nm} has not opened up today, and has not answered the door either. Somebody left food on the step. It was still there at noon, and still there when you went past again.`,
   (nm, d) => `${nm} got halfway through the morning's ordinary business and stopped, in the middle of the lane, holding whatever they were carrying, until somebody took it off them.`,
-  (nm, d) => `They say ${nm} sat with ${d} until they were made to leave, and then stood in the lane outside a good while after that, in the cold, doing nothing at all.`,
+  (nm, d) => `${nm} sat beside ${d}'s body until the bearers asked them to leave. Afterward they remained in the lane, crying into both hands until someone led them home.`,
   (nm, d) => `${nm} has been perfectly all right all morning: brisk, useful, first to volunteer for the worst of it. Twice now somebody has found them somewhere quiet with their hands over their face.`,
 ];
 /* And the morning's account of who is not. Names anyone NOT tied to the dead,
@@ -2150,11 +2185,11 @@ const SECRET_POOL = {
       confess: `"Forty years burying this village, and it pays in thanks, and thanks don't feed a man. So I take back what the grieving throw in after them. Rings. Coin. They don't need it and I do, and the dead have never once complained. Hang me by the grave-robbers, then. At least I'll know the ground I'm put in."` },
   ],
   ansel: [
-    { loc: "Old Church", outP: 0.3, short: "he drinks alone in the crypt, because his faith has gone and his flock must not see it",
+    { loc: "Old Church", exposure: "indoor", outP: 0.3, short: "he drinks alone in the crypt, because his faith has gone and his flock must not see it",
       walk: (nm) => `Candlelight, low in the crypt, and ${nm} with a bottle that has no place on any altar. He is not praying. He is reading the burial ledger over and over, and drinking, and his lips are moving around no psalm you know.`,
       hail: (nm) => `${nm} draws himself up to his full height, and the smell reaches you before the blessing does. "Walking the bounds of the flock," he says, too carefully. "Go home."`,
       confess: `The height goes out of him all at once. "I drink. In the crypt, where God stopped looking first. My faith went before the killings started, and a shepherd who no longer believes in wolves must at least keep them from seeing it. That is my whole crime. I wish it were a better one."` },
-    { loc: "Old Church", outP: 0.3, short: "he alters the parish ledger by night to hide a child he fathered and never owned",
+    { loc: "Old Church", exposure: "indoor", outP: 0.3, short: "he alters the parish ledger by night to hide a child he fathered and never owned",
       walk: (nm) => `${nm} bent over the ledger by one candle, not reading it but changing it: scraping a name, writing another, hiding a birth that would end him. His own child, by a woman long gone, entered under another man's name in his own careful hand.`,
       hail: (nm) => `${nm} closes the ledger over his hand too quickly. "Parish business. Names and dates. Nothing that concerns the living." The candle shakes, and priests' hands do not usually shake over names and dates.`,
       confess: `"There is a child in this valley who calls another man father. The fault is mine, from before I took the collar, and I have spent twenty years and a great deal of ink making certain the ledger never says so. That is where I go at night. Not to God. To the book, to keep on lying in it. Now there are two of us who know."` },
@@ -2172,7 +2207,7 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} slips from a house where someone has been dying loud and long, tucking a small stoppered bottle back into her shawl. Behind her, the crying has stopped. She has done this before. She will do it again. It may be the kindest crime there is.`,
       hail: (nm) => `${nm} meets your eyes without a flicker. "Someone was suffering. Now they are not. Ask me no more than that, and you can tell yourself you never knew." She walks past you, and does not hurry.`,
       confess: `"When the dying beg, and the physician has nothing left but to watch, I bring them the last mercy in a bottle. Yes. I help them go. The church calls it murder, and the sufferers called it grace, and I stopped letting the church do my deciding a long time ago. Do what you must with it."` },
-    { loc: "Old Mill", outP: 0.3, short: "she keeps a hidden child in the old mill, one the village must never know she has",
+    { loc: "Old Mill", exposure: "indoor", outP: 0.3, short: "she keeps a hidden child in the old mill, one the village must never know she has",
       walk: (nm) => `${nm} climbs the mill's outside stair to a loft the miller never uses, and through the shutter-crack you watch her lift a small child, and feed it, and sing to it, low. No one in the village knows the child exists. She means to keep it that way for as long as she draws breath.`,
       hail: (nm) => `${nm} steps between you and the stair. "There is nothing out here but old grain dust and my business, and both of them bite. Go home before you find out which." Behind her, faintly, a child fusses, and she does not turn her head.`,
       confess: `"My sister died bearing it, and the father wanted it drowned for the shame, so I took it and hid it, and I have raised it above the mill for three years on lies and moonlight. If the village learns of it, they will hand it back to the same men who wanted it dead. So I lie about my nights. Endlessly, and without one ounce of shame."` },
@@ -2186,7 +2221,7 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} meets three men at the tree line and hands over a wrapped bundle that rings faintly of good steel. Blades, made after hours, off the ledger. Whatever these men intend for the manor, ${nm} is arming it, one honest hammer-stroke at a time.`,
       hail: (nm) => `${nm} steps square into your path, all shoulders. "You're a long way out for a man with no business. Whatever you think you saw, you didn't, and we'll both live longer for it." The others are already gone into the dark.`,
       confess: `"There are men in this valley done with kneeling, and they need steel, and I'm the one who makes it. Aye. I forge for the rising. My boys will not grow up bowing to the man who's working their grandfather into an early grave. If that's treason, the manor's welcome to my hands. They'll have to catch them first."` },
-    { loc: "Old Mill", outP: 0.3, short: "he meets a man he loves in the shell of the old mill, a thing the forge and the village would break him for",
+    { loc: "Old Mill", exposure: "indoor", outP: 0.3, short: "he meets a man he loves in the shell of the old mill, a thing the forge and the village would break him for",
       walk: (nm) => `${nm}, who is all iron and few words by daylight, stands close in the mill's dark with another man, foreheads nearly touching, talking too low to hear over the dead wheel's drip. When they part, the smith holds on a moment longer than any handshake, and watches the man go the way you watch a thing you cannot keep.`,
       hail: (nm) => `${nm}'s whole body goes to iron. "Say nothing." Not a threat, for once. Something closer to a plea, from a man who has never asked anyone for anything. "Please. I've two boys. Say nothing."`,
       confess: `"There's a man. That's all you get of him, and if you're any kind of decent it's all you'll ever say. I've two sons and a forge and a village that would put me out of all three for this, so I take my one hour in the old mill and ask nothing else of the world. You're the second soul alive who knows. Be a better one than most have been."` },
@@ -2206,7 +2241,7 @@ const SECRET_POOL = {
       confess: `"I was sixteen, and it was given away before I'd properly held it, and it grew up in the city calling another woman mother. I found her, years on. She doesn't know me. But every coin this bar can spare goes to her, in the dark, through the coach, and it's the only good thing I've ever done in secret. Laugh at that, and I'll bar you for life."` },
   ],
   falk: [
-    { loc: "Old Mill", outP: 0.3, short: "laudanum for the pain, and he walks the dead mill floor until his hands stop shaking",
+    { loc: "Old Mill", exposure: "indoor", outP: 0.3, short: "laudanum for the pain, and he walks the dead mill floor until his hands stop shaking",
       walk: (nm) => `${nm}, alone on the mill floor, taking something from a small brown bottle with the practiced speed of shame. Then he walks it. Around, and around the idle stones, cane ticking, until his hands are still enough to belong to a physician again.`,
       hail: (nm) => `${nm} slides something into his coat before turning. "Insomnia. Professionally speaking." His pupils are wrong, and his hands, for once, are perfectly steady.`,
       confess: `He sets the little brown bottle on the table between you, defiantly. "Laudanum. For a spine that is forty years older than the rest of me. I dose after dark and walk it off where no one goes anymore, because a physician whose hands shake is a physician no one sends for. You'd have found the bottle eventually. You have that kind of face."` },
@@ -2228,7 +2263,7 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} seals a thick packet of close-written pages, addresses it in a hand not quite her own, and leaves it for the night coach. Whatever she writes, she signs a man's name to it, because a woman's would never see print, and she has decided the world will read her either way.`,
       hail: (nm) => `${nm} turns the packet face-down against her skirt. "Letters. To no one you know, in a city you will never see." She watches you the way she watches everything, deciding how much of it you understood.`,
       confess: `"I write. Stories, and worse than stories: the kind that ask why the men who own us get to own us. No press in the country prints a woman, so I sign a man's name and send them off in the dark, and half this county has read me without one soul knowing it was the seamstress. That is my secret. It's the only thing I brought out of my old life worth the keeping."` },
-    { loc: "Old Church", outP: 0.3, short: "she teaches the village girls their letters by night, against every father's wishes",
+    { loc: "Old Church", exposure: "indoor", outP: 0.3, short: "she teaches the village girls their letters by night, against every father's wishes",
       walk: (nm) => `${nm} lights a single candle in a back room, and a half-dozen girls file in out of the dark, and for an hour she teaches them their letters, heads bent over a slate, while their fathers sleep believing their daughters safe in bed and safely ignorant.`,
       hail: (nm) => `${nm} pulls the door to behind her, quick. "A private matter. Women's business, the kind men make dangerous by forbidding it." She does not step aside, and there is chalk on her fingers.`,
       confess: `"I teach the girls to read. At night, because their fathers would beat it out of them and me out of the village if they knew. Where I am from, keeping a woman ignorant was the first fence they built around her, and I have spent my whole life climbing fences. So yes. That is my crime. Spelling. Turn me in for spelling."` },
@@ -2280,16 +2315,16 @@ const FLED_OPENERS = [
 const DEMEANOR = {
   normal: [
     "There are new locks on their door. Three, and the marks where a fourth is being fitted.",
-    "They have not slept, the eyes say a week of it, but they answer steadily, like someone who has decided fear is a chore.",
+    "Their eyes are red and the skin beneath them bruised from missed sleep. They answer every question without raising their voice.",
     "Halfway through, their voice cracks, and they simply carry on through the crack. Everyone's voice does that now.",
     "They keep the table between you the whole time. Not guilt. It is just what people do now, with everyone.",
     "They smell of tallow and church incense. Whatever they burn at night, they are burning a great deal of it.",
-    "Their hands will not stay still, twisting a hem or a strap the whole while, the way everyone's hands have started doing lately, whether or not there is anything to confess.",
+    "Their hands twist a hem or strap throughout the conversation. Half the village has developed the same frightened habit.",
     "They keep one eye on the door the entire time, the way you would watch a window you were not sure you had latched, and answer you steadily anyway.",
-    "Tired past arguing with it, they sit with the flat, honest posture of someone who has run out of energy to perform anything, guilt or innocence alike.",
+    "They sit slumped and answer without gestures or protest. Exhaustion can look like calm, guilt or innocence; this gives you none of the three.",
     "The words come too fast, tripping over each other, the particular haste of someone who has learned that hesitation gets you hanged these days.",
-    "Calm, almost relieved, the way a person is relieved to finally be asked the question they have been rehearsing an answer to for a week.",
-    "They answer with their hands busy, needing something ordinary to hold onto.",
+    "They exhale when you ask the first question and answer immediately, with the cadence of words rehearsed many times.",
+    "They keep folding and unfolding the same cloth while they answer, eyes fixed on the work rather than on you.",
     "They lower their voice at every third word, as if the walls had grown ears. Perhaps they have.",
     "There is a tremor in them, but it is the honest kind, the kind fear puts in everyone now.",
   ],
@@ -2305,7 +2340,7 @@ const DEMEANOR = {
     "Their hands are cold. You notice it when they take yours in greeting.",
     "They flinch, very slightly, when the church bell sounds the hour.",
     "There is a pallor on them that was not there a week ago.",
-    "They keep touching their own wrist, as though checking something is still there. Or no longer is.",
+    "They press two fingers to their own wrist again and again, silently counting the pulse between answers.",
     "They repeat your last few words back before answering, like a translation is happening somewhere.",
   ],
 };
@@ -2855,8 +2890,14 @@ function sampleNight(s, m, n) {
   if (n === 1) evn = null;
   else if (evPool.length && chance(wx === "storm" ? 0.07 : 0.15)) evn = pick(evPool);
   const eventLoc = evn ? evn.loc : null;
-  const huntsCrowd = active && !!evn && m.reach !== "home" && chance(0.5);
+  /* A crowd is reachable only if the monster can reach the room it occupies.
+     Tavern and church gatherings are genuinely indoors; outdoor-only kinds
+     may hunt the yard or churchyard, but cannot turn an indoor event into an
+     indoor kill merely because its coarse LOCS key matches their ground. */
+  const huntsCrowd = active && !!evn && canReachExposure(m, evn.exposure || "outdoor") && chance(0.5);
   const outMap = {};
+  const exposureMap = {};
+  const setOut = (id, loc, exposure = "outdoor") => { outMap[id] = loc; exposureMap[id] = loc === "home" ? "indoor" : exposure; };
   const secretOut = {};
   /* who is out tonight because somebody they loved is in the ground. Keyed
      to the dead, so the walk and the morning tell the same story. */
@@ -2867,38 +2908,42 @@ function sampleNight(s, m, n) {
        roster, cannot be met in the lanes, and cannot be taken */
     if (!npc.alive || npc.fled) continue;
     if (npc.id === s.monster.vid) {
-      if (huntsCrowd) outMap[npc.id] = eventLoc;
+      if (huntsCrowd) setOut(npc.id, eventLoc, evn.exposure || "outdoor");
       else if (active) {
         /* A hunted thing shifts its ground: it leans away from wherever you keep searching. */
         const [a, b] = m.hunts;
-        outMap[npc.id] = (sc[a] || 0) !== (sc[b] || 0) && chance(0.7) ? ((sc[a] || 0) < (sc[b] || 0) ? a : b) : pick(m.hunts);
-      } else if (evn && chance(0.55)) outMap[npc.id] = eventLoc;
+        setOut(npc.id, (sc[a] || 0) !== (sc[b] || 0) && chance(0.7) ? ((sc[a] || 0) < (sc[b] || 0) ? a : b) : pick(m.hunts));
+      } else if (evn && chance(0.55)) setOut(npc.id, eventLoc, evn.exposure || "outdoor");
       else {
         /* On a night it is not hunting, the thing goes where the face it is
            wearing would go. If that face has just lost someone, it stands at
            the grave like anybody else would, and it is very good at it. This
            is the whole reason a grief errand can never clear a suspect. */
         const mg = grievingFor(s, npc.id);
-        if (mg && mg.kind === "close" && chance(0.4)) { griefOut[npc.id] = mg.dead.id; outMap[npc.id] = "Graveyard"; }
-        else outMap[npc.id] = "home";
+        if (mg && mg.kind === "close" && chance(0.4)) { griefOut[npc.id] = mg.dead.id; setOut(npc.id, "Graveyard"); }
+        else setOut(npc.id, "home", "indoor");
       }
     } else if (!npc.turned && (() => { const g = grievingFor(s, npc.id); if (g && g.kind === "close" && chance(0.4)) { griefOut[npc.id] = g.dead.id; return true; } return false; })()) {
       /* grief outranks the gathering and the ordinary errand both: nobody
          goes dancing three nights after burying the person they sat up with */
-      outMap[npc.id] = "Graveyard";
+      setOut(npc.id, "Graveyard");
     } else if (evn) {
-      if (npc.turned) outMap[npc.id] = chance(0.5) ? eventLoc : "home";
-      else if (chance(0.75)) outMap[npc.id] = eventLoc;
-      else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) { secretOut[npc.id] = true; outMap[npc.id] = secretOf(s, npc.id).loc; }
-      else outMap[npc.id] = "home";
+      if (npc.turned) {
+        if (chance(0.5)) setOut(npc.id, eventLoc, evn.exposure || "outdoor");
+        else setOut(npc.id, "home", "indoor");
+      } else if (chance(0.75)) setOut(npc.id, eventLoc, evn.exposure || "outdoor");
+      else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) { const sec = secretOf(s, npc.id); secretOut[npc.id] = true; setOut(npc.id, sec.loc, sec.exposure || "outdoor"); }
+      else setOut(npc.id, "home", "indoor");
     } else if (npc.turned) {
       /* the changed do not keep to their beds: they serve it, and wander to
          the eerie ground it keeps, where the player can catch them at it */
-      outMap[npc.id] = chance(0.55) ? pick([...m.hunts, "Graveyard", "Dark Forest", "Old Mill"].filter((l) => l !== HOME_LOC[npc.id])) : "home";
+      if (chance(0.55)) setOut(npc.id, pick([...m.hunts, "Graveyard", "Dark Forest", "Old Mill"].filter((l) => l !== HOME_LOC[npc.id])));
+      else setOut(npc.id, "home", "indoor");
     } else if (secretOf(s, npc.id) && chance(secretOf(s, npc.id).outP)) {
-      secretOut[npc.id] = true; outMap[npc.id] = secretOf(s, npc.id).loc;
+      const sec = secretOf(s, npc.id); secretOut[npc.id] = true; setOut(npc.id, sec.loc, sec.exposure || "outdoor");
     } else {
-      outMap[npc.id] = chance(0.25) ? pick(LOCS.filter((l) => l !== HOME_LOC[npc.id])) : "home";
+      if (chance(0.25)) setOut(npc.id, pick(LOCS.filter((l) => l !== HOME_LOC[npc.id])));
+      else setOut(npc.id, "home", "indoor");
     }
   }
   /* Night one always draws blood: if the horror can only take those caught
@@ -2909,7 +2954,7 @@ function sampleNight(s, m, n) {
     const someoneOut = cand.some((npc) => outMap[npc.id] && outMap[npc.id] !== "home");
     if (cand.length && !someoneOut) {
       const forced = pick(cand);
-      outMap[forced.id] = pick(m.hunts);
+      setOut(forced.id, pick(m.hunts));
     }
   }
   /* a villager's whispered warning does not fall on dead ground: for a few
@@ -2921,10 +2966,10 @@ function sampleNight(s, m, n) {
   if (s.warnedLoc && n <= s.warnedLoc.until && !huntsCrowd) {
     const L = s.warnedLoc.loc;
     if (active && m.reach !== "home" && m.hunts.includes(L) && chance(0.5)) {
-      outMap[s.monster.vid] = L;
+      setOut(s.monster.vid, L);
     } else {
       const keeper = s.npcs.find((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && x.id !== s.warnedLoc.by && secretOf(s, x.id) && !x.secretKnown && (!outMap[x.id] || outMap[x.id] === "home"));
-      if (keeper) { outMap[keeper.id] = L; secretOut[keeper.id] = true; }
+      if (keeper) { setOut(keeper.id, L); secretOut[keeper.id] = true; }
     }
   }
   const huntLoc = active ? outMap[s.monster.vid] : null;
@@ -2934,7 +2979,7 @@ function sampleNight(s, m, n) {
      secrets should be a payoff, not a nightly harvest. */
   const secretCatch = {};
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.35);
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch, griefOut, huntLoc, affliction };
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, affliction };
 }
 
 function resolveNight(prev, planIn, preEvents) {
@@ -3035,6 +3080,12 @@ function resolveNight(prev, planIn, preEvents) {
   const exposed = out || !!watching;
   const f = plan.facts || sampleNight(s, m, n);
   const { active, wx, evn, eventLoc, huntsCrowd, outMap, secretOut, secretCatch = {}, griefOut = {}, huntLoc, affliction } = f;
+  /* Older saved walks predate explicit exposure. Reconstruct conservatively:
+     homes are indoors, known event attendees inherit the authored event,
+     and every other night errand remains outdoor as it was presented. */
+  const exposureMap = f.exposureMap || Object.fromEntries(Object.entries(outMap).map(([id, loc]) => [id,
+    loc === "home" ? "indoor" : (evn && loc === eventLoc ? (evn.exposure || "outdoor") : "outdoor")
+  ]));
   if (active) s.lastActive = n;
   const dawn = [...(preEvents || [])];
   const beats = [...preBeats];
@@ -3059,7 +3110,8 @@ function resolveNight(prev, planIn, preEvents) {
   let doomedId = null;
   if (active && !s.over) {
     const dc = s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid);
-    let dp = m.reach === "home" ? dc : dc.filter((x) => outMap[x.id] && outMap[x.id] !== "home");
+    let dp = dc.filter((x) => outMap[x.id] && outMap[x.id] !== "home" && canReachExposure(m, exposureMap[x.id] || "outdoor"));
+    if (m.reach === "home") dp = dc;
     if (huntsCrowd) { const cp = dp.filter((x) => outMap[x.id] === eventLoc); if (cp.length) dp = cp; }
     else if (m.reach !== "home" && huntLoc) { const hp = dp.filter((x) => outMap[x.id] === huntLoc); if (hp.length && chance(0.65)) dp = hp; }
     if (dp.length) doomedId = pick(dp).id;
@@ -3081,7 +3133,7 @@ function resolveNight(prev, planIn, preEvents) {
     evOdd = attendees.filter((x) => x.turned && chance(0.6)).map((x) => x.id);
     if (attendees.length >= 2 && chance(0.2)) { const a = pick(attendees); const b = pick(attendees.filter((x) => x.id !== a.id)); evFight = [a.id, b.id]; s.grudges[a.id] = { other: b.id, until: n + 3 }; s.grudges[b.id] = { other: a.id, until: n + 3 }; }
     if (attendees.length >= 2 && chance(0.25)) { const cand2 = attendees.filter((x) => !evFight || !evFight.includes(x.id)); if (cand2.length >= 2) { const a = pick(cand2); const b = pick(cand2.filter((x) => x.id !== a.id)); evPair = [a.id, b.id]; } }
-    if (attendees.length && chance(0.15)) { const w = pick(attendees.filter((x) => x.id !== s.monster.vid && x.id !== mods.follow && x.id !== mods.hailed)); if (w) { evWander = w.id; outMap[w.id] = "Dark Forest"; } }
+    if (attendees.length && chance(0.15)) { const w = pick(attendees.filter((x) => x.id !== s.monster.vid && x.id !== mods.follow && x.id !== mods.hailed)); if (w) { evWander = w.id; outMap[w.id] = "Dark Forest"; exposureMap[w.id] = "outdoor"; } }
     if (evn.id === "sweep") { const unfound = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg)); if (unfound.length && chance(0.35)) { evSweepFind = pick(unfound); evSweepSense = senseFor(evSweepFind); s.foundSigns.push(evSweepFind); } }
   }
 
@@ -3166,7 +3218,7 @@ function resolveNight(prev, planIn, preEvents) {
     /* Deaths and flight can happen anywhere in the night resolution. Apply
        the favour invariant again after all of those rare paths settle. */
     cancelUnavailableFavour(s);
-    s.nightLogs.push({ night: n, active, huntLoc, outMap, secretOut, griefOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, odd: evOdd, fight: evFight, pair: evPair } : null });
+    s.nightLogs.push({ night: n, active, huntLoc, outMap, exposureMap, secretOut, griefOut, you: out ? { kind: "out", loc: plan.loc } : watching ? { kind: "watch", id: watching } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, exposure: evn.exposure || "outdoor", odd: evOdd, fight: evFight, pair: evPair } : null });
     /* Cap the morning at five cards, keeping the most important: rank by pri
        (deaths, a villager marked, the note first), stable within a tier so the
        night still reads in order, and drop trailing atmosphere. */
@@ -3200,6 +3252,7 @@ function resolveNight(prev, planIn, preEvents) {
   const applyFollowConsequence = () => {
     const fw = npcById(s, mods.follow);
     const fDest = outMap[fw.id] || plan.loc;
+    const fPlace = placeNoun(fDest, exposureMap[fw.id] || "outdoor");
     s.playerSaw.push({ night: n, id: fw.id, loc: fDest });
     if (fw.id === s.monster.vid && active) {
       const act = mods.followAct || "flee";
@@ -3225,16 +3278,16 @@ function resolveNight(prev, planIn, preEvents) {
               beats.push(`But the true name is already out and in the air between you, and a named thing flinches. The half heartbeat comes back to you. It is enough.`);
             }
             beats.push(METHOD_KILL_LINES[guess.method]);
-            beats.push(`What dies at the ${fDest} wore ${fw.name}'s face for years. No torches. No square. No rope. Just you, and the dark, and the end of it, one full night before it would have fed again.`);
+            beats.push(`What dies at the ${fPlace} wore ${fw.name}'s face for years. No torches. No square. No rope. Just you, and the dark, and the end of it, one full night before it would have fed again.`);
             s.wonInDark = true;
-            s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fDest}: a ${guess.name}. Its own rite ended it in the dark, before it could take one more soul.` };
+            s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fPlace}: a ${guess.name}. Its own rite ended it in the dark, before it could take one more soul.` };
             return true;
           }
           /* the wrong name, carried into the dark */
           if (chance(0.7)) {
             beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
-            s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
-            s.over = { win: false, reason: "slain", text: `You confronted it at the ${fDest} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
+            s.deathBeats = playerDeathBeats(m, fw.name, fPlace, { encounterBegun: true, revealed: true, kind: "wrongRite" });
+            s.over = { win: false, reason: "slain", text: `You confronted it at the ${fPlace} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
             return true;
           }
           if (!s.struck.includes(guess.id)) s.struck = [...s.struck, guess.id];
@@ -3255,18 +3308,18 @@ function resolveNight(prev, planIn, preEvents) {
         /* -- Pass G2: the climactic offer, in place of death -- */
         if (monsterOfferReady(s, n)) {
           s.offerMade = true;
-          s.pendingOffer = { name: fw.name, where: fDest, overText: `You followed ${fw.name} out past the last house. Only one of you came back, and it was not you.` };
+          s.pendingOffer = { name: fw.name, where: fPlace, overText: `You followed ${fw.name} to the ${fPlace}. Only one of you came back, and it was not you.` };
           s.offerBeats = (OFFER_SCENES[m.id] || OFFER_SCENES.wraith)(fw.name);
           finish();
           s.phase = "offer";
           return "offer";
         }
         beats.push(act === "confront" ? `You step out of the shadow and say ${fw.name}'s name. It is very glad you did.` : "You move. And it is already facing you. It was always already facing you.");
-        s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
-        s.over = { win: false, reason: "slain", text: `You followed ${fw.name} out past the last house. Only one of you came back, and it was not you.` };
+        s.deathBeats = playerDeathBeats(m, fw.name, fPlace, mods.deathContext || { encounterBegun: true, revealed: true, kind: act });
+        s.over = { win: false, reason: "slain", text: `You followed ${fw.name} to the ${fPlace}. Only one of you came back, and it was not you.` };
         return true;
       }
-      s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fDest} and watched ${fw.name} stop being ${fw.name}. It is ${fw.name} the thing wears. You are certain of the face now, though not yet of what wears it.`);
+      s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fPlace} and watched ${fw.name} stop being ${fw.name}. It is ${fw.name} the thing wears. You are certain of the face now, though not yet of what wears it.`);
       s.faceKnown = fw.id;
       if (act === "flee" || act === "watch") shiftMonsterBond(s, 1);
       else if (act === "confront") shiftMonsterBond(s, -1);
@@ -3315,7 +3368,7 @@ function resolveNight(prev, planIn, preEvents) {
     } else if (fw.turned) {
       s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, known: true } : x));
       const helped = mods.followAct === "help";
-      s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fDest} and watched them stand facing away from the moon, hour on hour. ${fw.name} is changed.`);
+      s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fPlace} and watched them stand facing away from the moon, hour on hour. ${fw.name} is changed.`);
       beats.push(helped
         ? `You step out and try to reach them: a hand at the shoulder, their name said twice, softly. ${fw.name} turns toward you with a face that almost remembers being glad to see you, and then does not. Whatever is left to reach is not close enough to the surface tonight. You let go before it decides to reach back.`
         : mods.followAct === "on"
@@ -3338,8 +3391,8 @@ function resolveNight(prev, planIn, preEvents) {
       s.clues.push(`Night ${n}: ${fw.name}'s night errand, witnessed: ${sec.short}. Human, and nothing worse. Their lies about the nights are explained.`);
       dawn.push(ev(`You know ${fw.name}'s secret now: ${sec.short}. Whatever they claim about their nights, you know the human truth of it.`, fw.id));
     } else {
-      beats.push(`You leave ${fw.name} to their blameless errand and take yourself home, feeling a fool, and glad of the feeling.`);
-      dawn.push(ev(pickFreshIdx("dawnPlainFollow", DAWN_PLAIN_FOLLOW)(fw.name, fDest), fw.id));
+      beats.push(`You leave ${fw.name} to their private errand and take yourself home, feeling a fool, and glad of the feeling.`);
+      dawn.push(ev(pickFreshIdx("dawnPlainFollow", DAWN_PLAIN_FOLLOW)(fw.name, fPlace), fw.id));
     }
     return false;
   };
@@ -3426,7 +3479,7 @@ function resolveNight(prev, planIn, preEvents) {
     } else if (mods.approach === "back") {
       beats.push(`Short of the ${plan.loc}, your nerve makes the decision for you. You turn for home, skin prickling, and do not run only because running invites the chase.`);
       dawn.push(ev(`You turned back before the ${plan.loc} last night. Whatever was there kept what it knows, and so did you. But you are alive to be careful again.`));
-    } else if (active && plan.loc === huntLoc && mods.follow !== s.monster.vid && !mods.witnessKill) {
+    } else if (active && plan.loc === huntLoc && (exposureMap[s.monster.vid] || "outdoor") === "outdoor" && mods.follow !== s.monster.vid && !mods.witnessKill) {
       const press = mods.approach === "press";
       /* a hunt playing out at the edge of an event's own firelight/crowd gives
          cover: lower odds of being caught, higher odds of a glimpse in the
@@ -3438,13 +3491,13 @@ function resolveNight(prev, planIn, preEvents) {
       if (caught) {
         if (monsterOfferReady(s, n)) {
           s.offerMade = true;
-          s.pendingOffer = { name: monsterNpc.name, where: plan.loc, overText: `Something found you at the ${plan.loc}. Your lantern was discovered at dawn, still burning beside what remained.` };
+          s.pendingOffer = { name: monsterNpc.name, where: placeNoun(plan.loc, "outdoor"), overText: `Something found you at the ${placeNoun(plan.loc, "outdoor")}. Your lantern was discovered at dawn, still burning beside what remained.` };
           s.offerBeats = (OFFER_SCENES[m.id] || OFFER_SCENES.wraith)(monsterNpc.name);
           finish();
           s.phase = "offer";
           return s;
         }
-        s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(monsterNpc.name, plan.loc);
+        s.deathBeats = playerDeathBeats(m, monsterNpc.name, placeNoun(plan.loc, "outdoor"), mods.deathContext || { encounterBegun: true, revealed: false, kind: mods.hid ? "hide" : "approach", action: mods.approach });
         s.over = { win: false, reason: "slain", text: `Something found you at the ${plan.loc}. Your lantern was discovered at dawn, still burning beside what remained.` };
         return finish();
       }
@@ -3493,7 +3546,7 @@ function resolveNight(prev, planIn, preEvents) {
         dawn.push(ev(`Someone hooded passed you in the night, making for the ${huntLoc}. Whoever claims they slept soundly may be worth pressing.`));
       }
     }
-    /* went home after following someone on a blameless errand: the night ends
+    /* went home after following someone on an ordinary-looking errand: the night ends
        here, safe, without rolling the outdoor search/danger the rest of the walk uses */
     const wentHome = mods.follow && mods.followAct === "home";
     let wraithHomeP = 0.2;
@@ -3508,7 +3561,7 @@ function resolveNight(prev, planIn, preEvents) {
         s.phase = "offer";
         return s;
       }
-      s.deathBeats = DEATH_SCENES.wraith(monsterNpc.name, "road home");
+      s.deathBeats = playerDeathBeats(m, monsterNpc.name, "road home", { encounterBegun: true, revealed: false, kind: "approach", action: "shadow" });
       s.over = { win: false, reason: "slain", text: "A cold you had never known closed around you on the road home. The Wraith takes those who wander." };
       return finish();
     }
@@ -3642,7 +3695,7 @@ function resolveNight(prev, planIn, preEvents) {
                 s.phase = "offer";
                 return s;
               }
-              s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(target.name, "lanes");
+              s.deathBeats = playerDeathBeats(m, target.name, "lanes", { encounterBegun: true, revealed: false, kind: "watch" });
               s.over = { win: false, reason: "slain", text: `You followed ${target.name} out past the last house. Only one of you came back, and it was not you.` };
               return finish();
             }
@@ -3796,13 +3849,15 @@ function resolveNight(prev, planIn, preEvents) {
       /* the succubus never kills at home: it calls its victims OUT, to its
          own ground, and the bodies are found there come morning */
       if (m.id === "succubus" && victimKind === "kill") victimWhere = huntLoc || pick(m.hunts);
+      if (m.id === "succubus" && victimKind === "kill") exposureMap[victim.id] = "outdoor";
+      const victimPlace = placeNoun(victimWhere, exposureMap[victim.id] || (victimWhere === "home" ? "indoor" : "outdoor"));
       /* the necromancer, past its first seeding kill, sends the buried */
       const necroDead = m.id === "necromancer" && n > 1
         ? [...s.deaths].reverse().find((d) => d.kind === "slain" || d.kind === "executed" || d.kind === "mobbed")
         : null;
       if (victimKind === "kill") {
         if (n === 1) {
-          beats.push(...NIGHT_ONE_SCENE(victim, victimWhere));
+          beats.push(...NIGHT_ONE_SCENE(victim, victimPlace));
         } else {
           if (mods.witnessKill && mods.witnessKill.id === victim.id) {
             /* lived on screen, in full, twenty feet away. The recap does not
@@ -3810,15 +3865,15 @@ function resolveNight(prev, planIn, preEvents) {
           } else beats.push(m.id === "necromancer" && necroDead
             ? pickFreshIdx("necroKill", NECRO_KILL)(victim.name, necroDead.name)
             : m.id === "succubus"
-            ? pickFreshIdx("succKill", SUCCUBUS_KILL)(victim.name, victimWhere)
+            ? pickFreshIdx("succKill", SUCCUBUS_KILL)(victim.name, victimPlace)
             : huntsCrowd && victimWhere === eventLoc
-            ? pick(EVENT_KILL)(evn.name, victim.name)
+            ? pick(EVENT_KILL)(evn.name, victim.name, victimPlace)
             : wx === "storm" && chance(0.5)
             ? "Under the thunder, something happens that no one hears. The storm keeps its counsel till morning."
-            : pickFreshIdx("screamLines", SCREAM_LINES)(victimWhere));
+            : pickFreshIdx("screamLines", SCREAM_LINES)(victimPlace));
         }
         s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, alive: false } : x));
-        s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, examined: false, found: [] });
+        s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, whereDetail: victimPlace, exposure: exposureMap[victim.id], examined: false, found: [] });
         /* -- if the dead is someone the player met, followed or watched
            TONIGHT, the recap must say so plainly, not let the connection
            vanish into a generic scream. -- */
@@ -3834,11 +3889,11 @@ function resolveNight(prev, planIn, preEvents) {
             : `You left ${victim.name}'s door barred and dark. Sometime after, that bolt was drawn back from the inside, and ${victim.name} walked out into the night of their own accord, toward whatever asked them to.`);
           s.clues.push(victimWhere === "home"
             ? `Night ${n}: you watched ${victim.name}'s door most of the night. It never opened, and they were dead behind it by dawn. Whatever took them passes barred doors, or was already inside.`
-            : `Night ${n}: ${victim.name}'s door stayed barred the whole time you watched it, and they were found at the ${victimWhere}. They rose and walked out AFTER you left, of their own accord. Nothing forced that door. Something called them through it.`);
+            : `Night ${n}: ${victim.name}'s door stayed barred the whole time you watched it, and they were found at the ${victimPlace}. They rose and walked out AFTER you left, of their own accord. Nothing forced that door. Something called them through it.`);
           dawn.push(ev(`You watched ${victim.name}'s door that same night, and the night waited you out. What you know that the village does not: the door was never forced.`, victim.id, 2));
         } else if (crossedPaths && n > 1) {
           beats.push(`${victim.name}. You were with ${victim.name} in the dark not an hour ago, and left them living. Whatever found them found them almost the moment your back was turned.`);
-          s.clues.push(`Night ${n}: ${victim.name} was alive when you left them at ${victimWhere === "home" ? "their own door" : "the " + victimWhere}. It was close behind you both. It chose them.`);
+          s.clues.push(`Night ${n}: ${victim.name} was alive when you left them at ${victimWhere === "home" ? "their own door" : "the " + victimPlace}. It was close behind you both. It chose them.`);
           /* -- and whether the VILLAGE knows it, which is a different fact.
              It knows only what somebody saw: a neighbour who marked your
              lantern that same night can put you and the dead on the same
@@ -3865,7 +3920,7 @@ function resolveNight(prev, planIn, preEvents) {
           /* who and where share one card: the first morning should not deal
              a whole hand over a single body. The flourish is occasional and
              pure atmosphere, so the five-card cap sheds it first. */
-          const nd = NIGHT_ONE_DAWN(victim, victimWhere); // [bell (who), place (where), witness]
+          const nd = NIGHT_ONE_DAWN(victim, victimPlace); // [bell (who), place (where), witness]
           dawn.push(ev(`${nd[0]} ${nd[1]}`, victim.id, 2));
           if (chance(0.55)) {
             const useNd = chance(0.5);
@@ -3873,17 +3928,17 @@ function resolveNight(prev, planIn, preEvents) {
             dawn.push(ev(useNd ? nd[2] : pickFreshIdx("brutalDetails", BRUTAL_DETAILS)(victim.name), victim.id, 0));
           }
         } else {
-          dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimWhere), victim.id, 2));
+          dawn.push(ev(pickFreshIdx("bodyFound", BODY_FOUND)(victim, victimPlace), victim.id, 2));
           /* one flourish only, in priority order: the sent-dead or the call
              (these ARE the clue for their kinds), a message it left, a
              first-blood signature, otherwise a visceral detail. */
           if (m.id === "necromancer" && necroDead) {
             dawn.push(ev(pickFreshIdx("necroDawn", NECRO_DAWN)(victim.name, necroDead.name), victim.id));
           } else if (m.id === "succubus") {
-            dawn.push(ev(pickFreshIdx("succDawn", SUCCUBUS_DAWN)(victim.name, victimWhere), victim.id));
+            dawn.push(ev(pickFreshIdx("succDawn", SUCCUBUS_DAWN)(victim.name, victimPlace), victim.id));
             if (!s.succClueGiven) {
               s.succClueGiven = true;
-              s.clues.push(`Night ${n}: ${victim.name} drew their own bolt and walked out to the ${victimWhere} alone, barefoot, in no hurry. Nothing forced that door. Whatever kills here CALLS its victims to it.`);
+              s.clues.push(`Night ${n}: ${victim.name} drew their own bolt and walked out to the ${victimPlace} alone, barefoot, in no hurry. Nothing forced that door. Whatever kills here CALLS its victims to it.`);
             }
           } else if (!s.monsterProtects && (s.monsterSawYou || s.wrongExecutions > 0) && chance(0.3)) {
             const km = pickFreshIdx("killerMessages", KILLER_MESSAGES);
@@ -4962,6 +5017,7 @@ function answerFor(s, id, night, q, targetId) {
   }
   const log = s.nightLogs.find((x) => x.night === night);
   const actual = log ? log.outMap[id] : undefined;
+  const actualPlace = actual && actual !== "home" ? placeNoun(actual, (log && log.exposureMap && log.exposureMap[id]) || "outdoor") : actual;
   const isMonster = id === s.monster.vid;
   const tn = turnNightOf(s, id);
   const lying = (isMonster && log && log.active) || (npc.turned && tn !== null && night >= tn);
@@ -5022,6 +5078,7 @@ function answerFor(s, id, night, q, targetId) {
        them at a location), there is no plausible reason left to deny the
        plain fact of the place itself -- only to be evasive about why. */
     const playerWitnessed = s.playerSaw.find((f) => f.night === night && f.id === id && f.loc && f.loc !== "home");
+    const witnessedPlace = playerWitnessed ? placeNoun(playerWitnessed.loc, (log && log.exposureMap && log.exposureMap[id]) || "outdoor") : null;
     let witnessedHandled = false;
     if (isMonster) {
       const mc = monsterClaim();
@@ -5029,7 +5086,7 @@ function answerFor(s, id, night, q, targetId) {
       if (playerWitnessed) {
         claim = playerWitnessed.loc;
         s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
-        quote = `"The ${playerWitnessed.loc}. You saw me yourself. Sleep and I have parted ways, that is all."`;
+        quote = `"The ${witnessedPlace}. You saw me yourself. Sleep and I have parted ways, that is all."`;
         witnessedHandled = true;
       } else if (log.griefOut && log.griefOut[id]) {
         /* it spent a quiet night at the grave of somebody it buried, wearing
@@ -5051,12 +5108,12 @@ function answerFor(s, id, night, q, targetId) {
       } else if (mc.loc === "home" && actual === "home") quote = pickFreshIdx(`whereHome:${id}`, per.whereHome)();
       else if (evn && mc.loc === evn.loc && actual === evn.loc) quote = `"At the ${evn.name}, with half the village. Ask anyone there."`;
       else if (mc.loc === "home") quote = `"Home, with the door barred, like any sane soul."`;
-      else if (mc.admitOut) quote = `"I was out, yes. At the ${mc.loc}, walking. Sleep does not come anymore, and I have stopped pretending otherwise."`;
-      else quote = `"The ${mc.loc}, briefly. Saw nothing, heard nothing."`;
+      else if (mc.admitOut) quote = `"I was out, yes. At the ${placeNoun(mc.loc, "outdoor")}, walking. Sleep does not come anymore, and I have stopped pretending otherwise."`;
+      else quote = `"The ${placeNoun(mc.loc, "outdoor")}, briefly. Saw nothing, heard nothing."`;
     } else if (lying) {
       if (playerWitnessed) {
         claim = playerWitnessed.loc;
-        quote = `"The ${playerWitnessed.loc}. You saw me there yourself." The words come out flat, a fact recited rather than felt.`;
+        quote = `"The ${witnessedPlace}. You saw me there yourself." The words come out flat, a fact recited rather than felt.`;
         witnessedHandled = true;
       } else {
         claim = "home";
@@ -5067,7 +5124,7 @@ function answerFor(s, id, night, q, targetId) {
       const gname = gd ? gd.name : "the dead";
       if (playerWitnessed) {
         claim = playerWitnessed.loc;
-        quote = `"You know where. The ${playerWitnessed.loc}. You saw me there, and you know who is buried in it."`;
+        quote = `"You know where. The ${witnessedPlace}. You saw me there, and you know who is buried in it."`;
         witnessedHandled = true;
       } else if (chance(0.6)) {
         claim = "Graveyard";
@@ -5080,7 +5137,7 @@ function answerFor(s, id, night, q, targetId) {
       /* an innocent hiding a human secret lies too: badly, unless the lie is already dead on arrival */
       if (playerWitnessed) {
         claim = playerWitnessed.loc;
-        quote = `"You know where. The ${playerWitnessed.loc}. What I was doing there is mine."`;
+        quote = `"You know where. The ${witnessedPlace}. What I was doing there is mine."`;
         witnessedHandled = true;
       } else {
         claim = "home";
@@ -5093,7 +5150,7 @@ function answerFor(s, id, night, q, targetId) {
       }
     } else if (log && log.secretOut && log.secretOut[id] && npc.secretKnown) {
       claim = actual;
-      quote = `"You know where. The ${actual}. My business there is my own, and you of all people know what it is. Ask what you actually want to ask."`;
+      quote = `"You know where. The ${actualPlace}. My business there is my own, and you of all people know what it is. Ask what you actually want to ask."`;
     } else if (evn && actual === evn.loc) {
       claim = actual;
       quote = `"At the ${evn.name}, with half the village around me, thank God. Ask anyone who was there."`;
@@ -5104,7 +5161,7 @@ function answerFor(s, id, night, q, targetId) {
       else if (log && log.active && log.huntLoc && dispChance(0.35, npc.disp)) quote += HOME_LOC[id] === log.huntLoc ? ` "Though I heard something, late, moving along the wall of this very house. I did not open the shutters to look."` : ` "Though I heard something, late, out toward the ${log.huntLoc}. I did not open the shutters to look."`;
     } else {
       claim = actual;
-      quote = pickFreshIdx(`whereOut:${id}`, per.whereOut)(actual);
+      quote = pickFreshIdx(`whereOut:${id}`, per.whereOut)(actualPlace);
     }
     /* -- the night walk is remembered, both ways -- */
     if (!witnessedHandled) {
@@ -5832,6 +5889,10 @@ function actAccuse(prev, id, typeId) {
     s.fled = true;
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, fled: true } : x));
     cancelUnavailableFavour(s);
+    /* A "follow X tonight" favour has already reached its decisive answer
+       when X is unmasked and flees. Do not leave the old doorstep banner
+       asking for a report about someone who has just left the village. */
+    if (s.sideQuest && s.sideQuest.target === id) s.sideQuest = null;
     beats.push(`The rite is performed. The circle closes. Nothing happens.`);
     beats.push(`${npc.name} looks at ${METHOD_CARRY[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
     beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Name it wrong once more and it comes for you, not them.");
@@ -5901,7 +5962,7 @@ const C = {
 const DAY_STRIP_MASK = "linear-gradient(#000 0%, #000 34%, rgba(0,0,0,.86) 44%, rgba(0,0,0,.58) 54%, rgba(0,0,0,.28) 64%, rgba(0,0,0,.08) 70%, transparent 74%)";
 /* the night card holds its art longer before letting go, so the dark below
    reads as the same dark rather than as the end of a picture */
-const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 62%, rgba(0,0,0,0.5) 88%, transparent 100%)";
+const NIGHT_CARD_MASK = "linear-gradient(#000 0%, #000 48%, rgba(0,0,0,.92) 60%, rgba(0,0,0,.74) 72%, rgba(0,0,0,.5) 83%, rgba(0,0,0,.24) 93%, transparent 100%)";
 
 /* Authored location plates. Day and night keep the same landmarks so a
    place is recognisable at a glance; the persistent village wounds swap in
@@ -6557,12 +6618,17 @@ const MONSTER_VICTORY_ART = {
   hollowed: "assets/monster-victory/hollowed.webp",
 };
 function MonsterVictory({ id, size = 120, green = false }) {
-  const source = MONSTER_VICTORY_ART[id];
+  /* Victory cards sit on parchment already. Use the transparent concept
+     plates for every creature so no authored image brings its own square
+     paper background along with it. */
+  const source = MONSTER_PLATES[id]
+    ? `assets/monster-concepts-v1/${MONSTER_PLATES[id]}`
+    : MONSTER_VICTORY_ART[id];
   if (!source) return <MonsterArt id={id} size={size} light />;
   return (
-    <span style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 3, background: C.paper }}>
+    <span style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 3, background: "transparent" }}>
       <img src={source} alt="" width={size} height={size} draggable="false"
-        decoding="async" style={{ display: "block", width: size, height: size, objectFit: "cover" }} />
+        decoding="async" style={{ display: "block", width: size, height: size, objectFit: "contain" }} />
       {green && <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(102,132,78,.2),rgba(54,86,59,.48))", mixBlendMode: "color", boxShadow: "inset 0 0 0 1px rgba(143,166,120,.55)", pointerEvents: "none" }} />}
     </span>
   );
@@ -6585,7 +6651,11 @@ function MonsterArt({ id, size = 64, flat = false, locked = false }) {
       boxShadow: flat ? "none" : "2px 3px 0 rgba(25,23,21,.18)",
     }}>
       <img src={`assets/monster-concepts-v1/${plate}`} alt={locked ? "Locked creature" : name}
-        draggable="false" decoding="async" style={{
+        /* Mobile WebKit may defer async decoding for rows below an overflow
+           sheet's initial paint until the next tap/scroll. Journal plates are
+           small and already mounted as one 4x4 page, so fetch and decode those
+           eagerly when the Journal opens; other surfaces stay asynchronous. */
+        draggable="false" loading={flat ? "eager" : undefined} decoding={flat ? "sync" : "async"} fetchPriority={flat ? "high" : "auto"} style={{
           display: "block", width: "100%", height: "100%", objectFit: "cover",
           mixBlendMode: "normal", filter: plateFilter, opacity: locked ? 0.34 : 1,
           WebkitMaskImage: "none",
@@ -8583,6 +8653,18 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heNight .mvGrain, .heNight .mvGrainF { opacity:.085; mix-blend-mode:screen; background-image:repeating-linear-gradient(96deg,rgba(241,230,209,.12) 0 1px,transparent 1px 6px); background-size:23px 27px; }
 .heNight .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 52%,rgba(0,0,0,.72) 100%); }
 .heNight .mvFog, .heNight .mvFogBank { filter:saturate(.62); }
+.heDeathBeats { position:relative; background:linear-gradient(90deg,rgba(255,255,255,.045),transparent 72%); }
+.heOutcome { isolation:isolate; }
+.heOutcomeArt { position:absolute; z-index:0; inset:0 0 auto; height:330px; overflow:hidden; opacity:.78; -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 42%,rgba(0,0,0,.9) 56%,rgba(0,0,0,.68) 70%,rgba(0,0,0,.38) 84%,rgba(0,0,0,.12) 95%,transparent 100%); mask-image:linear-gradient(180deg,#000 0%,#000 42%,rgba(0,0,0,.9) 56%,rgba(0,0,0,.68) 70%,rgba(0,0,0,.38) 84%,rgba(0,0,0,.12) 95%,transparent 100%); }
+.heOutcomeArt > svg { width:100%; height:100%; object-fit:cover; filter:saturate(.55) contrast(1.1) brightness(.72); }
+.heOutcomeArtVeil { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 20%,rgba(116,25,36,.34),rgba(7,5,8,.68) 62%,#070508 100%); }
+.heOutcomeEyebrow { display:block; font-size:11px; letter-spacing:3.6px; white-space:nowrap; color:#D98A91; text-shadow:0 1px 8px #000; }
+.heOutcomeTitle { margin:9px 0 0; font-size:clamp(29px,8vw,39px); line-height:.94; letter-spacing:2px; color:#F0DCD8; text-shadow:0 3px 24px #000; }
+.heOutcomeTitle span { color:#C24450; }
+.heOutcomeCopy { border-radius:4px; background:transparent; }
+.heOutcomeCopy--win { border-radius:5px; }
+.heOutcomeDock { background:linear-gradient(180deg,rgba(7,5,8,.18),rgba(7,5,8,.92) 30%); }
+.heOutcome--win .heDockButton.mv-kind-commit { border-color:#D5A752; color:#F4D895; background:rgba(213,167,82,.13); }
 .heNight .mv-btn:focus-visible, .heNight [role="button"]:focus-visible { outline-color:var(--he-paper-light); }
 @media (max-height:740px) { .heGate .relative.max-w-md { padding-left:16px; padding-right:16px; } .heGate .hePortrait { transform:scale(.9); } .heGameTitle { padding-top:6px; padding-bottom:8px; } .heGameTitle h1 { font-size:40px; } .heBlackBookCard { min-height:174px; padding-top:13px; } .heBookLore { display:none; } .heHomeMetaCard { min-height:68px; } .heHomeMetaNote { display:none; } }
 @media (max-height:680px) { .heExamScreen .heDayMastheadCopy.is-lab { padding-top:max(env(safe-area-inset-top),18px) !important; padding-bottom:9px; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadTitle { font-size:23px !important; } .heExamScreen .heDayMastheadCopy.is-lab .heMastheadSub { margin-top:3px !important; font-size:12.5px !important; } .heExamScreen .heExamBody { padding-top:10px !important; gap:9px !important; } .heExamScreen .heExamReader { padding-top:10px !important; padding-bottom:10px !important; } .heExamScreen .heExamPicker { margin-bottom:6px; padding:9px !important; } .heExamScreen .heExamTarget { min-height:80px; padding-top:5px !important; padding-bottom:5px !important; } }
@@ -10260,19 +10342,23 @@ function MonsterVillage() {
     if (dying && !beatsFirst) {
       const dTotal = 1.0 + s.deathBeats.length * 1.6;
       return (
-        <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: "radial-gradient(ellipse at 50% 20%, #2E1016, #0A070C 70%)", color: C.parch, overflow: "hidden" }}>
+        <div className="fixed inset-0 mv-body heNight heOutcome heOutcome--death flex flex-col" style={{ background: "#070508", color: C.parch, overflow: "hidden" }}>
           <style>{CSS_ALL}</style>
+          <div className="heOutcomeArt" aria-hidden="true">
+            <NightScene height={300} />
+            <div className="heOutcomeArtVeil" />
+          </div>
           <div className="mvGrainF" />
-          <div className="relative max-w-md mx-auto px-6 pt-12 pb-8 h-full flex flex-col">
-            <div className="mv-display shrink-0 text-center mvIn" style={{ fontSize: 17, letterSpacing: 5, color: C.redBright, textShadow: "0 0 18px rgba(158,48,57,0.6)" }}>YOU DO NOT SEE THE DAWN</div>
-            {/* the last thing you read is the biggest thing on the screen, and
-                it brightens as it goes, the way a night card does */}
-            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="mt-5 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, cursor: beatsRevealed ? "default" : "pointer" }}>
+          <div className="relative max-w-md mx-auto w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+            <div className="relative shrink-0" style={{ padding: "calc(max(env(safe-area-inset-top),23px) + 24px) 26px 0" }}>
+              <h1 className="mv-display heOutcomeTitle">YOU DO NOT<br /><span>SEE THE DAWN</span></h1>
+            </div>
+            <BeatFlow revealed={beatsRevealed} base={1.0} step={1.6} className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col heDeathBeats heOutcomeCopy" onClick={() => setBeatsRevealed(true)} style={{ gap: 10, justifyContent: "flex-start", alignItems: "stretch", textAlign: "left", padding: "clamp(34px, 6dvh, 58px) 8px 28px", cursor: beatsRevealed ? "default" : "pointer" }}>
               {s.deathBeats.map((b, i) => (
                 <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: i === s.deathBeats.length - 1 ? "#F0DCD8" : `rgba(233,223,200,${(0.85 + (s.deathBeats.length > 1 ? i / (s.deathBeats.length - 1) : 1) * 0.15).toFixed(2)})`, textWrap: "pretty", animationDelay: beatsRevealed ? undefined : `${1.0 + i * 1.6}s`, textShadow: "0 2px 14px rgba(0,0,0,0.85)" }}>{b}</p>
               ))}
             </BeatFlow>
-            <div className="mvIvDock heDockSpill shrink-0" style={{ padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),23px)" }}>
+            <div className="relative mvIvDock heDockSpill shrink-0 heOutcomeDock" style={{ padding: "14px 22px", paddingBottom: "max(env(safe-area-inset-bottom),23px)" }}>
               <div className={beatsRevealed ? "" : "mvBeat"} style={{ animationDelay: beatsRevealed ? undefined : `${dTotal}s` }}>
                 <DockBtn kind="destroy" onClick={toDawn}>IT IS OVER</DockBtn>
               </div>
@@ -10287,7 +10373,8 @@ function MonsterVillage() {
        the hour in display type, the beats dealt into the dark under it, and
        one thing to press. The beats brighten as they go, so the night
        closes in rather than simply continuing. */
-    const title = s.beatTitle || `NIGHT ${s.nightNum}`;
+    const title = won ? "THE VILLAGE BREATHES" : (s.beatTitle || `NIGHT ${s.nightNum}`);
+    const bareCinematic = beatsFirst || s.beatTitle === "JUDGMENT" || s.beatTitle === "THE RECKONING";
     const beatColor = (i) => (i === beats.length - 1
       ? "#F1E4C6"
       : `rgba(233,223,200,${(0.8 + (beats.length > 1 ? i / (beats.length - 1) : 1) * 0.2).toFixed(2)})`);
@@ -10298,34 +10385,38 @@ function MonsterVillage() {
     const livingTonight = s.npcs.filter((n) => !n.fled && (n.alive
       || s.deaths.some((d) => d.id === n.id && d.night === s.nightNum && d.kind !== "turned"))).length;
     return (
-        <div className="fixed inset-0 mv-body heNight heNightCinematic flex flex-col" style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
+        <div className={`fixed inset-0 mv-body heNight heNightCinematic heOutcome ${won ? "heOutcome--win" : ""} flex flex-col`} style={{ background: "#05060C", color: C.parch, overflow: "hidden" }}>
           <style>{CSS_ALL}</style>
           <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
             {/* The reckoning is carried by its words alone. Other nights keep
                 the moonlit village behind the title card. */}
             <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 228, WebkitMaskImage: NIGHT_CARD_MASK, maskImage: NIGHT_CARD_MASK }}>
               {won ? (
-                <div style={{ height: 228, background: "linear-gradient(180deg,#241B1E,#161014)" }} />
+                <VillageScene height={228} />
               ) : <NightScene height={228} />}
-              <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(20,16,20,0) 44%, rgba(20,16,20,0.6) 84%, rgba(20,16,20,0.88) 100%)" : "linear-gradient(rgba(5,6,12,0) 44%, rgba(5,6,12,0.55) 84%, rgba(5,6,12,0.85) 100%)" }} />
+              <div className="absolute inset-0" style={{ background: won ? "linear-gradient(rgba(22,18,12,0.04) 30%, rgba(22,18,12,0.42) 72%, rgba(5,6,12,0.94) 100%)" : "linear-gradient(rgba(5,6,12,0) 44%, rgba(5,6,12,0.55) 84%, rgba(5,6,12,0.85) 100%)" }} />
             </div>
             <div className="mvFog" style={{ position: "absolute", left: "-10%", right: "-10%", top: 150, height: 180, background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(180,196,224,0.09), transparent 70%)", pointerEvents: "none" }} />
             <div className="mvGrain" />
             {!beatsRevealed && <button onClick={() => setBeatsRevealed(true)} className="mv-btn mv-body absolute" style={{ top: "max(env(safe-area-inset-top),23px)", right: 18, padding: "4px 10px", border: "none", borderRadius: 3, background: "rgba(8,10,18,0.55)", color: heroAccent, fontSize: 13.5, cursor: "pointer", zIndex: 2 }}>skip ≫</button>}
-            <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 30px)" }}
+            <div className="relative flex-1 min-h-0 flex flex-col" style={{ padding: "0 26px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 30px)", textAlign: won ? "center" : undefined, alignItems: won ? "center" : undefined }}
               onClick={() => setBeatsRevealed(true)}>
-              <span className="mv-display block" style={{ fontSize: 12, letterSpacing: 3.4, whiteSpace: "nowrap", color: "#AEB6D8" }}>
-                {beatsFirst ? "THE RITE UNRAVELS" : won ? "THE RECKONING" : `DAY ${s.dayNum} GIVES WAY`}
-              </span>
-              <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: title.length > 12 ? 27 : 35, lineHeight: 0.96, letterSpacing: 2, color: C.parch, textShadow: "0 3px 20px #000" }}>{title}</h1>
-              <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} className="flex flex-col" style={{ flex: 1, minHeight: 0, gap: 9, marginTop: 13, paddingBottom: 8, overflowY: "auto" }}>
+              {!bareCinematic && !won && (
+                <span className="mv-display block heOutcomeEyebrow" style={{ color: "#AEB6D8" }}>
+                  {`DAY ${s.dayNum} GIVES WAY`}
+                </span>
+              )}
+              {(!bareCinematic || won) && (
+                <h1 className="mv-display" style={{ margin: "7px 0 0", fontSize: won ? "clamp(31px,9vw,43px)" : (title.length > 12 ? 27 : 35), lineHeight: 0.96, letterSpacing: 2, color: won ? "#F4D895" : C.parch, textShadow: "0 3px 20px #000" }}>{title}</h1>
+              )}
+              <BeatFlow revealed={beatsRevealed} base={1.2} step={1.4} className={`flex flex-col heOutcomeCopy ${won ? "heOutcomeCopy--win" : ""}`} style={{ flex: 1, minHeight: 0, gap: 9, marginTop: 13, padding: "18px 15px 12px", overflowY: "auto", textAlign: "left", alignItems: "stretch" }}>
                 {beats.map((b, i) => (
                   <p key={i} className={beatsRevealed ? "" : "mvBeat"} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: beatColor(i), textWrap: "pretty", textShadow: "0 1px 8px rgba(0,0,0,0.6)", animationDelay: beatsRevealed ? undefined : `${1.2 + i * 1.4}s` }}>{b}</p>
                 ))}
                 {!beatsRevealed && <p className="mvBeat" style={{ margin: 0, fontSize: 15.5, letterSpacing: 4, textAlign: "center", color: "rgba(233,223,200,0.6)", animationDelay: `${total}s` }}>· · ·</p>}
               </BeatFlow>
               {/* what the night cost, and what is left of the village */}
-              <div className="flex items-baseline" style={{ gap: 26, paddingTop: 18, borderTop: "1px solid rgba(233,223,200,0.12)" }}>
+              <div className="flex items-baseline heOutcomeStats" style={{ gap: 26, paddingTop: 18 }}>
                 <span className="flex items-baseline" style={{ gap: 8 }}>
                   <span className="mv-display" style={{ fontSize: 24.5, lineHeight: 1, color: C.parch }}>{s.nightNum}</span>
                   <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, whiteSpace: "nowrap", color: "#E4D8C2", textShadow: "0 1px 5px rgba(0,0,0,.75)" }}>{s.nightNum === 1 ? "NIGHT KEPT" : "NIGHTS KEPT"}</span>
@@ -10440,10 +10531,7 @@ function MonsterVillage() {
         pendingOffer: null,
         diedRefusingOffer: true,
         nightBeats: [],
-        deathBeats: [
-          "It waits one breath more for an answer that does not come the way it wanted, and then it stops waiting.",
-          ...(DEATH_SCENES[mm.id] || DEATH_SCENES.wraith)(po.name || monsterNpc.name, po.where || "dark"),
-        ],
+        deathBeats: playerDeathBeats(mm, po.name || monsterNpc.name, po.where || "dark", { encounterBegun: true, revealed: true, kind: "offer" }),
         beatTitle: `NIGHT ${s.nightNum} · REFUSED`,
         phase: "night",
         over: { win: false, reason: "slain", text: po.overText || "Something found you in the dark, and this time it did not ask twice." },
@@ -10739,7 +10827,10 @@ function MonsterVillage() {
       lane = { wid: w.id, dest: facts.outMap[w.id], seen: facts.wx !== "fog" && chance(0.6) };
       queue.push("lane");
     }
-    if (facts.evn && facts.eventLoc !== loc) queue.push("event");
+    /* An indoor gathering and an outdoor search may share a map pin without
+       sharing ground. A card night inside the Tavern is still something the
+       player passes while searching the yard outside. */
+    if (facts.evn && (facts.eventLoc !== loc || (facts.evn.exposure || "outdoor") !== "outdoor")) queue.push("event");
     if (facts.wx !== "storm" && chance(0.55)) queue.push("sound");
     /* Whether this hide beat is really the horror (huntLoc === loc) or an
        ambiguous phantom (the flat 25% roll, which might be nothing at all)
@@ -10748,7 +10839,8 @@ function MonsterVillage() {
        rare phantom too, so having to hide never certifies an active night:
        the tread in the lane proves nothing, same as everything else. */
     let hideIsMonster = false;
-    if (facts.active && (facts.huntLoc === loc || chance(0.25))) { queue.push("hide"); hideIsMonster = facts.huntLoc === loc; }
+    const huntIsHereOutside = facts.huntLoc === loc && ((facts.exposureMap || {})[s.monster.vid] || "outdoor") === "outdoor";
+    if (facts.active && (huntIsHereOutside || chance(0.25))) { queue.push("hide"); hideIsMonster = huntIsHereOutside; }
     else if (!facts.active && chance(0.12)) queue.push("hide");
     queue.push("approach");
     /* "company": every OTHER living villager (besides the monster, and
@@ -10756,11 +10848,12 @@ function MonsterVillage() {
        destination for the night is this same location: decided here, once,
        from facts already locked in, never re-rolled. If nobody qualifies the
        stage is simply skipped (see goReturn). */
-    const company = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && (!lane || x.id !== lane.wid) && facts.outMap[x.id] === loc).map((x) => x.id);
+    const company = s.npcs.filter((x) => x.alive && !x.fled && x.id !== s.monster.vid && (!lane || x.id !== lane.wid) && facts.outMap[x.id] === loc && ((facts.exposureMap || {})[x.id] || "outdoor") === "outdoor").map((x) => x.id);
     if (company.length) queue.push("company");
     queue.push("return");
     setModal(null);
-    setWalk({ mode: "out", loc, facts, mods: {}, queue, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(loc), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(loc), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(loc), openLine: pickFreshIdx("outLines", OUT_LINES)(loc), pre: [], stage: "depart" });
+    const site = placeNoun(loc, "outdoor");
+    setWalk({ mode: "out", loc, site, facts, mods: {}, queue, lane, company, hideIsMonster, afflictionBeat, vigilRoll: chance(0.5), chatUsed: false, soundLine: pickFreshIdx("walkSoundLines", WALK_SOUND_LINES), soundMundane: pickFreshIdx("soundChaseMundane", SOUND_CHASE_MUNDANE), soundHeard: soundFor(monsterOf(s).id), hideIntro: pickFreshIdx("hideIntro", HIDE_INTRO_LINES)(site), approachLine: pickFreshIdx("quietApproach", QUIET_APPROACH_LINES)(site), vigilLine: pickFreshIdx("vigilLines", VIGIL_LINES)(site), openLine: pickFreshIdx("outLines", OUT_LINES)(site), pre: [], stage: "depart" });
   };
 
   const commitWalk = (extra) => nightfall({ kind: "out", loc: extra.loc || walk.loc, mods: { ...walk.mods, ...extra, closureLine: walk.closureLine || null }, facts: walk.facts });
@@ -10917,28 +11010,30 @@ function MonsterVillage() {
   const followScene = (wid) => {
     const w = npcById(s, wid);
     const dest = walk.facts.outMap[wid] || walk.loc;
-    if (wid === s.monster.vid && walk.facts.active) return { kind: "monster", dest, text: pickFreshIdx("followMonster", FOLLOW_MONSTER_SCENES)(w.name, dest) };
-    if (w.turned) return { kind: "turned", dest, text: pickFreshIdx("followTurned", FOLLOW_TURNED_SCENES)(w.name, dest) };
+    const place = placeNoun(dest, (walk.facts.exposureMap || {})[wid] || "outdoor");
+    if (wid === s.monster.vid && walk.facts.active) return { kind: "monster", dest, place, text: pickFreshIdx("followMonster", FOLLOW_MONSTER_SCENES)(w.name, place) };
+    if (w.turned) return { kind: "turned", dest, place, text: pickFreshIdx("followTurned", FOLLOW_TURNED_SCENES)(w.name, place) };
     /* a secret errand is only READABLE when the night's sampled catch roll
        allows: otherwise the tail sees an ordinary errand and nothing more,
        so a follow is a good bet, never a harvest */
-    if (walk.facts.secretOut[wid] && (walk.facts.secretCatch || {})[wid]) return { kind: "secret", dest, text: secretOf(s, wid).walk(w.name) };
+    if (walk.facts.secretOut[wid] && (walk.facts.secretCatch || {})[wid]) return { kind: "secret", dest, place, text: secretOf(s, wid).walk(w.name) };
     /* no catch roll on grief: there is nothing to decode about somebody
        standing at a grave, and it proves nothing either way */
     const gid = (walk.facts.griefOut || {})[wid];
-    if (gid) return { kind: "grief", dest, text: pickFreshIdx("griefWalk", GRIEF_WALK)(w.name, (npcById(s, gid) || {}).name || "them") };
-    return { kind: "plain", dest, text: pickFreshIdx("followPlain", FOLLOW_PLAIN_SCENES)(w.name, dest) };
+    if (gid) return { kind: "grief", dest, place, text: pickFreshIdx("griefWalk", GRIEF_WALK)(w.name, (npcById(s, gid) || {}).name || "them") };
+    return { kind: "plain", dest, place, text: pickFreshIdx("followPlain", FOLLOW_PLAIN_SCENES)(w.name, place) };
   };
 
   const hailLine = (wid) => {
     const w = npcById(s, wid);
     const dest = walk.facts.outMap[wid];
-    if (wid === s.monster.vid && walk.facts.active) return pickFreshIdx("hailMonster", HAIL_MONSTER_LINES)(w.name, dest);
+    const place = placeNoun(dest, (walk.facts.exposureMap || {})[wid] || "outdoor");
+    if (wid === s.monster.vid && walk.facts.active) return pickFreshIdx("hailMonster", HAIL_MONSTER_LINES)(w.name, place);
     if (w.turned) return pickFreshIdx("hailTurned", HAIL_TURNED_LINES)(w.name);
     if (walk.facts.secretOut[wid]) return secretOf(s, wid).hail(w.name);
     const gh = (walk.facts.griefOut || {})[wid];
     if (gh) return pickFreshIdx("griefHail", GRIEF_HAIL)(w.name, (npcById(s, gh) || {}).name || "them");
-    return pickFreshIdx("hailPlain", HAIL_PLAIN_LINES)(w.name, dest);
+    return pickFreshIdx("hailPlain", HAIL_PLAIN_LINES)(w.name, place);
   };
 
   /* ---------- a village event, met on the road ---------- */
@@ -10985,8 +11080,10 @@ function MonsterVillage() {
   const walkModal = walk && (() => {
     const isWatch = walk.mode === "watch";
     const evn = walk.facts.evn;
-    const atEvent = !isWatch && evn && walk.facts.eventLoc === walk.loc;
-    const danger = !isWatch && walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc;
+    const walkPlace = walk.site || placeNoun(walk.loc, "outdoor");
+    const atEvent = !isWatch && evn && walk.facts.eventLoc === walk.loc && (evn.exposure || "outdoor") === "outdoor";
+    const huntExposure = ((walk.facts.exposureMap || {})[s.monster.vid]) || "outdoor";
+    const danger = !isWatch && walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc && huntExposure === "outdoor";
     const w = walk.lane ? npcById(s, walk.lane.wid) : null;
     /* the held-breath beat: suspense lines, then the pre-rolled outcome */
     const startFate = (lines, finale, label, action, kind) => { Snd.danger(); setWalk({ ...walk, stage: "fate", pre: [], fate: { lines, finale, label, action, kind: kind || "red" } }); };
@@ -11051,8 +11148,8 @@ function MonsterVillage() {
        face is excluded (it is the one doing this) and so are the changed (it
        does not eat its own). If this is empty there is nobody to lose and
        the witness stage cannot open. */
-    const witnessPool = () => (walk.facts.active && walk.facts.huntLoc === walk.loc)
-      ? s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && walk.facts.outMap[x.id] === walk.loc)
+    const witnessPool = () => (walk.facts.active && walk.facts.huntLoc === walk.loc && (((walk.facts.exposureMap || {})[s.monster.vid] || "outdoor") === "outdoor"))
+      ? s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && walk.facts.outMap[x.id] === walk.loc && (((walk.facts.exposureMap || {})[x.id] || "outdoor") === "outdoor"))
       : [];
     const WITNESS_P = 0.5;
     const rollApproachFate = (approach) => {
@@ -11076,7 +11173,7 @@ function MonsterVillage() {
         TENSION_APPROACH,
         died ? FATE_DIE : brushed ? null : FATE_LIVE,
         died ? "It turns →" : brushed ? "It lifts its head →" : "Breathe again →",
-        died ? { type: "commitWalk", extra: { approach, fateDeath: true } }
+        died ? { type: "commitWalk", extra: { approach, fateDeath: true, deathContext: { encounterBegun: true, revealed: false, kind: walk.mods.hid ? "hide" : "approach", action: approach } } }
           : brushed ? { type: "brush", loc: walk.loc, after: { type: "commitWalk", extra: { approach, fateDeath: false } } }
           : { type: "goReturn", extra: { approach, fateDeath: false } },
         died || brushed ? "red" : "amber"
@@ -11089,7 +11186,7 @@ function MonsterVillage() {
     const startFollowFate = (act, extra, lines, label, bLoc, commitType) => {
       const died = monsterOfferReady(s, s.nightNum + 1) || chance(followDeathChance(s, act));
       const brushed = !died && chance(BRUSH_P);
-      const commit = { type: commitType, extra: { ...extra, followFate: died } };
+      const commit = { type: commitType, extra: { ...extra, followFate: died, deathContext: { encounterBegun: true, revealed: true, kind: act } } };
       startFate(
         lines,
         died ? FATE_DIE : null,
@@ -11127,7 +11224,10 @@ function MonsterVillage() {
     const sceneLoc = walk.stage === "brush" ? ((walk.brushQuarry || {}).loc || walk.loc)
       : (walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")) ? walk.followScene.dest
       : isWatch ? (HOME_LOC[walk.targetId] || "Cottage") : walk.loc;
-    const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLoc).toUpperCase()}`;
+    const sceneLabel = walk.followScene && (walk.stage === "followed" || walk.stage === "reveal")
+      ? (walk.followScene.place || placeNoun(sceneLoc, "outdoor"))
+      : (!isWatch && sceneLoc === walk.loc ? walkPlace : placeNoun(sceneLoc, "outdoor"));
+    const heroLabel = isWatch && !walk.followScene ? `${((npcById(s, walk.targetId) || {}).name || "").toUpperCase()}'S DOOR` : `THE ${String(sceneLabel).toUpperCase()}`;
     const wxWord = walk.facts.wx ? { fog: "FOG", storm: "STORM COMING", frost: "HARD FROST" }[walk.facts.wx] : "CLEAR";
     return (
       <NightShell loc={sceneLoc} danger={tense} wound={nightWound(s, sceneLoc)} wx={walk.facts.wx}
@@ -11174,9 +11274,9 @@ function MonsterVillage() {
                 {beat(walk.lane.seen
                   ? `Ahead in the lane, a figure with a hood half-up: ${w.name}, unmistakably, moving with purpose toward the ${walk.lane.dest}.`
                   : `A hooded figure crosses the lane ahead, face lost to the dark, making for the ${walk.lane.dest}.`)}
-                <Btn full kind="amber" onClick={() => { const sc = followScene(walk.lane.wid); setWalk({ ...walk, followFrom: "lane", stage: "followed", followScene: sc, pre: [`You fall in behind, two shadows back, matching their pace toward the ${sc.dest}.`] }); }}>Follow them, two shadows back</Btn>
+                <Btn full kind="amber" onClick={() => { const sc = followScene(walk.lane.wid); setWalk({ ...walk, followFrom: "lane", stage: "followed", followScene: sc, pre: [`You fall in behind, two shadows back, matching their pace toward the ${sc.place || sc.dest}.`] }); }}>Follow them, two shadows back</Btn>
                 <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, hailed: walk.lane.wid }, stage: "hailed", pre: [], hailText: hailLine(walk.lane.wid) })}>Hail them, softly</Btn>
-                <Btn full onClick={() => setWalk({ ...walk, stage: nextStage(walk, "lane"), pre: [walk.lane.dest === walk.loc ? "You let the figure draw well ahead of you on the same road, and follow at your own pace." : `You let the figure pass and keep to your own errand, toward the ${walk.loc}.`] })}>Let them go. Keep to your errand</Btn>
+                <Btn full onClick={() => setWalk({ ...walk, stage: nextStage(walk, "lane"), pre: [walk.lane.dest === walk.loc ? "You let the figure draw well ahead of you on the same road, and follow at your own pace." : `You let the figure pass and keep to your own errand, toward the ${walkPlace}.`] })}>Let them go. Keep to your errand</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "hailed" && (() => {
@@ -11192,7 +11292,7 @@ function MonsterVillage() {
                     </div>
                   </div>
                   {!walk.chatUsed && <Btn full onClick={() => setWalk({ ...walk, chatUsed: true, chatText: pickFreshIdx("laneChat", LANE_CHAT_LINES) })}>Ask what they've seen</Btn>}
-                  <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "lane"), pre: [`You met ${hw.name} in the lane. They went their way, and you go yours, toward the ${walk.loc}.`] })}>Go your way →</Btn>
+                  <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "lane"), pre: [`You met ${hw.name} in the lane. They went their way, and you go yours, toward the ${walkPlace}.`] })}>Go your way →</Btn>
                 </div>
               );
             })()}
@@ -11210,21 +11310,21 @@ function MonsterVillage() {
                     <Btn full kind="red" onClick={() => startFate(TENSION_CONFRONT, null, armedGuess ? "Say the true name →" : "Say the name →", { type: "commitWalk", extra: { follow: fw2.id, followAct: "confront", loc: fsc.dest } })}>{armedGuess ? "Step out. Name it. End it here" : "Step out and say the name"}</Btn>
                   </>)}
                   {fsc.kind === "turned" && (<>
-                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You back away from what ${fw2.name} has become, one careful step at a time, and force your feet on toward the ${walk.loc}.`] })}>Carry it with you. On to the {walk.loc}</Btn>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You back away from what ${fw2.name} has become, one careful step at a time, and force your feet on toward the ${walkPlace}.`] })}>Carry it with you. On to the {walkPlace}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Slip away home with what you know</Btn>
                   </>)}
                   {fsc.kind === "grief" && (<>
-                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You leave ${fw2.name} to it. Whatever else is true of tonight, that part was not yours to watch.`] })}>Leave them their hour. On to the {walk.loc}</Btn>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`You leave ${fw2.name} to it. Whatever else is true of tonight, that part was not yours to watch.`] })}>Leave them their hour. On to the {walkPlace}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Enough for one night. Head home</Btn>
                   </>)}
                   {fsc.kind === "secret" && (<>
-                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`Some secrets are only secrets. You leave ${fw2.name} to theirs and keep to your own errand, toward the ${walk.loc}.`] })}>Leave them to it. On to the {walk.loc}</Btn>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, follow: fw2.id, followAct: "on" }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [`Some secrets are only secrets. You leave ${fw2.name} to theirs and keep to your own errand, toward the ${walkPlace}.`] })}>Leave them to it. On to the {walkPlace}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, loc: fsc.dest })}>Enough for one night. Head home</Btn>
                   </>)}
                   {/* "anything else", not "plain": no kind may reach this
                       stage without a way off it. */}
                   {!["monster", "turned", "grief", "secret"].includes(fsc.kind) && (<>
-                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, followSeen: fw2.id }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [sameDest ? `You leave ${fw2.name} to their business and turn to your own: the ${walk.loc} is not theirs to keep.` : `You leave ${fw2.name} to it and turn for the ${walk.loc}.`] })}>{sameDest ? "Leave them to it. See to your own search" : `Leave them to it. On to the ${walk.loc}`}</Btn>
+                    <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, followSeen: fw2.id }, stage: nextStage(walk, walk.followFrom || "lane"), pre: [sameDest ? `You leave ${fw2.name} to their business and turn to your own: the ${walkPlace} is not theirs to keep.` : `You leave ${fw2.name} to it and turn for the ${walkPlace}.`] })}>{sameDest ? "Leave them to it. See to your own search" : `Leave them to it. On to the ${walkPlace}`}</Btn>
                     <Btn full onClick={() => commitWalk({ follow: fw2.id, followAct: "home", loc: fsc.dest })}>Enough for one night. Head home</Btn>
                   </>)}
                 </div>
@@ -11274,7 +11374,7 @@ function MonsterVillage() {
                   {beat(walk.facts.active
                     ? `You follow the sound until it stops being ahead of you and starts being everywhere at once. You stand very still in the middle of it, and listen, and learn something you will not be able to unlearn. ${heard}`
                     : walk.soundMundane, walk.facts.active ? C.redBright : undefined)}
-                  <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: [`You find your road again and go on toward the ${walk.loc}.`] })}>Find your road again, on to the {walk.loc} →</Btn>
+                  <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: [`You find your road again and go on toward the ${walkPlace}.`] })}>Find your road again, on to the {walkPlace} →</Btn>
                 </div>
               );
             })()}
@@ -11283,7 +11383,7 @@ function MonsterVillage() {
                 {beat(walk.facts.active
                   ? `You plant your feet and give the night nothing to chase. The sound circles wide once, twice, closer, reading you the way you are reading it. ${walk.soundHeard}`
                   : "You stand until your knees ache, and the sound thins, and resolves into wind working at something loose, streets away. Not everything abroad tonight is the thing. Most of the dark is only dark.", walk.facts.active ? C.redBright : undefined)}
-                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: ["You give your road your attention again."] })}>On, toward the {walk.loc} →</Btn>
+                <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: ["You give your road your attention again."] })}>On, toward the {walkPlace} →</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "hide" && (
@@ -11308,7 +11408,7 @@ function MonsterVillage() {
               <div className="flex flex-col gap-2">
                 {beat(atEvent
                   ? `You reach the edge of the ${evn.name}'s firelight, and something about the crowd feels wrong before you can say why: a shape moving against the grain of the dancing, patient, at the margins where the light gives out.`
-                  : `You are close now. And something is already at the ${walk.loc}: a movement low against the stones, deliberate, busy at some work you cannot see. Your heart is louder than your boots.`, C.redBright)}
+                  : `You are close now. Something is already at the ${walkPlace}, crouched low and working at something on the ground. It stops when your boot scrapes stone.`, C.redBright)}
                 <Btn full kind="red" onClick={() => rollApproachFate("press")}>Press closer. You need to SEE it</Btn>
                 <Btn full kind="amber" onClick={() => rollApproachFate("shadow")}>Hold to the shadows and watch</Btn>
                 <Btn full onClick={() => goReturn({ approach: "back" })}>Turn for home, while you can</Btn>
@@ -11322,7 +11422,7 @@ function MonsterVillage() {
                 <Btn full kind="amber" onClick={() => chooseStyle("ground")}>Search the ground, inch by inch</Btn>
                 <Btn full kind="amber" onClick={() => chooseStyle("wait")}>Find a vantage and wait. Watch who comes</Btn>
                 <Btn full kind="amber" onClick={() => chooseStyle("circle")}>Walk the village boundary, watching the lanes</Btn>
-                <p style={{ fontSize: 14, lineHeight: 1.5, color: C.dim }}>Search the ground here for the marks it leaves. Wait at a vantage to see who else comes to the {walk.loc}. Or leave the {walk.loc} to itself and walk the ring of lanes around the village, catching whoever crosses between the houses.</p>
+                <p style={{ fontSize: 14, lineHeight: 1.5, color: C.dim }}>Search the ground here for marks. Wait at a vantage to see who comes to the {walkPlace}. Or leave it and walk the boundary lanes.</p>
               </div>
             )}
             {!isWatch && walk.stage === "vigil" && (
@@ -11514,7 +11614,7 @@ function MonsterVillage() {
             {isWatch && walk.stage === "trail" && (
               <div className="flex flex-col gap-2">
                 {beat(walk.trailLine)}
-                <Btn full kind="amber" onClick={() => { const sc = followScene(walk.targetId); setWalk({ ...walk, followScene: sc, stage: "reveal", pre: [`You keep close through the lanes, two shadows back, all the way to the ${sc.dest}.`] }); }}>Keep close →</Btn>
+                <Btn full kind="amber" onClick={() => { const sc = followScene(walk.targetId); setWalk({ ...walk, followScene: sc, stage: "reveal", pre: [`You keep close through the lanes, two shadows back, all the way to the ${sc.place || sc.dest}.`] }); }}>Keep close →</Btn>
               </div>
             )}
             {isWatch && walk.stage === "reveal" && (() => {
@@ -11733,7 +11833,7 @@ function MonsterVillage() {
                         <div className="flex gap-3" style={{ fontSize: 14, lineHeight: 1.5 }}>
                           <span className="mv-display" style={{ width: 60, flexShrink: 0 }}>Night {log.night}</span>
                           <span style={{ color: slain ? C.red : drained ? C.red : showTurned ? C.turn : C.inkDim }}>
-                            {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.where}`) : ""}` : drained ? `${drained.name} found drained, at home` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
+                            {slain ? `${slain.name} slain${slain.where ? (slain.where === "home" ? ", at home" : `, found at the ${slain.whereDetail || slain.where}`) : ""}` : drained ? `${drained.name} found drained, at home` : showTurned ? `${turned.name} was changed, you now know` : "no one found dead"}
                             {mobd ? ` · ${mobd.name} hanged by the mob` : ""}{log.wail ? " · wailing heard" : ""}{log.weather ? ` · ${log.weather}` : ""}{log.event ? ` · ${log.event.name}` : ""}
                           </span>
                         </div>
@@ -12405,7 +12505,7 @@ function MonsterVillage() {
           <>
             <div style={{ marginTop: "auto" }}>
               <span className="mv-display block" style={{ fontSize: 12.5, letterSpacing: 3.2, color: "rgba(233,223,200,0.75)" }}>WHERE WILL YOU SEARCH</span>
-              {s.nightNum <= 2 && <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(233,223,200,0.9)" }}>Every place holds its own signs, and its own risks. What hunts by night notices being hunted.</p>}
+              {s.nightNum <= 2 && <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(233,223,200,0.9)" }}>You search the outdoor ground at each place: yards, roads and churchyard. Every place holds its own signs, and its own risks.</p>}
             </div>
             <div style={{ flexShrink: 0, marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
               {LOCS.map((l) => (
@@ -12417,7 +12517,7 @@ function MonsterVillage() {
                     <span style={{ position: "absolute", inset: 0, background: "linear-gradient(rgba(7,9,16,0) 40%, rgba(7,9,16,0.85))" }} />
                   </span>
                   <span style={{ display: "flex", alignItems: "center", width: "100%", padding: "8px 11px 9px", textAlign: "left" }}>
-                    <span className="mv-display" style={{ fontSize: 13.5, letterSpacing: 0.6, color: C.parch }}>{l}{locAffSuffix(l)}</span>
+                    <span className="mv-display" style={{ fontSize: 13.5, letterSpacing: 0.6, color: C.parch }}>{placeNoun(l, "outdoor")}{locAffSuffix(l)}</span>
                   </span>
                 </button>
               ))}
@@ -12824,7 +12924,7 @@ function MonsterVillage() {
         ? `DECEASED: DAY ${death.night}, EXECUTED ON YOUR ACCUSATION`
         : death.kind === "mobbed"
           ? `DECEASED: NIGHT ${death.night}, AT THE ROPE`
-          : `DECEASED: NIGHT ${death.night}${death.where ? (death.where === "home" ? ", AT HOME" : `, IN THE ${death.where.toUpperCase()}`) : ""}`
+          : `DECEASED: NIGHT ${death.night}${death.where ? (death.where === "home" ? ", AT HOME" : `, AT THE ${(death.whereDetail || death.where).toUpperCase()}`) : ""}`
       : null;
     const troubled = !n.alive || n.fled;
     const heroAccent = troubled ? C.redBright : n.turned && n.known ? C.turn : n.cured ? C.amber : "#AEB6D8";
