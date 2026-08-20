@@ -1388,7 +1388,7 @@
     result.push(action("LISTEN", "Lower the lantern and listen", "quiet"));
     actorsAt(state, state.player.location, state.cursor).filter(function (v) { return playerCanSeeActor(state, v.id, state.cursor); }).forEach(function (v) {
       result.push(action("HAIL", "Hail " + v.name, "bone", { actorId: v.id }));
-      result.push(action("FOLLOW", "Follow " + v.name, "quiet", { actorId: v.id }));
+      result.push(action("FOLLOW", "Follow " + v.name, "amber", { actorId: v.id }));
     });
     result.push(action("GO_HOME", "Go home and bar the door", "bone"));
     return result;
