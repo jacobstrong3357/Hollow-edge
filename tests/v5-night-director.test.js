@@ -1,6 +1,9 @@
 "use strict";
 
 var assert = require("assert");
+var fs = require("fs");
+var path = require("path");
+var vm = require("vm");
 var Director = require("../v5-night-director.js");
 
 var villagers = [
@@ -136,23 +139,72 @@ function take(state, wanted) {
   assert.strictEqual(state.currentBeat, null, "an uneventful next action must not repeat the previous presentation beat");
 })();
 
+(function strangeSightWaitsForAChoiceAndApproachCarriesRealRisk() {
+  var sawSafe = false;
+  var sawThreat = false;
+  for (var i = 0; i < 80 && !(sawSafe && sawThreat); i += 1) {
+    var config = baseConfig("delusion-choice:" + i);
+    config.monster.attackSlot = 6;
+    config.currentFacts.attackSlot = 6;
+    config.forcedBeats = [{
+      id: "strange-sight", type: "delusion", slot: 0, location: "Village Square", text: "A giggle comes from the leaves.",
+      meta: { fragments: ["A giggle comes from the leaves.", "You move closer. The sound stops.", "Only trampled leaves. Something was there."], requiresResponse: true, resolvedAsUnreal: true }
+    }];
+    var state = Director.createNight(config);
+    state = take(state, { type: "LEAVE", to: "Village Square" });
+    var actions = Director.guidedActions(state, { target: "Old Church", kind: "search", intentDone: false, interacted: {} });
+    assert.deepStrictEqual(actions.map(function (a) { return a.label; }), ["Move closer and inspect", "Run. Head for home"], "the sight is unresolved until the player chooses");
+    state = take(state, actions[0]);
+    var choice = state.ledgers.truth.find(function (event) { return event.kind === "delusion_approach"; });
+    assert(choice, "approaching the hallucination is recorded as a causal choice");
+    if (choice.attractedThreat) {
+      sawThreat = true;
+      assert.strictEqual(state.phase, "threat", "the deterministic danger roll can turn curiosity into an attack");
+    } else {
+      sawSafe = true;
+      assert(state.currentBeat && state.currentBeat.type === "delusion" && state.currentBeat.meta.requiresResponse === false, "a safe approach reveals the concrete resolution once");
+    }
+  }
+  assert(sawSafe && sawThreat, "the seeded approach tape contains both safe resolutions and real threats");
+
+  var retreatConfig = baseConfig("delusion-retreat");
+  retreatConfig.forcedBeats = [{ id: "retreat-sight", type: "delusion", slot: 0, location: "Village Square", text: "A figure waits.", meta: { fragments: ["A figure waits.", "Only a tree."], requiresResponse: true } }];
+  var retreat = Director.createNight(retreatConfig);
+  retreat = take(retreat, { type: "LEAVE", to: "Village Square" });
+  var retreatAction = Director.guidedActions(retreat, { target: "Old Church", kind: "search", intentDone: false, interacted: {} })[1];
+  retreat = take(retreat, retreatAction);
+  assert.strictEqual(retreat.phase, "returning");
+  assert(!retreat.ledgers.truth.some(function (event) { return event.kind === "delusion_approach"; }), "retreating does not secretly spend the approach risk");
+})();
+
+(function aWatchedVillagerDoesNotCrossTheirOwnDoorScene() {
+  var config = baseConfig("watch-door-not-lane");
+  config.openingIntent = { kind: "watch", id: "rosa" };
+  config.monster.active = false;
+  config.currentFacts = { weather: "storm", active: false, outMap: { rosa: "Old Church", falk: "home", ansel: "home" } };
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "late-delivery", family: "work", destination: "Old Church", reason: "deliver cloth", object: "a parcel", depart: 2, duration: 2 } }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert(!state.ledgers.truth.some(function (event) { return event.id.indexOf("encounter:") === 0 && event.actors.indexOf("rosa") >= 0; }), "the person still inside the watched house is not framed as a passer-by");
+})();
+
 (function guidedNightOffersAStoryCorridorNotTheWholeMap() {
   var state = Director.createNight(baseConfig("guided-corridor"));
   var guide = { target: "Old Church", kind: "search", intentDone: false, interacted: {} };
   var actions = Director.guidedActions(state, guide);
   assert.strictEqual(actions.length, 1, "leaving home is one committed beginning");
   assert.strictEqual(actions[0].type, "LEAVE");
+  assert.strictEqual(actions[0].to, "Old Church", "a church-bound walk takes the real back-lane edge instead of staging a visit to the Square");
+  assert(/back lanes straight/.test(actions[0].label), "the opening choice names the route the simulation actually takes");
   state = take(state, actions[0]);
   actions = Director.guidedActions(state, guide);
-  assert(actions.length <= 3, "an ordinary scene never becomes a wall of controls");
-  assert.deepStrictEqual(actions.map(function (a) { return [a.type, a.to]; }), [["MOVE", "Old Church"]], "the player is led toward the declared errand rather than shown every road");
-  state = take(state, actions[0]);
-  actions = Director.guidedActions(state, guide);
-  assert.deepStrictEqual(actions.map(function (a) { return a.type; }), ["SEARCH"], "arrival frames the intended investigation");
+  assert.deepStrictEqual(actions.map(function (a) { return [a.type, a.searchMode]; }), [["SEARCH", "ground"], ["SEARCH", "edges"]], "arrival offers two concrete ways to investigate the destination");
   state = take(state, actions[0]);
   guide.intentDone = true;
+  guide.searches = { ground: true };
   actions = Director.guidedActions(state, guide);
-  assert.deepStrictEqual(actions.map(function (a) { return a.type; }), ["KEEP_WATCH", "GO_HOME"], "after the errand, one meaningful watch replaces a stack of empty time buttons");
+  assert.deepStrictEqual(actions.map(function (a) { return [a.type, a.searchMode]; }), [["SEARCH", "edges"], ["SEARCH_ON", undefined], ["GO_HOME", undefined]], "the second search method and an ongoing search replace passive waiting while preserving the road home");
+  assert(!actions.some(function (a) { return /until something changes/i.test(a.label); }), "continuing a search does not promise that the night will produce an event");
   var actorAction = Director.availableActions(state).find(function (a) { return a.type === "HAIL"; });
   if (actorAction) {
     actions = Director.guidedActions(state, { target: "Old Church", kind: "search", actorId: actorAction.actorId, intentDone: true, interacted: {} });
@@ -165,6 +217,145 @@ function take(state, wanted) {
   }
 })();
 
+(function searchChoicesBelongToThePlaceInsteadOfAdvertisingEvidence() {
+  var expected = {
+    "Village Square": /well|market|alley|doorway/i,
+    "Old Church": /churchyard|church|vestry|window/i,
+    Graveyard: /grave|plot|boundary wall/i,
+    "Dark Forest": /trail|tree|bracken|path/i,
+    "Old Mill": /millrace|wheel|store shed|door/i,
+    Tavern: /stable|wagon|cellar|window/i
+  };
+  Object.keys(expected).forEach(function (target) {
+    var config = baseConfig("site-search-labels:" + target);
+    config.monster.active = false;
+    config.currentFacts = { weather: "still", active: false, outMap: {} };
+    config.villagers = [];
+    config.player = {};
+    config.forcedBeats = [];
+    var state = Director.createNight(config);
+    state.phase = "active";
+    state.player.location = target;
+    state.currentBeat = null;
+    var actions = Director.guidedActions(state, { target: target, kind: "search", intentDone: false, searches: {}, interacted: {} });
+    assert.strictEqual(actions.length, 2, target + " offers two parts of the place to explore");
+    actions.forEach(function (action) {
+      assert(expected[target].test(action.label), action.label + " should belong specifically to " + target);
+      assert(!/tracks|marks|carcasses|blight/i.test(action.label), action.label + " should not advertise the hidden evidence category");
+    });
+    var onward = Director.guidedActions(state, { target: target, kind: "search", intentDone: true, searches: { ground: true, edges: true }, interacted: {} });
+    assert(onward.some(function (action) { return action.type === "SEARCH_ON" && !/until something changes/i.test(action.label); }), target + " offers another concrete circuit without promising an event");
+  });
+})();
+
+(function searchModesRevealOnlyTheEvidenceTheyCouldFind() {
+  var config = baseConfig("search-modes");
+  config.forcedBeats = [
+    { id: "edge-sign:2", type: "stamp", slot: 2, location: "Old Church", sign: "bite", text: "A dead rook bears two clean punctures.", meta: { searchMode: "edges" } },
+    { id: "edge-sign:3", type: "stamp", slot: 3, location: "Old Church", sign: "bite", text: "A dead rook bears two clean punctures.", meta: { searchMode: "edges" } }
+  ];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "MOVE", to: "Old Church" });
+  state = take(state, { type: "SEARCH", searchMode: "ground" });
+  assert.strictEqual(state.found.stamps.length, 0, "the ground search does not magically expose a carcass hidden at the edge");
+  state = take(state, { type: "SEARCH", searchMode: "edges" });
+  assert.strictEqual(state.found.stamps.length, 1);
+  assert.strictEqual(state.found.stamps[0].sign, "bite", "switching to walls and margins reveals the persistent carcass evidence one hour later");
+  assert.strictEqual(state.currentBeat.id, "edge-sign:3");
+})();
+
+(function continuingASearchAdvancesTheWholeHiddenNight() {
+  var config = baseConfig("search-through-night");
+  config.monster.active = false;
+  config.currentFacts = { weather: "frost", active: false, outMap: {} };
+  config.villagers = [];
+  config.player = {};
+  config.forcedBeats = [{ id: "late-finding", type: "atmosphere", slot: 4, location: "Village Square", text: "A gate moves near the well." }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "SEARCH_ON" });
+  assert.strictEqual(state.cursor, 4, "continuing the search advances every hidden slot until something changes");
+  assert.strictEqual(state.currentBeat.id, "late-finding");
+  assert(state.actionHistory.filter(function (row) { return row.type === "SEARCH_ON"; }).length >= 4, "the ledger records searching through the intervening hours instead of waiting");
+})();
+
+(function searchingCanDrawTheActiveMonster() {
+  var sawThreat = false;
+  var sawSafe = false;
+  for (var i = 0; i < 80 && !(sawThreat && sawSafe); i += 1) {
+    var config = baseConfig("search-risk:" + i);
+    config.villagers = [];
+    config.player = {};
+    config.forcedBeats = [];
+    config.monster.attackSlot = 6;
+    config.currentFacts = { weather: "storm", active: true, huntLoc: "Village Square", attackSlot: 6, outMap: {} };
+    var state = Director.createNight(config);
+    state = take(state, { type: "LEAVE", to: "Village Square" });
+    state.discoverySchedule = {};
+    state = take(state, { type: "SEARCH", searchMode: "edges" });
+    if (state.phase === "threat") {
+      sawThreat = true;
+      assert.strictEqual(state.pendingThreat.source, "search");
+    } else sawSafe = true;
+  }
+  assert(sawThreat && sawSafe, "the deterministic search tape contains both quiet searches and searches that attract the hunter");
+})();
+
+(function everyOpeningDestinationIsReachedDirectly() {
+  ["Village Square", "Old Church", "Graveyard", "Dark Forest", "Old Mill", "Tavern"].forEach(function (target) {
+    var state = Director.createNight(baseConfig("direct-opening:" + target));
+    var actions = Director.guidedActions(state, { target: target, kind: "search", intentDone: false, interacted: {} });
+    assert.strictEqual(actions[0].to, target, target + " must be the first lived location, not an intermediate route node");
+    assert(/straight/.test(actions[0].label));
+  });
+
+  var state = Director.createNight(baseConfig("graveyard-back-lane"));
+  var actions = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: false, interacted: {} });
+  assert.strictEqual(actions[0].to, "Graveyard");
+  assert(/straight to the Graveyard/.test(actions[0].label));
+  state = take(state, actions[0]);
+  assert.strictEqual(state.player.location, "Graveyard");
+  actions = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: false, interacted: {} });
+  assert(actions.every(function (action) { return action.type !== "MOVE"; }), "arrival at the Graveyard cannot masquerade as arrival at the Church");
+})();
+
+(function aDistantScreamCanBeInvestigatedForAStampLastWordsAndSuspicion() {
+  var sawClue = false;
+  var heardWords = false;
+  var drewSuspicion = false;
+  for (var i = 0; i < 140 && !(sawClue && heardWords && drewSuspicion); i += 1) {
+    var config = baseConfig("body-investigation:" + i);
+    config.slots = 6;
+    config.openingIntent = { kind: "search", loc: "Graveyard" };
+    config.player = {};
+    config.forcedBeats = [];
+    config.villagers = [
+      { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "late-delivery", family: "work", destination: "Village Square", reason: "deliver a coat", object: "a parcel", depart: 0, duration: 6 } },
+      { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true, home: "Old Church" }
+    ];
+    config.monster = { id: "ghoul", hostId: "greta", active: true, signs: ["bite", "graves"], hunts: ["Village Square"], attack: "kill", reach: "out", huntSlot: 1 };
+    config.currentFacts = { weather: "frost", active: true, huntLoc: "Village Square", attackSlot: 1, outMap: { rosa: "Village Square", falk: "home" } };
+    var state = Director.createNight(config);
+    state = take(state, { type: "LEAVE", to: "Graveyard" });
+    state.discoverySchedule = {};
+    state = take(state, { type: "SEARCH", searchMode: "ground" });
+    assert(state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.investigable, "the distant scream identifies a direction the player may choose to pursue");
+    var choices = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} });
+    var investigate = choices.find(function (action) { return action.investigateEventId; });
+    assert(investigate && investigate.to === "Village Square" && /Investigate the scream/.test(investigate.label));
+    state = take(state, investigate);
+    var inquiry = Director.consequenceProjection(state).investigations[0];
+    assert(inquiry && inquiry.victimId === "rosa" && inquiry.location === "Village Square");
+    assert(state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.bodyInvestigation, "investigating reaches the body as a lived scene");
+    sawClue = sawClue || inquiry.clueFound;
+    heardWords = heardWords || inquiry.heardLastWords;
+    drewSuspicion = drewSuspicion || inquiry.suspicious;
+    if (inquiry.clueFound) assert(state.found.stamps.some(function (stamp) { return stamp.sign === inquiry.sign; }), "physical evidence beside the body appears as a real stamp");
+  }
+  assert(sawClue && heardWords && drewSuspicion, "the deterministic investigation tape contains evidence, last-word and social-suspicion outcomes");
+})();
+
 (function discoveriesAreEarnedAndFair() {
   var config = baseConfig("discoveries");
   var state = Director.createNight(config);
@@ -174,6 +365,7 @@ function take(state, wanted) {
   assert.strictEqual(state.found.stamps.length, 1);
   assert.strictEqual(state.found.clues.length, 1, "a searched mundane object is filed separately from a monster sign");
   assert.strictEqual(state.found.stamps[0].sign, "tracks");
+  assert(state.beats.some(function (beat) { return beat.id === "forced-stamp" && /fog/i.test(beat.text); }), "fog is present in the physical-search presentation, not only the night label");
   assert(state.monsterSchedule.signs.indexOf(state.found.stamps[0].sign) >= 0, "stamps only reveal a real monster sign");
   assert.notStrictEqual(state.found.stamps[0].sign, "wail", "wailing is never found on the ground");
   var invalidConfig = baseConfig("invalid-stamp");
@@ -205,7 +397,9 @@ function take(state, wanted) {
   assert.strictEqual(state.slots, 3, "the Director accepts a genuinely short three-beat night");
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
-  assert.strictEqual(state.phase, "complete", "a quiet night can end promptly when the player returns home");
+  assert.strictEqual(state.phase, "returning", "heading home remains a visible journey beat before the threshold");
+  state = take(state, { type: "REACH_HOME" });
+  assert.strictEqual(state.phase, "complete", "a quiet night can end promptly once the player reaches home");
 })();
 
 (function uncaughtPrivateErrandsDoNotLeakIntoIncidentalClues() {
@@ -264,7 +458,7 @@ function take(state, wanted) {
 
 (function followingTheActiveHostEndsAllSocialChoices() {
   var config = baseConfig("recognition-is-not-a-chat");
-  config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" } };
+  config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" }, revealText: "The muzzle opens through Rosa's face, but her long frame and eyes remain unmistakable." };
   config.currentFacts = { weather: "still", active: true, huntLoc: "Graveyard", attackSlot: 6, outMap: { rosa: "Old Church" } };
   config.villagers = [{
     id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
@@ -277,6 +471,8 @@ function take(state, wanted) {
   state = take(state, { type: "FOLLOW", actorId: "rosa" });
   assert.strictEqual(state.phase, "threat", "recognising the host immediately enters survival state");
   assert.strictEqual(state.pendingThreat.kind, "recognition");
+  assert.strictEqual(state.currentBeat.type, "threat");
+  assert(/Rosa's face/.test(state.currentBeat.text), "following the active host reaches the monster-specific body reveal before the survival choice");
   var actions = Director.availableActions(state);
   assert(!actions.some(function (action) { return action.type === "HAIL" || action.type === "SEARCH"; }), "hail and search disappear after the mask drops");
   assert.deepStrictEqual(actions.map(function (action) { return action.type; }), ["FLEE", "WATCH_MONSTER", "CONFRONT_MONSTER"]);
@@ -314,6 +510,7 @@ function take(state, wanted) {
   var state = Director.createNight(config);
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
   var attack = state.ledgers.truth.find(function (event) { return event.kind === "slain"; });
   assert(attack, "a home-reaching active hunt must land even when the hunting ground is empty");
   assert.strictEqual(attack.location, "home", "dawn finds a behind-the-door victim at home");
@@ -370,6 +567,65 @@ function take(state, wanted) {
   assert.strictEqual(JSON.stringify(resolved.outcomes), snapshot, "resolving a threat must not reroll sampled outcomes");
   assert(resolved.ledgers.truth.some(function (x) { return x.kind === "escape" || x.kind === "intervention" || x.kind === "slain"; }), "the consequence is written into truth");
   assert(resolved.beats.some(function (b) { return b.type === "flee" || b.type === "aftermath"; }), "the consequence has a renderable flee or aftermath beat");
+})();
+
+(function closeMonsterChoicesTradeSafetyForWhatCanBeSeen() {
+  var config = baseConfig("close-read-risks");
+  config.villagers = [{ id: "tobias", name: "Old Tobias", role: "the Gravedigger", build: "stooped", alive: true, home: "Village Square" }];
+  config.monster = { id: "demon", hostId: "tobias", active: true, signs: ["hex", "flora"], hunts: ["Dark Forest"], attack: "kill", reach: "out", revealText: "Rotted flesh opens in black seams. Beneath it, the stoop is unmistakably Old Tobias." };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 2, outMap: { tobias: "Dark Forest" } };
+  config.forcedBeats = [];
+  var original = Director.createNight(config);
+  original.phase = "threat";
+  original.cursor = 2;
+  original.player.location = "Dark Forest";
+  original.pendingThreat = { id: "close-demon", slot: 2, location: "Dark Forest", victimId: "player", kind: "player", sign: "hex" };
+  var actions = Director.availableActions(original);
+  assert.deepStrictEqual(actions.map(function (action) { return [action.type, action.hideMode]; }), [
+    ["HIDE", "cover"], ["HIDE", "shadow"], ["HIDE", "still"], ["FLEE", undefined]
+  ], "a close encounter offers three distinct ways to hide and the road home");
+  assert(/roots/.test(actions[0].label) && /bracken/.test(actions[1].label) && /path/.test(actions[2].label), "the Dark Forest hiding choices use the place rather than imaginary village doorways");
+
+  var shadow = JSON.parse(JSON.stringify(original));
+  shadow.outcomes[2].conceal.shadow = { survive: 0.31, reveal: 0.9 };
+  shadow = Director.reduce(shadow, { type: "HIDE", hideMode: "shadow" });
+  assert.strictEqual(shadow.phase, "returning", "deep shadow is the safer low-information choice");
+  assert(!shadow.ledgers.truth.some(function (event) { return event.kind === "monster_close_read" && (event.learnedIdentity || event.learnedBuild || event.learnedSign); }));
+
+  var still = JSON.parse(JSON.stringify(original));
+  still.outcomes[2].conceal.still = { survive: 0.31, reveal: 0.1 };
+  still = Director.reduce(still, { type: "HIDE", hideMode: "still" });
+  assert.strictEqual(still.phase, "dead", "the same sampled survival value fails when the player risks standing in the open");
+
+  var closeLook = JSON.parse(JSON.stringify(original));
+  closeLook.outcomes[2].conceal.still = { survive: 0.99, reveal: 0.1 };
+  closeLook = Director.reduce(closeLook, { type: "HIDE", hideMode: "still" });
+  var reading = closeLook.ledgers.truth.find(function (event) { return event.kind === "monster_close_read"; });
+  assert(reading && reading.learnedIdentity && reading.learnedBuild && reading.learnedSign === "hex", "surviving the most exposed choice can reveal sign, build and host together");
+  assert.strictEqual(closeLook.currentBeat.actorId, "tobias");
+  assert(/Old Tobias/.test(closeLook.currentBeat.text));
+  assert(closeLook.found.stamps.some(function (stamp) { return stamp.sign === "hex" && stamp.source === "monster_close_read"; }), "a sign seen on the body becomes a real Journal stamp");
+})();
+
+(function aQuietTemperamentBeatCannotBecomeAnAttack() {
+  var config = baseConfig("quiet-temperament");
+  config.monster = { id: "vampire", hostId: "rosa", active: false, signs: ["bite", "cold"], hunts: ["Village Square"], attack: "kill", reach: "out", voice: { mode: "speaker" } };
+  config.currentFacts = { weather: "still", active: false, outMap: {} };
+  config.villagers = [];
+  config.player = {};
+  config.forcedBeats = [{
+    id: "quiet-laugh", type: "atmosphere", slot: 0, location: "*", text: "A soft laugh comes from an empty house.",
+    meta: { requiresResponse: true, quietPresence: true, voiceMode: "speaker", responseText: "The laugh moves to another lane and fades." }
+  }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert(state.currentBeat.meta.quietPresence, "the non-hunt night still carries the monster's speaker temperament");
+  var actions = Director.guidedActions(state, { target: "Village Square", kind: "search", intentDone: false, searches: {}, interacted: {} });
+  assert.deepStrictEqual(actions.map(function (action) { return action.type; }), ["LISTEN", "GO_HOME"]);
+  state = take(state, { type: "LISTEN" });
+  assert(/another lane/.test(state.currentBeat.text), "turning toward the sound receives its authored quiet-night resolution");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "quiet_monster_presence" && event.activeHunt === false; }));
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "slain" || event.kind === "changed" || event.kind === "player_slain"; }), "temperament can own an inactive night without inventing a victim");
 })();
 
 (function interventionProjectsAsARescueRelationship() {
@@ -466,6 +722,8 @@ function take(state, wanted) {
   var state = Director.createNight(config);
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
+  assert.strictEqual(state.phase, "returning", "the forest does not turn directly into the player's threshold");
+  state = take(state, { type: "REACH_HOME" });
   assert.strictEqual(state.phase, "threshold");
   assert.strictEqual(state.currentBeat.type, "doorstep");
   assert.deepStrictEqual(Director.availableActions(state).map(function (a) { return a.type; }), ["KEEP_BARRED", "LOOK_THROUGH", "ANSWER_DOOR"]);
@@ -477,10 +735,31 @@ function take(state, wanted) {
   assert(state.ledgers.truth.some(function (e) { return e.kind === "threshold_choice"; }));
 })();
 
+(function thresholdDetailsRespectTheSampledWeather() {
+  var config = baseConfig("storm-threshold");
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.active = false;
+  config.currentFacts = { weather: "storm", active: false, outMap: { rosa: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.kind = "breath";
+  state.thresholdEvent.look = "The breathing stops when the shutter moves. The frost on the outer latch is already melting.";
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert.strictEqual(state.phase, "threshold");
+  assert(/Rain rattles/.test(state.currentBeat.text) && !/frost/i.test(state.currentBeat.text));
+  state = take(state, { type: "LOOK_THROUGH" });
+  assert(/Rainwater/.test(state.currentBeat.text) && !/frost/i.test(state.currentBeat.text), "a storm threshold cannot borrow the frost latch");
+})();
+
 (function goingHomeDoesNotStopTheVillageClock() {
   var state = Director.createNight(baseConfig("home-is-not-pause"));
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
+  assert.strictEqual(state.phase, "returning");
+  state = take(state, { type: "REACH_HOME" });
   assert.strictEqual(state.phase, "complete");
   assert.strictEqual(state.cursor, state.slots - 1, "the hidden village clock must settle through the final slot");
   assert(state.ledgers.truth.some(function (e) { return e.kind === "slain" && e.victimId === "rosa"; }), "a scheduled later attack still happens after the player bars the door");
@@ -530,6 +809,17 @@ function take(state, wanted) {
   assert(!state.ledgers.observations.some(function (o) { return o.eventId === event.id; }), "the player journal cannot identify someone hidden by fog");
   assert(state.ledgers.memories.falk.some(function (m) { return m.eventId === event.id; }), "the villager can still remember seeing the player's lantern");
   assert(!Director.availableActions(state).some(function (a) { return a.actorId === "falk" && ["HAIL", "FOLLOW"].includes(a.type); }), "an unseen villager cannot be hailed or followed by name");
+  var projection = Director.consequenceProjection(state);
+  assert.strictEqual(projection.weather, "fog");
+  assert.strictEqual(projection.encounters[0].clarity, "one_sided");
+  assert(/fog hid/i.test(projection.encounters[0].weatherEffect), "the daylight thread preserves why recognition failed");
+})();
+
+(function weatherProfilesChangeEvidenceHearingAndRecognition() {
+  assert(Director.WEATHER_PROFILES.fog.visibility < Director.WEATHER_PROFILES.storm.visibility, "fog is the strongest recognition penalty");
+  assert(Director.WEATHER_PROFILES.storm.whisperChance < Director.WEATHER_PROFILES.fog.whisperChance, "storm drowns subtle audible clues");
+  assert(Director.WEATHER_PROFILES.frost.stampChance > Director.WEATHER_PROFILES.still.stampChance, "frost strengthens ground evidence");
+  assert(Director.WEATHER_PROFILES.frost.visibility > Director.WEATHER_PROFILES.still.visibility, "breath and tracks make frost sightings unusually legible");
 })();
 
 (function adjacentEncountersBecomeOneHumanConversation() {
@@ -565,7 +855,7 @@ function take(state, wanted) {
 })();
 
 (function browserAndNodeSurface() {
-  assert.strictEqual(Director.version, 4);
+  assert.strictEqual(Director.version, 5);
   var state = Director.createNight(baseConfig("visible"));
   var visible = Director.visibleState(state);
   assert(Array.isArray(visible.actions));
@@ -584,9 +874,68 @@ function take(state, wanted) {
   var restored = JSON.parse(JSON.stringify(state));
   assert(Director.availableActions(restored).some(function (a) { return a.type === "WAIT"; }), "an old save remains playable before its first upgraded action");
   restored = take(restored, { type: "WAIT" });
-  assert.strictEqual(restored.version, 4);
+  assert.strictEqual(restored.version, 5);
   assert(restored.visibility && restored.thresholdEvent && restored.outcomes[1].chase, "the first action fills only the new deterministic fields");
   assert.strictEqual(restored.monsterSchedule.relentless, false, "old monster schedules gain the deterministic rhythm flag without rerolling");
+})();
+
+(function soundCannotBlockTheWalkTransition() {
+  var html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  var start = html.slice(html.indexOf("const startDirectorNight"), html.indexOf("/* ---------- The night walk", html.indexOf("const startDirectorNight")));
+  assert(start.indexOf("setWalk({") < start.indexOf("Snd.scene("), "the Director walk state must be queued before optional ambience runs");
+  assert(html.includes("node.volume.linearRampTo(db, seconds)"), "weather volume fades must use a linear ramp that accepts the silent decibel floor");
+  assert(!html.includes("windFilter.frequency.rampTo("), "the LFO-owned wind filter parameter must not be automated directly");
+  var sightings = html.slice(html.indexOf("const DIRECTOR_SIGHTING_LINES"), html.indexOf("function directorSightingFor"));
+  assert.strictEqual((sightings.match(/^\s+\(nm, c\) =>/gm) || []).length, 10, "crossed-path encounters have ten short observable presentations");
+  assert(!sightings.includes("${c.dest}") && !sightings.includes("${c.object}"), "a lantern sighting cannot reveal a destination or the private meaning of an object");
+  assert(!html.includes("WHERE THEY REALLY WENT"), "following uses a neutral scene heading rather than editorialising about the villager");
+  assert(html.includes('hail = directorHailFor(seed, npc, "mourning", ctx, deadName)'), "a graveside hail answers the mourning situation instead of using generic roadside gossip");
+  var hailSource = html.slice(html.indexOf("const DIRECTOR_HAIL_BY_FAMILY"), html.indexOf("function directorHailFor"))
+    .replace("const DIRECTOR_HAIL_BY_FAMILY =", "DIRECTOR_HAIL_BY_FAMILY =");
+  var hailContext = {};
+  vm.createContext(hailContext);
+  vm.runInContext(hailSource, hailContext);
+  var hailRows = Object.keys(hailContext.DIRECTOR_HAIL_BY_FAMILY).reduce(function (rows, family) {
+    return rows.concat(hailContext.DIRECTOR_HAIL_BY_FAMILY[family].map(function (line) { return { family: family, line: line }; }));
+  }, []);
+  assert(hailRows.length >= 40, "walk hails have many situation-aware combinations");
+  hailRows.forEach(function (entry) {
+    var text = entry.line("Doctor Falk", { dest: "Graveyard" }, "Rosa");
+    var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words >= 10 && words <= 25, entry.family + " hail must remain within 10–25 words: " + text);
+  });
+  assert(!html.includes("crosses the edge of your lantern with"), "the retired repeating sighting line cannot leak through a fallback");
+  assert(html.includes('q: "sawContext"'), "a Director encounter offers a location-specific witness follow-up");
+  assert(html.includes("I was only passing through, taking the back lane toward"), "interviews explain a route waypoint separately from the villager's destination");
+  assert(html.includes("WEATHER_WALK_CONTINUED") && html.includes("WEATHER_DAWN_CONTINUED"), "consecutive weather has authored second-night openings and dawn consequences");
+  assert(html.includes("QUIET_NIGHT_WEATHER") && html.includes('quietNight:${wx || "still"}'), "quiet Director recaps are selected from the sampled weather instead of the generic frost-capable pool");
+  assert(html.includes("allDelusionFragments.slice(0, 1)"), "an unresolved strange sight shows only its opening image before asking the player what to do");
+  assert(!html.includes("outside ${actorName}'s door in the ${target}"), "watch prose does not redundantly route a doorstep scene through its map label");
+  assert(!/storm drowned half the night|storm drowned words/.test(html), "storm interview copy does not echo the same drowned-sound sentence in question and answer");
+  assert(html.includes("projection.investigations") && html.includes("director_body_investigation"), "fresh-body investigations survive into dawn, clues and social suspicion");
+  assert(html.includes("alive: directorActorState.alive"), "the night portrait uses the Director's death state before daylight updates the legacy cast");
+  var revealSource = html.slice(html.indexOf("function directorHostBuild"), html.indexOf("const DIRECTOR_SEARCH_PAYOFF"))
+    .replace("const DIRECTOR_MONSTER_REVEALS =", "DIRECTOR_MONSTER_REVEALS =");
+  var revealContext = {};
+  vm.createContext(revealContext);
+  vm.runInContext(revealSource, revealContext);
+  var demonReveal = revealContext.DIRECTOR_MONSTER_REVEALS.demon("Old Tobias", "stooped");
+  assert(/rotted flesh/i.test(demonReveal) && /stoop/i.test(demonReveal) && /Old Tobias/.test(demonReveal), "a demon can be horrific while its ruined body still identifies Old Tobias");
+  assert(html.includes('(DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name'), "a Director death restores the monster-specific death scene with the actual host named");
+  var temperamentSource = html.slice(html.indexOf("const DIRECTOR_TEMPERAMENT_QUIET"), html.indexOf("function directorHostBuild"))
+    .replace("const DIRECTOR_TEMPERAMENT_QUIET =", "DIRECTOR_TEMPERAMENT_QUIET =");
+  var temperamentContext = {};
+  vm.createContext(temperamentContext);
+  vm.runInContext(temperamentSource, temperamentContext);
+  assert.deepStrictEqual(Object.keys(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET).sort(), ["beast", "silent", "speaker"]);
+  Object.keys(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET).forEach(function (mode) {
+    assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET[mode].length >= 6, mode + " owns quiet nights through a varied authored pool");
+  });
+  assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.beast.some(function (row) { return /growl/i.test(row.open); }), "beast nights can carry a non-hunting growl");
+  assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.speaker.some(function (row) { return /laugh/i.test(row.open); }), "speaker nights can carry an obscure non-hunting laugh");
+  assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.silent.some(function (row) { return /silence|without making a sound|refuses/i.test(row.open); }), "silent horrors take sound away instead of borrowing a beast or speaker cue");
+  assert(html.includes("if (!s.playerSigns.includes(stamp.sign)) s.playerSigns.push(stamp.sign)"), "a Director sign is already stamped when it reaches the Journal");
+  assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
 })();
 
 console.log("v5-night-director: all tests passed");
