@@ -526,6 +526,7 @@
       slots: slots,
       weather: facts.weather || config.weather || "still",
       phase: "planned",
+      openingIntent: clone(config.openingIntent || null),
       cursor: -1,
       graph: graph,
       cast: cast,
@@ -844,8 +845,12 @@
     });
     appendObservation(state, { eventId: event.id, slot: slot, kind: dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: "clear", reliability: "direct", text: dialogue.follow || null });
     state.ledgers.memories[actorId].push({ eventId: event.id, slot: slot, subject: "player", kind: "followed", location: destination, clarity: "uncertain", acknowledged: false, interpretation: "They may not know whether the lantern behind them was yours." });
+    var followText = dialogue.follow || (villager.name + " reaches the " + destination + " and completes a small, human errand before turning home.");
+    if (state.openingIntent && state.openingIntent.kind === "watch" && state.openingIntent.id === actorId) {
+      followText = "You abandon the watch outside " + villager.name + "'s door and follow them. " + followText;
+    }
     appendBeat(state, makeBeat("follow-beat:" + slot + ":" + actorId, "follow", slot, destination,
-      dialogue.follow || (villager.name + " reaches the " + destination + " and completes a small, human errand before turning home."), {
+      followText, {
         actorId: actorId,
         truthEventId: event.id,
         meta: { motiveFamily: schedule.motive.family, revealedSecret: !!dialogue.revealsSecret, critical: state.monsterSchedule.active && actorId === state.monsterSchedule.hostId }
@@ -1287,7 +1292,9 @@
     if (next.phase === "returning") return resolveReturn(next, action);
     if (next.phase === "chase") return resolveChase(next, action);
     if (next.phase === "threat") return resolveThreat(next, action);
-    var legal = availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var forcedWatchFollow = next.currentBeat && next.currentBeat.type === "watch" && next.currentBeat.meta && next.currentBeat.meta.departure
+      && action.type === "FOLLOW" && action.actorId === next.currentBeat.actorId;
+    var legal = forcedWatchFollow || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
     if (action.type === "GO_HOME") {
       next.player.location = HOME;
@@ -1409,7 +1416,7 @@
     if (state.phase === "planned") {
       var leave = all[0];
       if (!leave) return [];
-      leave.label = guide.kind === "watch" ? "Set out for " + (guide.actorName || "their") + " door" : "Set out for the " + target;
+      leave.label = guide.kind === "watch" ? "Leave via the Village Square to watch " + (guide.actorName || "their") + "'s door" : "Leave via the Village Square for the " + target;
       return [leave];
     }
     var result = [];
@@ -1427,7 +1434,30 @@
     if (target && !atTarget) {
       var path = shortestPath(state.graph, state.player.location, target);
       var nextLocation = path[1];
-      add(all.find(function (item) { return item.type === "MOVE" && item.to === nextLocation; }), "Continue to the " + target);
+      var moveLabel = state.player.location === "Village Square" && target !== "Village Square"
+        ? "Cut through the Village Square to the " + target
+        : "Continue to the " + target;
+      add(all.find(function (item) { return item.type === "MOVE" && item.to === nextLocation; }), moveLabel);
+    }
+    var beat = state.currentBeat;
+    if (beat && beat.type === "watch" && beat.meta && beat.meta.departure) {
+      add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }) || action("FOLLOW", "Abandon the watch and follow " + (guide.actorName || "them"), "amber", { actorId: beat.actorId }), "Abandon the watch and follow " + (guide.actorName || "them"));
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Give up the watch and go home");
+      return result.slice(0, 3);
+    }
+    if (beat && beat.type === "watch" && beat.meta && beat.meta.noDeparture) {
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "They do not leave. Go home at dawn");
+      return result.slice(0, 3);
+    }
+    if (beat && beat.type === "delusion" && beat.meta && beat.meta.requiresResponse) {
+      add(all.find(function (item) { return item.type === "SEARCH"; }), "Turn and look");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Back away and go home");
+      return result.slice(0, 3);
+    }
+    if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.requiresResponse) {
+      add(all.find(function (item) { return item.type === "LISTEN"; }), "Turn toward the sound");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Go home and bar the door");
+      return result.slice(0, 3);
     }
     if (atTarget && !guide.intentDone) {
       if (guide.kind === "watch") add(all.find(function (item) { return item.type === "WAIT"; }), "Take up watch near " + (guide.actorName || "their") + " door");

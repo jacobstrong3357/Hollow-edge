@@ -3434,7 +3434,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   });
   if (facts.active) forcedBeats.push({
     id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(0, attackSlot - 1), location: "*",
-    text: temperament.sound, meta: { soundCue: temperament.cue, voiceMode: temperament.mode },
+    text: temperament.sound, meta: { soundCue: temperament.cue, voiceMode: temperament.mode, requiresResponse: true },
   });
   if (facts.active && facts.huntLoc && realGroundSigns.length) forcedBeats.push({
     id: `n${n}:hunting-mark`, type: "stamp", slot: attackSlot, location: facts.huntLoc,
@@ -3446,7 +3446,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     const fragments = DIRECTOR_DELUSIONS[Math.floor(rng.next() * DIRECTOR_DELUSIONS.length)];
     forcedBeats.push({
     id: `n${n}:delusion`, type: "delusion", slot: Math.min(slots - 1, 1 + Math.floor(rng.next() * Math.max(1, slots - 1))), location: "*",
-    text: fragments.join(" "), meta: { fragments, resolvedAsUnreal: true },
+    text: fragments.join(" "), meta: { fragments, resolvedAsUnreal: true, requiresResponse: true, soundCue: "leaves" },
     });
   }
   const directorConfig = {
@@ -3509,11 +3509,40 @@ function compileDirectorNight(s, facts, openingIntent) {
   } else if (openingIntent.kind === "watch") {
     const target = npcById(s, openingIntent.id);
     const watchLocation = HOME_LOC[openingIntent.id] || "Village Square";
+    const graph = HE_DIRECTOR.DEFAULT_GRAPH || {};
+    const route = (() => {
+      const q = [["Home"]]; const seen = new Set(["Home"]);
+      while (q.length) { const p = q.shift(); const here = p[p.length - 1]; if (here === watchLocation) return p; for (const next of (graph[here] || [])) if (!seen.has(next)) { seen.add(next); q.push([...p, next]); } }
+      return ["Home", "Village Square", watchLocation];
+    })();
+    const setupSlot = Math.min(slots - 1, Math.max(0, route.length - 1));
+    if (target) directorConfig.forcedBeats.push({
+      id: `n${n}:door-watch-setup:${openingIntent.id}`, type: "watch", slot: setupSlot,
+      location: watchLocation, actorId: openingIntent.id,
+      text: `You leave via the Village Square and take up a position outside ${target.name}'s door in the ${watchLocation}.`,
+      meta: { setup: true },
+    });
     const watchText = directorHomeWatchText(s, facts, openingIntent.id);
-    if (target && watchText) directorConfig.forcedBeats.push({
-      id: `n${n}:door-watch:${openingIntent.id}`, type: "watch", slot: watchLocation === "Village Square" ? 1 : 2,
+    const leaves = target && facts.outMap && facts.outMap[openingIntent.id] && facts.outMap[openingIntent.id] !== "home";
+    if (target && leaves) {
+      const agenda = preview.schedules && preview.schedules[openingIntent.id];
+      const departSlot = agenda && agenda.slots ? agenda.slots.findIndex((loc, i) => i > setupSlot && loc !== (HOME_LOC[openingIntent.id] || "Village Square") && loc !== "Home") : -1;
+      const destination = facts.outMap[openingIntent.id];
+      directorConfig.forcedBeats.push({
+        id: `n${n}:door-departure:${openingIntent.id}`, type: "watch", slot: departSlot >= 0 ? departSlot : Math.min(slots - 1, setupSlot + 1),
+        location: watchLocation, actorId: openingIntent.id,
+        text: `${target.name}'s door opens. A light moves out toward the ${destination}. The watch is over if you mean to know where they are going.`,
+        meta: { departure: true },
+      });
+    } else if (target && watchText) directorConfig.forcedBeats.push({
+      id: `n${n}:door-watch:${openingIntent.id}`, type: "watch", slot: Math.min(slots - 1, Math.max(setupSlot + 1, slots - 1)),
       location: watchLocation, actorId: openingIntent.id, text: watchText,
-      meta: { revealsSecret: facts.homeWatch.kind === "secret", secretSummary: facts.homeWatch.short || null },
+      meta: { revealsSecret: facts.homeWatch && facts.homeWatch.kind === "secret", secretSummary: facts.homeWatch && facts.homeWatch.short || null, noDeparture: true },
+    });
+    else if (target) directorConfig.forcedBeats.push({
+      id: `n${n}:door-quiet:${openingIntent.id}`, type: "watch", slot: slots - 1,
+      location: watchLocation, actorId: openingIntent.id,
+      text: `${target.name} does not leave all night. At dawn, you go home.`, meta: { noDeparture: true },
     });
   }
   return HE_DIRECTOR.fromExistingFacts(directorConfig, currentFacts);
@@ -11871,7 +11900,7 @@ function MonsterVillage() {
         interacted: walk.interacted || {},
       });
       const recognition = d.phase === "threat" && d.pendingThreat && d.pendingThreat.kind === "recognition";
-      const labels = { atmosphere: "THE VILLAGE ABROAD", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: "BEHIND THE SHUTTER", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "WHERE THEY REALLY WENT" };
+      const labels = { atmosphere: beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "WHERE THEY REALLY WENT" };
       const nightRatio = d.cursor < 0 ? -1 : d.cursor / Math.max(1, d.slots - 1);
       const slotLabel = nightRatio < 0 ? "BEFORE THE LAST LIGHT" : nightRatio < .28 ? "AFTER THE BELL" : nightRatio < .7 ? "THE SMALL HOURS" : "BEFORE DAWN";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
