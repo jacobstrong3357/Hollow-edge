@@ -262,6 +262,45 @@ function take(state, wanted) {
   assert(projection.secrets.some(function (event) { return event.actorId === "rosa"; }), "an actually witnessed secret survives into the village state");
 })();
 
+(function followingTheActiveHostEndsAllSocialChoices() {
+  var config = baseConfig("recognition-is-not-a-chat");
+  config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" } };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Graveyard", attackSlot: 6, outMap: { rosa: "Old Church" } };
+  config.villagers = [{
+    id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+    motive: { id: "false-errand", family: "work", destination: "Old Church", reason: "carry a parcel", object: "a parcel", depart: 1, duration: 5 },
+    dialogue: { follow: "Rosa stops pretending and scents the church road for somebody's trail." }
+  }];
+  var state = Director.createNight(config);
+  Object.keys(state.visibility).forEach(function (slot) { state.visibility[slot].rosa = true; });
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  assert.strictEqual(state.phase, "threat", "recognising the host immediately enters survival state");
+  assert.strictEqual(state.pendingThreat.kind, "recognition");
+  var actions = Director.availableActions(state);
+  assert(!actions.some(function (action) { return action.type === "HAIL" || action.type === "SEARCH"; }), "hail and search disappear after the mask drops");
+  assert.deepStrictEqual(actions.map(function (action) { return action.type; }), ["FLEE", "WATCH_MONSTER", "CONFRONT_MONSTER"]);
+  state.outcomes[state.cursor].hide = 0.99;
+  state = take(state, { type: "WATCH_MONSTER" });
+  assert.strictEqual(state.phase, "returning");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_reveal_choice" && event.action === "WATCH_MONSTER"; }));
+})();
+
+(function aCorrectArmedConfrontationCanEndAtTheReveal() {
+  var config = baseConfig("named-in-the-dark");
+  config.player = { armedGuess: { id: "werewolf", name: "Werewolf", method: "silver" } };
+  config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" } };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Graveyard", attackSlot: 6, outMap: { rosa: "Old Church" } };
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "false-errand", family: "work", destination: "Old Church", reason: "carry a parcel", object: "a parcel", depart: 1, duration: 5 }, dialogue: { follow: "Rosa stops pretending." } }];
+  var state = Director.createNight(config);
+  Object.keys(state.visibility).forEach(function (slot) { state.visibility[slot].rosa = true; });
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  state = take(state, { type: "CONFRONT_MONSTER" });
+  assert.strictEqual(state.phase, "complete");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_slain"; }), "the true prepared name settles the confrontation without returning to social play");
+})();
+
 (function homeReachingHuntsDoNotRequireAStreetCollision() {
   var config = {
     seed: "witch-at-the-window", night: 6, slots: 7,
@@ -526,7 +565,7 @@ function take(state, wanted) {
 })();
 
 (function browserAndNodeSurface() {
-  assert.strictEqual(Director.version, 3);
+  assert.strictEqual(Director.version, 4);
   var state = Director.createNight(baseConfig("visible"));
   var visible = Director.visibleState(state);
   assert(Array.isArray(visible.actions));
@@ -545,7 +584,7 @@ function take(state, wanted) {
   var restored = JSON.parse(JSON.stringify(state));
   assert(Director.availableActions(restored).some(function (a) { return a.type === "WAIT"; }), "an old save remains playable before its first upgraded action");
   restored = take(restored, { type: "WAIT" });
-  assert.strictEqual(restored.version, 3);
+  assert.strictEqual(restored.version, 4);
   assert(restored.visibility && restored.thresholdEvent && restored.outcomes[1].chase, "the first action fills only the new deterministic fields");
   assert.strictEqual(restored.monsterSchedule.relentless, false, "old monster schedules gain the deterministic rhythm flag without rerolling");
 })();

@@ -3255,14 +3255,32 @@ function directorMotiveFor(s, facts, npc) {
   return null;
 }
 const DIRECTOR_PERSONA_HAIL = {
-  marta: (nm, ctx) => `“Easy,” ${nm} says, lifting the cloth over ${ctx.object}. “There is a house waiting on me. You look frozen—walk beside me until the turning, then bar your door.”`,
-  tobias: (nm, ctx) => `${nm} plants his feet. “I am looking after something the daylight crowd would only fuss over.” He glances toward the ${ctx.dest}. “If you hear digging where I am not, come find me. Do not go looking alone.”`,
-  ansel: (nm, ctx) => `“Someone asked for me,” ${nm} says, one hand closed over ${ctx.object}. “I will not give you their name in a lane. Keep away from the churchyard wall tonight, and if the bell rings twice, do not answer it.”`,
-  greta: (nm, ctx) => `${nm} studies your face before answering. “I am searching for what I need, not what wants finding.” She shifts ${ctx.object} under one arm. “Stay close if you must come. Step where I step.”`,
-  wilhelm: (nm, ctx) => `“I have somebody to find and not enough night to explain it,” ${nm} says. He offers you the safer side of the lane without mentioning the kindness. “Walk, or go home. Do not stand lit up like bait.”`,
-  liesel: (nm, ctx) => `“Come here, love—out of the middle of the road.” ${nm} pulls you into the lee of a wall. “I have business at the ${ctx.dest}. You may keep me company, but you will not turn it into village talk tomorrow.”`,
-  falk: (nm, ctx) => `${nm} checks your pupils before he answers your question. “Someone needs me. That is all you are owed.” He lifts ${ctx.object}. “If you hear breathing behind you, do not run until you know where the ground goes.”`,
-  rosa: (nm, ctx) => `${nm} watches the road behind you while you speak. “I am carrying something where it needs to go.” A small pause. “You may walk with me. Quietly. Or you may go home and say you never saw me.”`,
+  marta: (nm) => `“Evening, love.” ${nm} tucks your scarf closer at the throat. “Keep your lantern low. The dogs have been barking at light.”`,
+  tobias: (nm) => `${nm} grunts your name. “If you hear digging where I am not, come find me. Do not go looking alone.”`,
+  ansel: (nm) => `“God keep you,” ${nm} says. “The vestry gate was unlatched at dusk. Do not use it tonight.”`,
+  greta: (nm) => `${nm} gives you one measuring look. “Step where the grass is pale. Something heavy used the other verge.”`,
+  wilhelm: (nm) => `${nm} moves you to the wallward side of the lane. “Do not stand lit up like bait. Someone else can be brave tomorrow.”`,
+  liesel: (nm) => `“Evening, love.” ${nm} lowers her voice. “Tobias says the graves are settling. Tobias lies badly when he is frightened.”`,
+  falk: (nm) => `${nm} checks your face in the lantern light. “Still yourself before you run. Panic chooses worse ground than monsters do.”`,
+  rosa: (nm) => `${nm} nods once. “Keep your light off the upper windows. Half this village is awake and pretending otherwise.”`,
+};
+const DIRECTOR_MONSTER_ACTIVITY = {
+  werewolf: (dest) => `It works the edge of the ${dest} with its nose close to the ground, sorting one human trail from all the others. It has chosen a scent.`,
+  ghoul: (dest) => `It kneels at the ${dest} and tests the soil with both hands, loosening earth as carefully as Tobias preparing a grave. Something beneath answers the touch.`,
+  shifter: (dest) => `It studies the windows around the ${dest}, trying a neighbour's posture, then another's voice, deciding which shape will be admitted after a knock.`,
+  revenant: (dest) => `It crosses the ${dest} in the same straight line again and again, stopping at one door each time as though completing an old journey that ended there.`,
+  wraith: (dest) => `It passes among the stones at the ${dest}. Frost takes each name after it reads it and melts everywhere except one fresh grave.`,
+  banshee: (dest) => `It faces the houses from the ${dest} and draws breath for a cry it has not yet released. Every dog in the village is already hiding.`,
+  vampire: (dest) => `It listens beneath the lit windows around the ${dest}, patient at each pulse, passing over one sleeping house and choosing the next.`,
+  witch: (dest) => `It ties hair and red thread around a nail at the ${dest}, whispers a household name into the knot, then taps it once against the stone.`,
+  demon: (dest) => `It scratches a question into the ground at the ${dest} and answers itself in a second voice. Both answers concern somebody still awake.`,
+  lich: (dest) => `It counts the occupied houses from the ${dest}, moving a finger for each living name and starting again whenever the number comes out wrong.`,
+  doppel: (dest) => `It practises three neighbours' voices at the ${dest}. The fourth voice is yours, repeating something you have never said aloud.`,
+  hag: (dest) => `It crouches at the ${dest} over a sleeping animal, not touching it, feeding it a dream that makes its paws run against the earth.`,
+  necromancer: (dest) => `It presses one palm to the ground at the ${dest}. Beneath it, buried knuckles begin answering in patient little knocks.`,
+  mimic: (dest) => `It makes a child's cry at the ${dest}, waits, then tries a wounded dog's whine. It is testing which sound opens a door fastest.`,
+  succubus: (dest) => `It hums one unfinished phrase toward the houses from the ${dest}. Somewhere beyond your sight, a bolt is being drawn back.`,
+  hollowed: (dest) => `It lays one hand against a tree at the ${dest}. The branches bend toward the village, feeling along roofs and chimneys like searching fingers.`,
 };
 function directorStableLine(key, rows, ...args) {
   const score = [...String(key)].reduce((n, ch) => ((n * 33) + ch.charCodeAt(0)) >>> 0, 5381);
@@ -3277,18 +3295,20 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   const dead = griefId && npcById(s, griefId);
   const activeHost = facts.active && npc.id === s.monster.vid;
   const temperament = DIRECTOR_MONSTER_TEMPERAMENT[monsterOf(s).id] || { mode: "silent" };
-  let hail, follow, honest, evasive, question, secretSummary = null;
+  let hail, follow, honest, evasive, question, reaffirm, secretSummary = null;
   if (activeHost) {
     hail = temperament.mode === "beast"
       ? `${npc.name} stops without turning. Their shoulders lift around one deep breath. The answer to your hail is a low growl forced through a throat still trying to pass for human.`
       : temperament.mode === "silent"
         ? `${npc.name} turns. Their mouth opens, but the lane loses every sound before an answer can form. They walk on while the silence holds.`
         : directorStableLine(seed + npc.id + ":hail-monster", HAIL_MONSTER_LINES, npc.name, dest);
-    follow = temperament.mode === "beast"
+    const reveal = temperament.mode === "beast"
       ? `You follow ${npc.name} toward the ${dest}. The human stride shortens, breaks, then lands on too many points at once. Breath becomes panting; panting becomes a growl. You stop before it turns.`
       : temperament.mode === "silent"
         ? `You follow ${npc.name} toward the ${dest}. Frost takes each print after they lift their foot. They make no breath and no sound, and the night goes still around their passing.`
         : directorStableLine(seed + npc.id + ":follow-monster", FOLLOW_MONSTER_SCENES, npc.name, dest);
+    const activity = (DIRECTOR_MONSTER_ACTIVITY[monsterOf(s).id] || ((where) => `It bends to deliberate work at the ${where}, intent upon somebody who is not yet here.`))(dest);
+    follow = `${reveal} ${activity}`;
     honest = temperament.mode === "beast"
       ? `A growl starts in ${npc.name}'s chest. “You followed me,” they manage, the words damaged by whatever the night did to their throat.`
       : `“You followed me to the ${dest}. You should be more careful about what you ask to notice.”`;
@@ -3296,28 +3316,32 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
       ? `“You followed a silence and gave it my face. That is not testimony.”`
       : `“You followed a shadow and decided it wore my coat. Fear has made better witnesses than you.”`;
     question = `I followed you to the ${dest}. What were you doing there?`;
+    reaffirm = evasive;
   } else if (npc.turned) {
     hail = directorStableLine(seed + npc.id + ":hail-turned", HAIL_TURNED_LINES, npc.name);
     follow = directorStableLine(seed + npc.id + ":follow-turned", FOLLOW_TURNED_SCENES, npc.name, dest);
     honest = `“I went where I was needed.” The words arrive flat and complete. Nothing follows them.`;
     evasive = honest;
     question = `I followed you to the ${dest}. What called you there?`;
+    reaffirm = honest;
   } else if (secret) {
-    hail = secret.hail(npc.name);
+    hail = (DIRECTOR_PERSONA_HAIL[npc.id] || ((nm) => `“Evening,” ${nm} says softly. “Keep to the lit side of the lane.”`))(npc.name);
     follow = secretCaught
       ? secret.walk(npc.name)
       : `You keep ${npc.name}'s lantern ahead of you for three turns. At the ${dest}, it goes dark. A door closes softly somewhere you cannot place. You learned that the errand mattered enough to hide—and nothing you can fairly name beyond that.`;
     honest = secretCaught ? secret.confess : `“You followed me and lost me. That does not entitle you to the part I kept.”`;
     evasive = `“You saw that I wanted privacy. You did not see a crime. Do not improve the night for the sake of your Journal.”`;
     question = secretCaught ? `I followed you to the ${dest}. Tell me what I saw.` : `I followed you toward the ${dest}. Why did you lose me?`;
+    reaffirm = secretCaught ? honest : evasive;
     secretSummary = secret.short;
   } else if (griefId) {
     const deadName = dead ? dead.name : "the dead";
-    hail = directorStableLine(seed + npc.id + ":hail-grief", GRIEF_HAIL, npc.name, deadName);
+    hail = (DIRECTOR_PERSONA_HAIL[npc.id] || ((nm) => `“Evening,” ${nm} says softly. “Keep to the lit side of the lane.”`))(npc.name);
     follow = directorStableLine(seed + npc.id + ":follow-grief", GRIEF_WALK, npc.name, deadName);
     honest = `“I went to ${deadName}. Grief keeps poor hours and it does not ask your permission.”`;
     evasive = `“You watched somebody mourn. If you need that to be suspicious, the ugliness is yours.”`;
     question = `I followed you to ${deadName}'s grave. Why did you go alone?`;
+    reaffirm = honest;
   } else {
     const persona = DIRECTOR_PERSONA_HAIL[npc.id] || ((nm, c) => `“I have an errand at the ${c.dest},” ${nm} says. “Walk with me if you mean kindness. Go home if you mean questions.”`);
     hail = persona(npc.name, ctx);
@@ -3325,11 +3349,12 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
     honest = `“I went out to ${ctx.reason}. You saw the work, so ask me what still troubles you.”`;
     evasive = `“You followed me far enough to see a human errand. If you require guilt as well, bring your own.”`;
     question = `I followed you to the ${dest}. Was ${ctx.reason} the whole reason?`;
+    reaffirm = honest;
   }
   return {
     sighting: `${npc.name} crosses the edge of your lantern with ${ctx.object}. They keep checking the road behind them, not the road ahead.`,
     hail, follow, honest, evasive, question,
-    reaffirm: hail,
+    reaffirm,
     revealsSecret: secretCaught,
     secretSummary,
   };
@@ -3365,6 +3390,13 @@ function compileDirectorNight(s, facts, openingIntent) {
   const attackSlot = Math.max(1, Math.min(slots - 1, Math.floor(slots * 0.7)));
   const realGroundSigns = monsterOf(s).signs.filter((sg) => sg !== "wail");
   const temperament = DIRECTOR_MONSTER_TEMPERAMENT[monsterOf(s).id] || { mode: "silent", hallucination: 0, cue: "silence", sound: "The village sound cuts out, then returns without explanation." };
+  const armedCandidates = gameMonsters(s).filter((mm) => !s.struck.includes(mm.id) && (s.playerSigns || []).every((sg) => mm.signs.includes(sg)));
+  const armedGuess = armedCandidates.length === 1 ? {
+    id: armedCandidates[0].id,
+    name: armedCandidates[0].name,
+    method: armedCandidates[0].method,
+    carry: METHOD_CARRY[armedCandidates[0].method],
+  } : null;
   const afflictionText = directorAfflictionText(s, facts.affliction);
   const firstNightTarget = n === 1 && facts.active ? s.npcs.find((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && facts.outMap[npc.id] === facts.huntLoc) : null;
   const guaranteedHuntTarget = facts.relentlessVictimId ? npcById(s, facts.relentlessVictimId) : firstNightTarget;
@@ -3417,7 +3449,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       relentless: monsterOf(s).id === "werewolf",
       voice: temperament,
     },
-    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou },
+    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, armedGuess },
     gathering: facts.evn && facts.eventLoc ? {
       id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
       text: [facts.evn.intro, afflictionText].filter(Boolean).join(" "),
@@ -3580,7 +3612,20 @@ function resolveNight(prev, planIn, preEvents) {
   if (director) {
     const projection = HE_DIRECTOR.consequenceProjection(director);
     const encounters = projection.encounters || [];
-    const directorEvents = encounters.map((thread) => {
+    const revealChoice = (director.ledgers.truth || []).find((event) => event.kind === "monster_reveal_choice");
+    if (revealChoice) Object.assign(mods, {
+      follow: revealChoice.actorId,
+      followAct: revealChoice.action === "WATCH_MONSTER" ? "watch" : revealChoice.action === "CONFRONT_MONSTER" ? "confront" : "flee",
+      followFate: !!revealChoice.caught,
+      followLearnedSign: revealChoice.learnedSign || null,
+      revealSeen: !!revealChoice.seenByMonster,
+      confrontWrongCaught: revealChoice.wrongName ? !!revealChoice.caught : undefined,
+    });
+    /* Once the player has seen the borrowed face come apart, this is no
+       longer an alibi thread. The face goes into the accusation systems,
+       never into tomorrow's ordinary interview queue. */
+    const interviewEncounters = revealChoice ? encounters.filter((thread) => thread.actorId !== revealChoice.actorId) : encounters;
+    const directorEvents = interviewEncounters.map((thread) => {
       const actorId = thread.actorId;
       const agenda = director.schedules && director.schedules[actorId];
       const motive = agenda && agenda.motive;
@@ -3951,7 +3996,8 @@ function resolveNight(prev, planIn, preEvents) {
             return true;
           }
           /* the wrong name, carried into the dark */
-          if (chance(0.7)) {
+          const wrongNameCaught = mods.confrontWrongCaught !== undefined ? mods.confrontWrongCaught : chance(0.7);
+          if (wrongNameCaught) {
             beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
             s.deathBeats = (DEATH_SCENES[m.id] || DEATH_SCENES.wraith)(fw.name, fDest);
             s.over = { win: false, reason: "slain", text: `You confronted it at the ${fDest} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
@@ -3999,14 +4045,14 @@ function resolveNight(prev, planIn, preEvents) {
         /* a close pass is not a thing you get away with unnoticed: it stood
            over your hiding place and talked to you. It knows exactly who was
            in the lane, and behaves accordingly from here on. */
-        s.monsterSawYou = mods.brush || chance(0.6) ? true : s.monsterSawYou;
+        s.monsterSawYou = mods.revealSeen !== undefined ? (mods.revealSeen || s.monsterSawYou) : (mods.brush || chance(0.6) ? true : s.monsterSawYou);
         /* Staying to LEARN it is the riskier read (see deathP2 above), so on
            survival it earns more than the face fleeing already gives: pressed
            close enough to watch the change, you come away with one of its true
            tells as well. Never wail - that is only ever heard on a wailing
            night, never studied off the changing body. */
         const learnable = m.signs.filter((sg) => sg !== "wail" && !s.foundSigns.includes(sg));
-        const learned = learnable.length ? pick(learnable) : null;
+        const learned = mods.followLearnedSign && learnable.includes(mods.followLearnedSign) ? mods.followLearnedSign : (learnable.length ? pick(learnable) : null);
         if (learned) {
           s.foundSigns.push(learned);
           const sense = senseFor(learned);
@@ -4023,7 +4069,7 @@ function resolveNight(prev, planIn, preEvents) {
            withdrawal it never made */
         if (mods.brush && mods.brushBolt) beats.push(mods.brushBolt);
       } else {
-        s.monsterSawYou = mods.brush || chance(0.4) ? true : s.monsterSawYou;
+        s.monsterSawYou = mods.revealSeen !== undefined ? (mods.revealSeen || s.monsterSawYou) : (mods.brush || chance(0.4) ? true : s.monsterSawYou);
         beats.push(mods.brush && mods.brushBolt
           ? mods.brushBolt
           : `You go back the way you came, slowly, placing each foot like a debt, and do not breathe properly until your own bolt is thrown.`);
@@ -8991,7 +9037,7 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
 }
 /* A night choice is a sentence, not a command: amber when it takes you out
    of doors, quiet when it keeps you behind one. */
-function NightChoice({ children, onClick, quiet, plan, icon }) {
+function NightChoice({ children, onClick, quiet, danger, plan, icon }) {
   if (plan) return (
     <button onClick={onClick} className="mv-btn mv-body heNightChoice heNightPlanChoice" style={{
       minHeight: 62, display: "grid", gridTemplateColumns: "34px minmax(0,1fr) 14px", alignItems: "center", gap: 11,
@@ -9009,9 +9055,10 @@ function NightChoice({ children, onClick, quiet, plan, icon }) {
   return (
     <button onClick={onClick} className="mv-btn mv-body heNightChoice" style={{
       borderRadius: 4, padding: "9px 13px", textAlign: "left", fontSize: 14, cursor: "pointer",
-      background: quiet ? "rgba(10,12,24,0.55)" : "rgba(217,164,65,0.1)",
-      border: `1px solid ${quiet ? C.line : C.nightAmber}`,
-      color: quiet ? C.parch : C.nightAmber,
+      background: danger ? "linear-gradient(100deg,rgba(68,10,18,.78),rgba(27,9,14,.82))" : quiet ? "rgba(10,12,24,0.55)" : "rgba(217,164,65,0.1)",
+      border: `1px solid ${danger ? C.redBright : quiet ? C.line : C.nightAmber}`,
+      color: danger ? C.redBright : quiet ? C.parch : C.nightAmber,
+      boxShadow: danger ? "inset 0 0 18px rgba(158,30,43,.16), 0 0 12px rgba(158,30,43,.09)" : "none",
     }}>{children}</button>
   );
 }
@@ -11751,6 +11798,8 @@ function MonsterVillage() {
     if (action.type === "LISTEN") Snd.cue("whisper");
     else if (action.type === "MOVE") Snd.cue(["Old Church", "Graveyard"].includes(action.to) ? "gate" : action.to === "Dark Forest" ? "crickets" : ["Village Square", "Tavern"].includes(action.to) ? "bustle" : "leaves");
     else if (["FOLLOW", "FLEE", "RUN", "BREAK_LINE"].includes(action.type)) Snd.cue(action.type === "BREAK_LINE" ? "gate" : "leaves");
+    else if (action.type === "WATCH_MONSTER") { Snd.silence(true); Snd.cue("breath_close"); }
+    else if (action.type === "CONFRONT_MONSTER") Snd.danger();
     else if (action.type === "SEARCH") Snd.cue("earth");
     else if (action.type === "HAIL") Snd.cue("bustle");
     else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
@@ -11813,7 +11862,8 @@ function MonsterVillage() {
         intentDone: !!walk.intentDone,
         interacted: walk.interacted || {},
       });
-      const labels = { atmosphere: "THE VILLAGE ABROAD", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: "BEHIND THE SHUTTER", whisper: "A VOICE IN THE DARK", delusion: "WHAT YOUR EYES INSISTED", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: "WHERE THEY REALLY WENT" };
+      const recognition = d.phase === "threat" && d.pendingThreat && d.pendingThreat.kind === "recognition";
+      const labels = { atmosphere: "THE VILLAGE ABROAD", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: "BEHIND THE SHUTTER", whisper: "A VOICE IN THE DARK", delusion: "WHAT YOUR EYES INSISTED", threat: "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "WHERE THEY REALLY WENT" };
       const nightRatio = d.cursor < 0 ? -1 : d.cursor / Math.max(1, d.slots - 1);
       const slotLabel = nightRatio < 0 ? "BEFORE THE LAST LIGHT" : nightRatio < .28 ? "AFTER THE BELL" : nightRatio < .7 ? "THE SMALL HOURS" : "BEFORE DAWN";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
@@ -11845,9 +11895,9 @@ function MonsterVillage() {
           {!terminal && (
             <div className="flex flex-col" style={{ gap: 7, paddingBottom: 8 }}>
               {focusedActions.map((a, i) => (
-                <NightChoice key={`${a.type}:${a.to || a.actorId || i}`} quiet={a.tone === "quiet"} onClick={() => actDirector(a)}>
+                <NightChoice key={`${a.type}:${a.to || a.actorId || i}`} quiet={a.tone === "quiet"} danger={a.tone === "danger"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
-                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN"].includes(a.type) ? "→" : a.type === "SEARCH" ? "⌕" : ["LISTEN", "KEEP_WATCH"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : a.type === "ANSWER_DOOR" ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
+                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN"].includes(a.type) ? "→" : a.type === "SEARCH" ? "⌕" : ["LISTEN", "KEEP_WATCH"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : a.type === "WATCH_MONSTER" ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : a.type === "ANSWER_DOOR" ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
                     <span>{a.label}</span>
                   </span>
                 </NightChoice>

@@ -11,7 +11,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  var VERSION = 3;
+  var VERSION = 4;
   var DEFAULT_SLOTS = 7;
   var HOME = "Home";
   var SIGNS = ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"];
@@ -540,6 +540,7 @@
         afflicted: !!(config.player && config.player.afflicted),
         affliction: config.player && config.player.affliction || null,
         monsterSawYou: !!(config.player && config.player.monsterSawYou),
+        armedGuess: clone(config.player && config.player.armedGuess || null),
         route: [{ slot: -1, location: HOME }]
       },
       currentFacts: facts,
@@ -608,10 +609,11 @@
   function appendBeat(state, beat) {
     if (!beat) return null;
     var sig = beat.signature;
-    if (sig && (state.recentSignatures.indexOf(sig) >= 0 || state.usedSignatures.indexOf(sig) >= 0)) return null;
+    var critical = !!(beat.meta && beat.meta.critical);
+    if (sig && !critical && (state.recentSignatures.indexOf(sig) >= 0 || state.usedSignatures.indexOf(sig) >= 0)) return null;
     state.beats.push(beat);
     state.currentBeat = beat;
-    if (sig) state.usedSignatures.push(sig);
+    if (sig && state.usedSignatures.indexOf(sig) < 0) state.usedSignatures.push(sig);
     return beat;
   }
 
@@ -846,9 +848,10 @@
       dialogue.follow || (villager.name + " reaches the " + destination + " and completes a small, human errand before turning home."), {
         actorId: actorId,
         truthEventId: event.id,
-        meta: { motiveFamily: schedule.motive.family, revealedSecret: !!dialogue.revealsSecret }
+        meta: { motiveFamily: schedule.motive.family, revealedSecret: !!dialogue.revealsSecret, critical: state.monsterSchedule.active && actorId === state.monsterSchedule.hostId }
       }));
     if (state.followedActorIds.indexOf(actorId) < 0) state.followedActorIds.push(actorId);
+    return event;
   }
 
   function resolveFollow(state, action) {
@@ -870,7 +873,23 @@
     }
     state.actionHistory.push({ slot: state.cursor, type: "FOLLOW", to: state.player.location, actorId: action.actorId });
     appendTruth(state, { id: "player:" + state.cursor + ":follow", slot: state.cursor, kind: "player_action", action: "FOLLOW", location: state.player.location, actorId: action.actorId });
-    recordFollow(state, action.actorId, state.cursor);
+    var followedEvent = recordFollow(state, action.actorId, state.cursor);
+    /* Discovering the active host ends the social scene immediately. The
+       player is still hidden for one breath, as in the established walk,
+       but may only flee, risk staying to learn, or confront it. */
+    if (state.monsterSchedule.active && action.actorId === state.monsterSchedule.hostId) {
+      state.pendingThreat = {
+        id: "recognition:" + state.cursor + ":" + action.actorId,
+        slot: state.cursor,
+        location: state.player.location,
+        victimId: "player",
+        actorId: action.actorId,
+        kind: "recognition",
+        sign: actualSign(state, state.cursor),
+        truthEventId: followedEvent && followedEvent.id
+      };
+      state.phase = "threat";
+    }
     finishIfNeeded(state);
     return state;
   }
@@ -975,6 +994,8 @@
 
   function upgradeStateInPlace(state) {
     if (!state) return state;
+    state.player = state.player || { location: HOME, alive: true, route: [] };
+    if (!Object.prototype.hasOwnProperty.call(state.player, "armedGuess")) state.player.armedGuess = null;
     if (state.monsterSchedule && state.monsterSchedule.relentless == null) state.monsterSchedule.relentless = state.monsterSchedule.id === "werewolf";
     if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
     state.presentedActorIds = state.presentedActorIds || [];
@@ -1138,6 +1159,71 @@
     var threat = state.pendingThreat;
     if (!threat) return invalid(state, action, "There is no threat to resolve.");
     var outcome = state.outcomes[threat.slot];
+    if (threat.kind === "recognition") {
+      if (["FLEE", "WATCH_MONSTER", "CONFRONT_MONSTER"].indexOf(action.type) < 0) {
+        return invalid(state, action, "There is no conversation left to have. Choose whether to flee, watch, or confront it.");
+      }
+      var armed = state.player.armedGuess;
+      var correctName = action.type === "CONFRONT_MONSTER" && armed && armed.id === state.monsterSchedule.id;
+      var wrongName = action.type === "CONFRONT_MONSTER" && armed && armed.id !== state.monsterSchedule.id;
+      var survival = correctName || (action.type === "FLEE"
+        ? outcome.flee >= 0.15
+        : action.type === "WATCH_MONSTER"
+          ? outcome.hide >= 0.35
+          : outcome.intervene >= (wrongName ? 0.70 : 0.60));
+      var groundSigns = state.monsterSchedule.signs.filter(function (sign) { return GROUND_SIGNS.indexOf(sign) >= 0; });
+      var learnedSign = action.type === "WATCH_MONSTER" && groundSigns.length
+        ? groundSigns[Math.floor(outcome.sign * groundSigns.length) % groundSigns.length]
+        : null;
+      var seenByMonster = action.type !== "FLEE" || outcome.flee < 0.4;
+      appendTruth(state, {
+        id: "monster-reveal-choice:" + threat.slot,
+        slot: threat.slot,
+        kind: "monster_reveal_choice",
+        action: action.type,
+        location: threat.location,
+        actorId: threat.actorId,
+        actors: ["player", threat.actorId],
+        armedGuessId: armed && armed.id || null,
+        correctName: !!correctName,
+        wrongName: !!wrongName,
+        succeeded: !!survival,
+        caught: !survival,
+        learnedSign: learnedSign,
+        seenByMonster: seenByMonster
+      });
+      state.player.monsterSawYou = state.player.monsterSawYou || seenByMonster;
+      state.pendingThreat = null;
+      if (correctName) {
+        state.monsterSchedule.active = false;
+        appendTruth(state, { id: "monster-slain:" + threat.slot, slot: threat.slot, kind: "monster_slain", location: threat.location, actorId: threat.actorId, monsterId: state.monsterSchedule.id, actors: ["player", threat.actorId] });
+        appendBeat(state, makeBeat("monster-slain-beat:" + threat.slot, "aftermath", threat.slot, threat.location,
+          "You step from hiding with the true name and its answering rite. For the first time tonight, the thing wearing your neighbour's face is afraid.", { actorId: threat.actorId, outcome: "named" }));
+        return completeNight(state);
+      }
+      if (!survival) {
+        appendBeat(state, makeBeat("reveal-caught:" + threat.slot, "flee", threat.slot, threat.location,
+          wrongName
+            ? "You say the wrong name. It looks at what you brought as though it were a child's toy, and closes the distance while you are still understanding."
+            : "It turns before you finish moving. The road gives you three strides. It needs only two.",
+          { actorId: threat.actorId, outcome: "caught" }));
+        state.player.alive = false;
+        state.phase = "dead";
+        appendTruth(state, { id: "player-death:" + threat.slot, slot: threat.slot, kind: "player_slain", location: threat.location, actors: [threat.actorId, "player"] });
+        return state;
+      }
+      var resultText = action.type === "FLEE"
+        ? "You leave while it is bent to its work, placing each foot as though the road might hear. Only at the first barred gate do you let yourself run."
+        : action.type === "WATCH_MONSTER"
+          ? "You stay. You watch the borrowed body at its work and force yourself to remember the mark showing through it. " + (learnedSign ? STAMP_TEXT[learnedSign] : "The shape and gait are enough to know the face, but give you no clean mark to stamp.")
+          : wrongName
+            ? "The rite is wrong. It laughs—and that laugh gives you the half-heartbeat you need to reach the wall before it reaches you."
+            : "You step out and say the human name. It turns. You survive the answer, but it has seen you clearly now.";
+      appendBeat(state, makeBeat("reveal-escape:" + threat.slot + ":" + action.type.toLowerCase(), "flee", threat.slot, threat.location,
+        resultText, { actorId: threat.actorId, sign: learnedSign, outcome: "escaped" }));
+      state.phase = "returning";
+      return state;
+    }
     if (threat.kind === "witness") {
       if (action.type === "INTERVENE") {
         var saved = outcome.intervene < 0.35;
@@ -1264,6 +1350,11 @@
       return (state.graph[HOME] || ["Village Square"]).map(function (to) { return action("LEAVE", "Step into the night", "amber", { to: to }); });
     }
     if (state.phase === "threat") {
+      if (state.pendingThreat.kind === "recognition") return [
+        action("FLEE", "Flee, quietly, while it is busy", "danger"),
+        action("WATCH_MONSTER", "Stay hidden. Watch it. Learn it", "amber"),
+        action("CONFRONT_MONSTER", state.player.armedGuess ? "Step out. Name it. End it here" : "Step out and say the name", "danger")
+      ];
       if (state.pendingThreat.kind === "witness") return [
         action("INTERVENE", "Shout a warning", "danger"),
         action("IGNORE", "Stay silent", "quiet"),
