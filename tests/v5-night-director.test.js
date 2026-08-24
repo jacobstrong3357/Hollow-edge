@@ -624,6 +624,46 @@ function take(state, wanted) {
   assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_slain"; }), "the true prepared name settles the confrontation without returning to social play");
 })();
 
+(function fleeingARecognitionAtTheFinalSlotCannotLeaveTheNightTape() {
+  var config = baseConfig("final-slot-recognition-flee");
+  config.slots = 3;
+  config.forcedBeats = [];
+  config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" } };
+  config.currentFacts = { weather: "fog", active: true, huntLoc: "Graveyard", attackSlot: 0, outMap: { rosa: "Old Church" } };
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "late-errand", family: "work", destination: "Old Church", reason: "carry a parcel", object: "a parcel", depart: 0, duration: 3 } }];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = state.slots - 1;
+  state.player.location = "Old Church";
+  state.schedules.rosa.slots[state.cursor] = "Old Church";
+  state.visibility[state.cursor].rosa = true;
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  assert.strictEqual(state.cursor, state.slots - 1, "a final-slot follow stays on the final sampled hour");
+  assert(state.pendingThreat && state.pendingThreat.slot === state.cursor, "the recognition uses an existing outcome slot");
+
+  var escaped = JSON.parse(JSON.stringify(state));
+  escaped.outcomes[escaped.cursor].flee = 0.99;
+  escaped = take(escaped, { type: "FLEE" });
+  assert.strictEqual(escaped.phase, "returning", "a successful final-slot flee opens the road-home result");
+  assert(escaped.currentBeat && escaped.currentBeat.id.indexOf("reveal-escape:") === 0);
+
+  var caught = JSON.parse(JSON.stringify(state));
+  caught.outcomes[caught.cursor].flee = 0.01;
+  caught = take(caught, { type: "FLEE" });
+  assert.strictEqual(caught.phase, "dead", "the caught outcome renders its death result instead of throwing");
+  assert(caught.currentBeat && caught.currentBeat.id.indexOf("reveal-caught:") === 0);
+
+  var oldSave = JSON.parse(JSON.stringify(state));
+  oldSave.cursor = oldSave.slots;
+  oldSave.pendingThreat.slot = oldSave.slots;
+  delete oldSave.outcomes[oldSave.slots - 1].flee;
+  oldSave = Director.upgradeState(oldSave);
+  assert.strictEqual(oldSave.cursor, oldSave.slots - 1, "an already-saved overflow slot is repaired on its next action");
+  assert.strictEqual(oldSave.pendingThreat.slot, oldSave.slots - 1);
+  assert.strictEqual(typeof oldSave.outcomes[oldSave.slots - 1].flee, "number", "missing flee odds are restored deterministically");
+  assert.doesNotThrow(function () { Director.reduce(oldSave, { type: "FLEE" }); }, "a repaired in-progress save cannot blank on flee");
+})();
+
 (function homeReachingHuntsDoNotRequireAStreetCollision() {
   var config = {
     seed: "witch-at-the-window", night: 6, slots: 7,

@@ -1133,7 +1133,7 @@
     var schedule = state.schedules[action.actorId];
     if (!schedule) return invalid(state, action, "There is nobody there to follow.");
     var destination = schedule.motive.destination;
-    var targetSlot = state.cursor + 1;
+    var targetSlot = Math.min(state.slots - 1, state.cursor + 1);
     for (var probe = state.cursor + 1; probe < state.slots; probe += 1) {
       targetSlot = probe;
       if (actorLocation(state, action.actorId, probe) === destination) break;
@@ -1145,6 +1145,12 @@
       state.player.route.push({ slot: slot, location: state.player.location, action: "FOLLOW", actorId: action.actorId });
       processAttack(state, slot);
       if (state.phase !== "active") return state;
+    }
+    /* A sighting can happen in the last sampled hour. Following then resolves
+       inside that hour instead of advancing beyond the outcome tape. */
+    if (state.cursor >= state.slots - 1 && destination !== HOME && state.player.location !== destination) {
+      state.player.location = destination;
+      state.player.route.push({ slot: state.cursor, location: destination, action: "FOLLOW", actorId: action.actorId });
     }
     state.actionHistory.push({ slot: state.cursor, type: "FOLLOW", to: state.player.location, actorId: action.actorId });
     appendTruth(state, { id: "player:" + state.cursor + ":follow", slot: state.cursor, kind: "player_action", action: "FOLLOW", location: state.player.location, actorId: action.actorId });
@@ -1324,12 +1330,18 @@
     state.ledgers.observations = state.ledgers.observations || [];
     state.ledgers.memories = state.ledgers.memories || {};
     (state.cast || []).forEach(function (villager) { state.ledgers.memories[villager.id] = state.ledgers.memories[villager.id] || []; });
+    state.cursor = Math.max(-1, Math.min(state.slots - 1, Number(state.cursor == null ? -1 : state.cursor)));
+    if (state.pendingThreat && (state.pendingThreat.slot < 0 || state.pendingThreat.slot >= state.slots)) state.pendingThreat.slot = state.cursor;
+    if (state.chase && (state.chase.slot < 0 || state.chase.slot >= state.slots)) state.chase.slot = state.cursor;
     for (var slot = 0; slot < state.slots; slot += 1) {
       state.visibility[slot] = state.visibility[slot] || {};
       (state.cast || []).forEach(function (villager) {
         if (state.visibility[slot][villager.id] == null) state.visibility[slot][villager.id] = true;
       });
       state.outcomes[slot] = state.outcomes[slot] || {};
+      ["flee", "hide", "intervene", "sign"].forEach(function (kind) {
+        if (typeof state.outcomes[slot][kind] !== "number") state.outcomes[slot][kind] = keyedNumber(state.seed, "outcome:" + slot + ":" + kind);
+      });
       if (!state.outcomes[slot].chase) {
         state.outcomes[slot].chase = {
           run: [0, 1, 2].map(function (step) { return keyedNumber(state.seed, "outcome:" + slot + ":chase:run:" + step); }),
