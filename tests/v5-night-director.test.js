@@ -974,6 +974,34 @@ function take(state, wanted) {
   assert(resolved.beats.some(function (b) { return b.type === "flee" || b.type === "aftermath"; }), "the consequence has a renderable flee or aftermath beat");
 })();
 
+(function reachingTheSampledHuntRestoresTheWarningScene() {
+  var config = baseConfig("witnessed-warning-restored");
+  config.slots = 5;
+  config.openingIntent = { kind: "search", loc: "Old Mill" };
+  config.player = {};
+  config.forcedBeats = [];
+  config.villagers = [{
+    id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+    motive: { id: "mill-errand", family: "work", destination: "Old Mill", reason: "collect flour", object: "a flour sack", depart: 0, duration: 5 }
+  }];
+  config.monster = { id: "ghoul", hostId: "greta", active: true, signs: ["bite", "graves"], hunts: ["Old Mill"], attack: "kill", reach: "out", huntSlot: 2 };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Old Mill", attackSlot: 2, guaranteedVictimId: "rosa", outMap: { rosa: "Old Mill" } };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Old Mill" });
+  state.discoverySchedule = {};
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+
+  assert.strictEqual(state.phase, "threat", "being at the sampled hunt opens a live intervention scene");
+  assert(state.pendingThreat && state.pendingThreat.kind === "witness" && state.pendingThreat.victimId === "rosa", "the sampled neighbour remains the quarry when the player witnesses the hunt");
+  assert(Director.availableActions(state).some(function (action) { return action.type === "INTERVENE" && action.label === "Shout a warning"; }), "the player can try to stop the killing");
+
+  state.outcomes[2].intervene = 0.1;
+  state = take(state, { type: "INTERVENE" });
+  assert(state.cast.find(function (villager) { return villager.id === "rosa"; }).alive, "a successful warning saves the neighbour");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "intervention" && event.succeeded; }), "the rescue remains a durable consequence");
+})();
+
 (function closeMonsterChoicesTradeSafetyForWhatCanBeSeen() {
   var config = baseConfig("close-read-risks");
   config.villagers = [{ id: "tobias", name: "Old Tobias", role: "the Gravedigger", build: "stooped", alive: true, home: "Village Square" }];

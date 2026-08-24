@@ -749,6 +749,13 @@
       cast.forEach(function (v) { priorities[slot][v.id] = keyedNumber(seed, "attack:" + slot + ":" + v.id); });
     }
     if (config.player && config.player.targeted && monsterSchedule.active) priorities[monsterSchedule.attackSlot].player = -1;
+    else if (monsterSchedule.active && facts.guaranteedVictimId && priorities[monsterSchedule.attackSlot] && Object.prototype.hasOwnProperty.call(priorities[monsterSchedule.attackSlot], facts.guaranteedVictimId)) {
+      /* sampleNight already chose the neighbour whose real errand crosses the
+         hunting ground. Keep that choice authoritative when the player is
+         present, so finding the hunt produces the witnessed attack and its
+         warning choice instead of silently rerolling the quarry to player. */
+      priorities[monsterSchedule.attackSlot][facts.guaranteedVictimId] = -1;
+    }
     var state = {
       version: VERSION,
       seed: String(seed),
