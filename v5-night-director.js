@@ -2912,8 +2912,13 @@
     if (guide.actorId) {
       var hailKey = guide.actorId + "|HAIL";
       var followKey = guide.actorId + "|FOLLOW";
+      var guidedActor = state.cast.find(function (villager) { return villager.id === guide.actorId; });
+      var acceptedLure = !!((guide.interacted || {})[hailKey] && guidedActor && guidedActor.dialogue && guidedActor.dialogue.luresFollow);
       if (!(guide.interacted || {})[hailKey]) add(all.find(function (item) { return item.type === "HAIL" && item.actorId === guide.actorId; }));
-      if (!(guide.interacted || {})[followKey]) add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }));
+      if (!(guide.interacted || {})[followKey]) add(
+        all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }),
+        acceptedLure ? "Accept. Walk with " + guidedActor.name : null
+      );
     }
     var atTarget = !!target && state.player.location === target;
     if (target && !atTarget) {

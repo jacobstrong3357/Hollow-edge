@@ -850,6 +850,27 @@ function take(state, wanted) {
   assert(revealChoice && revealChoice.location === "Old Church", "the survival choice retains the place where the encounter actually happened");
 })();
 
+(function aMaskedInvitationTurnsFollowIntoAnAcceptance() {
+  var config = baseConfig("masked-monster-lure");
+  config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks"], hunts: ["Village Square"], attack: "kill", reach: "out", voice: { mode: "beast" } };
+  config.currentFacts = { weather: "storm", active: true, huntLoc: "Village Square", attackSlot: 5, outMap: { rosa: "Old Church" } };
+  config.villagers = [{
+    id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+    motive: { id: "masked-errand", family: "work", destination: "Old Church", reason: "carry a parcel", object: "a parcel", depart: 1, duration: 5 },
+    dialogue: { hail: "Rosa smiles. Walk with me.", luresFollow: true }
+  }];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Village Square";
+  state.schedules.rosa.slots[0] = "Village Square";
+  state.visibility[0].rosa = true;
+  state.currentBeat = { id: "rosa-hail", type: "encounter", slot: 0, location: "Village Square", actorId: "rosa", text: "Rosa smiles. Walk with me." };
+  var actions = Director.guidedActions(state, { actorId: "rosa", interacted: { "rosa|HAIL": true } });
+  var follow = actions.find(function (action) { return action.type === "FOLLOW"; });
+  assert(follow && follow.label === "Accept. Walk with Rosa", "a masked invitation has a natural acceptance instead of a generic tailing command");
+})();
+
 (function aCorrectArmedConfrontationCanEndAtTheReveal() {
   var config = baseConfig("named-in-the-dark");
   config.player = { armedGuess: { id: "werewolf", name: "Werewolf", method: "silver" } };
@@ -1817,6 +1838,12 @@ function take(state, wanted) {
   assert(html.includes('catch (e) { console.warn("Night sound cue could not play", e); }'), "a failed Director sound effect cannot unmount the night screen");
   assert(html.includes('catch (e) { console.warn("Night heartbeat could not play", e); }'), "a failed heartbeat cannot unmount the night screen");
   assert(html.includes('directorBeat.meta.recognition') && html.includes('Snd.beat(true);'), "the monster-recognition choice keeps the heartbeat running beneath the decision");
+  assert(html.includes("DIRECTOR_MASKED_MONSTER_HAIL") && html.includes("luresFollow"), "an active host can plausibly invite the player to follow before the danger screen");
+  assert(!html.includes("low growl forced through a throat still trying to pass for human") && !html.includes("It sounds like scheduling"), "a casual hail cannot announce the monster before recognition");
+  var maskedHailSource = html.slice(html.indexOf("const HAIL_MONSTER_LINES"), html.indexOf("const HAIL_TURNED_LINES"));
+  ["growl", "teeth", "scheduling", "trying to pass for human"].forEach(function (tell) {
+    assert(!maskedHailSource.toLowerCase().includes(tell), "masked roadside dialogue cannot contain the explicit tell: " + tell);
+  });
   assert(html.includes('monsterEndedHere ? "Take the news back to the village →"') && html.includes('const livedLocation = monsterEndedHere ? monsterEndedHere.location : d.player.location;'), "a night victory remains at its lived location and does not offer to draw a distant home bolt");
   var sampledNight = html.slice(html.indexOf("function sampleNight"), html.indexOf("/* ================= V5 NIGHT DIRECTOR ADAPTER"));
   assert(sampledNight.indexOf("if (s.warnedLoc") < sampledNight.indexOf("let guaranteedVictimId"), "natural, secret and warned routes settle before an empty hunting ground receives a fallback villager");

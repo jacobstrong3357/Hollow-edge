@@ -2268,12 +2268,34 @@ const DAWN_PLAIN_FOLLOW = [
   (nm, dest) => `You trailed ${nm} to the ${dest} and saw exactly what they did there. A harmless-looking errand is still not proof of innocence.`,
 ];
 const HAIL_MONSTER_LINES = [
-  (nm, dest) => `${nm} stops. Considers you. "Dangerous night for a walk," they say, pleasantly. "For you, I mean." The smile takes one beat too long, and you want a wall at your back.`,
-  (nm, dest) => `${nm} does not startle. That registers first: everyone startles now. "You should be indoors," ${nm} says, and it does not sound like concern. It sounds like scheduling.`,
-  (nm, dest) => `"Well met," ${nm} says, before you have made a sound. The dark between you feels shorter than the lane says it is. "Walk safe. The night has teeth." You hear the smile more than see it.`,
-  (nm, dest) => `${nm} greets you by name before you have made a sound worth hearing. "Cold, for standing about." A pleasant nod at the dark. "You do a great deal of standing about, these nights." It is said kindly. That is the part you will lie awake over.`,
-  (nm, dest) => `"Couldn't sleep either?" ${nm} falls in beside you, warm, easy, asking after your health, your rest, your habits. Every answer you give, you can feel being filed away somewhere.`,
+  (nm, dest) => `${nm} smiles. “Late road for both of us. Take care getting home.”`,
+  (nm, dest) => `“You startled me,” ${nm} says. “Keep your lantern high tonight.”`,
+  (nm, dest) => `${nm} nods toward the ${dest}. “I have one errand left. Then I am going home.”`,
+  (nm, dest) => `“Cold night,” ${nm} says. “Do not linger on my account.”`,
+  (nm, dest) => `${nm} gives you a tired smile. “We should both be behind our doors.”`,
+  (nm, dest) => `“Could not sleep either?” ${nm} asks. “I thought a walk might help.”`,
 ];
+/* A monster met in its neighbour's shape keeps that shape socially as well as
+   physically. These are plausible roadside replies, not evidence. A lure can
+   lead into the established recognition screen, where following carries the
+   real survival risk. */
+const DIRECTOR_MASKED_MONSTER_HAIL = {
+  beast: [
+    (nm, dest) => `${nm} catches their breath and smiles. “Long walk. Are you heading this way?”`,
+    (nm, dest) => `“Thought I heard a dog near the ${dest},” ${nm} says. “Come and help me look.”`,
+    (nm, dest) => `${nm} adjusts their hood. “Walk with me. Two lanterns are better than one.”`,
+  ],
+  silent: [
+    (nm, dest) => `${nm} smiles and gestures toward the ${dest}. “Coming?”`,
+    (nm, dest) => `“I could use the company,” ${nm} says. “Only as far as the ${dest}.”`,
+    (nm, dest) => `${nm} lifts their lantern. “Walk with me. This road is worse alone.”`,
+  ],
+  speaker: [
+    (nm, dest) => `${nm} smiles warmly. “I am going toward the ${dest}. Keep me company?”`,
+    (nm, dest) => `“There you are,” ${nm} says. “Come along. I wanted someone sensible beside me.”`,
+    (nm, dest) => `${nm} offers an easy smile. “Walk with me. I have something curious to show you.”`,
+  ],
+};
 const HAIL_TURNED_LINES = [
   (nm) => `${nm} waits three heartbeats before turning. "Home is behind you," they say. Nothing else. They do not blink.`,
   (nm) => `${nm} turns before your hail is finished and speaks to a point beside your shoulder. "You should sleep," they say. "It's easier."`,
@@ -4572,6 +4594,16 @@ function directorFollowSecret(wx, npc, dest, summary) {
   const seen = /^(?:he|she|they)\b/i.test(clearAction) ? `you see that ${clearAction}` : `you see ${clearAction}`;
   return `${directorFollowLead(wx, npc.name, dest)} There, ${seen}.`;
 }
+function directorMaskedMonsterHail(seed, npc, dest, mode) {
+  const lure = stableIdx(`${seed}:${npc.id}:masked-lure`, 5) === 0;
+  const pool = lure
+    ? (DIRECTOR_MASKED_MONSTER_HAIL[mode] || DIRECTOR_MASKED_MONSTER_HAIL.silent)
+    : HAIL_MONSTER_LINES;
+  return {
+    text: directorStableLine(`${seed}:${npc.id}:masked-hail:${mode}:${lure ? "lure" : "passing"}`, pool, npc.name, dest),
+    luresFollow: lure,
+  };
+}
 function directorDialogueFor(s, facts, npc, motive, seed) {
   const dest = (motive && motive.destination) || facts.outMap[npc.id] || "Village Square";
   const wx = facts.wx || null;
@@ -4584,14 +4616,12 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   const activeHost = facts.active && npc.id === s.monster.vid;
   const temperament = DIRECTOR_MONSTER_TEMPERAMENT[monsterOf(s).id] || { mode: "silent" };
   const travel = directorFollowLead(wx, npc.name, dest);
-  let hail, caughtHail = null, follow, honest, evasive, question, reaffirm, secretSummary = null;
+  let hail, caughtHail = null, follow, honest, evasive, question, reaffirm, secretSummary = null, luresFollow = false;
   if (activeHost) {
-    hail = temperament.mode === "beast"
-      ? `${npc.name} stops without turning. Their shoulders lift around one deep breath. The answer to your hail is a low growl forced through a throat still trying to pass for human.`
-      : temperament.mode === "silent"
-        ? `${npc.name} turns. Their mouth opens, but you hear no voice, wind or footstep. They walk on in complete silence.`
-        : directorStableLine(seed + npc.id + ":hail-monster", HAIL_MONSTER_LINES, npc.name, dest);
-    follow = `${travel} There, ${npc.name}'s human gait breaks. They begin hunting.`;
+    const maskedHail = directorMaskedMonsterHail(seed, npc, dest, temperament.mode);
+    hail = maskedHail.text;
+    luresFollow = maskedHail.luresFollow;
+    follow = `${travel} ${npc.name} looks back once, then leads you beyond the nearest light.`;
     honest = temperament.mode === "beast"
       ? `A growl starts in ${npc.name}'s chest. “You followed me,” they manage, the words damaged by whatever the night did to their throat.`
       : `“You followed me to the ${dest}. You should be more careful about what you ask to notice.”`;
@@ -4650,6 +4680,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
     reaffirm,
     revealsSecret: secretCaught,
     secretSummary,
+    luresFollow,
     griefName: griefId ? (dead ? dead.name : "the dead") : null,
     weather: wx,
   };
