@@ -1635,22 +1635,31 @@ function take(state, wanted) {
   assert.strictEqual(restored.monsterSchedule.relentless, false, "old monster schedules gain the deterministic rhythm flag without rerolling");
 })();
 
-(function aVillageCrisisInterruptsEveryDirectedRoute() {
-  var config = baseConfig("director-affliction-cutaway");
+(function aVillageCrisisOwnsSeveralPlayableBeats() {
+  var config = baseConfig("director-affliction-night");
   config.forcedBeats = [
     {
-      id: "church-burning-now", type: "atmosphere", slot: 0, location: "*",
+      id: "church-burning-arrival", type: "atmosphere", slot: 0, location: "Old Church",
       text: "The Old Church is burning.",
-      meta: { affliction: "churchBurn", afflictionLocation: "Old Church", afflictionWound: "burn", afflictionLabel: "THE CHURCH BURNS", soundCue: "fire", critical: true }
+      meta: { affliction: "churchBurn", afflictionLocation: "Old Church", afflictionWound: "burn", afflictionLabel: "THE CHURCH BURNS", soundCue: "fire", critical: true, crisis: true, crisisStage: "arrival", crisisChoices: [{ choice: "help", label: "Join the bucket line" }, { choice: "witness", label: "Watch who helps" }] }
     },
-    { id: "ordinary-same-hour", type: "atmosphere", slot: 0, location: "*", text: "A gate closes somewhere." }
+    {
+      id: "church-burning-struggle", type: "atmosphere", slot: 1, location: "Old Church",
+      text: "The roof starts to fall.",
+      meta: { affliction: "churchBurn", afflictionLocation: "Old Church", crisis: true, crisisStage: "struggle", crisisChoices: [{ choice: "help", label: "Keep the line moving" }], critical: true }
+    }
   ];
   var state = Director.createNight(config);
-  state = take(state, { type: "LEAVE", to: "Village Square" });
-  assert.strictEqual(state.player.location, "Village Square", "the crisis cutaway does not rewrite the player's direct route");
-  assert.strictEqual(state.currentBeat.id, "church-burning-now", "a village-wide crisis appears even when the player did not route through its location or another sound shares its hour");
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  assert.strictEqual(state.player.location, "Old Church", "the crisis is lived at its real location");
+  assert.strictEqual(state.currentBeat.id, "church-burning-arrival", "arrival begins the authored crisis sequence");
   assert.strictEqual(state.currentBeat.meta.afflictionLocation, "Old Church");
   assert.strictEqual(state.currentBeat.meta.afflictionWound, "burn");
+  var crisisActions = Director.guidedActions(state, { kind: "search", target: "Old Church" });
+  assert.deepStrictEqual(crisisActions.map(function (action) { return action.label; }), ["Join the bucket line", "Watch who helps"], "the disaster offers authored responses instead of routine site searches");
+  state = Director.reduce(state, crisisActions[0]);
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "crisis_response" && event.choice === "help"; }), "helping in the crisis becomes causal truth for dawn");
+  assert.strictEqual(state.currentBeat.id, "church-burning-struggle", "one response advances into the next crisis beat");
 })();
 
 (function soundCannotBlockTheWalkTransition() {
@@ -1672,10 +1681,14 @@ function take(state, wanted) {
   assert(secretCadence.includes("npc.id !== facts.guaranteedVictimId") && secretCadence.includes("npc.id !== s.monster.vid"), "the safeguard cannot reroute the hunt's quarry or its host");
   assert(secretCadence.includes("facts.secretCatch[chosen.id] = true") && start.includes("primeDirectorSecret"), "a primed secret is readable and enters the Director before the walk is compiled");
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
-  assert(compiledNight.includes('id: `n${n}:affliction:${facts.affliction}`') && compiledNight.includes('slot: 0, location: "*"'), "a sampled village crisis interrupts every Director route instead of waiting at the Village Square");
-  assert(compiledNight.includes("afflictionLocation: afflictionScene.location") && compiledNight.includes("afflictionWound: afflictionScene.wound"), "the crisis carries its authored location and damaged-night artwork into the Director");
+  assert(compiledNight.includes("directorAfflictionBeats(s, facts, slots)") && html.includes('crisisStage: "arrival"') && html.includes('crisisStage: "struggle"') && html.includes('crisisStage: "aftermath"') && html.includes('crisisStage: "resolution"'), "a sampled village crisis owns a multi-beat Director sequence through its final outcome");
+  assert(html.includes("afflictionLocation: scene.location") && html.includes("afflictionWound: scene.wound"), "the crisis carries its authored location and damaged-night artwork into every beat");
   assert(html.includes('churchBurn: { location: "Old Church", wound: "burn"') && html.includes('wellFouled: { location: "Village Square", wound: "fouled"'), "church fire and poisoned-well nights select their existing crisis plates");
   assert(html.includes('wound={afflictionScene ? afflictionScene.wound : nightWound(s, location)}'), "the live crisis art is shown before dawn persists the wound");
+  assert(sampledNight.includes("afflictionCrisisRoster") && sampledNight.includes("setOut(id, afflictLoc") && sampledNight.includes("afflictionCrowd"), "rare disasters force a stable crowd onto the damaged ground");
+  assert(compiledNight.includes("crisisMotive") && compiledNight.includes("family: \"crisis\"") && compiledNight.includes("duration: slots"), "crisis attendees remain scheduled at the scene rather than resuming unrelated errands");
+  assert(start.includes("const livedIntent = crisisScene") && start.includes("AFFLICTION_SUMMON[facts.affliction]"), "the disaster interrupts the player's declared errand and sends them to the real scene");
+  assert(html.includes('event.kind === "crisis_response"') && html.includes('event.choice === "help"') && html.includes('event.choice === "comfort"') && html.includes('event.choice === "witness"'), "help, support and observation have distinct dawn consequences");
   assert(compiledNight.includes("facts.guaranteedVictimId") && compiledNight.includes("guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }"), "the fallback neighbour is physically on the hunting ground throughout the attack hour");
   assert(compiledNight.includes("activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }"), "an active monster host leaves its house before it hunts");
   assert(html.includes("then followed them to the ${log.you.followedTo}"), "the final night history distinguishes following a watched suspect from remaining at their door");
@@ -2028,7 +2041,7 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=8'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=9'), "the local page cache-busts the current Director runtime");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
     HOME_LOC: { rosa: "Village Square" },
@@ -2047,7 +2060,7 @@ function take(state, wanted) {
   assert.strictEqual(markedFacts.huntLoc, "Old Mill");
   assert.strictEqual(markedFacts.outMap.greta, "Old Mill");
   assert(html.includes("markedOutNights: 0") && html.includes("active && f.targetingPlayer ? 0"), "new saves count exposed nights and reset the drought only when the stalk happens");
-  assert(html.includes("primeMarkedPlayerHunt(s, sampledFacts, openingIntent, comingNight)"), "the marked-hunt pass runs before every Director night");
+  assert(html.includes("primeMarkedPlayerHunt(s, sampledFacts, livedIntent, comingNight)"), "the marked-hunt pass runs before every Director night, including a disaster route");
   assert(!html.includes("It knows your face now. The dark is more dangerous for you than for anyone."), "the vague warning is retired");
   assert(html.includes("After two nights unchallenged, the next hunt takes your route."), "the replacement warning states the actual mechanic");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");

@@ -94,7 +94,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=8"></script>
+<script src="v5-night-director.js?v=9"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -958,7 +958,7 @@ const AFFLICTION_DAWN = {
   breadRiot: (nm) => `Before dawn a crowd breaks into ${nm}'s bakery and takes every loaf. ${nm} stands in the spilled flour, staring at neighbours she fed all their lives.`,
   wellFouled: () => `The well comes up black, stinking of iron and rot. Nobody asks what is down there. They queue at the cold stream and watch each other's buckets.`,
   tavernShut: (nm) => `${nm} bolts the tavern for good. "I'm done pouring for a village that's eating itself." Hollow's Edge loses its last warm room.`,
-  churchBurn: (nm) => `In the small hours someone put fire to the Old Church. "If God will not clean His house, fire will." It burned to the rafters while the village watched and fetched no water.${nm ? ` ${nm} stood closest of all, and his face held no grief.` : ""}`,
+  churchBurn: (nm) => `In the small hours someone put fire to the Old Church. The village formed a bucket line, but the roof fell before dawn.${nm ? ` ${nm} stayed beside the ruins until morning.` : ""}`,
   millFlood: () => `The millrace breaks its bank in the night. By morning the wheel is splinters, the floor knee-deep in black water, and the season's grain is ruined.`,
 };
 /* What you witness of it if you are out in the lanes when it happens. */
@@ -966,7 +966,7 @@ const AFFLICTION_WALK = {
   breadRiot: (nm) => `Neighbours spill from ${nm ? nm + "'s" : "the"} bakery with stolen loaves. ${nm || "The baker"} watches from the broken door, past shouting. You keep to the shadows.`,
   wellFouled: () => `Lanterns ring the well. The water has come up black and foul, and the crowd already has someone to blame. You go around.`,
   tavernShut: (nm) => `${nm || "The innkeeper"} drives the tavern's last bolt home while drinkers plead behind her. Hollow's Edge goes one lamp darker.`,
-  churchBurn: (nm) => `The Old Church is burning and the village fetches no water. ${nm ? nm + " stands closest and does not weep." : "No one weeps."} The heat reaches the lane.`,
+  churchBurn: (nm) => `The Old Church is burning. Neighbours run buckets through the churchyard while ${nm || "the priest"} calls names through the smoke.`,
   millFlood: () => `The mill wheel tears off its axle with a crack like a shot. Black water takes the floor. You do not go closer.`,
 };
 const DIRECTOR_AFFLICTION_SCENE = {
@@ -976,6 +976,64 @@ const DIRECTOR_AFFLICTION_SCENE = {
   churchBurn: { location: "Old Church", wound: "burn", label: "THE CHURCH BURNS", soundCue: "fire" },
   millFlood: { location: "Old Mill", wound: "flood", label: "THE MILLRACE BREAKS", soundCue: "water" },
 };
+/* Rare village disasters own their night. The named priority is not a cast
+   list: it is the order in which surviving neighbours are pulled into the
+   crisis. The same roster drives their schedules, the crowd prose, the
+   Journal and the social consequence at dawn. */
+const AFFLICTION_CRISIS = {
+  churchBurn: {
+    priority: ["ansel", "wilhelm", "marta", "rosa", "falk", "greta", "liesel", "tobias"], count: 5,
+    reason: "fight the fire at the Old Church", object: "a soot-blackened bucket",
+    arrival: () => "The Old Church roof is burning. A bucket line runs from the well to the churchyard gate.",
+    struggle: (names) => `${names} pass water through smoke and falling sparks. The bell begins ringing without a hand on the rope.`,
+    reaction: (name) => name ? `${name} stands beneath the burning porch, crying openly. “The parish books are still inside.”` : "Someone screams that the parish books are still inside. Nobody crosses the porch.",
+    closure: () => "The roof falls into the nave. The bell stops in the middle of a stroke, and the bucket line goes still.",
+    choices: ["Join the bucket line", "Go to Father Ansel", "Stand back. Watch who helps"],
+  },
+  wellFouled: {
+    priority: ["greta", "falk", "marta", "ansel", "wilhelm", "liesel", "rosa", "tobias"], count: 5,
+    reason: "keep neighbours from the poisoned well", object: "a covered water pail",
+    arrival: () => "Lanterns ring the well. The first bucket comes up black, and somebody drops it in the square.",
+    struggle: (names) => `${names} pull children back from the stones. Doctor Falk smells the water, then orders every bucket emptied.`,
+    reaction: (name) => name ? `${name} kneels beside a coughing child. “Fetch clean water from the stream. Run.”` : "A child begins coughing beside the well. Someone calls for clean water.",
+    closure: () => "A rope is drawn around the well. Before dawn, somebody paints a black cross across the stones.",
+    choices: ["Carry clean water from the stream", "Help Doctor Falk with the sick", "Watch the crowd. Someone did this"],
+  },
+  breadRiot: {
+    priority: ["marta", "wilhelm", "liesel", "ansel", "rosa", "tobias", "falk", "greta"], count: 5,
+    reason: "hold back the crowd at the bakery", object: "a torn flour sack",
+    arrival: () => "The bakery door gives way. Hungry neighbours surge through it while flour rolls into the square like smoke.",
+    struggle: (names) => `${names} try to pull people back. Loaves pass hand to hand and vanish beneath coats.`,
+    reaction: (name) => name ? `${name} stands beside the cold ovens, white with flour. “I would have fed them. They did not ask.”` : "The baker stands beside the cold ovens. “I would have fed them. They did not ask.”",
+    closure: () => "The crowd leaves with the last loaf. Marta closes the broken door on bare shelves and cold ovens.",
+    choices: ["Help Marta save the remaining bread", "Pull people out before someone is crushed", "Keep back. Remember who takes what"],
+  },
+  tavernShut: {
+    priority: ["liesel", "rosa", "tobias", "wilhelm", "marta", "ansel", "falk", "greta"], count: 4,
+    reason: "face the crowd outside the closing tavern", object: "the tavern's iron door bar",
+    arrival: () => "Liesel puts out the tavern lamps one by one. A crowd gathers before the final light dies.",
+    struggle: (names) => `${names} plead through the door while Liesel drags the iron bar into place. Nobody sounds angry yet.`,
+    reaction: (name) => name ? `${name} presses a palm to the barred door. “This was the last room where we still knew one another.”` : "Someone presses a palm to the barred door. “This was the last warm room.”",
+    closure: () => "The final lamp goes out behind the shutters. The crowd waits in darkness, then separates without a word.",
+    choices: ["Help Liesel bar the door", "Ask her to let the frightened inside", "Stay with the crowd until it disperses"],
+  },
+  millFlood: {
+    priority: ["wilhelm", "marta", "tobias", "falk", "greta", "ansel", "liesel", "rosa"], count: 5,
+    reason: "fight the flood at the Old Mill", object: "a length of wet rope",
+    arrival: () => "The millrace breaks its bank. Black water punches through the mill doors and carries grain into the lane.",
+    struggle: (names) => `${names} hold a rope across the current. The wheel tears free and turns once in the road.`,
+    reaction: (name) => name ? `${name} clings to the rope, soaked through. “The winter grain is inside. We lose it, we go hungry.”` : "Someone clings to the rope. “The winter grain is inside.”",
+    closure: () => "The current eases before dawn. The mill wheel lies broken in the lane, and grain clings to every fence downstream.",
+    choices: ["Take the rope and pull people clear", "Try to save the winter grain", "Stay on high ground. Watch the current"],
+  },
+};
+function afflictionCrisisRoster(s, affliction, activeHostId) {
+  const def = AFFLICTION_CRISIS[affliction];
+  if (!def) return { attendees: [], anchorId: null };
+  const available = def.priority.map((id) => npcById(s, id)).filter((npc) => npc && npc.alive && !npc.fled && npc.id !== activeHostId);
+  const attendees = available.slice(0, def.count).map((npc) => npc.id);
+  return { attendees, anchorId: attendees[0] || null };
+}
 /* The muffled version, heard through your own shutters on a night you stayed in. */
 const AFFLICTION_HOME_BEAT = {
   breadRiot: "Shouting reaches you through the shutters past midnight, from the direction of the bakery. Not a scream, though. A crowd. You do not open the door to see what a hungry crowd does.",
@@ -3601,8 +3659,9 @@ function sampleNight(s, m, n) {
      burned church, the bolted tavern, or the place an affliction is tearing
      apart tonight. Those events drop out of the pool. */
   const evPool = EVENTS.filter((e) => !((s.burned || []).includes(e.loc) || (s.tavernShut && e.loc === "Tavern") || (afflictLoc && e.loc === afflictLoc)));
-  /* Night one is its own bespoke chapter: no village gathering competing with it. */
-  if (n === 1) evn = null;
+  /* Night one and a rare village disaster own their whole chapter. No card
+     game or parish supper competes with a burning church or poisoned well. */
+  if (n === 1 || affliction) evn = null;
   else if (evPool.length && chance(wx === "storm" ? 0.07 : 0.15)) evn = pick(evPool);
   const eventLoc = evn ? evn.loc : null;
   /* A crowd is reachable only if the monster can reach the room it occupies.
@@ -3617,6 +3676,8 @@ function sampleNight(s, m, n) {
   /* who is out tonight because somebody they loved is in the ground. Keyed
      to the dead, so the walk and the morning tell the same story. */
   const griefOut = {};
+  let afflictionCrowd = [];
+  let afflictionAnchorId = null;
   const sc = s.searchCount || {};
   const secretDrought = secretDroughtNights(s, n);
   const secretOutChance = (sec) => Math.min(0.62, sec.outP + (secretDrought >= 3 ? 0.25 : secretDrought >= 2 ? 0.15 : 0.08));
@@ -3663,6 +3724,21 @@ function sampleNight(s, m, n) {
       else setOut(npc.id, "home", "indoor");
     }
   }
+  /* A rare disaster overrides ordinary errands. Several living neighbours
+     are physically drawn to the damaged place, and stay there long enough
+     for the Director to show a real crowd rather than a decorative cutaway.
+     An active host keeps its hunting route unless the marked-player logic
+     later brings it to the crisis itself. */
+  if (affliction && afflictLoc) {
+    const roster = afflictionCrisisRoster(s, affliction, active ? s.monster.vid : null);
+    afflictionCrowd = roster.attendees;
+    afflictionAnchorId = roster.anchorId;
+    for (const id of afflictionCrowd) {
+      setOut(id, afflictLoc, "outdoor");
+      delete secretOut[id];
+      delete griefOut[id];
+    }
+  }
   /* a villager's whispered warning does not fall on dead ground: for a few
      nights after "keep away from the X", that place is made to LIVE - half
      the time the horror really does hunt there (if it can), and otherwise a
@@ -3674,7 +3750,7 @@ function sampleNight(s, m, n) {
     if (active && m.reach !== "home" && m.hunts.includes(L) && chance(0.5)) {
       setOut(s.monster.vid, L);
     } else {
-      const keeper = s.npcs.find((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && x.id !== s.warnedLoc.by && secretOf(s, x.id) && !x.secretKnown && (!outMap[x.id] || outMap[x.id] === "home"));
+      const keeper = s.npcs.find((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && x.id !== s.warnedLoc.by && !afflictionCrowd.includes(x.id) && secretOf(s, x.id) && !x.secretKnown && (!outMap[x.id] || outMap[x.id] === "home"));
       if (keeper) { setOut(keeper.id, L); secretOut[keeper.id] = true; }
     }
   }
@@ -3689,10 +3765,14 @@ function sampleNight(s, m, n) {
     const naturallyThere = eligible.filter((npc) => outMap[npc.id] === huntLoc && canReachExposure(m, exposureMap[npc.id] || "outdoor"));
     if (naturallyThere.length) guaranteedVictimId = pick(naturallyThere).id;
     else if (eligible.length) {
-      const forced = eligible[stableIdx(`${s.gameId}:hunt-fallback:${n}:${huntLoc}`, eligible.length)];
+      const awayFromCrisis = eligible.filter((npc) => !afflictionCrowd.includes(npc.id));
+      const fallbackPool = awayFromCrisis.length ? awayFromCrisis : eligible;
+      const forced = fallbackPool[stableIdx(`${s.gameId}:hunt-fallback:${n}:${huntLoc}`, fallbackPool.length)];
       setOut(forced.id, huntLoc, "outdoor");
       delete secretOut[forced.id];
       delete griefOut[forced.id];
+      afflictionCrowd = afflictionCrowd.filter((id) => id !== forced.id);
+      if (afflictionAnchorId === forced.id) afflictionAnchorId = afflictionCrowd[0] || null;
       guaranteedVictimId = forced.id;
     }
   }
@@ -3706,7 +3786,7 @@ function sampleNight(s, m, n) {
   const secretCatch = {};
   const secretCatchChance = secretDrought >= 3 ? 0.82 : secretDrought >= 2 ? 0.68 : 0.55;
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(secretCatchChance);
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, guaranteedVictimId, relentlessVictimId, affliction };
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, guaranteedVictimId, relentlessVictimId, affliction, afflictionLoc: afflictLoc || null, afflictionCrowd, afflictionAnchorId };
 }
 
 /* Recognition must change play, not merely add a warning. On an active night
@@ -3744,6 +3824,7 @@ function monsterDangerWarning(s) {
    departure at first and must still choose to follow. Hunt victims, changed
    villagers and the monster's host are never repurposed for this cadence. */
 function primeDirectorSecret(s, facts, openingIntent, n) {
+  if (facts && facts.affliction) return facts;
   if (secretDroughtNights(s, n) < 2) return facts;
   const eligible = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && !npc.secretKnown
     && npc.id !== s.monster.vid && npc.id !== facts.guaranteedVictimId && secretOf(s, npc.id));
@@ -3792,6 +3873,13 @@ const DIRECTOR_INTENT_LINES = {
     (name) => `You take up a position outside ${name}'s house.`,
     (name) => `Tonight you watch ${name}. You keep your distance and wait.`,
   ],
+};
+const AFFLICTION_SUMMON = {
+  churchBurn: "The church bell breaks into a wild alarm. Whatever you meant to do tonight, you run for the Old Church.",
+  wellFouled: "Someone shouts that the well is poisoned. Doors open across the village, and you run for the square.",
+  breadRiot: "Glass breaks at the bakery. A hungry crowd surges into the square, taking the whole village with it.",
+  tavernShut: "The tavern lamps go dark one by one. Voices gather outside before the final bolt falls.",
+  millFlood: "The mill gives a cracking roar. Water floods the lower lane, and every lantern turns toward it.",
 };
 function directorIntentLine(s, intent, wx) {
   const rows = DIRECTOR_INTENT_LINES[intent.kind] || DIRECTOR_INTENT_LINES.search;
@@ -4361,13 +4449,58 @@ function directorAfflictionText(s, affliction) {
       : affliction === "churchBurn" ? (ansel && ansel.alive ? ansel.name : null) : null;
   return AFFLICTION_WALK[affliction](name);
 }
+function directorAfflictionBeats(s, facts, slots) {
+  const affliction = facts.affliction;
+  const def = AFFLICTION_CRISIS[affliction];
+  const scene = DIRECTOR_AFFLICTION_SCENE[affliction];
+  if (!def || !scene) return [];
+  const attendees = (facts.afflictionCrowd || []).map((id) => npcById(s, id)).filter(Boolean);
+  const anchor = facts.afflictionAnchorId ? npcById(s, facts.afflictionAnchorId) : null;
+  const names = attendees.slice(0, 3).map((npc) => npc.name).join(" and ") || "Neighbours";
+  const common = {
+    affliction,
+    afflictionLocation: scene.location,
+    afflictionWound: scene.wound,
+    afflictionLabel: scene.label,
+    soundCue: scene.soundCue,
+    crisis: true,
+    attendees: attendees.map((npc) => npc.id),
+    anchorId: anchor ? anchor.id : null,
+    critical: true,
+  };
+  const responseChoices = [
+    { choice: "help", label: def.choices[0] },
+    { choice: "comfort", label: def.choices[1] },
+    { choice: "witness", label: def.choices[2] },
+  ];
+  return [
+    {
+      id: `n${s.nightNum + 1}:affliction:${affliction}:arrival`, type: "atmosphere", slot: 0, location: scene.location,
+      text: def.arrival(), meta: { ...common, crisisStage: "arrival", crisisChoices: responseChoices },
+    },
+    {
+      id: `n${s.nightNum + 1}:affliction:${affliction}:struggle`, type: "atmosphere", slot: Math.min(slots - 1, 1), location: scene.location,
+      text: def.struggle(names), meta: { ...common, crisisStage: "struggle", crisisChoices: responseChoices },
+    },
+    {
+      id: `n${s.nightNum + 1}:affliction:${affliction}:reaction`, type: "atmosphere", slot: Math.min(slots - 1, 2), location: scene.location,
+      actorId: anchor ? anchor.id : null,
+      text: def.reaction(anchor ? anchor.name : null),
+      meta: { ...common, crisisStage: "aftermath", crisisChoices: [{ choice: "stay", label: "Stay until the danger passes" }, { choice: "leave", label: "Leave before the crowd disperses" }] },
+    },
+    {
+      id: `n${s.nightNum + 1}:affliction:${affliction}:closure`, type: "atmosphere", slot: Math.min(slots - 1, 3), location: scene.location,
+      text: def.closure(), meta: { ...common, crisisStage: "resolution", crisisChoices: [{ choice: "leave", label: "Leave with the others. Head for home" }] },
+    },
+  ];
+}
 function compileDirectorNight(s, facts, openingIntent) {
   if (!HE_DIRECTOR) return null;
   const n = s.nightNum + 1;
   const seed = `${s.gameId}:director:${n}`;
   const rng = HE_DIRECTOR.createRng(seed + ":presentation");
   const rawSlots = 3 + Math.floor(rng.next() * 8);
-  const minimumSlots = openingIntent.kind === "search" && openingIntent.loc === "Graveyard" ? 4 : 3;
+  const minimumSlots = facts.affliction ? 5 : openingIntent.kind === "search" && openingIntent.loc === "Graveyard" ? 4 : 3;
   const slots = Math.max(minimumSlots, rawSlots);
   const attackSlot = Math.max(1, Math.min(slots - 1, Math.floor(slots * 0.7)));
   const realGroundSigns = monsterOf(s).signs.filter((sg) => sg !== "wail");
@@ -4383,7 +4516,6 @@ function compileDirectorNight(s, facts, openingIntent) {
     method: armedCandidates[0].method,
     carry: METHOD_CARRY[armedCandidates[0].method],
   } : null;
-  const afflictionText = directorAfflictionText(s, facts.affliction);
   const afflictionScene = DIRECTOR_AFFLICTION_SCENE[facts.affliction] || null;
   const firstNightTarget = n === 1 && facts.active ? s.npcs.find((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && facts.outMap[npc.id] === facts.huntLoc) : null;
   const guaranteedHuntTarget = facts.guaranteedVictimId ? npcById(s, facts.guaranteedVictimId)
@@ -4405,18 +4537,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     id: `n${n}:village-pulse`, type: "atmosphere", slot: 0, location: "Village Square",
     text: distantEventText,
   });
-  if (afflictionText && afflictionScene) forcedBeats.push({
-    id: `n${n}:affliction:${facts.affliction}`, type: "atmosphere", slot: 0, location: "*",
-    text: afflictionText,
-    meta: {
-      affliction: facts.affliction,
-      afflictionLocation: afflictionScene.location,
-      afflictionWound: afflictionScene.wound,
-      afflictionLabel: afflictionScene.label,
-      soundCue: afflictionScene.soundCue,
-      critical: true,
-    },
-  });
+  if (afflictionScene) forcedBeats.push(...directorAfflictionBeats(s, facts, slots));
   if (facts.active) forcedBeats.push({
     id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(1, attackSlot - 1), location: "*",
     text: facts.targetingPlayer
@@ -4450,14 +4571,18 @@ function compileDirectorNight(s, facts, openingIntent) {
     text: fragments.join(" "), meta: { fragments, unresolvedSight: true, requiresResponse: true, soundCue: facts.wx === "storm" ? "thunder" : facts.wx === "frost" ? "frost_step" : "leaves", weather: facts.wx || "still" },
     });
   }
+  const crisisAttendees = new Set(facts.afflictionCrowd || []);
+  const crisisDef = AFFLICTION_CRISIS[facts.affliction] || null;
   const directorConfig = {
     seed, night: n, slots, openingIntent,
     villagers: s.npcs.map((npc) => {
       const sampledMotive = directorMotiveFor(s, facts, npc);
       const guaranteedTarget = guaranteedHuntTarget && guaranteedHuntTarget.id === npc.id;
       const activeHost = facts.active && npc.id === s.monster.vid;
+      const crisisGuest = !!(crisisDef && crisisAttendees.has(npc.id));
       const secretLead = facts.secretLeadId === npc.id && sampledMotive;
       const fallbackMotive = { id: `hunt-route:${npc.id}`, family: "obligation", destination: facts.huntLoc, reason: "finish an errand promised before sunset", object: "a small parcel" };
+      const crisisMotive = crisisGuest ? { id: `crisis:${facts.affliction}:${npc.id}`, family: "crisis", destination: facts.afflictionLoc, reason: crisisDef.reason, object: crisisDef.object, depart: 0, duration: slots } : null;
       const home = HOME_LOC[npc.id] || "Village Square";
       const leadLoc = facts.secretLeadLoc;
       const leadRoute = secretLead ? [home, leadLoc, sampledMotive.destination].filter((loc, i, rows) => loc && (!i || loc !== rows[i - 1])) : null;
@@ -4472,6 +4597,7 @@ function compileDirectorNight(s, facts, openingIntent) {
         motive: secretLead ? { ...sampledMotive, route: leadRoute, depart: leadDepart, duration: slots }
           : guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }
           : activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }
+            : crisisMotive ? crisisMotive
             : sampledMotive,
       };
     }),
@@ -4494,6 +4620,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     weather: facts.wx || "still", active: facts.active, huntLoc: facts.huntLoc, targetingPlayer: !!facts.targetingPlayer,
     outMap: facts.outMap, griefOut: facts.griefOut, secretOut: facts.secretOut,
     eventLoc: facts.eventLoc, attackSlot, guaranteedVictimId: facts.guaranteedVictimId, relentlessVictimId: facts.relentlessVictimId,
+    affliction: facts.affliction, afflictionLoc: facts.afflictionLoc, afflictionCrowd: facts.afflictionCrowd, afflictionAnchorId: facts.afflictionAnchorId,
     secretLeadId: facts.secretLeadId, secretLeadLoc: facts.secretLeadLoc, secretLeadSlot: facts.secretLeadSlot,
   };
   /* Compile a private preview only to place one mundane object on a route
@@ -4748,6 +4875,7 @@ function resolveNight(prev, planIn, preEvents) {
   const beats = [...preBeats];
   const mods = { ...(plan.mods || {}), ...(director ? { directorLived: true } : {}) };
   const monsterNpc = npcById(s, s.monster.vid);
+  const crisisResponses = director ? (director.ledgers.truth || []).filter((event) => event.kind === "crisis_response") : [];
 
   /* Project the Director's exact causal trace into the established journal,
      interviews and social systems. This is deliberately one-way: the legacy
@@ -6136,12 +6264,17 @@ function resolveNight(prev, planIn, preEvents) {
   if (s.sideQuest && !s.sideQuest.reported) {
     if (!s.sideQuest.due) {
       const qt = s.sideQuest.target;
+      const crisisInterruptedWatch = affliction && f.interruptedIntent && f.interruptedIntent.kind === "watch" && f.interruptedIntent.id === qt;
       /* Whether you kept your word or not, the asker comes to you at dawn and
          asks. Missing the night is no longer settled behind your back: you can
          admit it, or you can look them in the eye and say you were there. See
          actFavourAnswer. Stamp this once: otherwise an unanswered missed
          favour gets a fresh doneNight every dawn and can never expire. */
-      s.sideQuest = { ...s.sideQuest, done: (watching === qt || mods.follow === qt), doneNight: n, due: true };
+      if (crisisInterruptedWatch) {
+        s.sideQuest = { ...s.sideQuest, night: n + 1 };
+        const giver = npcById(s, s.sideQuest.giver);
+        if (giver && giver.alive && !giver.fled) dawn.push(ev(`${giver.name} does not ask about the missed watch. Half the village was needed at the ${f.afflictionLoc}. The favour can wait one more night.`, giver.id, 1));
+      } else s.sideQuest = { ...s.sideQuest, done: (watching === qt || mods.follow === qt), doneNight: n, due: true };
     } else if (n - (s.sideQuest.doneNight || s.sideQuest.night) > 3) {
       /* left unanswered for days, the asking simply curdles */
       const giver = npcById(s, s.sideQuest.giver);
@@ -6208,6 +6341,28 @@ function resolveNight(prev, planIn, preEvents) {
     else if (affliction === "tavernShut") { s.tavernShut = { night: n }; dawn.push(ev(AFFLICTION_DAWN.tavernShut(liesel ? liesel.name : "the innkeeper"), "liesel", 2)); }
     else if (affliction === "churchBurn") { if (!s.burned.includes("Old Church")) s.burned.push("Old Church"); dawn.push(ev(AFFLICTION_DAWN.churchBurn(ansel && ansel.alive ? ansel.name : null), "ansel", 2)); }
     else if (affliction === "millFlood") { if (!s.burned.includes("Old Mill")) s.burned.push("Old Mill"); dawn.push(ev(AFFLICTION_DAWN.millFlood(), undefined, 2)); }
+    const helped = crisisResponses.some((event) => event.choice === "help");
+    const comforted = crisisResponses.some((event) => event.choice === "comfort");
+    const watched = crisisResponses.some((event) => event.choice === "witness");
+    const crowdIds = new Set(f.afflictionCrowd || []);
+    const anchorId = f.afflictionAnchorId;
+    if (helped) {
+      s.npcs = s.npcs.map((npc) => crowdIds.has(npc.id) && npc.alive && !npc.turned ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
+      const names = [...crowdIds].map((id) => npcById(s, id)).filter((npc) => npc && npc.alive && !npc.turned).map((npc) => npc.name).slice(0, 3).join(" and ");
+      dawn.push(ev(`${names || "The neighbours at the crisis"} remember you working beside them until the danger passed.`, anchorId || undefined, 1));
+    }
+    if (comforted && anchorId) {
+      const anchor = npcById(s, anchorId);
+      if (anchor && anchor.alive && !anchor.turned) {
+        s.npcs = s.npcs.map((npc) => npc.id === anchorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
+        dawn.push(ev(`${anchor.name} remembers that you came to them when the night was at its worst.`, anchor.id, 1));
+      }
+    }
+    if (watched && crowdIds.size) {
+      const names = [...crowdIds].map((id) => (npcById(s, id) || {}).name).filter(Boolean);
+      s.clues.push(`Night ${n}: during the disaster at the ${f.afflictionLoc}, you clearly saw ${names.join(" and ")} in the crowd. Their presence there is certain, but it does not clear any of them.`);
+      dawn.push(ev(`You kept out of the crush and watched. Your Journal now holds the names of everyone you could place at the ${f.afflictionLoc}.`, undefined, 1));
+    }
     /* a stay-home night did not live it in the lanes: give it a muffled beat */
     if (!plan.facts) beats.push(AFFLICTION_HOME_BEAT[affliction]);
   }
@@ -13287,17 +13442,20 @@ function MonsterVillage() {
     if (!HE_DIRECTOR) return false;
     const comingNight = s.nightNum + 1;
     const sampledFacts = sampleNight(s, monsterOf(s), comingNight);
-    const markedFacts = primeMarkedPlayerHunt(s, sampledFacts, openingIntent, comingNight);
-    const facts = primeDirectorSecret(s, markedFacts, openingIntent, comingNight);
-    if (openingIntent.kind === "watch" && facts.outMap[openingIntent.id] === "home") {
-      facts.homeWatch = rollHomeWatch(s, openingIntent.id, facts.outMap, comingNight);
+    const crisisScene = DIRECTOR_AFFLICTION_SCENE[sampledFacts.affliction] || null;
+    const livedIntent = crisisScene ? { kind: "search", loc: crisisScene.location, crisis: sampledFacts.affliction } : openingIntent;
+    if (crisisScene) sampledFacts.interruptedIntent = openingIntent;
+    const markedFacts = primeMarkedPlayerHunt(s, sampledFacts, livedIntent, comingNight);
+    const facts = primeDirectorSecret(s, markedFacts, livedIntent, comingNight);
+    if (!crisisScene && livedIntent.kind === "watch" && facts.outMap[livedIntent.id] === "home") {
+      facts.homeWatch = rollHomeWatch(s, livedIntent.id, facts.outMap, comingNight);
     }
-    const director = compileDirectorNight(s, facts, openingIntent);
+    const director = compileDirectorNight(s, facts, livedIntent);
     if (!director) return false;
     setModal(null);
     setWalk({
-      mode: "director", facts, director, openingIntent,
-      feedback: directorIntentLine(s, openingIntent, facts.wx),
+      mode: "director", facts, director, openingIntent: livedIntent, declaredIntent: openingIntent,
+      feedback: crisisScene ? AFFLICTION_SUMMON[facts.affliction] : directorIntentLine(s, livedIntent, facts.wx),
       lastAction: null,
       intentDone: false, interacted: {},
     });
@@ -13306,7 +13464,7 @@ function MonsterVillage() {
        open even when that happens. */
     try {
       Snd.toll(1);
-      const openingLocation = openingIntent.kind === "watch" ? (HOME_LOC[openingIntent.id] || "Village Square") : (openingIntent.loc || "Village Square");
+      const openingLocation = livedIntent.kind === "watch" ? (HOME_LOC[livedIntent.id] || "Village Square") : (livedIntent.loc || "Village Square");
       Snd.scene({ location: openingLocation, weather: facts.wx, proximity: 0.05 });
     } catch (e) { console.warn("Night ambience could not start", e); }
     return true;

@@ -2242,6 +2242,19 @@
       && presentingBeat.meta.disturbanceLocation === next.player.location && action.type === "INVESTIGATE_HERE";
     var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
+    if (action.crisisChoice && presentingBeat && presentingBeat.meta && presentingBeat.meta.crisis) {
+      appendTruth(next, {
+        id: "crisis-response:" + presentingBeat.id + ":" + action.crisisChoice,
+        slot: Math.max(0, next.cursor),
+        kind: "crisis_response",
+        location: next.player.location,
+        affliction: presentingBeat.meta.affliction,
+        choice: action.crisisChoice,
+        actorId: presentingBeat.meta.anchorId || null,
+        actors: (presentingBeat.meta.attendees || []).slice(),
+        sourceBeatId: presentingBeat.id
+      });
+    }
     if (action.dismissClue && presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected) {
       appendTruth(next, { id: "clue-left-closed:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "clue_left_closed", location: next.player.location, sourceBeatId: presentingBeat.id });
       if (presentingBeat.meta.siteObject) {
@@ -2773,6 +2786,21 @@
       add(all.find(function (item) { return item.type === "LISTEN"; }), "Turn and face what is following");
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
+    }
+    if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.crisis) {
+      var crisisChoices = beat.meta.crisisChoices || [];
+      var crisisSearch = all.find(function (item) { return item.type === "SEARCH"; });
+      var crisisHome = all.find(function (item) { return item.type === "GO_HOME"; });
+      crisisChoices.forEach(function (entry) {
+        var base = entry.choice === "leave" ? crisisHome : crisisSearch;
+        if (!base) return;
+        var crisisAction = clone(base);
+        crisisAction.crisisChoice = entry.choice;
+        crisisAction.affliction = beat.meta.affliction;
+        crisisAction.label = entry.label;
+        result.push(crisisAction);
+      });
+      return result.slice(0, 3);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.requiresResponse) {
       add(all.find(function (item) { return item.type === "LISTEN"; }), state.weather === "storm" ? "Hold still. Listen for the voice again" : "Turn toward the sound and listen");
