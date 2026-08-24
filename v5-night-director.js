@@ -1109,12 +1109,11 @@
       var fallback = monster.relentless ? exposedFallback(state, slot, [victim]) : null;
       state.pendingThreat = { id: "threat:" + slot + ":" + victim, slot: slot, location: location, victimId: victim, kind: victim === "player" ? "player" : "witness", sign: actualSign(state, slot), fallbackVictimId: fallback && fallback.victimId, fallbackLocation: fallback && fallback.location };
       state.phase = "threat";
-      state.player.monsterSawYou = true;
       var threatVoice = monster.voice && monster.voice.mode;
       var playerThreatText = threatVoice === "beast"
         ? "The village sound cuts out. Wet breath gathers behind you; a growl starts so low you feel it through the road. Something is between you and home."
         : threatVoice === "speaker"
-          ? "The village sound cuts out. A soft giggle comes from the road behind you. ‘There you are,’ something says."
+          ? "The village sound cuts out. A soft giggle comes from the road behind you. Something is between you and home."
           : "The village sound cuts out. Something is between you and the road home. It makes no breath, no tread, nothing you can follow.";
       if (state.weather !== "still") playerThreatText = weatherMonsterText(state, threatVoice, "near");
       appendBeat(state, makeBeat(state.pendingThreat.id, "threat", slot, location,
@@ -1142,7 +1141,6 @@
       source: "delusion_approach"
     };
     state.phase = "threat";
-    state.player.monsterSawYou = true;
     var resolution = (fragments || []).slice(1).join(" ");
     var voiceMode = state.monsterSchedule.voice && state.monsterSchedule.voice.mode;
     var proximity = weatherMonsterText(state, voiceMode, "near");
@@ -1162,7 +1160,6 @@
       source: "search"
     };
     state.phase = "threat";
-    state.player.monsterSawYou = true;
     var opening = searchMode === "edges"
       ? "Your lantern is still beneath the hedge when something moves on the other side of it."
       : "Bent over the ground, you hear weight settle into the road behind you.";
@@ -1326,6 +1323,10 @@
        player is still hidden for one breath, as in the established walk,
        but may only flee, risk staying to learn, or confront it. */
     if (state.monsterSchedule.active && action.actorId === state.monsterSchedule.hostId) {
+      /* Most monster sightings do not also hand over the borrowed face. Fog
+         and storm conceal it most often; frost is the clearest. */
+      var identityChance = state.weather === "fog" ? 0.18 : state.weather === "storm" ? 0.25 : state.weather === "frost" ? 0.42 : 0.34;
+      var identityVisible = keyedNumber(state.seed, "recognition-identity:" + state.cursor + ":" + action.actorId) < identityChance;
       state.pendingThreat = {
         id: "recognition:" + state.cursor + ":" + action.actorId,
         slot: state.cursor,
@@ -1333,18 +1334,20 @@
         victimId: "player",
         actorId: action.actorId,
         kind: "recognition",
+        identityVisible: identityVisible,
         sign: actualSign(state, state.cursor),
         truthEventId: followedEvent && followedEvent.id
       };
       state.phase = "threat";
       var host = state.cast.find(function (villager) { return villager.id === action.actorId; });
-      var recognitionText = state.monsterSchedule.revealText
-        || ((host && host.name || "Your neighbour") + " turns close enough for the lantern to catch the human shape still trapped inside the monster.");
-      if (state.weather === "fog") recognitionText = "Fog hides the face until it is close. " + recognitionText;
-      else if (state.weather === "storm") recognitionText = "Lightning shows the face. " + recognitionText;
-      else if (state.weather === "frost") recognitionText = "Its breath crosses yours. " + recognitionText;
+      var recognitionText = identityVisible
+        ? (state.monsterSchedule.revealText || ((host && host.name || "Your neighbour") + " turns close enough for the lantern to catch the human shape still trapped inside the monster."))
+        : "You lose " + (host && host.name || "your neighbour") + " at the turning. A monstrous shape crosses the road ahead. You cannot see its face.";
+      if (state.weather === "fog") recognitionText = identityVisible ? "Fog gives the face back at the last moment. " + recognitionText : "Fog closes over the turning. " + recognitionText;
+      else if (state.weather === "storm") recognitionText = identityVisible ? "Lightning shows the face. " + recognitionText : "Rain and darkness hide the face. " + recognitionText;
+      else if (state.weather === "frost") recognitionText = identityVisible ? "Its breath crosses yours. " + recognitionText : "Breath clouds the face. " + recognitionText;
       appendBeat(state, makeBeat("recognition-beat:" + state.cursor + ":" + action.actorId, "threat", state.cursor, state.player.location,
-        recognitionText, { actorId: action.actorId, sign: state.pendingThreat.sign, truthEventId: followedEvent && followedEvent.id, meta: { recognition: true, critical: true } }));
+        recognitionText, { actorId: identityVisible ? action.actorId : null, sign: state.pendingThreat.sign, truthEventId: followedEvent && followedEvent.id, meta: { recognition: true, identityVisible: identityVisible, critical: true } }));
     }
     if (state.phase === "active" && state.cursor >= state.slots - 1 && destination !== HOME && !(followedVillager && followedVillager.changed) && !(followedEvent && followedEvent.changedAftermath)) {
       state.followPause = {
@@ -1904,6 +1907,8 @@
     state.resolvedAttackSlots.push(threat.slot);
     state.pendingThreat = null;
     state.phase = "chase";
+    /* A chase is mutual. Merely hearing or glimpsing the thing is not. */
+    state.player.monsterSawYou = true;
     state.chase = { slot: threat.slot, step: 0, distance: 2, location: threat.location, history: [], fallbackVictimId: threat.fallbackVictimId || null, fallbackLocation: threat.fallbackLocation || null };
     appendTruth(state, { id: "chase-start:" + threat.slot, slot: threat.slot, kind: "chase_started", location: threat.location, actors: [state.monsterSchedule.hostId, "player"].filter(Boolean) });
     appendBeat(state, makeBeat("chase-start-beat:" + threat.slot, "flee", threat.slot, threat.location,
@@ -2136,15 +2141,21 @@
       var correctName = action.type === "CONFRONT_MONSTER" && armed && armed.id === state.monsterSchedule.id;
       var wrongName = action.type === "CONFRONT_MONSTER" && armed && armed.id !== state.monsterSchedule.id;
       var survival = correctName || (action.type === "FLEE"
-        ? outcome.flee >= 0.15
+        ? outcome.flee >= 0.10
         : action.type === "WATCH_MONSTER"
-          ? outcome.hide >= 0.35
+          ? outcome.hide >= 0.30
           : outcome.intervene >= (wrongName ? 0.70 : 0.60));
       var groundSigns = state.monsterSchedule.signs.filter(function (sign) { return GROUND_SIGNS.indexOf(sign) >= 0; });
       var learnedSign = action.type === "WATCH_MONSTER" && groundSigns.length
         ? groundSigns[Math.floor(outcome.sign * groundSigns.length) % groundSigns.length]
         : null;
-      var seenByMonster = action.type !== "FLEE" || outcome.flee < 0.4;
+      var learnedIdentity = !!threat.identityVisible
+        || (action.type === "WATCH_MONSTER" && survival && outcome.sign < 0.28);
+      /* A successful quiet retreat remains unseen. Watching is only marked
+         when the thing visibly checks the hiding place; confrontation is
+         necessarily mutual. */
+      var seenByMonster = action.type === "CONFRONT_MONSTER"
+        || (action.type === "WATCH_MONSTER" && survival && outcome.hide < 0.52);
       appendTruth(state, {
         id: "monster-reveal-choice:" + threat.slot,
         slot: threat.slot,
@@ -2159,6 +2170,8 @@
         succeeded: !!survival,
         caught: !survival,
         learnedSign: learnedSign,
+        learnedIdentity: learnedIdentity,
+        identityVisible: !!threat.identityVisible,
         seenByMonster: seenByMonster
       });
       state.player.monsterSawYou = state.player.monsterSawYou || seenByMonster;
@@ -2183,15 +2196,17 @@
         appendTruth(state, { id: "player-death:" + threat.slot, slot: threat.slot, kind: "player_slain", location: threat.location, actors: [threat.actorId, "player"] });
         return state;
       }
+      var revealedHost = state.cast.find(function (actor) { return actor.id === threat.actorId; });
+      var revealedName = revealedHost && revealedHost.name || "your neighbour";
       var resultText = action.type === "FLEE"
         ? "You step backward while it is bent to its work. At the first barred gate, you turn and run."
         : action.type === "WATCH_MONSTER"
-          ? "You stay hidden. " + (learnedSign ? MONSTER_WORK_TEXT[learnedSign] : "You learn its gait and shape, but it leaves no mark you can stamp.")
+          ? "You stay hidden. " + (learnedIdentity && !threat.identityVisible ? "For one instant, the human shape beneath it resolves into " + revealedName + ". " : "") + (learnedSign ? MONSTER_WORK_TEXT[learnedSign] : "You learn its gait and shape, but it leaves no mark you can stamp.") + (seenByMonster ? " It turns toward your hiding place before you slip away." : "")
           : wrongName
             ? "The rite is wrong. It laughs. While its head is thrown back, you reach the wall and climb."
             : "You step out and say the human name. It turns. You survive the answer, but it has seen you clearly now.";
       appendBeat(state, makeBeat("reveal-escape:" + threat.slot + ":" + action.type.toLowerCase(), "flee", threat.slot, threat.location,
-        resultText, { actorId: threat.actorId, sign: learnedSign, outcome: "escaped" }));
+        resultText, { actorId: learnedIdentity ? threat.actorId : null, sign: learnedSign, outcome: "escaped", meta: { learnedIdentity: learnedIdentity, identityVisible: !!threat.identityVisible } }));
       state.phase = "returning";
       return state;
     }
@@ -2231,11 +2246,11 @@
     if (["legacy", "cover", "shadow", "still"].indexOf(hideMode) < 0) return invalid(state, action, "That hiding place is not open.");
     var conceal = outcome.conceal && outcome.conceal[hideMode];
     var roll = conceal ? conceal.survive : outcome.hide;
-    var threshold = hideMode === "shadow" ? 0.16 : hideMode === "cover" ? 0.30 : hideMode === "still" ? 0.48 : 0.25;
+    var threshold = hideMode === "shadow" ? 0.13 : hideMode === "cover" ? 0.26 : hideMode === "still" ? 0.44 : 0.22;
     var survival = roll >= threshold;
     var revealRoll = conceal ? conceal.reveal : 1;
-    var learnedIdentity = survival && (hideMode === "still" ? revealRoll < 0.56 : hideMode === "cover" ? revealRoll < 0.18 : hideMode === "shadow" ? revealRoll < 0.03 : false);
-    var learnedBuild = survival && (learnedIdentity || (hideMode === "still" ? revealRoll < 0.82 : hideMode === "cover" ? revealRoll < 0.48 : hideMode === "shadow" ? revealRoll < 0.10 : false));
+    var learnedIdentity = survival && (hideMode === "still" ? revealRoll < 0.38 : hideMode === "cover" ? revealRoll < 0.10 : hideMode === "shadow" ? revealRoll < 0.02 : false);
+    var learnedBuild = survival && (learnedIdentity || (hideMode === "still" ? revealRoll < 0.76 : hideMode === "cover" ? revealRoll < 0.42 : hideMode === "shadow" ? revealRoll < 0.08 : false));
     var learnedSign = survival && (learnedIdentity || (hideMode === "still" ? revealRoll < 0.92 : hideMode === "cover" ? revealRoll < 0.68 : hideMode === "shadow" ? revealRoll < 0.20 : false)) ? threat.sign : null;
     var host = state.cast.find(function (villager) { return villager.id === state.monsterSchedule.hostId; });
     var hostBuild = host && host.build || null;
@@ -2618,7 +2633,7 @@
     if (action.type === "SEARCH" && action.searchMode && next.phase === "active" && !next.currentBeat && next.monsterSchedule.active) {
       var monsterNearSearch = next.monsterSchedule.huntLoc === next.player.location
         || next.monsterSchedule.locations[slot] === next.player.location;
-      var searchRisk = action.searchMode === "edges" ? 0.34 : 0.24;
+      var searchRisk = action.searchMode === "edges" ? 0.44 : 0.34;
       if (monsterNearSearch && keyedNumber(next.seed, "search-risk:" + slot + ":" + action.searchMode) < searchRisk) {
         triggerSearchThreat(next, slot, next.player.location, action.searchMode);
       }

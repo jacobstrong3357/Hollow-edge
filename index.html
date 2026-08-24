@@ -90,7 +90,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=11"></script>
+<script src="v5-night-director.js?v=12"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -3808,7 +3808,7 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, markedOutNights: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, monsterWarningSeen: false, markedOutNights: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
     publicBlame: null,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
@@ -4040,15 +4040,8 @@ function primeMarkedPlayerHunt(s, facts, openingIntent, n) {
 }
 
 function monsterDangerWarning(s) {
-  if (!(s.enraged || s.monsterSawYou)) return null;
-  const opening = s.enraged && s.monsterSawYou
-    ? "It has seen your face. It now treats you as prey."
-    : s.enraged ? "It now treats you as prey."
-      : "It has seen your face and can recognise you in the dark.";
-  const nightsOut = Number.isFinite(s.markedOutNights) ? s.markedOutNights : 0;
-  if (nightsOut >= 2) return `${opening} The next night it hunts, it will come to the place you choose to search or watch. You will be its target.`;
-  if (nightsOut === 1) return `${opening} When you go out, it may hunt at the place you choose. If you survive one more night out, its next hunting night will come to the place you choose.`;
-  return `${opening} When you go out, it may hunt at the place you choose. If you survive two nights out, its next hunting night will come to the place you choose.`;
+  if (!s.monsterSawYou || s.monsterWarningSeen) return null;
+  return "It saw you. Nights are more dangerous for you now.";
 }
 
 /* After five nights without learning one, put a still-unknown human secret
@@ -5148,13 +5141,16 @@ function resolveNight(prev, planIn, preEvents) {
       followAct: revealChoice.action === "WATCH_MONSTER" ? "watch" : revealChoice.action === "CONFRONT_MONSTER" ? "confront" : "flee",
       followFate: !!revealChoice.caught,
       followLearnedSign: revealChoice.learnedSign || null,
+      followIdentityKnown: !!(revealChoice.identityVisible || revealChoice.learnedIdentity),
       revealSeen: !!revealChoice.seenByMonster,
       confrontWrongCaught: revealChoice.wrongName ? !!revealChoice.caught : undefined,
     });
     /* Once the player has seen the borrowed face come apart, this is no
        longer an alibi thread. The face goes into the accusation systems,
        never into tomorrow's ordinary interview queue. */
-    const interviewEncounters = revealChoice ? encounters.filter((thread) => thread.actorId !== revealChoice.actorId) : encounters;
+    const interviewEncounters = revealChoice && (revealChoice.identityVisible || revealChoice.learnedIdentity)
+      ? encounters.filter((thread) => thread.actorId !== revealChoice.actorId)
+      : encounters;
     const directorEvents = interviewEncounters.map((thread) => {
       const actorId = thread.actorId;
       const agenda = director.schedules && director.schedules[actorId];
@@ -5585,6 +5581,7 @@ function resolveNight(prev, planIn, preEvents) {
     s.playerSaw.push({ night: n, id: fw.id, loc: fDest });
     if (fw.id === s.monster.vid && active) {
       const act = mods.followAct || "flee";
+      const identityKnown = mods.followIdentityKnown !== false;
       /* -- the armed confrontation: if the player's journal has been worked
          down to exactly ONE possible creature, they went out carrying that
          creature's remedy. Confront it and name it truly, and it dies here,
@@ -5649,8 +5646,12 @@ function resolveNight(prev, planIn, preEvents) {
         s.over = { win: false, reason: "slain", text: `You followed ${fw.name} to the ${fPlace}. Only one of you came back, and it was not you.` };
         return true;
       }
-      s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fPlace} and watched ${fw.name} stop being ${fw.name}. It is ${fw.name} the thing wears. You are certain of the face now, though not yet of what wears it.`);
-      s.faceKnown = fw.id;
+      if (identityKnown) {
+        s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fPlace} and saw the monster wearing ${fw.name}'s face.`);
+        s.faceKnown = fw.id;
+      } else {
+        s.clues.push(`Night ${n}: you lost ${fw.name} near the ${fPlace}, then saw a monster in the road. Its face stayed hidden.`);
+      }
       if (act === "flee" || act === "watch") shiftMonsterBond(s, 1);
       else if (act === "confront") shiftMonsterBond(s, -1);
       if (act === "confront") {
@@ -5676,12 +5677,18 @@ function resolveNight(prev, planIn, preEvents) {
           const sense = senseFor(learned);
           beats.push(`You stay, and you watch, and you make yourself memorize all of it: the gait, the build, the stride, and one thing more, the mark of what it truly is showing plain through the borrowed skin. ${sense}`);
           s.clues.push(`Night ${n}: you held your nerve and studied ${fw.name} in the dark until its true nature showed through. ${sense}`);
-          dawn.push(evPlaque(ev(`You have seen the face it wears: ${fw.name}, and by staying to watch you learned one of its true tells besides. ${sense} The field narrows.`, fw.id, 3), "amber", learned));
+          dawn.push(evPlaque(ev(identityKnown
+            ? `You saw the monster wearing ${fw.name}'s face. You also learned one of its true tells. ${sense}`
+            : `You saw the monster, but not its face. You learned one of its true tells. ${sense}`, identityKnown ? fw.id : undefined, 3), "amber", learned));
         } else if (!mods.brush) {
           beats.push(`You stay, and you watch, and you memorize everything: the gait, the build, the length of the stride, until it lifts its head and tastes the air, and you leave before it finishes.`);
-          dawn.push(ev(`You have seen the face it wears: ${fw.name}. Whatever kind of thing it is, it goes about in ${fw.name}, and you would swear to it in any court. Now you need only its true nature.`, fw.id, 2));
+          dawn.push(ev(identityKnown
+            ? `You saw the monster wearing ${fw.name}'s face. Now you need its true nature.`
+            : `You saw the monster and learned its build, but its face stayed hidden.`, identityKnown ? fw.id : undefined, 2));
         } else {
-          dawn.push(ev(`You have seen the face it wears: ${fw.name}, and last night ${fw.name} stood close enough to speak to you and did. Whatever kind of thing it is, it goes about in that face, and it knows whose face was in the lane.`, fw.id, 2));
+          dawn.push(ev(identityKnown
+            ? `You saw the monster wearing ${fw.name}'s face. It also saw you.`
+            : `You saw the monster without seeing its face. It saw you.`, identityKnown ? fw.id : undefined, 2));
         }
         /* the walk ended at a dead run: the recap picks that up, not a quiet
            withdrawal it never made */
@@ -5692,8 +5699,8 @@ function resolveNight(prev, planIn, preEvents) {
           ? mods.brushBolt
           : `You go back the way you came, slowly, placing each foot like a debt, and do not breathe properly until your own bolt is thrown.`);
         dawn.push(ev(mods.brush
-          ? `You have seen the face it wears: ${fw.name}. You did not get away unseen. It came the whole way in, close enough to be smelled, and spoke to you in the dark, and it knows the shape of whoever was crouched in it.`
-          : `You have seen the face it wears: ${fw.name}. You fled before it saw yours, and carried the certainty home. Now you need only its true nature.`, fw.id, 2));
+          ? identityKnown ? `You saw the monster wearing ${fw.name}'s face. It also saw you.` : `You saw the monster without seeing its face. It also saw you.`
+          : identityKnown ? `You saw the monster wearing ${fw.name}'s face. You escaped unseen.` : `You saw the monster, but not its face. You escaped unseen.`, identityKnown ? fw.id : undefined, 2));
       }
     } else if (fw.turned) {
       s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, known: true } : x));
@@ -10696,7 +10703,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
 
         {/* ---- the tray ---- */}
         <div className="mvIvDock heDockSpill" style={{ flexShrink: 0, background: "linear-gradient(#181D31, #131728)", borderTop: `1px solid ${C.line}` }}>
-          <div className="px-4 pt-3" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 19px)", maxHeight: "46vh", overflowY: "auto" }}>
+          <div className="px-4 pt-3 heInterviewQuestions" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 19px)", maxHeight: "46vh", overflowY: "auto" }}>
             {/* the hours you have left, alone on their line. The nights used to
                 share it, and by Night 4 the scrolling row was sliding under the
                 pips. They live below the questions now, with room to run. */}
@@ -11704,6 +11711,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 @keyframes mvivin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .mvIvChip:hover { border-color: #D9A441 !important; }
 .mvIvDock { box-shadow: 0 -12px 26px rgba(4,6,12,0.55); }
+.heInterviewQuestions .heInkButton { font-size:13.5px !important; line-height:1.3 !important; }
 /* Centring (or bottom-aligning) a column that has outgrown its own scroll
    box throws the START of it out through the top edge, where no scrollbar
    can ever reach it: a seven-beat JUDGMENT lost its opening line under the
@@ -12037,7 +12045,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heActionCardIcon { margin-top:2px !important; transform:rotate(-4deg); filter:drop-shadow(1px 1px 0 rgba(0,0,0,.5)); }
 .heActionCardTitle { letter-spacing:1.15px !important; }
 .heActionCard:not(.heActionCardSide) { padding-left:9px !important; padding-right:9px !important; gap:8px !important; }
-.heActionCard:not(.heActionCardSide) .heActionCardTitle { font-size:11.5px !important; letter-spacing:.35px !important; white-space:nowrap; }
+.heActionCard:not(.heActionCardSide) .heActionCardTitle { font-size:11.5px !important; letter-spacing:.35px !important; white-space:normal; overflow-wrap:anywhere; }
 .heActionCardHint { color:#B8AA92 !important; font-size:12.5px !important; }
 .heActionCardSide { --he-btn-tilt:.08deg; min-height:58px; }
 .heActionCardSide::before { background:linear-gradient(90deg,#756750,#BBA27A 48%,#756750); }
@@ -12983,7 +12991,7 @@ function MonsterVillage() {
      the marker self-reset as soon as the next night resolves. */
   const acknowledgeDawn = () => {
     setDawnDone(true);
-    setS({ ...s, dawnSeenNight: s.nightNum });
+    setS({ ...s, dawnSeenNight: s.nightNum, monsterWarningSeen: s.monsterWarningSeen || !!s.monsterSawYou });
   };
 
   if (!s && !bootReady) {
@@ -15834,7 +15842,6 @@ function MonsterVillage() {
      tonight's weather - the night is not sampled until you have chosen, and
      naming the weather first would let the player pick their odds. */
   const planModal = modal === "plan" && (() => {
-    const duskLine = DUSK_LINES[stableIdx(`${s.gameId}:dusk:${s.nightNum}`, DUSK_LINES.length)];
     const bargainTarget = s.coerceNote && npcById(s, s.coerceNote.target);
     const favourGiver = s.sideQuest && !s.sideQuest.due && !s.sideQuest.reported ? npcById(s, s.sideQuest.giver) : null;
     const favourTarget = s.sideQuest && !s.sideQuest.due && !s.sideQuest.reported ? npcById(s, s.sideQuest.target) : null;
@@ -15909,11 +15916,9 @@ function MonsterVillage() {
               <span className="mv-display block" style={{ fontSize: 12.5, letterSpacing: 3.2, color: s.fled ? "rgba(194,68,80,0.85)" : "rgba(233,223,200,0.75)" }}>
                 {s.fled ? "IT COMES TONIGHT" : "HOLLOW'S EDGE"}
               </span>
-              <div style={{ marginTop: 9, paddingLeft: 11, borderLeft: "2px solid rgba(233,223,200,0.22)" }}>
-                <p style={{ margin: 0, fontSize: 12.5, fontStyle: "italic", lineHeight: 1.5, color: "rgba(233,223,200,0.95)" }}>
-                  {s.fled ? "It has stopped pretending to be anyone. Every night from here is its night." : duskLine}
-                </p>
-              </div>
+              {s.fled && <div style={{ marginTop: 9, paddingLeft: 11, borderLeft: "2px solid rgba(233,223,200,0.22)" }}>
+                <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "rgba(233,223,200,0.95)" }}>It has stopped pretending. Every night is a hunting night now.</p>
+              </div>}
               <p style={{ margin: "9px 0 0", fontSize: 14.5, lineHeight: 1.5, color: "rgba(233,223,200,1)", textWrap: "pretty", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
                 {s.fled
                   ? "It comes every night now. A wrong name costs a life, and the village has one mistake left in it."
@@ -16657,15 +16662,6 @@ function MonsterVillage() {
       })()}
 
       <div className="max-w-md mx-auto px-4 pb-32 heDayMainContent">
-        {/* The night's recap belongs to the dawn reveal (once) and the journal's
-            Nights log (summarised, in the Journal). The day homepage keeps only
-            the active-danger warnings, never the full recap. */}
-        {monsterDangerWarning(s) && (
-          <div className="mt-3">
-            <p style={{ color: C.redBright, fontSize: 14.5, fontWeight: 700 }}>{monsterDangerWarning(s)}</p>
-          </div>
-        )}
-
         {/* Daylight search/exam findings no longer sit inline here - they
             crowded the page. They're filed in the Journal's Days tab, and
             the JOURNAL bar's notification dot (keyed to s.clues) already

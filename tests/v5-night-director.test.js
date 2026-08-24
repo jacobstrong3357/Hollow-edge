@@ -834,12 +834,17 @@ function take(state, wanted) {
   assert.strictEqual(state.phase, "threat", "recognising the host immediately enters survival state");
   assert.strictEqual(state.pendingThreat.kind, "recognition");
   assert.strictEqual(state.currentBeat.type, "threat");
-  assert(/Rosa's face/.test(state.currentBeat.text), "following the active host reaches the monster-specific body reveal before the survival choice");
-  assert(state.currentBeat.text.startsWith("Fog hides the face until it is close."), "recognition weather uses a short concrete opener");
+  assert(/monstrous shape/.test(state.currentBeat.text) && /cannot see its face/.test(state.currentBeat.text), "following the active host can reveal the monster without automatically naming its borrowed face");
+  assert(state.currentBeat.text.startsWith("Fog closes over the turning."), "fog can conceal the host during an otherwise unmistakable monster sighting");
   assert((state.currentBeat.text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length <= 30, "the complete weather and recognition card fits a three-to-five-line mobile beat");
   var actions = Director.availableActions(state);
   assert(!actions.some(function (action) { return action.type === "HAIL" || action.type === "SEARCH"; }), "hail and search disappear after the mask drops");
   assert.deepStrictEqual(actions.map(function (action) { return action.type; }), ["FLEE", "WATCH_MONSTER", "CONFRONT_MONSTER"]);
+  var quietEscape = JSON.parse(JSON.stringify(state));
+  quietEscape.outcomes[quietEscape.cursor].flee = 0.5;
+  quietEscape = take(quietEscape, { type: "FLEE" });
+  assert.strictEqual(quietEscape.phase, "returning");
+  assert.strictEqual(quietEscape.player.monsterSawYou, false, "a successful quiet retreat does not falsely mark the player as seen");
   state.monsterSchedule.signs = ["bite"];
   state.outcomes[state.cursor].hide = 0.99;
   state = take(state, { type: "WATCH_MONSTER" });
@@ -848,6 +853,8 @@ function take(state, wanted) {
   assert(!/what was left here|borrowed body at its work/.test(state.currentBeat.text), "a learned sign cannot be joined to vague unrelated fragments");
   var revealChoice = state.ledgers.truth.find(function (event) { return event.kind === "monster_reveal_choice" && event.action === "WATCH_MONSTER"; });
   assert(revealChoice && revealChoice.location === "Old Church", "the survival choice retains the place where the encounter actually happened");
+  assert.strictEqual(revealChoice.identityVisible, false, "an anonymous sighting stays distinct from identifying the host");
+  assert.strictEqual(revealChoice.seenByMonster, false, "remaining successfully hidden does not invent mutual recognition");
 })();
 
 (function aMaskedInvitationTurnsFollowIntoAnAcceptance() {
@@ -2324,7 +2331,7 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=11'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=12'), "the local page cache-busts the current Director runtime");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
     HOME_LOC: { rosa: "Village Square" },
@@ -2348,12 +2355,18 @@ function take(state, wanted) {
   var dangerWarningContext = { Number: Number };
   vm.createContext(dangerWarningContext);
   vm.runInContext(dangerWarningSource + "; this.monsterDangerWarning = monsterDangerWarning;", dangerWarningContext);
-  var firstWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: true, enraged: false, markedOutNights: 0 });
-  var secondWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: true, enraged: true, markedOutNights: 1 });
-  var guaranteedWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: false, enraged: true, markedOutNights: 2 });
-  assert(/may hunt at the place you choose/i.test(firstWarning) && /survive two nights out/i.test(firstWarning), "the first warning explains both the immediate risk and the two-night escalation");
-  assert(/survive one more night out/i.test(secondWarning), "the warning states when only one exposed night remains");
-  assert(/next night it hunts/i.test(guaranteedWarning) && /You will be its target/i.test(guaranteedWarning), "the guaranteed stalk states exactly when and whom the monster will hunt");
+  var firstWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: true, monsterWarningSeen: false });
+  var repeatedWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: true, monsterWarningSeen: true });
+  var unseenWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: false, monsterWarningSeen: false, enraged: true });
+  assert.strictEqual(firstWarning, "It saw you. Nights are more dangerous for you now.", "the first warning is short and concrete");
+  assert.strictEqual(repeatedWarning, null, "the warning is shown only once");
+  assert.strictEqual(unseenWarning, null, "anger alone cannot claim that the monster saw the player");
+  var dayHomeSource = html.slice(html.indexOf('<div className="max-w-md mx-auto px-4 pb-32 heDayMainContent">'), html.indexOf("{/* Daylight search/exam findings", html.indexOf('<div className="max-w-md mx-auto px-4 pb-32 heDayMainContent">')));
+  assert(!dayHomeSource.includes("monsterDangerWarning"), "the one-time warning does not repeat on the day board");
+  assert(html.includes(".heInterviewQuestions .heInkButton { font-size:13.5px !important"), "interview question copy matches the smaller section-heading scale");
+  assert(html.includes("white-space:normal; overflow-wrap:anywhere"), "long death-scene action titles wrap instead of clipping a villager's name");
+  var planSource = html.slice(html.indexOf('const planModal = modal === "plan"'), html.indexOf("if (s.dawn.length", html.indexOf('const planModal = modal === "plan"')));
+  assert(!planSource.includes("duskLine"), "nightfall no longer adds a decorative bell or dusk sentence beneath the location heading");
   ["draws its next hunt closer", "two nights unchallenged", "takes your route", "paying that off for a while", "Hunt it too openly"].forEach(function (phrase) {
     assert(!html.includes(phrase), "retired abstract danger language cannot return: " + phrase);
   });
