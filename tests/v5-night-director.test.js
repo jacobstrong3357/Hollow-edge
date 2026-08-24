@@ -177,6 +177,33 @@ function take(state, wanted) {
   assert(!retreat.ledgers.truth.some(function (event) { return event.kind === "delusion_approach"; }), "retreating does not secretly spend the approach risk");
 })();
 
+(function aFinalStrangeSightMustBeAnsweredBeforeTheJourneyHome() {
+  var config = baseConfig("final-strange-sight");
+  config.slots = 3;
+  config.monster.active = false;
+  config.currentFacts = { weather: "frost", active: false, outMap: {} };
+  config.villagers = [];
+  config.forcedBeats = [{
+    id: "last-sight", type: "delusion", slot: 2, location: "Village Square", text: "A child-sized shape crosses the road.",
+    meta: { fragments: ["A child-sized shape crosses the road.", "You hurry to the place it vanished.", "Only a dropped mitten, wet with dew."], requiresResponse: true }
+  }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.phase, "active", "the final slot cannot complete while its strange sight still requires a choice");
+  assert.strictEqual(state.player.location, "Village Square", "the unresolved sight remains where it happened instead of becoming the threshold");
+  var actions = Director.guidedActions(state, { target: "Village Square", kind: "search", intentDone: true, searches: {}, interacted: {} });
+  assert.deepStrictEqual(actions.map(function (item) { return item.label; }), ["Move closer and inspect", "Run. Head for home"]);
+  var finalSlot = state.cursor;
+  state = Director.reduce(state, actions[0]);
+  assert.strictEqual(state.cursor, finalSlot, "answering a sight is a reaction in the current slot, not an eighth hour of night");
+  assert.strictEqual(state.phase, "returning", "after resolving the final sight, reaching home remains an explicit step");
+  assert.strictEqual(state.player.location, "Village Square");
+  assert(state.currentBeat && state.currentBeat.meta.requiresResponse === false, "the concrete resolution remains visible on the journey-home choice");
+  assert.deepStrictEqual(Director.availableActions(state).map(function (item) { return item.type; }), ["REACH_HOME"]);
+})();
+
 (function aWatchedVillagerDoesNotCrossTheirOwnDoorScene() {
   var config = baseConfig("watch-door-not-lane");
   config.openingIntent = { kind: "watch", id: "rosa" };

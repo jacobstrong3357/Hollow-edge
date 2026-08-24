@@ -1241,7 +1241,17 @@
   }
 
   function finishIfNeeded(state) {
-    if (state.phase === "active" && state.cursor >= state.slots - 1) beginThresholdOrComplete(state);
+    if (state.phase !== "active" || state.cursor < state.slots - 1) return;
+    /* A required sight or sound owns the screen until the player answers it.
+       Completing here used to strand a final-slot delusion beneath a single
+       morning button: its response actions disappeared and the location was
+       rewritten as Home. Once the last beat is resolved, dawn starts the
+       journey home; reaching the threshold remains its own explicit action. */
+    if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.requiresResponse) return;
+    state.phase = "returning";
+    if (!state.ledgers.truth.some(function (event) { return event.id === "dawn-return:" + state.cursor; })) {
+      appendTruth(state, { id: "dawn-return:" + state.cursor, slot: state.cursor, kind: "started_home", location: state.player.location, reason: "dawn" });
+    }
   }
 
   function settleAfterReturn(state) {
@@ -1627,6 +1637,24 @@
       appendTruth(next, { id: "go-home:" + next.cursor, slot: next.cursor, kind: "started_home", location: next.player.location });
       return next;
     }
+    if (action.approachDelusion && presentingBeat && presentingBeat.type === "delusion" && presentingBeat.meta && presentingBeat.meta.requiresResponse) {
+      /* Looking closer is an answer to the thing already in front of you, not
+         another hour of travel. Resolve it in the current slot so a sight at
+         the edge of dawn cannot step beyond the sampled night. */
+      var responseSlot = Math.max(0, next.cursor);
+      var approachFragments = presentingBeat.meta.fragments || [];
+      var approachRisk = keyedNumber(next.seed, "delusion-approach-risk:" + (presentingBeat.id || responseSlot));
+      next.actionHistory.push({ slot: responseSlot, type: "SEARCH", to: null, actorId: null, approachDelusion: true });
+      appendTruth(next, { id: "delusion-approach:" + responseSlot, slot: responseSlot, kind: "delusion_approach", location: next.player.location, risk: approachRisk, attractedThreat: next.monsterSchedule.active && approachRisk < 0.4 });
+      if (next.monsterSchedule.active && approachRisk < 0.4) {
+        triggerDelusionApproachThreat(next, responseSlot, next.player.location, approachFragments);
+      } else {
+        appendBeat(next, makeBeat("delusion-resolution:" + responseSlot, "delusion", responseSlot, next.player.location,
+          approachFragments.slice(1).join(" "), { meta: { fragments: approachFragments.slice(1), resolvedAsUnreal: true, requiresResponse: false, critical: true } }));
+      }
+      finishIfNeeded(next);
+      return next;
+    }
     if (action.type === "HAIL") {
       /* Conversation is a reaction inside the current scene, not another
          hour of night. It can change the villager's later timing without
@@ -1691,14 +1719,6 @@
       if (monsterNearSearch && keyedNumber(next.seed, "search-risk:" + slot + ":" + action.searchMode) < searchRisk) {
         triggerSearchThreat(next, slot, next.player.location, action.searchMode);
       }
-    }
-    if (action.approachDelusion && next.phase === "active") {
-      var approachFragments = presentingBeat && presentingBeat.meta && presentingBeat.meta.fragments || [];
-      var approachRisk = keyedNumber(next.seed, "delusion-approach-risk:" + (presentingBeat && presentingBeat.id || slot));
-      appendTruth(next, { id: "delusion-approach:" + slot, slot: slot, kind: "delusion_approach", location: next.player.location, risk: approachRisk, attractedThreat: next.monsterSchedule.active && approachRisk < 0.4 });
-      if (next.monsterSchedule.active && approachRisk < 0.4) triggerDelusionApproachThreat(next, slot, next.player.location, approachFragments);
-      else appendBeat(next, makeBeat("delusion-resolution:" + slot, "delusion", slot, next.player.location,
-        approachFragments.slice(1).join(" "), { meta: { fragments: approachFragments.slice(1), resolvedAsUnreal: true, requiresResponse: false, critical: true } }));
     }
     finishIfNeeded(next);
     return next;
