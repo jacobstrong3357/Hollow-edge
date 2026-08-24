@@ -1330,6 +1330,24 @@ function take(state, wanted) {
   assert(html.includes("THE NOTE IN YOUR POCKET") && html.includes("At nightfall, you must decide whether to obey."), "an active coercion note remains visible on the day screen");
   assert(html.includes('plan.kind === "give_up"'), "giving up the named villager resolves as a full night choice");
   assert(html.includes('nightfall({ kind: "give_up", id: bargainTarget.id })'), "the nightfall confirmation commits the bargain explicitly");
+  var coercionReplySource = html.slice(html.indexOf("const COERCION_APPROVAL_BY_TEMPERAMENT"), html.indexOf("function coercionTemperament"))
+    .replace("const COERCION_APPROVAL_BY_TEMPERAMENT =", "COERCION_APPROVAL_BY_TEMPERAMENT =");
+  var coercionReplyContext = {};
+  vm.createContext(coercionReplyContext);
+  vm.runInContext(coercionReplySource, coercionReplyContext);
+  assert.deepStrictEqual(Object.keys(coercionReplyContext.COERCION_APPROVAL_BY_TEMPERAMENT).sort(), ["beast", "silent", "speaker"]);
+  assert(coercionReplyContext.COERCION_APPROVAL_BY_TEMPERAMENT.speaker.length >= 10, "talking monsters have a broad pool of mocking bargain replies");
+  assert(coercionReplyContext.COERCION_APPROVAL_BY_TEMPERAMENT.beast.length >= 6 && coercionReplyContext.COERCION_APPROVAL_BY_TEMPERAMENT.silent.length >= 6, "beast and silent monsters answer the bargain in their own voices");
+  var allCoercionReplies = Object.values(coercionReplyContext.COERCION_APPROVAL_BY_TEMPERAMENT).flat();
+  assert.strictEqual(new Set(allCoercionReplies).size, allCoercionReplies.length, "no coercion approval line repeats across temperament pools");
+  assert(coercionReplyContext.COERCION_APPROVAL_BY_TEMPERAMENT.speaker.some(function (line) { return /laugh|smil|funny|darling/i.test(line); }), "speaker replies can be giggling, intimate or openly mocking");
+  allCoercionReplies.forEach(function (line) {
+    var words = (line.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words <= 18, "a coercion reply stays sharp and concise: " + line);
+  });
+  assert(html.includes("coercionApprovalScene(s, target, n)"), "the dawn body scene uses the temperament-aware reply");
+  assert(html.includes("Beside the body, it left its answer: “${approval}”"), "the Journal preserves the exact reply shown at dawn");
+  assert(!html.includes('the same small hand has written: "GOOD. I KNEW YOU WOULD."'), "the retired fixed approval cannot return");
   var bargainSettleSource = html.slice(html.indexOf("function settleGiveUpInPlace"), html.indexOf("/* Telling them the truth", html.indexOf("function settleGiveUpInPlace")));
   assert.strictEqual((bargainSettleSource.match(/s\.deaths\.push/g) || []).length, 1, "the surrender settlement records exactly the named victim");
   assert(!html.includes("function actGiveUp") && !html.includes("Give them up, truly"), "the coercion bargain cannot execute during daylight from a villager profile");

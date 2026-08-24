@@ -3480,6 +3480,53 @@ const DIRECTOR_MONSTER_TEMPERAMENT = {
   succubus: { mode: "speaker", cue: "song", hallucination: 0.30, sound: "Someone hums beyond the lantern, warm and close. The tune keeps choosing the road you most want to take." },
   hollowed: { mode: "speaker", cue: "branch", hallucination: 0.42, sound: "Branches part high above the road. A courteous voice says, ‘Continue,’ and chuckles when you do not." },
 };
+const COERCION_APPROVAL_BY_TEMPERAMENT = {
+  speaker: [
+    "GOOD. I KNEW YOU WOULD. I KNEW BEFORE YOU DID. THAT IS THE FUNNY PART.",
+    "YOU BROUGHT ME A GIFT. I LEFT YOU ONE TOO: ANOTHER MORNING.",
+    "HOW KIND. HOW VERY, VERY KIND. GO HOME. I STILL LIKE YOU BEST.",
+    "DID YOU HEAR THEM CALL FOR YOU? I DID. I LAUGHED.",
+    "DO NOT LOOK SO SICK. YOU CHOSE BEAUTIFULLY. I AM STILL SMILING.",
+    "GOOD. GOOD. I WONDERED WHICH OF YOU WOULD BREAK FIRST. NOW I KNOW.",
+    "ONE LITTLE KNOCK, ONE LITTLE LIE, ONE LESS NEIGHBOUR. YOU LEARN QUICKLY.",
+    "GO HOME, DARLING. I SHALL REMEMBER WHICH LIFE IS YOURS.",
+    "I KNEW YOU WOULD COME ROUND. EVERYONE DOES, JUST BEFORE THE END.",
+    "HUSH NOW. THEY HAVE FINISHED CRYING. YOU MAY SLEEP.",
+    "THE FUNNIEST PART WAS WHEN THEY TRUSTED YOU. I AM STILL GIGGLING.",
+    "HEE HEE. YOU REALLY DID IT. I HAD SO HOPED YOU WOULD.",
+  ],
+  beast: [
+    "GOOD. YOU BROUGHT ME MEAT. YOUR DOOR STAYS CLOSED.",
+    "OBEDIENT. GO HOME. I KNOW YOUR SCENT NOW.",
+    "ONE BODY GIVEN. ONE BODY SPARED. DO NOT TEST THE COUNT.",
+    "YOU FED THE DARK. THE DARK REMEMBERS YOUR HAND.",
+    "GOOD. THE OTHER HEART STOPPED. YOURS MAY KEEP BEATING.",
+    "I TOOK WHAT YOU LED OUT. GO BACK BEHIND YOUR BOLT.",
+  ],
+  silent: [
+    "ACCEPTED. YOUR NAME IS NOT CROSSED OUT.",
+    "ONE LIFE FOR ONE NIGHT. DO NOT MISTAKE THAT FOR MERCY.",
+    "THE ACCOUNT IS BALANCED. FOR NOW.",
+    "YOU CHOSE. I HAVE RECORDED THE CHOICE.",
+    "THEIR PLACE IS EMPTY. YOURS REMAINS RESERVED.",
+    "GO HOME. WHEN I WANT YOU, THE BOLT WILL NOT MATTER.",
+  ],
+};
+function coercionTemperament(s) {
+  return (DIRECTOR_MONSTER_TEMPERAMENT[monsterOf(s).id] || { mode: "silent" }).mode;
+}
+function coercionApprovalFor(s, target, night) {
+  const mode = coercionTemperament(s);
+  const rows = COERCION_APPROVAL_BY_TEMPERAMENT[mode] || COERCION_APPROVAL_BY_TEMPERAMENT.silent;
+  return rows[stableIdx(`${s.gameId}:coercion-approval:${night}:${target.id}:${monsterOf(s).id}`, rows.length)];
+}
+function coercionApprovalScene(s, target, night) {
+  const mode = coercionTemperament(s);
+  const reply = coercionApprovalFor(s, target, night);
+  if (mode === "speaker") return `${target.name} is found dead near home. A second note waits between their teeth. The final letters curl upward like a smile: “${reply}”`;
+  if (mode === "beast") return `${target.name} is found dead near home. Beside the body, the reply has been gouged through paper into the earth: “${reply}”`;
+  return `${target.name} is found dead near home. A clean folded scrap rests on the chest. It reads: “${reply}”`;
+}
 /* The monster owns quiet nights too. These beats reveal temperament, never a
    body, sign or victim: the hunt schedule alone may kill or change someone. */
 const DIRECTOR_TEMPERAMENT_QUIET = {
@@ -4137,7 +4184,7 @@ function resolveNight(prev, planIn, preEvents) {
       `At nightfall, you knock on ${target.name}'s door and say somebody needs help beyond the last lamps.`,
       `${target.name} goes into the lanes alone. You go home and draw the bolt. One cry reaches you before midnight.`,
     ];
-    const dawn = [...(preEvents || []), ev(`${target.name} is found dead near home. Beside the body, the same small hand has written: "GOOD. I KNEW YOU WOULD."`, target.id, 3)];
+    const dawn = [...(preEvents || []), ev(coercionApprovalScene(s, target, n), target.id, 3)];
     s.nightLogs.push({ night: n, active: true, huntLoc: "home", outMap, exposureMap, secretOut: {}, griefOut: {}, you: { kind: "home" }, wail: false, weather: null, event: null });
     s.dawn = dawn;
     s.dawnScene = { loc: HOME_LOC[target.id] || "Village Square", kind: "body" };
@@ -6180,6 +6227,7 @@ function actUnbind(prev, id) {
 function settleGiveUpInPlace(s, id, night) {
   const npc = npcById(s, id);
   if (!npc || !npc.alive || !s.coerceNote || s.coerceNote.target !== id) return null;
+  const approval = coercionApprovalFor(s, npc, night);
   s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false } : x));
   s.deaths.push({ night, id, name: npc.name, kind: "slain", where: "home", examined: false, found: [] });
   s.monsterProtects = true;
@@ -6187,7 +6235,7 @@ function settleGiveUpInPlace(s, id, night) {
   s.coerceNote = null;
   if (s.mob && (s.mob.target === id || s.mob.accuser === id)) s.mob = null;
   cancelUnavailableFavour(s);
-  s.clues.push(`Night ${night}: you gave it ${npc.name}. The deaths did not end, but it approved your obedience and promised to remember which life is yours.`);
+  s.clues.push(`Night ${night}: you gave it ${npc.name}. Beside the body, it left its answer: “${approval}”`);
   return npc;
 }
 
