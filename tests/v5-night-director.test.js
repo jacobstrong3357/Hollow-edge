@@ -1950,6 +1950,9 @@ function take(state, wanted) {
     var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
     assert(words <= 30, "every discovered-secret follow result stays at 30 words or fewer: " + text);
   });
+  var falkConfession = html.match(/confess: `([^`]*Laudanum[^`]*)`/);
+  assert(falkConfession, "Doctor Falk's laudanum confession remains authored");
+  assert((falkConfession[1].match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length <= 25, "Doctor Falk's secret answer stays concise");
   assert(!html.includes("works at the ${dest}") && !html.includes("They set down ${ctx.object}"), "follow results do not stack vague work language and decorative props");
   assert(!html.includes("a coat at one turning, an empty lane at the next"), "the retired long storm-follow preamble cannot return");
   assert(html.includes('const directorWeatherLabel = { fog: "FOG", storm: "STORM", frost: "FROST" }[walk.facts.wx] || "STILL";'), "the Director location row names the same weather value that drives its scene");
