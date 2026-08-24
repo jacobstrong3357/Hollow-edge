@@ -49,17 +49,6 @@ function take(state, wanted) {
   assert.notDeepStrictEqual(a.outcomes, c.outcomes, "different seeds should change sampled outcomes");
 })();
 
-(function heldSteadyNerveSuppressesMoreRandomHallucinations() {
-  var config = baseConfig("steady-nerve-suppression");
-  config.player.composure = 1;
-  config.forcedBeats = [];
-  var state = Director.createNight(config);
-  assert.strictEqual(state.player.composure, 1, "steady nerve carries into the next Director night");
-  Object.keys(state.discoverySchedule).forEach(function (key) {
-    assert(!state.discoverySchedule[key].some(function (beat) { return beat.type === "delusion"; }), "holding the reward prevents random strange sights from becoming repeated noise");
-  });
-})();
-
 (function filtersCastAndBuildsAgendas() {
   var state = Director.createNight(baseConfig());
   assert.deepStrictEqual(state.cast.map(function (v) { return v.id; }).sort(), ["ansel", "falk", "rosa"]);
@@ -150,81 +139,67 @@ function take(state, wanted) {
   assert.strictEqual(state.currentBeat, null, "an uneventful next action must not repeat the previous presentation beat");
 })();
 
-(function strangeSightWaitsForAChoiceAndApproachCarriesRealRisk() {
-  var sawSafe = false;
-  var sawThreat = false;
-  var safeState = null;
-  for (var i = 0; i < 80 && !(sawSafe && sawThreat); i += 1) {
+(function strangeSightOffersIgnoreAndCanRevealPeopleSignsOrDanger() {
+  var outcomes = { falseSight: false, person: false, sign: false, threat: false };
+  for (var i = 0; i < 400 && !Object.keys(outcomes).every(function (key) { return outcomes[key]; }); i += 1) {
     var config = baseConfig("delusion-choice:" + i);
     config.monster.attackSlot = 6;
     config.currentFacts.attackSlot = 6;
+    config.currentFacts.outMap = { rosa: "Village Square" };
+    config.villagers = [{
+      id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+      motive: { id: "market", family: "work", destination: "Village Square", reason: "deliver cloth", object: "a parcel", depart: 0, duration: 4 }
+    }];
     config.forcedBeats = [{
       id: "strange-sight", type: "delusion", slot: 0, location: "Village Square", text: "A giggle comes from the leaves.",
-      meta: { fragments: ["A giggle comes from the leaves.", "You move closer. The sound stops.", "Only trampled leaves. Something was there."], requiresResponse: true, resolvedAsUnreal: true }
+      meta: { fragments: ["A giggle comes from the leaves.", "You move closer. The sound stops.", "Only trampled leaves. Something was there."], requiresResponse: true, unresolvedSight: true }
     }];
     var state = Director.createNight(config);
     state = take(state, { type: "LEAVE", to: "Village Square" });
     var actions = Director.guidedActions(state, { target: "Old Church", kind: "search", intentDone: false, interacted: {} });
-    assert.deepStrictEqual(actions.map(function (a) { return a.label; }), ["Move closer. If it is false, steady your nerve", "Leave it. End the night"], "the sight presents an explicit risk and reward");
+    assert.deepStrictEqual(actions.map(function (a) { return a.label; }), ["Move closer and see what it is", "Do not look. Continue to the Old Church", "Leave it. Head for home"], "the sight offers curiosity, refusal and retreat as distinct choices");
     state = take(state, actions[0]);
     var choice = state.ledgers.truth.find(function (event) { return event.kind === "delusion_approach"; });
     assert(choice, "approaching the hallucination is recorded as a causal choice");
     if (choice.attractedThreat) {
-      sawThreat = true;
+      outcomes.threat = true;
       assert.strictEqual(state.phase, "threat", "the deterministic danger roll can turn curiosity into an attack");
+    } else if (state.currentBeat && state.currentBeat.type === "encounter") {
+      outcomes.person = true;
+      assert.strictEqual(state.currentBeat.actorId, "rosa", "a real nearby villager can be the shape in the dark");
+      assert(state.ledgers.truth.some(function (event) { return event.kind === "strange_sight_person" && event.actorId === "rosa"; }), "the real sighting is recorded");
+    } else if (state.currentBeat && state.currentBeat.type === "stamp") {
+      outcomes.sign = true;
+      assert(state.found.stamps.length, "a dead animal, hex or other real monster sign is stamped for the Journal");
+      assert(state.ledgers.truth.some(function (event) { return event.kind === "strange_sight_sign"; }), "the sign is recorded as a real event");
     } else {
-      sawSafe = true;
-      safeState = state;
-      assert(state.currentBeat && state.currentBeat.type === "delusion" && state.currentBeat.meta.requiresResponse === false, "a safe approach reveals the concrete resolution once");
-      assert.strictEqual(state.player.composure, 1, "testing a false sight steadies the player for one later escape");
-      assert(state.currentBeat.meta.gainedComposure, "the resolution card announces the newly earned safeguard");
-      assert(state.ledgers.truth.some(function (event) { return event.kind === "composure_gained"; }), "the safeguard is recorded in the causal ledger");
+      outcomes.falseSight = true;
+      assert(state.currentBeat && state.currentBeat.type === "delusion" && state.currentBeat.meta.requiresResponse === false, "a false sight receives one concrete resolution");
+      assert.strictEqual(state.currentBeat.meta.strangeSightResolution, "false");
       var continuation = Director.guidedActions(state, { target: "Old Church", kind: "search", intentDone: false, interacted: {} });
       assert.strictEqual(continuation[0].label, "Continue your search", "a resolved sight returns to the declared errand instead of asking the player to wait for a promise");
     }
   }
-  assert(sawSafe && sawThreat, "the seeded approach tape contains both safe resolutions and real threats");
+  assert(Object.keys(outcomes).every(function (key) { return outcomes[key]; }), "the seeded sightings include false shapes, people, signs and attacks");
 
-  var protectedEscape = JSON.parse(JSON.stringify(safeState));
-  var protectedSlot = protectedEscape.cursor;
-  protectedEscape.phase = "threat";
-  protectedEscape.pendingThreat = { id: "test-threat", slot: protectedSlot, location: protectedEscape.player.location, victimId: "player", kind: "player", sign: "tracks" };
-  protectedEscape.outcomes[protectedSlot].conceal.cover.survive = 0;
-  protectedEscape = Director.reduce(protectedEscape, { type: "HIDE", hideMode: "cover" });
-  assert.strictEqual(protectedEscape.phase, "returning", "steady nerve converts the next failed escape into a narrow success");
-  assert.strictEqual(protectedEscape.player.alive, true);
-  assert.strictEqual(protectedEscape.player.composure, 0, "the safeguard is consumed when it prevents failure");
-  assert(protectedEscape.ledgers.truth.some(function (event) { return event.kind === "composure_spent"; }), "spending steady nerve is recorded in the causal ledger");
+  var ignoreConfig = baseConfig("delusion-ignore");
+  ignoreConfig.forcedBeats = [{ id: "ignored-sight", type: "delusion", slot: 0, location: "Village Square", text: "A figure waits.", meta: { fragments: ["A figure waits.", "Only a tree."], requiresResponse: true } }];
+  var ignored = Director.createNight(ignoreConfig);
+  ignored = take(ignored, { type: "LEAVE", to: "Village Square" });
+  var ignoreAction = Director.guidedActions(ignored, { target: "Old Church", kind: "search", intentDone: false, interacted: {} })[1];
+  ignored = take(ignored, ignoreAction);
+  assert(ignored.ledgers.truth.some(function (event) { return event.kind === "strange_sight_ignored"; }), "refusing to look is recorded separately");
+  assert(!ignored.ledgers.truth.some(function (event) { return event.kind === "delusion_approach"; }), "refusing to look does not roll the approach danger");
+  assert.strictEqual(ignored.phase, "active", "refusing to look continues the declared errand");
 
-  var protectedChase = JSON.parse(JSON.stringify(safeState));
-  var chaseSlot = protectedChase.cursor;
-  protectedChase.phase = "chase";
-  protectedChase.pendingThreat = null;
-  protectedChase.chase = { slot: chaseSlot, step: 0, distance: 2, location: protectedChase.player.location, history: [], fallbackVictimId: null, fallbackLocation: null };
-  protectedChase.outcomes[chaseSlot].chase.run[0] = 0;
-  var failedRun = Director.availableActions(protectedChase).find(function (action) { return action.type === "RUN"; });
-  protectedChase = Director.reduce(protectedChase, failedRun);
-  assert.strictEqual(protectedChase.phase, "returning", "steady nerve turns a failed chase move into an immediate narrow escape");
-  assert.strictEqual(protectedChase.player.composure, 0);
-
-  var unprotectedEscape = JSON.parse(JSON.stringify(safeState));
-  var unprotectedSlot = unprotectedEscape.cursor;
-  unprotectedEscape.player.composure = 0;
-  unprotectedEscape.phase = "threat";
-  unprotectedEscape.pendingThreat = { id: "test-threat", slot: unprotectedSlot, location: unprotectedEscape.player.location, victimId: "player", kind: "player", sign: "tracks" };
-  unprotectedEscape.outcomes[unprotectedSlot].conceal.cover.survive = 0;
-  unprotectedEscape = Director.reduce(unprotectedEscape, { type: "HIDE", hideMode: "cover" });
-  assert.strictEqual(unprotectedEscape.phase, "dead", "the same failed escape is fatal without steady nerve");
-
-  var retreatConfig = baseConfig("delusion-retreat");
-  retreatConfig.forcedBeats = [{ id: "retreat-sight", type: "delusion", slot: 0, location: "Village Square", text: "A figure waits.", meta: { fragments: ["A figure waits.", "Only a tree."], requiresResponse: true } }];
-  var retreat = Director.createNight(retreatConfig);
-  retreat = take(retreat, { type: "LEAVE", to: "Village Square" });
-  var retreatAction = Director.guidedActions(retreat, { target: "Old Church", kind: "search", intentDone: false, interacted: {} })[1];
-  retreat = take(retreat, retreatAction);
-  assert.strictEqual(retreat.phase, "returning");
-  assert(!retreat.ledgers.truth.some(function (event) { return event.kind === "delusion_approach"; }), "retreating does not secretly spend the approach risk");
-  assert(!retreat.ledgers.truth.some(function (event) { return event.kind === "composure_gained"; }), "retreating earns no safeguard");
+  var homeConfig = baseConfig("delusion-home");
+  homeConfig.forcedBeats = [{ id: "home-sight", type: "delusion", slot: 0, location: "Village Square", text: "A figure waits.", meta: { fragments: ["A figure waits.", "Only a tree."], requiresResponse: true } }];
+  var home = Director.createNight(homeConfig);
+  home = take(home, { type: "LEAVE", to: "Village Square" });
+  var homeAction = Director.guidedActions(home, { target: "Old Church", kind: "search", intentDone: false, interacted: {} })[2];
+  home = take(home, homeAction);
+  assert.strictEqual(home.phase, "returning", "heading home remains a separate choice");
+  assert(!home.ledgers.truth.some(function (event) { return event.kind === "delusion_approach"; }));
 })();
 
 (function aFinalStrangeSightMustBeAnsweredBeforeTheJourneyHome() {
@@ -244,13 +219,13 @@ function take(state, wanted) {
   assert.strictEqual(state.phase, "active", "the final slot cannot complete while its strange sight still requires a choice");
   assert.strictEqual(state.player.location, "Village Square", "the unresolved sight remains where it happened instead of becoming the threshold");
   var actions = Director.guidedActions(state, { target: "Village Square", kind: "search", intentDone: true, searches: {}, interacted: {} });
-  assert.deepStrictEqual(actions.map(function (item) { return item.label; }), ["Move closer. If it is false, steady your nerve", "Leave it. End the night"]);
+  assert.deepStrictEqual(actions.map(function (item) { return item.label; }), ["Move closer and see what it is", "Do not look. Continue your search", "Leave it. Head for home"]);
   var finalSlot = state.cursor;
   state = Director.reduce(state, actions[0]);
   assert.strictEqual(state.cursor, finalSlot, "answering a sight is a reaction in the current slot, not an eighth hour of night");
   assert.strictEqual(state.phase, "returning", "after resolving the final sight, reaching home remains an explicit step");
   assert.strictEqual(state.player.location, "Village Square");
-  assert(state.currentBeat && state.currentBeat.meta.requiresResponse === false, "the concrete resolution remains visible on the journey-home choice");
+  assert(state.currentBeat && !(state.currentBeat.meta && state.currentBeat.meta.requiresResponse), "the concrete resolution remains visible on the journey-home choice");
   assert.deepStrictEqual(Director.availableActions(state).map(function (item) { return item.type; }), ["REACH_HOME"]);
 })();
 
@@ -283,7 +258,9 @@ function take(state, wanted) {
 })();
 
 (function guidedNightOffersAStoryCorridorNotTheWholeMap() {
-  var state = Director.createNight(baseConfig("guided-corridor"));
+  var corridorConfig = baseConfig("guided-corridor");
+  corridorConfig.player.afflicted = false;
+  var state = Director.createNight(corridorConfig);
   var guide = { target: "Old Church", kind: "search", intentDone: false, interacted: {} };
   var actions = Director.guidedActions(state, guide);
   assert.strictEqual(actions.length, 1, "leaving home is one committed beginning");
@@ -1510,9 +1487,9 @@ function take(state, wanted) {
   assert(html.includes("[0, 0.2, 0.43].forEach"), "the whisper cue has its own audible three-part texture");
   assert(!html.includes("When you reach it, the lane is empty and the voice is behind you."), "a sound opening cannot move the player before they choose a response");
   assert(html.includes("allDelusionFragments.slice(0, 1)"), "an unresolved strange sight shows only its opening image before asking the player what to do");
-  assert(html.includes("STEADY NERVE · YOUR NEXT FAILED ESCAPE BECOMES A NARROW SUCCESS"), "the earned safeguard remains visible during the night");
-  assert(html.includes("Steady nerve held. Your next failed escape becomes a narrow success."), "the earned safeguard remains visible in daylight");
-  assert(html.includes("composure: s.composure || 0") && html.includes("s.composure = director.player.composure || 0"), "steady nerve persists through the legacy night boundary");
+  assert(!/STEADY NERVE|Steady nerve held|composure/.test(html), "the removed steady-nerve mechanic cannot leak into state or presentation");
+  assert(html.includes('directorBeat.meta.requiresResponse) {\n          Snd.silence(false);'), "an unresolved strange sight keeps the weather ambience alive");
+  assert(html.includes("action.approachDelusion || action.ignoreDelusion"), "both looking and deliberately looking away restore the live weather soundscape");
   assert(!html.includes("an uncertain sight: ${delusion.text}"), "resolved hallucinations do not clutter the evidence journal");
   assert(!html.includes("outside ${actorName}'s door in the ${target}"), "watch prose does not redundantly route a doorstep scene through its map label");
   assert(!/storm drowned half the night|storm drowned words/.test(html), "storm interview copy does not echo the same drowned-sound sentence in question and answer");

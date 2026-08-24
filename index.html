@@ -2969,7 +2969,7 @@ const HOWARE_LINES = {
   marta: [`"I bake. When my hands are in dough they can't shake, and when the house isn't quiet I don't listen for things." A tired half-smile. "The village has never eaten so well."`, `"Some mornings I catch myself setting two cups again. Three winters, and this trouble has him back at my table, asking if I barred the door. I always bar the door, love."`],
   tobias: [`"I'm old. It'll take the young ones first." He says it flat. Then, quieter, looking at his spade: "That's the part I can't sleep around. Not it coming for me. It not bothering."`, `"Forty years I've been the last kindness this village does for each other. Lately I dig and wonder who does mine, if this keeps up. Nobody, is who."`],
   ansel: [`"I stand up on Sunday and tell them God is watching over Hollow's Edge." He turns his cup a full circle. "Something is watching. That much of the sermon is true."`, `"I am tired in a place sleep doesn't reach. But a shepherd doesn't get to put the crook down mid-wolf. So. I am well, is the answer I'd thank you to repeat."`],
-  greta: [`"I'm the only one sleeping properly, and I pay for it: they've noticed." She snorts. "Steady nerves are just knowing which things are actually worth fearing."`, `"My grandmother lived through the last trouble like this. Keep doing your work with your hands and your counting with your head." She looks at you. "It's everyone else's counting that frightens me."`],
+  greta: [`"I'm the only one sleeping properly, and I pay for it: they've noticed." She snorts. "Fear is useful when you aim it at the right thing."`, `"My grandmother lived through the last trouble like this. Keep doing your work with your hands and your counting with your head." She looks at you. "It's everyone else's counting that frightens me."`],
   wilhelm: [`"The boys ask me every night if it can get in. Every night I say no. A man shouldn't get that good at a lie." He works the bellows once, for nothing.`, `"Holding up. Aye. A forge holds up. Doesn't mean nothing's burning inside it." That is all you get, and from him it is a confession.`],
   liesel: [`"Business is roaring, love. Fear drinks like a sailor." She laughs, then lets it die honestly. "I count my drinkers out the door every night. Lately I count them again at the window."`, `"I've been left before. I know how to live in a house short one voice. But this" - she gestures at the dark outside - "is the whole village learning it at once."`],
   falk: [`"At my age, holding up is a technical term. The hip is a ruin, and I sleep in my chair because lying flat feels like rehearsal." He raps his cane once. "But the hands still work."`, `"I have signed a great many certificates, and there was always a cause to write in the little box. Lately I leave it empty. It is making a superstitious old fool of me."`],
@@ -3338,7 +3338,7 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, composure: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0, quarry: null, doorVisits: 0,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -4151,11 +4151,11 @@ function compileDirectorNight(s, facts, openingIntent) {
   });
   const strained = !!(s.wasSpared || s.monsterSawYou || s.wrongExecutions >= 2);
   const hallucinationChance = Math.min(0.72, temperament.hallucination + (strained ? 0.22 : 0));
-  if (!(s.composure > 0) && rng.next() < hallucinationChance) {
+  if (rng.next() < hallucinationChance) {
     const fragments = directorWeatherDelusion(facts.wx, DIRECTOR_DELUSIONS[Math.floor(rng.next() * DIRECTOR_DELUSIONS.length)]);
     forcedBeats.push({
     id: `n${n}:delusion`, type: "delusion", slot: Math.min(slots - 1, 1 + Math.floor(rng.next() * Math.max(1, slots - 1))), location: "*",
-    text: fragments.join(" "), meta: { fragments, resolvedAsUnreal: true, requiresResponse: true, soundCue: facts.wx === "storm" ? "thunder" : facts.wx === "frost" ? "frost_step" : "leaves", weather: facts.wx || "still" },
+    text: fragments.join(" "), meta: { fragments, unresolvedSight: true, requiresResponse: true, soundCue: facts.wx === "storm" ? "thunder" : facts.wx === "frost" ? "frost_step" : "leaves", weather: facts.wx || "still" },
     });
   }
   const directorConfig = {
@@ -4190,7 +4190,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       relentless: monsterTruth.id === "werewolf",
       voice: temperament, revealText,
     },
-    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, composure: s.composure || 0, armedGuess },
+    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, armedGuess },
     gathering: facts.evn && facts.eventLoc ? {
       id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
       text: facts.evn.intro,
@@ -4625,7 +4625,6 @@ function resolveNight(prev, planIn, preEvents) {
       }
     }
     s.monsterSawYou = !!(s.monsterSawYou || director.player.monsterSawYou);
-    s.composure = director.player.composure || 0;
     s.nightHistory = [...(s.nightHistory || []), {
       night: n,
       signatures: [...new Set(director.usedSignatures || [])],
@@ -11853,7 +11852,16 @@ function MonsterVillage() {
         else if (directorBeat && directorBeat.type === "doorstep") { Snd.silence(true); Snd.knock(); }
         else if (directorBeat && directorBeat.type === "whisper") Snd.cue("whisper");
         else if (directorBeat && directorBeat.type === "stamp") Snd.cue("earth");
-        else if (directorBeat && directorBeat.type === "delusion") { Snd.silence(true); Snd.cue("breath_close"); }
+        else if (directorBeat && directorBeat.type === "delusion" && directorBeat.meta && directorBeat.meta.requiresResponse) {
+          Snd.silence(false);
+          Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: 0.25 });
+          Snd.cue("breath_close");
+        }
+        else if (directorBeat && directorBeat.type === "delusion") {
+          Snd.silence(false);
+          Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: 0.1 });
+          Snd.cue("leaves");
+        }
         else if (directorBeat && directorBeat.type === "flee") { Snd.silence(false); Snd.cue("leaves"); }
         else if (walk && walk.mode === "director") {
           Snd.silence(false);
@@ -13130,7 +13138,13 @@ function MonsterVillage() {
       usedFeedback: feedback ? [...(walk.usedFeedback || []), feedback] : (walk.usedFeedback || []),
     });
     try {
-      if (action.type === "LISTEN") Snd.cue(wx === "storm" ? "thunder" : wx === "fog" ? "bell_distant" : wx === "frost" ? "frost_step" : "whisper");
+      if (action.approachDelusion || action.ignoreDelusion) {
+        Snd.silence(false);
+        Snd.scene({ location: next.player.location, weather: wx, proximity: next.phase === "threat" ? 1 : 0.15 });
+        if (next.phase === "threat") Snd.danger();
+        else Snd.cue(action.ignoreDelusion ? (wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : "leaves") : "breath_close");
+      }
+      else if (action.type === "LISTEN") Snd.cue(wx === "storm" ? "thunder" : wx === "fog" ? "bell_distant" : wx === "frost" ? "frost_step" : "whisper");
       else if (action.type === "MOVE") Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : ["Old Church", "Graveyard"].includes(action.to) ? "gate" : action.to === "Dark Forest" ? "crickets" : ["Village Square", "Tavern"].includes(action.to) ? "bustle" : "leaves");
       else if (["FOLLOW", "FLEE", "RUN", "BREAK_LINE"].includes(action.type)) Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : action.type === "BREAK_LINE" ? "gate" : "leaves");
       else if (action.type === "WATCH_MONSTER") { Snd.silence(true); Snd.cue("breath_close"); }
@@ -13213,11 +13227,6 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{afflictionScene ? location.toUpperCase() : d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap" }}>{directorWeatherLabel}</span>
           </div>
-          {d.player.composure > 0 && (
-            <div className="mv-display" style={{ marginBottom: 9, padding: "7px 10px", fontSize: 10.5, lineHeight: 1.35, letterSpacing: 1.7, color: "#E4C06B", background: "rgba(217,164,65,.09)", border: "1px solid rgba(217,164,65,.42)" }}>
-              STEADY NERVE · YOUR NEXT FAILED ESCAPE BECOMES A NARROW SUCCESS
-            </div>
-          )}
           <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
               {actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
@@ -15524,10 +15533,9 @@ function MonsterVillage() {
         {/* The night's recap belongs to the dawn reveal (once) and the journal's
             Nights log (summarised, in the Journal). The day homepage keeps only
             the active-danger warnings, never the full recap. */}
-        {(s.enraged || s.composure > 0) && (
+        {s.enraged && (
           <div className="mt-3">
             {s.enraged && <p style={{ color: C.redBright, fontSize: 14.5, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
-            {s.composure > 0 && <p style={{ color: C.ink, fontSize: 14.5, fontWeight: 700 }}>Steady nerve held. Your next failed escape becomes a narrow success.</p>}
           </div>
         )}
 
