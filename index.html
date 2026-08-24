@@ -3388,6 +3388,13 @@ const SIDE_QUEST_ASK = [
   (target) => `"A favour," they say, and it is not really a question. "Follow ${target} tonight, and come tell me what you saw. I have my reasons. I'd rather not say them yet."`,
 ];
 
+const FOLLOW_FAVOUR_ASK = [
+  (target) => `“Yes. Follow ${target} tonight. Do not confront them. Tell me where they go.”`,
+  (target) => `“Watch ${target}'s door tonight. If they leave, follow them and tell me what you see.”`,
+  (target) => `“Keep an eye on ${target} tonight. I need to know whether they leave home.”`,
+  (target) => `“Follow ${target} after dark. Come to me tomorrow with the truth of where they went.”`,
+];
+
 const GOSSIP_GRUDGE = [
   (a, b) => `"${a} and ${b}? Still not speaking, after that business between them. Ask either one why, if you've an hour and a thick skin."`,
   (a, b) => `"You want talk? ${a} and ${b} haven't traded a civil word in days. Whatever it was, it was ugly enough the whole street heard it."`,
@@ -3492,6 +3499,15 @@ function cancelUnavailableFavour(s) {
   if (giver && giver.alive && !giver.fled) return false;
   s.sideQuest = null;
   return true;
+}
+function assignFollowFavour(s, giverId, gated = false) {
+  if (!s || s.sideQuest) return null;
+  const targets = s.npcs.filter((npc) => npc.alive && !npc.fled && npc.id !== giverId
+    && !(npc.turned && npc.known) && npc.id !== s.faceKnown);
+  if (!targets.length) return null;
+  const target = targets[stableIdx(`${s.gameId}:follow-favour:${s.dayNum}:${giverId}`, targets.length)];
+  s.sideQuest = { giver: giverId, target: target.id, night: s.nightNum, done: false, reported: false, gated };
+  return target;
 }
 const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s.monster.vid);
 const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
@@ -6389,7 +6405,12 @@ function resolveNight(prev, planIn, preEvents) {
         s.sideQuest = { ...s.sideQuest, night: n + 1 };
         const giver = npcById(s, s.sideQuest.giver);
         if (giver && giver.alive && !giver.fled) dawn.push(ev(`${giver.name} does not ask about the missed watch. Half the village was needed at the ${f.afflictionLoc}. The favour can wait one more night.`, giver.id, 1));
-      } else s.sideQuest = { ...s.sideQuest, done: (watching === qt || mods.follow === qt), doneNight: n, due: true };
+      } else {
+        const directorFollowedTarget = !!(director && (director.actionHistory || []).some((action) => action.type === "FOLLOW" && action.actorId === qt));
+        const targetStayedHome = outMap[qt] === "home";
+        const keptFavour = mods.follow === qt || directorFollowedTarget || (watching === qt && targetStayedHome);
+        s.sideQuest = { ...s.sideQuest, done: keptFavour, doneNight: n, due: true };
+      }
     } else if (n - (s.sideQuest.doneNight || s.sideQuest.night) > 3) {
       /* left unanswered for days, the asking simply curdles */
       const giver = npcById(s, s.sideQuest.giver);
@@ -8163,7 +8184,10 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "help") {
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
-    quote = HELP_LINES[id] || `They find you a small necessary task. You finish it before asking anything more.`;
+    const followTarget = assignFollowFavour(s, id);
+    quote = followTarget
+      ? pickFreshIdx("followFavourAsk", FOLLOW_FAVOUR_ASK)(followTarget.name)
+      : HELP_LINES[id] || `They find you a small necessary task. You finish it before asking anything more.`;
   }
 
   if (q === "howare") {
@@ -15382,11 +15406,9 @@ function MonsterVillage() {
     const npc = npcById(s, iv.id);
     const interviewBegan = iv.begun || iv.transcript.some((t) => t.q);
     if (interviewBegan && !s.sideQuest && npc && npc.alive && !npc.fled && !npc.turned && npc.disp >= 1 && chance(0.4)) {
-      const targets = s.npcs.filter((x) => x.alive && !x.fled && x.id !== iv.id);
-      if (targets.length) {
-        const target = pick(targets);
-        const s2 = JSON.parse(JSON.stringify(s));
-        s2.sideQuest = { giver: iv.id, target: target.id, night: s2.nightNum, done: false, reported: false };
+      const s2 = JSON.parse(JSON.stringify(s));
+      const target = assignFollowFavour(s2, iv.id);
+      if (target) {
         const line = pickFreshIdx("sideQuestAsk", SIDE_QUEST_ASK)(target.name);
         setS(s2);
         setSheet([ev(line, npc.id)]);
@@ -15658,6 +15680,8 @@ function MonsterVillage() {
   const planModal = modal === "plan" && (() => {
     const duskLine = DUSK_LINES[stableIdx(`${s.gameId}:dusk:${s.nightNum}`, DUSK_LINES.length)];
     const bargainTarget = s.coerceNote && npcById(s, s.coerceNote.target);
+    const favourGiver = s.sideQuest && !s.sideQuest.due && !s.sideQuest.reported ? npcById(s, s.sideQuest.giver) : null;
+    const favourTarget = s.sideQuest && !s.sideQuest.due && !s.sideQuest.reported ? npcById(s, s.sideQuest.target) : null;
     const kicker = planStage === "give_up" ? `NIGHT ${s.nightNum + 1} · THE BARGAIN`
       : s.fled ? `NIGHT ${s.nightNum + 1} · UNDER SIEGE`
       : planStage === "watch" ? `NIGHT ${s.nightNum + 1} · WHOSE DOOR`
@@ -15765,6 +15789,9 @@ function MonsterVillage() {
                 <>
                   {bargainTarget && bargainTarget.alive && !bargainTarget.fled && (
                     <NightChoice plan danger icon="wounds" onClick={() => setPlanStage("give_up")}>Answer the note about {bargainTarget.name}</NightChoice>
+                  )}
+                  {favourGiver && favourTarget && favourTarget.alive && !favourTarget.fled && (
+                    <NightChoice plan icon="exam" onClick={() => { setPlanStage(null); startWatchWalk(favourTarget.id); }}>Keep {favourGiver.name}'s favour: watch {favourTarget.name}</NightChoice>
                   )}
                   <NightChoice plan icon="exam" onClick={() => setPlanStage("watch")}>Watch a villager's door</NightChoice>
                   <NightChoice plan icon="search" onClick={() => setPlanStage("search")}>Search an area</NightChoice>
