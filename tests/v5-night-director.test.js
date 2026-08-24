@@ -1191,6 +1191,16 @@ function take(state, wanted) {
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.silent.some(function (row) { return /silence|without making a sound|refuses/i.test(row.open); }), "silent horrors take sound away instead of borrowing a beast or speaker cue");
   assert(html.includes("if (!s.playerSigns.includes(stamp.sign)) s.playerSigns.push(stamp.sign)"), "a Director sign is already stamped when it reaches the Journal");
   assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
+  assert(html.includes("THE NOTE IN YOUR POCKET") && html.includes("At nightfall, you must decide whether to obey."), "an active coercion note remains visible on the day screen");
+  assert(html.includes('plan.kind === "give_up"'), "giving up the named villager resolves as a full night choice");
+  assert(html.includes('nightfall({ kind: "give_up", id: bargainTarget.id })'), "the nightfall confirmation commits the bargain explicitly");
+  var bargainSettleSource = html.slice(html.indexOf("function settleGiveUpInPlace"), html.indexOf("function actGiveUp", html.indexOf("function settleGiveUpInPlace")));
+  assert.strictEqual((bargainSettleSource.match(/s\.deaths\.push/g) || []).length, 1, "the surrender settlement records exactly the named victim");
+  assert(html.includes('x.fled || (s.faceKnown === x.id && s.monsterSawYou)'), "a revealed monster who went to ground remains available as an interview subject");
+  assert(html.includes('askQ("whereNow", x.id)') && html.includes("Where is {x.name}?"), "the village interview offers a direct whereabouts question for Greta or anyone else who fled");
+  var goneReplySource = html.slice(html.indexOf('if (q === "whereNow"'), html.indexOf('if (q === "opinion"', html.indexOf('if (q === "whereNow"')));
+  assert.strictEqual((goneReplySource.match(/whereNowGone:/g) || []).length, 1, "fled-villager replies use one stable keyed pool");
+  assert((goneReplySource.match(/^\s+`“/gm) || []).length >= 6, "villagers have several concise explanations for someone leaving the village");
   var recordedFindingSource = html.slice(html.indexOf("function directorRecordedFindingText"), html.indexOf("function directorMotiveFor"));
   var recordedFindingContext = {};
   vm.createContext(recordedFindingContext);

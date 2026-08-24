@@ -4125,6 +4125,31 @@ function resolveNight(prev, planIn, preEvents) {
      truth. The hanging itself is resolved near the end of this function,
      after the night has played out. */
 
+  /* Giving somebody to the note is the whole night. The player does not also
+     take a walk while the betrayal happens off-screen, and the monster does
+     not claim a second victim before morning. */
+  if (plan && plan.kind === "give_up") {
+    const outMap = Object.fromEntries(s.npcs.filter((npc) => npc.alive && !npc.fled).map((npc) => [npc.id, "home"]));
+    const exposureMap = Object.fromEntries(Object.keys(outMap).map((id) => [id, "indoor"]));
+    const target = settleGiveUpInPlace(s, plan.id, n);
+    if (!target) return resolveNight(prev, { kind: "home" }, preEvents);
+    const beats = [
+      `At nightfall, you knock on ${target.name}'s door and say somebody needs help beyond the last lamps.`,
+      `${target.name} goes into the lanes alone. You go home and draw the bolt. One cry reaches you before midnight.`,
+    ];
+    const dawn = [...(preEvents || []), ev(`${target.name} is found dead near home. Beside the body, the same small hand has written: "GOOD. I KNEW YOU WOULD."`, target.id, 3)];
+    s.nightLogs.push({ night: n, active: true, huntLoc: "home", outMap, exposureMap, secretOut: {}, griefOut: {}, you: { kind: "home" }, wail: false, weather: null, event: null });
+    s.dawn = dawn;
+    s.dawnScene = { loc: HOME_LOC[target.id] || "Village Square", kind: "body" };
+    if (s.dayEvents.length) s.dayLogs = [...(s.dayLogs || []), { day: endedDay, events: s.dayEvents }];
+    s.dayEvents = []; s.ap = 2; s.questionedToday = []; s.investigatedNight = null;
+    s.nightBeats = beats; s.beatTitle = `NIGHT ${n} · THE BARGAIN`; s.phase = "night";
+    if (!s.over && untainted(s).length <= 2) {
+      s.over = { win: false, reason: "lost", text: "Too few remain to bury the dead. You gave the thing one of the last living souls in Hollow's Edge, and it kept only the part of its promise that suited it." };
+    }
+    return s;
+  }
+
   /* ---- fled endgame: it besieges the village ---- */
   if (s.fled) {
     const beats = [...preBeats];
@@ -6143,24 +6168,29 @@ function actUnbind(prev, id) {
   return s;
 }
 
-/* -- Pass G2: acting on the coercion note. The note promised the killing
-   ends if you hand over its target; it does not, because nothing it says
-   is a bargain made in good faith. Giving in kills them anyway and buys
-   the thing's quiet satisfaction (the same s.monsterProtects a wrongful
-   execution of this same target would earn, per monsterKillsAccuser's
-   sibling branch above) - so the two paths into this trap pay off
-   identically, only the telling of it differs. */
-function actGiveUp(prev, id) {
-  const s = JSON.parse(JSON.stringify(prev));
+/* Settle the bargain in-place so the profile action and the nightfall choice
+   cannot disagree about who dies or what the monster's favour buys. */
+function settleGiveUpInPlace(s, id, night) {
   const npc = npcById(s, id);
-  if (!npc || !s.coerceNote || s.coerceNote.target !== id) return s;
+  if (!npc || !npc.alive || !s.coerceNote || s.coerceNote.target !== id) return null;
   s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false } : x));
-  s.deaths.push({ night: s.nightNum, id, name: npc.name, kind: "slain", where: "home", examined: false, found: [] });
+  s.deaths.push({ night, id, name: npc.name, kind: "slain", where: "home", examined: false, found: [] });
   s.monsterProtects = true;
   shiftMonsterBond(s, 2);
   s.coerceNote = null;
+  if (s.mob && (s.mob.target === id || s.mob.accuser === id)) s.mob = null;
+  cancelUnavailableFavour(s);
+  s.clues.push(`Night ${night}: you gave it ${npc.name}. The deaths did not end, but it approved your obedience and promised to remember which life is yours.`);
+  return npc;
+}
+
+/* -- Pass G2: acting on the coercion note. Giving in kills the named person
+   and buys the thing's quiet satisfaction. */
+function actGiveUp(prev, id) {
+  const s = JSON.parse(JSON.stringify(prev));
+  const npc = settleGiveUpInPlace(s, id, s.nightNum);
+  if (!npc) return s;
   s.dayEvents.push(ev(`You do as the note asked. By morning ${npc.name} is dead all the same, and beside the body, in the same small unhurried hand as before: "GOOD. I KNEW YOU WOULD. GO HOME WHEN I TELL YOU, AND I SHALL REMEMBER WHICH LIFE IS YOURS."`, id, 2));
-  s.clues.push(`Day ${s.dayNum}: you gave it ${npc.name}. It lied about ending the deaths, but approved your obedience and promised to remember which life is yours.`);
   return s;
 }
 
@@ -6422,7 +6452,7 @@ function answerFor(s, id, night, q, targetId) {
   const mentions = [];
   let quote = "", claim = null, foundSign = null, clue = null;
 
-  const key = ["opinion", "suspect", "mobcalm", "mobagree", "mobplea", "howare"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
+  const key = ["opinion", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
     : q === "craft" ? `${s.dayNum}:craft`
     : q === "past" ? "past"
     : q === "talk" ? `${s.dayNum}:talk`
@@ -6753,6 +6783,25 @@ function answerFor(s, id, night, q, targetId) {
       quote = `"I passed ${t.name} on the road that night, heading for the ${tLoc}."`;
     } else {
       quote = `"No. Wherever ${t.name} was that night, it was not where I was."`;
+    }
+  }
+
+  if (q === "whereNow" && targetId) {
+    const t = npcById(s, targetId);
+    const goneToGround = t && (t.fled || (s.faceKnown === t.id && s.monsterSawYou));
+    if (!t) quote = `“I do not know who you mean.”`;
+    else if (!goneToGround) quote = `“${t.name} is still in the village. Try ${HOME_LOC[t.id] || "the square"}.”`;
+    else {
+      const subject = t.sex === "m" ? "he" : "she";
+      const possessive = t.sex === "m" ? "his" : "her";
+      quote = pickFreshIdx(`whereNowGone:${id}:${targetId}`, [
+        `“${t.name} left before dawn. No farewell. Fear must have driven ${t.sex === "m" ? "him" : "her"} out.”`,
+        `“${t.name} is gone. The door stood open this morning, and nobody saw which road ${subject} took.”`,
+        `“No one has seen ${t.name} since dawn. ${possessive.charAt(0).toUpperCase() + possessive.slice(1)} house is empty. I thought you knew.”`,
+        `“${t.name} left in the night. Perhaps ${subject} finally became as frightened as the rest of us.”`,
+        `“Gone. ${t.name} took no cart and told no one. People do strange things when they are afraid.”`,
+        `“${t.name} has left Hollow's Edge. Whether from fear or guilt, I could not tell you.”`,
+      ]);
     }
   }
 
@@ -7261,6 +7310,7 @@ const Q_LABELS = {
   read: "How did someone seem?",
   about: "Did you see someone in particular?",
   opinion: "What do you make of someone?",
+  whereNow: "Where is someone now?",
   suspect: "Who do you think is doing this?",
   strange: "Noticed anything strange lately?",
   press: "You lied to me. Why?",
@@ -9104,6 +9154,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const howareUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:howare:`);
   const pastUsed = (s.askedLog[iv.id] || []).includes("past");
   const pickTargets = s.npcs.filter((x) => x.id !== iv.id);
+  const goneTargets = pickTargets.filter((x) => x.fled || (s.faceKnown === x.id && s.monsterSawYou));
   const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && secretOf(s, x.id));
   const canReport = s.sideQuest && s.sideQuest.giver === iv.id && s.sideQuest.done && !s.sideQuest.reported;
   const last = iv.transcript.length - 1;
@@ -9379,6 +9430,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               {subHead("THE VILLAGE")}
               <div className="grid grid-cols-1 gap-2">
                 <Btn small disabled={gossipUsed} onClick={() => askQ("gossip")}>What's the talk of the village?</Btn>
+                {goneTargets.map((x) => <Btn key={`gone:${x.id}`} small onClick={() => askQ("whereNow", x.id)}>Where is {x.name}?</Btn>)}
                 {shareCandidates.length > 0 && <Btn small onClick={() => setIvSub("share")}>Share what you know…</Btn>}
                 {canReport && <Btn small kind="amber" onClick={() => askQ("report")}>Tell them what you saw</Btn>}
                 {s.coerceNote && !s.coerceNote.shown && <Btn small kind="red" onClick={showNote}>Show them the note</Btn>}
@@ -9764,10 +9816,10 @@ function NightChoice({ children, onClick, quiet, danger, plan, icon }) {
   if (plan) return (
     <button onClick={onClick} className="mv-btn mv-body heNightChoice heNightPlanChoice" style={{
       minHeight: 62, display: "grid", gridTemplateColumns: "34px minmax(0,1fr) 14px", alignItems: "center", gap: 11,
-      padding: "11px 13px", textAlign: "left", cursor: "pointer", color: C.parch,
-      background: quiet ? "linear-gradient(100deg,rgba(11,12,20,.98),rgba(18,16,20,.94))" : "linear-gradient(100deg,rgba(47,33,19,.98),rgba(24,20,17,.98))",
-      border: `1px solid ${quiet ? "rgba(138,143,168,.55)" : "rgba(217,164,65,.76)"}`,
-      borderTop: `2px solid ${quiet ? "rgba(233,223,200,.58)" : C.nightAmber}`,
+      padding: "11px 13px", textAlign: "left", cursor: "pointer", color: danger ? "#F0DCD8" : C.parch,
+      background: danger ? "linear-gradient(100deg,rgba(76,15,24,.98),rgba(27,9,14,.98))" : quiet ? "linear-gradient(100deg,rgba(11,12,20,.98),rgba(18,16,20,.94))" : "linear-gradient(100deg,rgba(47,33,19,.98),rgba(24,20,17,.98))",
+      border: `1px solid ${danger ? C.redBright : quiet ? "rgba(138,143,168,.55)" : "rgba(217,164,65,.76)"}`,
+      borderTop: `2px solid ${danger ? C.redBright : quiet ? "rgba(233,223,200,.58)" : C.nightAmber}`,
       boxShadow: "3px 4px 0 rgba(0,0,0,.42), inset 0 0 0 1px rgba(243,233,214,.04)",
     }}>
       <span className="heNightPlanIcon" aria-hidden="true"><MvIcon k={icon} /></span>
@@ -9895,6 +9947,9 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heSideQuestKicker { display:block; margin-bottom:3px; color:#c49761; font-size:9px; line-height:1; letter-spacing:2.4px; text-shadow:none; }
 .heSideQuestNotice--action { cursor:pointer; }
 .heSideQuestNotice--action:hover { filter:contrast(1.08); }
+.heCoerceNoteNotice { background:linear-gradient(103deg,#1a0c0f 0%,#3a151d 52%,#13090c 100%); border-top-color:rgba(194,68,80,.7) !important; border-bottom-color:#7d2934 !important; }
+.heCoerceNoteNotice .heSideQuestKicker { color:#e58a94; }
+.heCoerceNoteNotice .heSideQuestCopy { color:#f4dfe0; }
 .heGate { color:var(--he-ink) !important; }
 .heGate .mvHomeScene { position:fixed; inset:0; height:100%; opacity:.58; }
 .heGatePlate { position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px); object-fit:cover; object-position:center; filter:grayscale(.16) sepia(.08) contrast(1.03); }
@@ -14281,14 +14336,30 @@ function MonsterVillage() {
      naming the weather first would let the player pick their odds. */
   const planModal = modal === "plan" && (() => {
     const duskLine = DUSK_LINES[stableIdx(`${s.gameId}:dusk:${s.nightNum}`, DUSK_LINES.length)];
-    const kicker = s.fled ? `NIGHT ${s.nightNum + 1} · UNDER SIEGE`
+    const bargainTarget = s.coerceNote && npcById(s, s.coerceNote.target);
+    const kicker = planStage === "give_up" ? `NIGHT ${s.nightNum + 1} · THE BARGAIN`
+      : s.fled ? `NIGHT ${s.nightNum + 1} · UNDER SIEGE`
       : planStage === "watch" ? `NIGHT ${s.nightNum + 1} · WHOSE DOOR`
       : planStage === "search" ? `NIGHT ${s.nightNum + 1} · WHERE`
       : `NIGHT ${s.nightNum + 1} · NIGHTFALL`;
     const back = planStage ? () => setPlanStage(null) : () => setModal(null);
     return (
       <NightShell loc="Village Square" kicker={kicker} onClose={back} closeLabel={planStage ? "back" : "close"} tone={s.fled ? "siege" : "night"}>
-        {planStage === "watch" ? (
+        {planStage === "give_up" && bargainTarget ? (
+          <>
+            <div style={{ marginTop: "auto" }}>
+              <span className="mv-display block" style={{ fontSize: 12.5, letterSpacing: 3.2, color: C.redBright }}>THE NOTE DEMANDS A LIFE</span>
+              <div style={{ marginTop: 10, padding: "12px 13px", background: "rgba(76,15,24,.34)", borderLeft: `2px solid ${C.redBright}` }}>
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.45, color: "#F0DCD8" }}>“GIVE ME {bargainTarget.name.toUpperCase()} AND THIS ENDS, FOR YOU.”</p>
+              </div>
+              <p style={{ margin: "11px 0 0", fontSize: 14, lineHeight: 1.5, color: C.parch }}>Giving {bargainTarget.name} up will kill them. The note promises only your safety.</p>
+            </div>
+            <div style={{ flexShrink: 0, marginTop: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+              <NightChoice plan danger icon="wounds" onClick={() => nightfall({ kind: "give_up", id: bargainTarget.id })}>Give {bargainTarget.name} to it</NightChoice>
+              <NightChoice plan quiet icon="walls" onClick={() => setPlanStage(null)}>Refuse. Keep {bargainTarget.name} safe tonight</NightChoice>
+            </div>
+          </>
+        ) : planStage === "watch" ? (
           <>
             <div style={{ marginTop: "auto" }}>
               <span className="mv-display block" style={{ fontSize: 12.5, letterSpacing: 3.2, color: "rgba(233,223,200,0.75)" }}>WHOSE DOOR WILL YOU WATCH</span>
@@ -14351,6 +14422,9 @@ function MonsterVillage() {
             <div style={{ flexShrink: 0, marginTop: 15, display: "flex", flexDirection: "column", gap: 8 }}>
               {s.fled ? (
                 <>
+                  {bargainTarget && bargainTarget.alive && !bargainTarget.fled && (
+                    <NightChoice plan danger icon="wounds" onClick={() => setPlanStage("give_up")}>Answer the note about {bargainTarget.name}</NightChoice>
+                  )}
                   <NightChoice plan icon="walls" onClick={() => nightfall({ kind: "siege" })}>Barricade in the church with the others</NightChoice>
                   <button onClick={() => setModal("rite")} className="mv-btn mv-body"
                     style={{ borderRadius: 4, padding: "9px 13px", textAlign: "left", fontSize: 14, cursor: "pointer", background: "rgba(158,48,57,0.16)", border: `1px solid ${C.redBright}`, color: "#F0DCD8" }}>Perform the rite at dusk</button>
@@ -14368,6 +14442,9 @@ function MonsterVillage() {
                 </>
               ) : (
                 <>
+                  {bargainTarget && bargainTarget.alive && !bargainTarget.fled && (
+                    <NightChoice plan danger icon="wounds" onClick={() => setPlanStage("give_up")}>Answer the note about {bargainTarget.name}</NightChoice>
+                  )}
                   <NightChoice plan icon="exam" onClick={() => setPlanStage("watch")}>Watch a villager's door</NightChoice>
                   <NightChoice plan icon="search" onClick={() => setPlanStage("search")}>Search an area</NightChoice>
                   <div style={{ marginTop: 6, paddingTop: 12, borderTop: "1px solid rgba(233,223,200,0.12)", display: "flex", flexDirection: "column" }}>
@@ -15012,6 +15089,22 @@ function MonsterVillage() {
           </div>
         </div>
       )}
+
+      {s.coerceNote && (() => {
+        const noteTarget = npcById(s, s.coerceNote.target);
+        if (!noteTarget || !noteTarget.alive || noteTarget.fled) return null;
+        return (
+          <div className="heSideQuestNotice heCoerceNoteNotice">
+            <div className="heSideQuestNoticeInner">
+              <span className="heSideQuestPortrait"><Portrait id={noteTarget.id} size={32} turnedKnown={noteTarget.turned && noteTarget.known} /></span>
+              <p className="heSideQuestCopy">
+                <span className="mv-display heSideQuestKicker">THE NOTE IN YOUR POCKET</span>
+                <strong>“GIVE ME {noteTarget.name.toUpperCase()}.”</strong> {s.coerceNote.shown ? "The village has seen it." : "No one else knows."} At nightfall, you must decide whether to obey.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {s.sideQuest && !s.sideQuest.reported && (() => {
         const giver = npcById(s, s.sideQuest.giver);
