@@ -1669,6 +1669,92 @@ const TURNED_RAVING = [
   `They recite your own history back at you, flat and word-perfect, and finish with something that was never in it: "...and you die at the Graveyard, I think. He hasn't decided yet."`,
   `"Shh." They put a finger to their lips, delighted. "You'll wake the others. There are so many of us now. You just haven't finished counting."`,
 ];
+
+/* Once a villager is known to be changed, the ordinary interview no longer
+   applies. These three questions pull damaged but useful testimony from the
+   person still caught inside: identity, place and a real monster sign. */
+const TURNED_INTERVIEW_QS = ["turnedWho", "turnedMemory", "turnedMark"];
+const TURNED_SIGN_MEMORY = {
+  bite: [
+    `"Teeth. Too long. Its breath smelled of blood before it bit me."`,
+    `"I remember its mouth. Huge teeth, and blood on its breath."`,
+  ],
+  claw: [
+    `"Hands first. Then the nails came out like claws. Four cut through my coat."`,
+    `"It held me with claws, not fingers. I still feel where they entered."`,
+  ],
+  tracks: [
+    `"Its feet bent wrong. The prints pointed away while it walked toward me."`,
+    `"I watched it cross the mud. Its tracks did not match the feet above them."`,
+  ],
+  cold: [
+    `"No warmth in its hand or breath. Frost formed where it touched me."`,
+    `"It was colder than the ground. I could see my breath against its skin."`,
+  ],
+  flora: [
+    `"Leaves blackened when it passed. Green stems died beneath its hand."`,
+    `"The grass curled grey around its feet. I watched the roots die."`,
+  ],
+  hex: [
+    `"A black mark covered its palm. The same shape burned behind my eyes."`,
+    `"It drew a crooked sign over me. My teeth hurt when the last line closed."`,
+  ],
+  graves: [
+    `"Grave dirt under its nails. Wet earth in its sleeves. It smelled freshly buried."`,
+    `"Its hands were packed with grave mould. Some of it stayed in my mouth."`,
+  ],
+  wail: [
+    `"Its mouth opened too wide. The scream came from behind me while I watched it."`,
+    `"I heard it wail before its lips moved. The sound went through my bones."`,
+  ],
+};
+
+function turnedInterviewAnswer(s, npc, q) {
+  const m = monsterOf(s);
+  const host = npcById(s, s.monster.vid);
+  const turnedNight = turnNightOf(s, npc.id) || s.nightNum;
+  const log = s.nightLogs.find((entry) => entry.night === turnedNight);
+  const location = log && log.huntLoc ? log.huntLoc : "the dark";
+  const askedKey = `${s.dayNum}:${q}`;
+  s.askedLog[npc.id] = s.askedLog[npc.id] || [];
+  if (s.askedLog[npc.id].includes(askedKey)) {
+    return { quote: `"You asked me. I gave you what is left."`, mentions: [], claim: null, flag: null, foundSign: null, clue: null, followUps: [], repeat: true };
+  }
+  s.askedLog[npc.id].push(askedKey);
+
+  if (q === "turnedWho") {
+    const givesBuild = stableIdx(`${s.gameId}:${npc.id}:${turnedNight}:turned-who`, 2) === 0;
+    if (givesBuild) {
+      const build = host.build;
+      s.knownBuild = build;
+      if (!(s.buildClues || []).some((entry) => entry.length === 1 && entry[0] === build)) s.buildClues = [...(s.buildClues || []), [build]];
+      const words = { tall: "Tall", stout: "Stout and broad", slight: "Slight", stooped: "Stooped" }[build] || `${build} of build`;
+      const quote = `"${words}. I remember the shape above me. Then the pain."`;
+      return { quote, mentions: [], claim: null, flag: null, foundSign: null, clue: `Day ${s.dayNum}: ${npc.name}, known changed, remembered the attacker was ${build} of build.`, followUps: [] };
+    }
+    const woman = host.sex === "f";
+    s.knownSex = host.sex;
+    const quote = woman
+      ? `"A woman. Her hand covered my mouth. I never saw her face clearly."`
+      : `"A man. His voice was at my ear. I never saw his face clearly."`;
+    return { quote, mentions: [], claim: null, flag: null, foundSign: null, clue: `Day ${s.dayNum}: ${npc.name}, known changed, remembered the attacker was ${woman ? "a woman" : "a man"}.`, followUps: [] };
+  }
+
+  if (q === "turnedMemory") {
+    const at = LOCS.includes(location) ? `the ${location}` : "somewhere in the dark";
+    const quote = pickFreshIdx(`turnedMemory:${npc.id}:${turnedNight}`, [
+      `"${LOCS.includes(location) ? location : "The dark"}. I remember the ground against my cheek. Then its voice in my head."`,
+      `"It happened at ${at}. I remember trying to stand. I remember being told not to."`,
+      `"I remember ${at}. After that, only its voice telling me to get up."`,
+    ]);
+    return { quote, mentions: [], claim: LOCS.includes(location) ? location : null, flag: null, foundSign: null, clue: LOCS.includes(location) ? `Day ${s.dayNum}: ${npc.name}, known changed, remembers being attacked at the ${location} on Night ${turnedNight}.` : null, followUps: [] };
+  }
+
+  const signPool = m.signs.filter((sign) => TURNED_SIGN_MEMORY[sign]);
+  const sign = signPool[stableIdx(`${s.gameId}:${npc.id}:${turnedNight}:turned-mark`, signPool.length)];
+  const quote = pickFreshIdx(`turnedSignMemory:${npc.id}:${sign}`, TURNED_SIGN_MEMORY[sign]);
+  return { quote, mentions: [], claim: null, flag: null, foundSign: null, clue: `Day ${s.dayNum}: ${npc.name}, known changed, remembers a sign of the attacker: ${SIGNS[sign]}. This is testimony, not a physical stamp.`, followUps: [] };
+}
 /* The moment the examination lands: the pretence drops in the room, with
    you standing in it. Leads straight into the raving interview above. */
 const TURNED_FACED = [
@@ -6742,10 +6828,10 @@ function answerFor(s, id, night, q, targetId) {
   const m = monsterOf(s);
   const npc = npcById(s, id);
   const per = PERSONA[id];
+  if (npc.turned && npc.known && TURNED_INTERVIEW_QS.includes(q)) return turnedInterviewAnswer(s, npc, q);
   /* A villager known to be changed no longer keeps up the pretence: their
-     mind has gone to the thing, and what is left raves. It cannot lie for
-     the monster the way a hidden thrall does, and it cannot be pressed for
-     anything usable. It just leaks. (Sitting quietly with them still works.) */
+     ordinary interview is inaccessible in the UI. Keep this fallback for an
+     older saved interview that was already open when the change became known. */
   if (npc.turned && npc.known && q !== "talk") {
     return { quote: pickFreshIdx("turnedRaving", TURNED_RAVING), mentions: [], claim: null, flag: null, foundSign: null, clue: null, followUps: [], raving: true };
   }
@@ -7620,7 +7706,7 @@ function answerFor(s, id, night, q, targetId) {
    lied about. `strange`, `mobwhy` and `mobview` do not - the answer key files
    them against a night because that is its fallback, but the questions are
    about the day you are standing in, and dating them would be a lie. */
-const NIGHT_QS = ["where", "saw", "sawAt", "sawContext", "about", "read", "press", "context"];
+const NIGHT_QS = ["where", "saw", "sawAt", "sawContext", "about", "read", "press", "context", "turnedWho", "turnedMemory", "turnedMark"];
 
 const Q_LABELS = {
   where: "Where were you that night?",
@@ -7645,6 +7731,9 @@ const Q_LABELS = {
   mobcalm: "Talk them out of the rope",
   mobagree: "Tell them you think they're right",
   mobplea: "The rope is coming for you. Talk to me.",
+  turnedWho: "Who changed you?",
+  turnedMemory: "What do you remember?",
+  turnedMark: "What did it do to you?",
 };
 
 function applyAnswer(prev, id, night, q, targetId) {
@@ -9471,6 +9560,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const talkUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:talk`);
   const howareUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:howare:`);
   const pastUsed = (s.askedLog[iv.id] || []).includes("past");
+  const turnedQuestionUsed = (q) => (s.askedLog[iv.id] || []).includes(`${s.dayNum}:${q}`);
   const pickTargets = s.npcs.filter((x) => x.id !== iv.id);
   const goneTargets = pickTargets.filter((x) => x.fled || (s.faceKnown === x.id && s.monsterSawYou));
   const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && secretOf(s, x.id));
@@ -9680,6 +9770,16 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           )}
 
           {begun && !done && !ivSub && (
+            changed ? (
+              <div>
+                <p className="mv-display" style={{ margin: "0 0 8px", fontSize: 10.5, letterSpacing: 2, color: chrome.ink }}>ASK WHAT REMAINS OF THEM</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <Btn small disabled={turnedQuestionUsed("turnedWho")} onClick={() => askQ("turnedWho")}>Who changed you?</Btn>
+                  <Btn small disabled={turnedQuestionUsed("turnedMemory")} onClick={() => askQ("turnedMemory")}>What do you remember?</Btn>
+                  <Btn small disabled={turnedQuestionUsed("turnedMark")} onClick={() => askQ("turnedMark")}>What did it do to you?</Btn>
+                </div>
+              </div>
+            ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
                 {IV_CATS.map((c) => (
@@ -9707,8 +9807,9 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                 </div>
               )}
             </>
+            )
           )}
-          {begun && !done && ivSub === "catN" && (
+          {begun && !done && !changed && ivSub === "catN" && (
             <div>
               {subHead("THE NIGHTS")}
               {contextQuestions.length > 0 && (
@@ -9731,7 +9832,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {begun && !done && ivSub === "catP" && (
+          {begun && !done && !changed && ivSub === "catP" && (
             <div>
               {subHead("PRESS THEM")}
               <div className="grid grid-cols-1 gap-2">
@@ -9743,7 +9844,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {begun && !done && ivSub === "catV" && (
+          {begun && !done && !changed && ivSub === "catV" && (
             <div>
               {subHead("THE VILLAGE")}
               <div className="grid grid-cols-1 gap-2">
@@ -9755,7 +9856,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {begun && !done && ivSub === "catH" && (
+          {begun && !done && !changed && ivSub === "catH" && (
             <div>
               {subHead("THE PERSON")}
               <div className="grid grid-cols-1 gap-2">
@@ -9765,19 +9866,19 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             </div>
           )}
-          {begun && !done && ivSub === "person" && (
+          {begun && !done && !changed && ivSub === "person" && (
             <div>
               {subHead("ABOUT WHOM?", "catN")}
               {faceGrid(pickTargets, (x) => setIvSub({ pid: x.id }))}
             </div>
           )}
-          {begun && !done && ivSub === "share" && (
+          {begun && !done && !changed && ivSub === "share" && (
             <div>
               {subHead("TELL THEM ABOUT WHOM?", "catV")}
               {faceGrid(shareCandidates, (x) => askQ("share", x.id))}
             </div>
           )}
-          {begun && !done && ivSub && ivSub.pid && (() => {
+          {begun && !done && !changed && ivSub && ivSub.pid && (() => {
             const t = npcById(s, ivSub.pid);
             return (
               <div>
@@ -14437,7 +14538,8 @@ function MonsterVillage() {
   };
   const askQ = (q, targetId) => {
     const contextQuestion = q === "context" ? contextualQuestionsFor(s, iv.id).find((cq) => cq.id === targetId) : null;
-    const questionNight = contextQuestion ? contextQuestion.night : iv.night;
+    const turnedQuestion = TURNED_INTERVIEW_QS.includes(q);
+    const questionNight = contextQuestion ? contextQuestion.night : turnedQuestion ? (turnNightOf(s, iv.id) || iv.night) : iv.night;
     const effectiveQ = q === "saw" && iv.contextEventId ? "sawContext" : q;
     const effectiveTarget = effectiveQ === "sawContext" ? iv.contextEventId : targetId;
     const prevDisp = (npcById(s, iv.id) || {}).disp || 0;
@@ -14479,7 +14581,7 @@ function MonsterVillage() {
   const endInterview = () => {
     const npc = npcById(s, iv.id);
     const interviewBegan = iv.begun || iv.transcript.some((t) => t.q);
-    if (interviewBegan && !s.sideQuest && npc && npc.alive && !npc.fled && npc.disp >= 1 && chance(0.4)) {
+    if (interviewBegan && !s.sideQuest && npc && npc.alive && !npc.fled && !npc.turned && npc.disp >= 1 && chance(0.4)) {
       const targets = s.npcs.filter((x) => x.alive && !x.fled && x.id !== iv.id);
       if (targets.length) {
         const target = pick(targets);

@@ -1482,6 +1482,50 @@ function take(state, wanted) {
   assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
   assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");
+  assert(html.includes('changed ? (\n              <div>') && html.includes('onClick={() => askQ("turnedWho")}') && html.includes('onClick={() => askQ("turnedMemory")}') && html.includes('onClick={() => askQ("turnedMark")}'), "a known changed villager receives three dedicated questions instead of the ordinary interview categories");
+  assert(html.includes('!changed && ivSub === "catN"') && html.includes('!changed && ivSub === "catP"') && html.includes('!changed && ivSub === "catV"') && html.includes('!changed && ivSub === "catH"'), "ordinary night, pressure, village and personal questions stay hidden in a known-turned interview");
+  assert(html.includes('npc.alive && !npc.fled && !npc.turned && npc.disp >= 1'), "a known changed villager cannot end the interview by assigning an ordinary watch favour");
+  var turnedInterviewSource = html.slice(html.indexOf('const TURNED_INTERVIEW_QS'), html.indexOf('/* The moment the examination lands'));
+  function turnedInterviewContext(stableValue) {
+    var ctx = {
+      stableIdx: function (key, length) { return stableValue % length; },
+      monsterOf: function () { return { signs: ["bite", "graves"] }; },
+      npcById: function (state, id) { return state.npcs.find(function (npc) { return npc.id === id; }); },
+      turnNightOf: function () { return 3; },
+      pickFreshIdx: function (key, rows) { return rows[0]; },
+      LOCS: ["Graveyard", "Dark Forest", "Old Church", "Village Square", "Tavern", "Old Mill"],
+      SIGNS: { bite: "Bite Marks", graves: "Grave Dirt" }
+    };
+    vm.createContext(ctx);
+    vm.runInContext(turnedInterviewSource + '; this.turnedInterviewAnswer = turnedInterviewAnswer; this.TURNED_SIGN_MEMORY = TURNED_SIGN_MEMORY;', ctx);
+    return ctx;
+  }
+  function changedInterviewState() {
+    return { gameId: "changed-interview", dayNum: 4, nightNum: 4, monster: { vid: "ansel", type: "vampire" }, npcs: [{ id: "liesel", name: "Liesel", turned: true, known: true }, { id: "ansel", name: "Father Ansel", sex: "m", build: "tall" }], nightLogs: [{ night: 3, huntLoc: "Graveyard" }], askedLog: {}, buildClues: [], clues: [] };
+  }
+  var buildCtx = turnedInterviewContext(0);
+  var changedState = changedInterviewState();
+  var changedNpc = changedState.npcs[0];
+  var whoBuild = buildCtx.turnedInterviewAnswer(changedState, changedNpc, "turnedWho");
+  assert.strictEqual(changedState.knownBuild, "tall", "who changed you can yield the true host build");
+  assert(/tall of build/.test(whoBuild.clue));
+  var remembered = buildCtx.turnedInterviewAnswer(changedState, changedNpc, "turnedMemory");
+  assert.strictEqual(remembered.claim, "Graveyard", "what do you remember returns the actual turning location");
+  assert(/Night 3/.test(remembered.clue));
+  var marked = buildCtx.turnedInterviewAnswer(changedState, changedNpc, "turnedMark");
+  assert(/Teeth|mouth|blood|bite/i.test(marked.quote) && /Bite Marks/.test(marked.clue), "what did it do returns testimony about one real monster sign");
+  assert.strictEqual(marked.foundSign, null, "spoken sign testimony cannot masquerade as a physical stamp");
+  Object.keys(buildCtx.TURNED_SIGN_MEMORY).forEach(function (sign) {
+    buildCtx.TURNED_SIGN_MEMORY[sign].forEach(function (line) {
+      var words = (line.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+      assert(words <= 18, "known-turned sign testimony stays brief enough to read before the next question: " + line);
+    });
+  });
+  var sexCtx = turnedInterviewContext(1);
+  var sexState = changedInterviewState();
+  var whoSex = sexCtx.turnedInterviewAnswer(sexState, sexState.npcs[0], "turnedWho");
+  assert.strictEqual(sexState.knownSex, "m", "who changed you can instead yield the true host gender");
+  assert(/A man/.test(whoSex.quote));
   assert(!html.includes("Their door is open, their bed is cold, and no body is found."), "an unwitnessed turning cannot identify its victim through omniscient dawn narration");
   assert(html.includes('pickFreshIdx("offscreenTurnDawn", OFFSCREEN_TURN_DAWN)'), "an unwitnessed turning reports only the public fact that nobody died");
   assert(!html.includes('dawn.push(ev(pickFreshIdx("rumorStrange"'), "hidden changed villagers are not named by an automatic dawn rumor");
