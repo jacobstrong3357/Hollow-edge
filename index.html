@@ -1096,7 +1096,7 @@ function playerDeathBeats(m, nm, where, ctx) {
   if (!ctx || !ctx.encounterBegun) return full;
   let opening;
   if (ctx.kind === "flee") opening = `You run from ${nm} at the ${where}. Behind you, the revealed thing gives chase at once. It catches you before you reach the next lane.`;
-  else if (ctx.kind === "watch") opening = `You stay hidden one breath too long. ${nm}, no longer human, looks straight at your hiding place and crosses the ${where} before you can rise.`;
+  else if (ctx.kind === "watch") opening = `You stay hidden one breath too long at the ${where}. ${nm}, no longer human, looks straight at your hiding place and reaches you before you can rise.`;
   else if (ctx.kind === "confront") opening = `You step out and call ${nm} by name. The thing wearing that face turns fully toward you and closes the distance before you can retreat.`;
   else if (ctx.kind === "wrongRite") opening = `The wrong rite is still in your hands when you run. ${nm}'s revealed shape follows, laughing, and catches you at the ${where}.`;
   else if (ctx.kind === "offer") opening = `You refuse. ${nm} already has you cornered at the ${where}; it stops waiting and tightens its hold.`;
@@ -4209,6 +4209,7 @@ function resolveNight(prev, planIn, preEvents) {
     const revealChoice = (director.ledgers.truth || []).find((event) => event.kind === "monster_reveal_choice");
     if (revealChoice) Object.assign(mods, {
       follow: revealChoice.actorId,
+      followLocation: revealChoice.location || director.player.location,
       followAct: revealChoice.action === "WATCH_MONSTER" ? "watch" : revealChoice.action === "CONFRONT_MONSTER" ? "confront" : "flee",
       followFate: !!revealChoice.caught,
       followLearnedSign: revealChoice.learnedSign || null,
@@ -4611,8 +4612,11 @@ function resolveNight(prev, planIn, preEvents) {
      resolution logic and its odds are identical. -- */
   const applyFollowConsequence = () => {
     const fw = npcById(s, mods.follow);
-    const fDest = outMap[fw.id] || plan.loc;
-    const fPlace = placeNoun(fDest, exposureMap[fw.id] || "outdoor");
+    /* A Director encounter already knows where the player and monster stood.
+       Never replace that lived location with the villager's planned errand
+       destination when building the death, escape or victory recap. */
+    const fDest = mods.followLocation || outMap[fw.id] || plan.loc;
+    const fPlace = placeNoun(fDest, mods.followLocation ? "outdoor" : (exposureMap[fw.id] || "outdoor"));
     s.playerSaw.push({ night: n, id: fw.id, loc: fDest });
     if (fw.id === s.monster.vid && active) {
       const act = mods.followAct || "flee";

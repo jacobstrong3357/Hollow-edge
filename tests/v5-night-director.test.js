@@ -586,7 +586,8 @@ function take(state, wanted) {
   state.outcomes[state.cursor].hide = 0.99;
   state = take(state, { type: "WATCH_MONSTER" });
   assert.strictEqual(state.phase, "returning");
-  assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_reveal_choice" && event.action === "WATCH_MONSTER"; }));
+  var revealChoice = state.ledgers.truth.find(function (event) { return event.kind === "monster_reveal_choice" && event.action === "WATCH_MONSTER"; });
+  assert(revealChoice && revealChoice.location === "Old Church", "the survival choice retains the place where the encounter actually happened");
 })();
 
 (function aCorrectArmedConfrontationCanEndAtTheReveal() {
@@ -1024,6 +1025,9 @@ function take(state, wanted) {
   assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
   assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");
+  assert(html.includes('followLocation: revealChoice.location || director.player.location'), "a Director death recap receives the lived encounter location");
+  assert(html.includes('const fDest = mods.followLocation || outMap[fw.id] || plan.loc;'), "a planned villager destination cannot overwrite the player's death location");
+  assert(!html.includes('crosses the ${where} before you can rise'), "death prose does not describe crossing an entire named location to reach the player");
   assert(html.includes("node.volume.linearRampTo(db, seconds)"), "weather volume fades must use a linear ramp that accepts the silent decibel floor");
   assert(!html.includes("windFilter.frequency.rampTo("), "the LFO-owned wind filter parameter must not be automated directly");
   var sightings = html.slice(html.indexOf("const DIRECTOR_SIGHTING_LINES"), html.indexOf("function directorSightingFor"));
