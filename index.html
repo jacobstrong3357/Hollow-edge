@@ -3572,6 +3572,23 @@ const DIRECTOR_SITE_SEARCH_EMPTY = {
 function directorRecentSignatures(s) {
   return (s.nightHistory || []).slice(-4).flatMap((h) => h.signatures || []);
 }
+function directorRecordedFindingText(s) {
+  return [
+    ...(s.clues || []),
+    ...(s.worldEvents || []).flatMap((entry) => [entry && entry.findingText, entry && entry.text]),
+    ...(s.observations || []).map((entry) => entry && entry.text),
+  ].filter(Boolean).join("\n").toLowerCase();
+}
+function directorFindingAlreadyRecorded(s, text, agenda) {
+  const recorded = directorRecordedFindingText(s);
+  if (!recorded) return false;
+  if (agenda && agenda.motive) {
+    const object = String(agenda.motive.object || "").toLowerCase();
+    const reason = String(agenda.motive.reason || "").toLowerCase();
+    if (object && reason && recorded.includes(object) && recorded.includes(reason)) return true;
+  }
+  return !!text && recorded.includes(String(text).toLowerCase());
+}
 function directorMotiveFor(s, facts, npc) {
   const secret = facts.secretOut && facts.secretOut[npc.id] ? secretOf(s, npc.id) : null;
   const mourns = facts.griefOut && facts.griefOut[npc.id];
@@ -3987,7 +4004,11 @@ function compileDirectorNight(s, facts, openingIntent) {
       return ["Home", target];
     })();
     const searchSlot = Math.min(slots - 1, Math.max(1, searchRoute.length - 1));
-    const clueAgenda = Object.values(preview.schedules).find((agenda) => agenda.slots[searchSlot] === target && agenda.motive && agenda.motive.family !== "home" && (agenda.motive.family !== "secret" || !!facts.secretCatch[agenda.actorId]));
+    const clueAgenda = Object.values(preview.schedules).find((agenda) => {
+      if (agenda.slots[searchSlot] !== target || !agenda.motive || agenda.motive.family === "home") return false;
+      if (agenda.motive.family === "secret" && !facts.secretCatch[agenda.actorId]) return false;
+      return !directorFindingAlreadyRecorded(s, null, agenda);
+    });
     const oldSiteSigns = ((s.locEvidence && s.locEvidence[target]) || []).filter((sg) => realGroundSigns.includes(sg) && !(s.foundSigns || []).includes(sg));
     const liveSiteSigns = facts.active && facts.huntLoc === target ? realGroundSigns.filter((sg) => !(s.foundSigns || []).includes(sg)) : [];
     const searchableSigns = [...new Set([...oldSiteSigns, ...liveSiteSigns])];
@@ -4002,12 +4023,14 @@ function compileDirectorNight(s, facts, openingIntent) {
     }));
     const clueMode = signSearchMode === "ground" ? "edges" : "ground";
     const clueChance = facts.wx === "storm" ? 0.34 : facts.wx === "fog" ? 0.46 : facts.wx === "frost" ? 0.66 : 0.54;
-    if (rng.next() < clueChance) siteSearchSlots.forEach((slot) => directorConfig.forcedBeats.push({
+    const routeClueText = clueAgenda
+      ? `You find ${clueAgenda.motive.object}. Someone came here to ${clueAgenda.motive.reason}.`
+      : (DIRECTOR_SEARCH_PAYOFF[target] || "You find an unfinished human errand, but nothing that identifies who left it.");
+    const routeClueSeen = directorFindingAlreadyRecorded(s, routeClueText, clueAgenda);
+    if (rng.next() < clueChance && !routeClueSeen) siteSearchSlots.forEach((slot) => directorConfig.forcedBeats.push({
         id: `n${n}:route-payoff:${target}:${slot}`, type: "clue", slot,
         location: target, actorId: clueAgenda && clueAgenda.actorId,
-        text: clueAgenda
-          ? `You find ${clueAgenda.motive.object}. It belongs to a human errand: ${clueAgenda.motive.reason}. It explains the hour, not the person.`
-          : (DIRECTOR_SEARCH_PAYOFF[target] || "The place is not empty of human business. Somebody came here after the bell and left before finishing."),
+        text: routeClueText,
         meta: { searchMode: clueMode, siteSearch: true },
       }));
   } else if (openingIntent.kind === "watch") {

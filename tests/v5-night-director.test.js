@@ -903,6 +903,20 @@ function take(state, wanted) {
   assert.strictEqual(new Set(state.usedSignatures).size, state.usedSignatures.length, "a generated night contains no duplicate semantic signatures");
 })();
 
+(function identicalClueTextIsOnlyPresentedOnce() {
+  var config = baseConfig("duplicate-clue-text");
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false };
+  config.forcedBeats = [
+    { id: "note-one", type: "clue", slot: 1, location: "Old Church", actorId: "ansel", text: "A sealed note rests in the prayer book.", signature: "clue-one" },
+    { id: "note-two", type: "clue", slot: 1, location: "Old Church", actorId: "ansel", text: "A sealed note rests in the prayer book.", signature: "clue-two" }
+  ];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  state = take(state, { type: "SEARCH" });
+  assert.strictEqual(state.found.clues.length, 1, "the same clue text cannot appear twice even if two generators assigned different signatures");
+})();
+
 (function browserAndNodeSurface() {
   assert.strictEqual(Director.version, 5);
   var state = Director.createNight(baseConfig("visible"));
@@ -1015,6 +1029,15 @@ function take(state, wanted) {
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.silent.some(function (row) { return /silence|without making a sound|refuses/i.test(row.open); }), "silent horrors take sound away instead of borrowing a beast or speaker cue");
   assert(html.includes("if (!s.playerSigns.includes(stamp.sign)) s.playerSigns.push(stamp.sign)"), "a Director sign is already stamped when it reaches the Journal");
   assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
+  var recordedFindingSource = html.slice(html.indexOf("function directorRecordedFindingText"), html.indexOf("function directorMotiveFor"));
+  var recordedFindingContext = {};
+  vm.createContext(recordedFindingContext);
+  vm.runInContext(recordedFindingSource + "; this.wasRecorded = directorFindingAlreadyRecorded;", recordedFindingContext);
+  var oldSave = { clues: ["Night 2: You find a sealed note tucked into the prayer book. It belongs to a human errand: answer a confession requested through a third party. It explains the hour, not the person."] };
+  var oldAgenda = { motive: { object: "a sealed note tucked into the prayer book", reason: "answer a confession requested through a third party" } };
+  assert(recordedFindingContext.wasRecorded(oldSave, "new presentation text", oldAgenda), "older saves recognise a previously shown errand from their journal text even without Director signature history");
+  assert(html.includes("Someone came here to ${clueAgenda.motive.reason}."), "human errand clues state the observed explanation concisely");
+  assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [

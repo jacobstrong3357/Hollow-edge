@@ -736,6 +736,9 @@
     var sig = beat.signature;
     var critical = !!(beat.meta && beat.meta.critical);
     if (sig && !critical && (state.recentSignatures.indexOf(sig) >= 0 || state.usedSignatures.indexOf(sig) >= 0)) return null;
+    if (!critical && beat.type === "clue" && state.beats.some(function (shown) {
+      return shown.type === "clue" && String(shown.text || "").trim().toLowerCase() === String(beat.text || "").trim().toLowerCase();
+    })) return null;
     state.beats.push(beat);
     state.currentBeat = beat;
     if (sig && state.usedSignatures.indexOf(sig) < 0) state.usedSignatures.push(sig);
