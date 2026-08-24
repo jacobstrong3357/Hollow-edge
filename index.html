@@ -1502,6 +1502,97 @@ const ANIMAL_SIGN = {
 };
 const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pickFreshIdx(`animalSign:${sg}`, ANIMAL_SIGN[sg]) : null);
 
+/* Night actions leave real, local consequences for the next daylight search.
+   locEvidence records the abstract sign; this ledger records the thing the
+   player can actually put a hand on. One search reveals one scene, then the
+   scene is consumed so a dropped note or dead rabbit cannot be found twice. */
+const NIGHT_REMAIN_SCENES = {
+  bite: [
+    "A dead rabbit lies beside the path. Two deep punctures mark its throat.",
+    "A farm cat lies under the hedge. One wide bite broke its neck.",
+  ],
+  claw: [
+    "A dead rabbit lies in the bracken. Four parallel cuts opened its flank.",
+    "A ewe lies by the fence. Four deep tears cross its side, but nothing fed on it.",
+  ],
+  tracks: [
+    "A dead hare lies inside a ring of prints too large for it. The trail stops at the body.",
+    "A goat lies in the mud. Heavy prints circle it, then end in open ground.",
+  ],
+  graves: [
+    "A dead crow is half buried beside the path. Grave soil fills its beak.",
+    "A dog's shallow grave has been opened from below. Fresh earth lies around it.",
+  ],
+  cold: [
+    "A dead cat is frozen stiff. The grass around it is wet and green.",
+    "A dead rabbit lies rimed white. The frost ends at the edge of its body.",
+  ],
+  flora: [
+    "A dead bird lies among leaves turned grey at the root. Green growth starts one step away.",
+    "A rabbit lies in a circle of blackened grass. Nothing outside the circle is touched.",
+  ],
+  hex: [
+    "A dead crow lies inside marks cut into the soil. The cuts were made with care.",
+    "A rabbit has been placed inside a scratched ring. Dark wax fills the lines.",
+  ],
+};
+
+function addNightRemain(s, remain) {
+  s.nightRemains = s.nightRemains || [];
+  if (!remain || !remain.location || s.nightRemains.some((entry) => entry.id === remain.id)) return;
+  s.nightRemains.push(remain);
+}
+
+function recordMonsterNightRemain(s, night, location, sign, weather) {
+  const rows = NIGHT_REMAIN_SCENES[sign];
+  if (!rows || !rows.length || !location) return;
+  addNightRemain(s, {
+    id: `night-remain:${night}:monster:${location}:${sign}`,
+    night, location, sign, weather: weather || null, kind: "monster",
+    text: rows[stableIdx(`${s.gameId}:${night}:${location}:${sign}:remain`, rows.length)],
+  });
+}
+
+function recordDirectorHumanRemains(s, director, facts, night) {
+  if (!director || !director.schedules) return;
+  const outMap = (facts && facts.outMap) || {};
+  const griefOut = (facts && facts.griefOut) || {};
+  const rows = Object.values(director.schedules).filter((agenda) => {
+    const motive = agenda && agenda.motive;
+    return motive && motive.destination && motive.destination !== "Home" && outMap[agenda.actorId] && outMap[agenda.actorId] !== "home";
+  }).map((agenda) => {
+    const motive = agenda.motive;
+    const paper = /note|message|page|ledger|book|letter|list|tally/i.test(motive.object || "");
+    const grief = motive.family === "grief" || !!griefOut[agenda.actorId];
+    const score = grief ? 3 : paper ? 2 : 1;
+    return { agenda, motive, paper, grief, score };
+  }).sort((a, b) => b.score - a.score || stableIdx(`${director.seed}:${a.agenda.actorId}:remain-order`, 1000) - stableIdx(`${director.seed}:${b.agenda.actorId}:remain-order`, 1000));
+
+  let kept = 0;
+  for (const row of rows) {
+    if (kept >= 2) break;
+    const actor = npcById(s, row.agenda.actorId);
+    if (!actor) continue;
+    const roll = stableIdx(`${director.seed}:${actor.id}:${row.motive.id}:left-behind`, 100);
+    if (!row.grief && !row.paper && roll >= 28) continue;
+    if (row.paper && !row.grief && roll >= 72) continue;
+    const location = row.motive.destination;
+    const object = row.motive.object && row.motive.object !== "nothing" ? row.motive.object : "a small personal token";
+    const deadId = griefOut[actor.id];
+    const dead = deadId ? npcById(s, deadId) : null;
+    const text = row.grief
+      ? `${dead ? `At ${dead.name}'s grave` : `At the ${location}`}, you find ${object}. One set of kneeling prints faces the grave.`
+      : `Near the ${location}, you find ${object}, dropped beside fresh footprints. ${actor.name}'s name is written inside.`;
+    addNightRemain(s, {
+      id: `night-remain:${night}:human:${actor.id}:${row.motive.id}`,
+      night, location, weather: director.weather || null, kind: row.grief ? "mourning" : "dropped",
+      actorId: actor.id, deadId: deadId || null, object, reason: row.motive.reason,
+      text,
+    });
+    kept += 1;
+  }
+}
+
 /* ---------- the raised dead, and the called ----------
    Two horrors kill in ways the generic scream cannot carry. The necromancer
    sends the village's own buried to the doors they knew in life; the
@@ -3238,7 +3329,7 @@ function newGame(veteran, hollowedUnlocked) {
     npcs: NPC_DEFS.map((n) => ({ ...n, alive: true, turned: false, known: false, fled: false, sawYouWatching: null, offendedExam: null, secretKnown: false, disp: [-2, -1, 0, 1, 2][Math.floor(Math.random() * 5)] })),
     patience: Object.fromEntries(NPC_DEFS.map((n) => [n.id, PERSONA[n.id].patience])),
     askedLog: {}, monsterClaims: {}, grudges: {},
-    foundSigns: [], playerSigns: [], struckNpcs: [], locEvidence: Object.fromEntries(LOCS.map((l) => [l, []])),
+    foundSigns: [], playerSigns: [], struckNpcs: [], locEvidence: Object.fromEntries(LOCS.map((l) => [l, []])), nightRemains: [],
     deaths: [], nightLogs: [], statements: [], playerSaw: [], clues: [], hardCleared: [],
     worldEvents: [], observations: [], memories: [], relationshipEvents: [], scenarioHistory: [],
     /* V5 nights remember semantic shapes rather than titles. The Director
@@ -4244,6 +4335,9 @@ function resolveNight(prev, planIn, preEvents) {
   const prevFaceKnown = prev.faceKnown;
   const n = s.nightNum + 1;
   s.nightNum = n; s.dayNum = n;
+  /* Uncollected traces belong to the daylight immediately after their night.
+     Once the next night begins, weather and village traffic have taken them. */
+  s.nightRemains = (s.nightRemains || []).filter((entry) => entry && entry.night >= n);
   for (const id of Object.keys(s.patience)) {
     const pnpc = npcById(s, id);
     const dbonus = pnpc ? (pnpc.disp >= 1 ? 1 : pnpc.disp <= -1 ? -1 : 0) : 0;
@@ -4578,6 +4672,7 @@ function resolveNight(prev, planIn, preEvents) {
       s.deathBeats = (DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name : "someone you knew", deathPlace);
       s.deathAfterBeats = false;
     }
+    recordDirectorHumanRemains(s, director, f, n);
   }
 
   /* Settle the authored Churchyard event without changing the sampled night.
@@ -5565,11 +5660,15 @@ function resolveNight(prev, planIn, preEvents) {
        all real, all true of nothing. Everything else leaves its own two. */
     const sitePool = m.id === "mimic" ? Object.keys(SIGNS).filter((sg) => sg !== "wail") : m.signs.slice(0, 2);
     const site = sitePool.filter((sg) => !placed.includes(sg));
+    const remainSign = directorAttack && directorAttack.sign && directorAttack.sign !== "wail"
+      ? directorAttack.sign
+      : sitePool[stableIdx(`${s.gameId}:${n}:${huntLoc}:site-sign`, sitePool.length)];
     if (site.length) {
       const exactSign = directorAttack && directorAttack.sign && site.includes(directorAttack.sign) ? directorAttack.sign : null;
       if (exactSign) placed.push(exactSign);
       else if (!director) placed.push(pick(site));
     }
+    recordMonsterNightRemain(s, n, huntLoc, remainSign, wx);
     /* -- counterplay: a thing that knows it is hunted plants false marks -- */
     if (!director && (s.wrongExecutions > 0 || s.monsterSawYou || s.enraged) && chance(0.45)) {
       const pLoc = pick(LOCS.filter((l) => !m.hunts.includes(l)));
@@ -6158,6 +6257,54 @@ function actSearch(prev, loc) {
     s.foundSigns = s.foundSigns.filter((sg) => sg !== suspect.sg);
     s.clues.push(`Day ${s.dayNum}: the ${SIGNS[suspect.sg]} at the ${loc} were MADE. Too regular, cut with a tool, meant to be found. Something is salting your trail. Untick it if you ticked it.`);
     s.dayEvents.push(evPlaque(ev(`You go back over what you found at the ${loc} in good light, and your stomach drops. Too neat. Made by a hand, to be found by yours. It knows you read the ground, and it is writing back. Untick whatever you ticked for this.`), "danger"));
+    return s;
+  }
+  /* A specific thing left last night takes priority over a generic evidence
+     roll. The player spent the daylight action in the right place, so this
+     is found outright. Only one scene is collected per search. */
+  const remainsHere = (s.nightRemains || []).filter((entry) => entry && entry.night === s.nightNum && entry.location === loc);
+  const chosenRemain = remainsHere.find((entry) => entry.kind === "monster") || remainsHere[0];
+  const remainIndex = chosenRemain ? s.nightRemains.findIndex((entry) => entry.id === chosenRemain.id) : -1;
+  if (remainIndex >= 0) {
+    const remain = s.nightRemains.splice(remainIndex, 1)[0];
+    const weatherLine = remain.weather === "frost" ? "The frost kept every edge clear."
+      : remain.weather === "storm" ? "Rain blurred the ground, but not this."
+        : remain.weather === "fog" ? "The fog is gone. The mark remains."
+          : "";
+    const text = `${remain.text}${weatherLine ? ` ${weatherLine}` : ""}`;
+    if (remain.sign) {
+      const isNew = !s.foundSigns.includes(remain.sign);
+      if (isNew) s.foundSigns.push(remain.sign);
+      s.dayEvents.push(evPlaque(ev(text), isNew ? "amber" : "bone", remain.sign));
+      s.clues.push(`Day ${s.dayNum}: at the ${loc}, you found what the night left behind. ${remain.text}`);
+    } else {
+      s.dayEvents.push(evPlaque(ev(text, remain.actorId), "bone"));
+      s.clues.push(`Day ${s.dayNum}: at the ${loc}, you found what someone left during the night. ${remain.text}`);
+    }
+    if (remain.actorId) {
+      const actor = npcById(s, remain.actorId);
+      const dead = remain.deadId ? npcById(s, remain.deadId) : null;
+      const eventId = `day-remain:${s.dayNum}:${loc}:${remain.actorId}`;
+      const honest = remain.kind === "mourning"
+        ? `“I went to mourn${dead ? ` ${dead.name}` : ""}. I left it there. Please let that be enough.”`
+        : `“It is mine. I lost it on my way to the ${loc}.”`;
+      const evasive = remain.kind === "mourning"
+        ? "“A grave is private. Leave it so.”"
+        : "“A name inside does not tell you who dropped it.”";
+      s.worldEvents = [...(s.worldEvents || []), {
+        eventId, night: s.nightNum, location: loc, kind: "director_finding",
+        actorIds: [remain.actorId], subjectId: remain.actorId,
+        question: remain.kind === "mourning"
+          ? `I found what you left at${dead ? ` ${dead.name}'s grave` : ` the ${loc}`}. Why were you there?`
+          : `I found ${remain.object} at the ${loc}. Why was it there?`,
+        honest, evasive, findingText: remain.text, weather: remain.weather || null,
+      }];
+      s.observations = [...(s.observations || []), {
+        id: `${eventId}:evidence`, eventId, night: s.nightNum, location: loc,
+        kind: "evidence", confidence: "certain", subjectId: remain.actorId, source: "player", text: remain.text,
+      }];
+      if (actor && !actor.alive) s.dayEvents.push(ev(`${actor.name} cannot answer for it now.`, actor.id, 0));
+    }
     return s;
   }
   /* the ground remembers last night's chase for exactly one day: if the
@@ -11518,6 +11665,7 @@ function MonsterVillage() {
             run.foundSigns = (run.foundSigns || []).filter((sg) => valid.includes(sg));
             Object.keys(run.locEvidence || {}).forEach((l) => { run.locEvidence[l] = (run.locEvidence[l] || []).filter((sg) => valid.includes(sg)); });
             run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
+            run.nightRemains = (run.nightRemains || []).filter((entry) => entry && LOCS.includes(entry.location) && (!entry.sign || valid.includes(entry.sign)));
             repairDaylightGiveUp(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
