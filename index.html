@@ -2440,6 +2440,72 @@ const FRICTIONS = [
 ];
 const tieIn = (list, a, b) => list.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
 const bondedTo = (id) => BONDS.filter((x) => x.a === id || x.b === id).map((x) => (x.a === id ? x.b : x.a));
+
+/* Daylight recollections are deliberately concrete. A dead neighbour should
+   not receive the same present-tense suspicion prompts as somebody still in
+   the room. These lines give every portrait a short human answer to "what
+   were they like?" while the timeline questions below read the actual night
+   logs for their useful evidence. */
+const DEAD_RECOLLECTIONS = {
+  marta: [
+    `“Hazel fed people before they could ask. She remembered every child and every unpaid loaf.”`,
+    `“Hazel rose before everyone else. If a light moved at dawn, she usually saw it.”`,
+  ],
+  tobias: [
+    `“Tobias knew every grave and every family quarrel buried with it. He forgot very little.”`,
+    `“He was blunt, patient, and kinder than he liked anyone to notice.”`,
+  ],
+  ansel: [
+    `“Father Ansel chose his words carefully. People trusted him with things they told nobody else.”`,
+    `“He could be severe, but he never missed a sickbed or a burial.”`,
+  ],
+  greta: [
+    `“Greta noticed illness before the rest of us noticed a cough. She kept her own counsel.”`,
+    `“She frightened some people. She saved others. Both groups watched her closely.”`,
+  ],
+  wilhelm: [
+    `“Wilhelm was loud at the forge and gentle with his boys. Everyone knew where they stood with him.”`,
+    `“He worked late, spoke plainly, and carried other people's burdens without discussing them.”`,
+  ],
+  liesel: [
+    `“Liesel heard every rumour in the tavern. She knew which ones were cruel and which ones mattered.”`,
+    `“She made strangers welcome and neighbours answer for themselves.”`,
+  ],
+  falk: [
+    `“Doctor Falk was difficult, exact, and usually right. He remembered every wound he treated.”`,
+    `“He sounded cold when he was worried. Most people mistook one for the other.”`,
+  ],
+  rosa: [
+    `“Rosa watched more than she spoke. She noticed hems, hands, and stains other people missed.”`,
+    `“She was private, not unkind. People here often mistook privacy for guilt.”`,
+  ],
+};
+
+/* The social question has one job: show whether this speaker trusts the
+   chosen neighbour, then attach the best concrete fact they have. Bonds and
+   frictions anchor the authored relationships. Every other pair receives a
+   stable trust or suspicion, giving the village useful red herrings without
+   changing its mind every time the panel opens. */
+const RELATIONSHIP_LIKES = {
+  marta: "She noticed who needed bread and never shamed them for it.",
+  tobias: "He did the hard jobs without asking to be thanked.",
+  ansel: "He came to sickbeds and burials when other people stayed away.",
+  greta: "Her remedies saved people this village had given up on.",
+  wilhelm: "He repaired what neighbours could not afford to replace.",
+  liesel: "She fed people who could not pay and kept quiet about it.",
+  falk: "He always came when somebody was hurt, whatever his manner.",
+  rosa: "She mended clothes for families who had no coin.",
+};
+const RELATIONSHIP_SUSPECTS = {
+  marta: "She watched who came home at dawn and kept that knowledge close.",
+  tobias: "He spends too much time alone among the graves.",
+  ansel: "He hears every confession and answers very few questions.",
+  greta: "She gathers remedies in places she will not name.",
+  wilhelm: "He is out late and does not like being questioned.",
+  liesel: "She hears every rumour and decides which ones travel.",
+  falk: "He knows wounds better than people and shares very little.",
+  rosa: "No one knows much about her past, and she watches everything.",
+};
 /* Deaths that leave somebody to grieve. A turned neighbour is still walking
    about, so nobody mourns them until the village knows what happened. */
 const FATAL_KINDS = ["slain", "drained", "executed", "mobbed"];
@@ -2776,7 +2842,7 @@ const GRIEF_DAWN_DRY = [
    keep a door-watch tied to the actual forest edge, mill, church or square
    instead of silently treating every unlisted cottage as the well. */
 const HOME_LOC = {
-  hazel: "Village Square", tobias: "Graveyard", ansel: "Old Church", greta: "Dark Forest",
+  marta: "Village Square", tobias: "Graveyard", ansel: "Old Church", greta: "Dark Forest",
   wilhelm: "Old Mill", liesel: "Tavern", falk: "Village Square", rosa: "Village Square",
 };
 
@@ -7259,7 +7325,7 @@ function answerFor(s, id, night, q, targetId) {
   const mentions = [];
   let quote = "", claim = null, foundSign = null, clue = null;
 
-  const key = ["opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
+  const key = ["person", "opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
     : q === "craft" ? `${s.dayNum}:craft`
     : q === "past" ? "past"
     : q === "talk" ? `${s.dayNum}:talk`
@@ -7605,6 +7671,52 @@ function answerFor(s, id, night, q, targetId) {
       quote = `"I passed ${t.name} on the road that night, heading for the ${tLoc}."`;
     } else {
       quote = `"No. Wherever ${t.name} was that night, it was not where I was."`;
+    }
+  }
+
+  if (q === "person" && targetId) {
+    const t = npcById(s, targetId);
+    if (!t) quote = `“I do not know who you mean.”`;
+    else {
+      const bond = tieIn(BONDS, id, targetId);
+      const friction = tieIn(FRICTIONS, id, targetId);
+      const trusts = !friction && (bond || stableIdx(`${s.gameId}:relationship:${id}:${targetId}`, 2) === 0);
+      const tense = t.alive ? (trusts ? "I trust" : "I do not trust") : (trusts ? "I trusted" : "I never trusted");
+      const reason = trusts ? RELATIONSHIP_LIKES[targetId] : RELATIONSHIP_SUSPECTS[targetId];
+      const death = [...(s.deaths || [])].reverse().find((d) => d.id === targetId);
+      const limitNight = death ? death.night : s.nightNum;
+      const shared = [...(s.nightLogs || [])].filter((entry) => entry.night <= limitNight).reverse().find((entry) => {
+        const mine = entry.outMap && entry.outMap[id];
+        const theirs = entry.outMap && entry.outMap[targetId];
+        return mine && mine !== "home" && mine === theirs;
+      });
+      const missing = t.fled || (s.faceKnown === t.id && s.monsterSawYou);
+      const sec = secretOf(s, targetId);
+      if (!trusts) mentions.push({ id: t.id, kind: "suspects" });
+      if (!t.alive && bond && sec && !t.secretKnown && !isMonster && !lying) {
+        s.npcs = s.npcs.map((x) => x.id === targetId ? { ...x, secretKnown: true } : x);
+        quote = `“${tense} ${t.name}. ${reason} I knew that ${sec.short}.”`;
+      } else if (!t.alive && shared) {
+        const loc = shared.outMap[targetId];
+        mentions.push({ id: t.id, loc, kind: "with", night: shared.night });
+        quote = `“${tense} ${t.name}. ${reason} I last saw them at the ${loc} on Night ${shared.night}.”`;
+      } else if (!t.alive) {
+        const memory = pickFreshIdx(`deadPerson:${id}:${targetId}`, DEAD_RECOLLECTIONS[targetId]);
+        quote = `“${tense} ${t.name}. ${reason} ${memory.slice(1, -1)}”`;
+      } else if (missing) {
+        const subject = t.sex === "m" ? "he" : "she";
+        quote = `“${tense} ${t.name}. ${reason} ${t.name} left before dawn, and nobody saw which road ${subject} took.”`;
+      } else if (t.turned && t.known) {
+        mentions.push({ id: t.id, kind: "odd" });
+        quote = `“${tense} ${t.name}. But the person I knew is not answering anymore.”`;
+      } else if ((isMonster || lying) && targetId !== s.monster.vid) {
+        mentions.push({ id: t.id, kind: "suspects" });
+        quote = `“I do not trust ${t.name}. ${RELATIONSHIP_SUSPECTS[targetId]} Watch them after dark.”`;
+      } else if (shared) {
+        const loc = shared.outMap[targetId];
+        mentions.push({ id: t.id, loc, kind: "with", night: shared.night });
+        quote = `“${tense} ${t.name}. ${reason} I saw them at the ${loc} on Night ${shared.night}.”`;
+      } else quote = `“${tense} ${t.name}. ${reason}”`;
     }
   }
 
@@ -8218,9 +8330,10 @@ const Q_LABELS = {
   saw: "Who did you see?",
   read: "How did someone seem?",
   about: "Did you see someone in particular?",
+  person: "What can you tell me about someone?",
   opinion: "What do you make of someone?",
   whereNow: "Where is someone now?",
-  worried: "Were you worried about someone?",
+  worried: "Has anything seemed wrong with someone?",
   mentioned: "Did someone mention someone else?",
   suspect: "Who do you think is doing this?",
   strange: "Noticed anything strange lately?",
@@ -9986,7 +10099,7 @@ const IV_MOOD = {
 
 const IV_CATS = [
   { key: "catN", label: "Ask about a night", hint: "Where they were and who they saw" },
-  { key: "catS", label: "Ask about someone", hint: "Opinions, whereabouts and concern" },
+  { key: "catS", label: "Ask about someone", hint: "One relationship or useful lead" },
   { key: "catK", label: "Ask what they know", hint: "Their craft, suspicions and village talk" },
   { key: "catH", label: "Talk personally", hint: "Build or repair the relationship" },
 ];
@@ -10068,11 +10181,9 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const craftUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:craft`);
   const suspectUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:suspect:`);
   const gossipUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:gossip`);
-  const talkUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:talk`);
   const apologyUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:apologise`);
   const helpUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:help`);
   const howareUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:howare:`);
-  const pastUsed = (s.askedLog[iv.id] || []).includes("past");
   const turnedQuestionUsed = (q) => (s.askedLog[iv.id] || []).includes(`${s.dayNum}:${q}`);
   const pickTargets = s.npcs.filter((x) => x.id !== iv.id);
   const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && secretOf(s, x.id));
@@ -10363,8 +10474,8 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           {begun && !done && !changed && ivSub === "catS" && (
             <div>
               {subHead("ASK ABOUT SOMEONE")}
-              <p style={{ margin: "0 0 7px", fontSize: 13.5, color: C.parchLine }}>Choose a neighbour.</p>
-              {faceGrid(pickTargets, (x) => setIvSub({ personId: x.id }))}
+              <p style={{ margin: "0 0 7px", fontSize: 13.5, color: C.parchLine }}>Choose a neighbour. They will tell you whether they trust them and the most useful thing they know.</p>
+              {faceGrid(pickTargets, (x) => askQ("person", x.id))}
             </div>
           )}
           {begun && !done && !changed && ivSub === "catK" && (
@@ -10390,11 +10501,9 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           {begun && !done && !changed && ivSub === "catH" && (
             <div>
               {subHead("TALK PERSONALLY")}
-              <p style={{ margin: "0 0 8px", fontSize: 13.5, color: C.parchLine }}>These questions can improve how they receive you.</p>
+              <p style={{ margin: "0 0 8px", fontSize: 13.5, color: C.parchLine }}>Learn how they are coping, repair harm, or earn trust through useful work.</p>
               <div className="grid grid-cols-1 gap-2">
                 <Btn small disabled={howareUsed} onClick={() => askQ("howare")}>How are you holding up?</Btn>
-                <Btn small disabled={pastUsed} onClick={() => askQ("past")}>Tell me about before.</Btn>
-                <Btn small disabled={talkUsed} onClick={() => askQ("talk")}>Sit with them awhile.</Btn>
                 {n.disp < 0 && <Btn small disabled={apologyUsed} onClick={() => askQ("apologise")}>Apologise. Ask to start again.</Btn>}
                 {n.disp < 2 && <Btn small disabled={helpUsed} onClick={() => askQ("help")}>Ask what work needs doing.</Btn>}
               </div>
@@ -10403,7 +10512,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           {begun && !done && !changed && ivSub === "nightPerson" && (
             <div>
               {subHead("WHO DID THEY SEE?", "catN")}
-              {faceGrid(pickTargets, (x) => setIvSub({ nightPid: x.id }))}
+              {faceGrid(pickTargets, (x) => askQ("about", x.id))}
             </div>
           )}
           {begun && !done && !changed && ivSub === "share" && (
@@ -10412,42 +10521,6 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               {faceGrid(shareCandidates, (x) => askQ("share", x.id))}
             </div>
           )}
-          {begun && !done && !changed && ivSub && ivSub.nightPid && (() => {
-            const t = npcById(s, ivSub.nightPid);
-            return (
-              <div>
-                {subHead(t.name.toUpperCase(), "nightPerson")}
-                <div className="grid grid-cols-1 gap-2">
-                  <Btn small onClick={() => askQ("about", t.id)}>Did you see {t.name} that night?</Btn>
-                </div>
-              </div>
-            );
-          })()}
-          {begun && !done && !changed && ivSub && ivSub.personId && (() => {
-            const t = npcById(s, ivSub.personId);
-            return (
-              <div>
-                {subHead(t.name.toUpperCase(), "catS")}
-                <div className="grid grid-cols-1 gap-2">
-                  <Btn small onClick={() => askQ("opinion", t.id)}>What do you make of {t.name}?</Btn>
-                  <Btn small onClick={() => askQ("whereNow", t.id)}>Where is {t.name}?</Btn>
-                  <Btn small onClick={() => askQ("worried", t.id)}>Were you worried about {t.name}?</Btn>
-                  <Btn small onClick={() => setIvSub({ mentionedBy: t.id })}>Did {t.name} mention anyone?</Btn>
-                </div>
-              </div>
-            );
-          })()}
-          {begun && !done && !changed && ivSub && ivSub.mentionedBy && (() => {
-            const source = npcById(s, ivSub.mentionedBy);
-            const possibleSubjects = s.npcs.filter((x) => x.id !== iv.id && x.id !== source.id);
-            return (
-              <div>
-                {subHead(`WHO DID ${source.name.toUpperCase()} MENTION?`, { personId: source.id })}
-                {faceGrid(possibleSubjects, (x) => askQ("mentioned", `${source.id}|${x.id}`))}
-              </div>
-            );
-          })()}
-
           {begun && (done
             ? <Btn full center kind="amber" onClick={endInterview}>End the interview</Btn>
             : (
@@ -16353,7 +16426,7 @@ function MonsterVillage() {
         {villageStanding(s).hostileMajority && (
           <div style={{ marginTop: 12, padding: "9px 11px", border: `1px solid ${C.red}`, borderLeftWidth: 4, background: "rgba(158,48,57,0.08)", color: C.ink }}>
             <span className="mv-display" style={{ display: "block", color: C.red, fontSize: 10.5, letterSpacing: 2.2 }}>THE VILLAGE HAS TURNED AGAINST YOU</span>
-            <span style={{ display: "block", marginTop: 3, fontSize: 13.5, lineHeight: 1.4 }}>Most neighbours will give little away. Sit with them, apologise, or offer help to rebuild trust.</span>
+            <span style={{ display: "block", marginTop: 3, fontSize: 13.5, lineHeight: 1.4 }}>Most neighbours will give little away. Apologise or offer help to rebuild trust.</span>
           </div>
         )}
 
