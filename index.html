@@ -6506,7 +6506,7 @@ function answerFor(s, id, night, q, targetId) {
       if (playerWitnessed && mutualMonsterRecognition) {
         claim = playerWitnessed.loc;
         s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
-        quote = `"You saw what I am at the ${witnessedPlace}. I saw you run. Do not call this an interview."`;
+        quote = `${npc.name} does not answer. The house is empty. They knew you escaped and left before dawn.`;
         witnessedHandled = true;
       } else if (playerWitnessed && !monsterFaceKnown) {
         claim = playerWitnessed.loc;

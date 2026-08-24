@@ -1149,6 +1149,8 @@ function take(state, wanted) {
   assert(html.includes("playerWitnessed && mutualMonsterRecognition"), "a monster that saw the player flee answers as an exposed enemy");
   assert(html.includes("playerWitnessed && !monsterFaceKnown"), "a monster cannot claim the player saw them when the player's host knowledge remains secret");
   assert(html.includes('claim !== "home" && !mutualMonsterRecognition'), "an exposed monster cannot offer an ordinary witness follow-up");
+  assert(html.includes("The house is empty. They knew you escaped and left before dawn."), "an old open interview finds an exposed monster gone rather than confronting it indoors");
+  assert(!html.includes("Do not call this an interview."), "daylight never stages a direct interview confrontation with the exposed monster");
   assert(html.includes("WEATHER_WALK_CONTINUED") && html.includes("WEATHER_DAWN_CONTINUED"), "consecutive weather has authored second-night openings and dawn consequences");
   assert(html.includes("QUIET_NIGHT_WEATHER") && html.includes('quietNight:${wx || "still"}'), "quiet Director recaps are selected from the sampled weather instead of the generic frost-capable pool");
   assert(html.includes('soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null'), "storm keeps the monster voice cue instead of replacing it with thunder");
