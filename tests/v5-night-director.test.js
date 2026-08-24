@@ -1524,6 +1524,8 @@ function take(state, wanted) {
   assert(html.includes('directorBeat.meta.requiresResponse) {\n          Snd.silence(false);'), "an unresolved strange sight keeps the weather ambience alive");
   assert(html.includes("action.approachDelusion || action.ignoreDelusion"), "both looking and deliberately looking away restore the live weather soundscape");
   assert(!html.includes("SOMETHING ABROAD"), "quiet monster sounds use a concrete heading instead of the removed phrase");
+  assert(!html.includes("The rest belongs to somebody who trusted me"), "secretive villagers do not answer with an abstract ownership metaphor");
+  assert(html.includes("Someone asked me to keep this private. I will not give you their name."), "the replacement plainly states what the villager is withholding");
   assert(html.includes('directorBeat.type === "doorstep") {\n          Snd.silence(false);'), "a doorstep visit keeps storm ambience running");
   assert(html.includes('this.doorVol = new Tone.Volume(-8)') && html.includes('this.door.triggerAttackRelease("C1", "8n", t, 1)'), "the door has a dedicated louder knock voice");
   assert(html.includes("[.!?]+[”\"’']?"), "typed night text keeps a closing curly quote with the sentence instead of rendering it alone");
