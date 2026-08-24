@@ -486,7 +486,10 @@
        place already promised to resolveNight and the morning ledger. */
     if (forcedDestination && forcedDestination !== "home" && forcedDestination !== HOME) {
       result.destination = forcedDestination;
-      result.route = null;
+      /* Most sampled destinations use the shortest direct lane. A deliberate
+         corridor lead may supply one intermediate location so the player can
+         meet the villager before deciding whether to follow. */
+      result.route = villager.motive && villager.motive.route ? villager.motive.route.slice() : null;
     }
     return result;
   }
@@ -822,6 +825,7 @@
     return beat.type === "atmosphere" ? true
       : (beat.type === "stamp" || beat.type === "clue") ? isSearch && (!requiredSearch || !action.searchMode || requiredSearch === action.searchMode)
       : beat.type === "whisper" ? action.type === "LISTEN"
+        : beat.type === "encounter" ? ["LEAVE", "MOVE", "WAIT", "KEEP_WATCH"].indexOf(action.type) >= 0
         : beat.type === "watch" ? (action.type === "WAIT" || action.type === "KEEP_WATCH")
           : beat.type === "delusion";
   }
@@ -836,7 +840,9 @@
       /* The watched door is the player's chosen purpose for this hour. Show
          its result after coincident weather and atmosphere so a thunderclap
          cannot conceal the fact that the suspect left or stayed. */
-      return (a.type === "watch" ? 1 : 0) - (b.type === "watch" ? 1 : 0);
+      var aPriority = a.type === "watch" ? 2 : a.meta && a.meta.secretLead ? 1 : 0;
+      var bPriority = b.type === "watch" ? 2 : b.meta && b.meta.secretLead ? 1 : 0;
+      return aPriority - bPriority;
     });
     entries.forEach(function (beat) {
       var reveal = discoveryReveals(beat, action);
@@ -1248,7 +1254,9 @@
     if (!gatheringShown && !priorityDiscovery && action.actorId && visible.some(function (villager) { return villager.id === action.actorId; })) framedId = action.actorId;
     else if (!gatheringShown && !priorityDiscovery && ["LEAVE", "MOVE", "WAIT", "KEEP_WATCH"].indexOf(action.type) >= 0 && state.presentedActorIds.length < state.encounterBudget) {
       framedId = visible.filter(function (villager) { return state.presentedActorIds.indexOf(villager.id) < 0; }).sort(function (a, b) {
-        return (state.attackPriorities[slot][a.id] || 1) - (state.attackPriorities[slot][b.id] || 1);
+        var aSecretLead = a.dialogue && a.dialogue.revealsSecret ? 0 : 1;
+        var bSecretLead = b.dialogue && b.dialogue.revealsSecret ? 0 : 1;
+        return aSecretLead - bSecretLead || (state.attackPriorities[slot][a.id] || 1) - (state.attackPriorities[slot][b.id] || 1);
       }).map(function (villager) { return villager.id; })[0] || null;
     }
     if (framedId && state.presentedActorIds.indexOf(framedId) < 0) state.presentedActorIds.push(framedId);

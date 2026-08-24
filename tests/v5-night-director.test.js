@@ -630,6 +630,31 @@ function take(state, wanted) {
   assert(projection.secrets.some(function (event) { return event.actorId === "rosa"; }), "an actually witnessed secret survives into the village state");
 })();
 
+(function aSecretLeadCrossesTheChosenSearchBeforeItsPrivateDestination() {
+  var config = baseConfig("secret-corridor-lead");
+  config.monster.active = false;
+  config.openingIntent = { kind: "search", loc: "Old Church" };
+  config.currentFacts = { weather: "fog", active: false, outMap: { rosa: "Dark Forest" }, secretOut: { rosa: true }, secretLeadId: "rosa", secretLeadLoc: "Old Church", secretLeadSlot: 0 };
+  config.villagers = [{
+    id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+    motive: { id: "hidden-pages", family: "secret", destination: "Dark Forest", reason: "hide a packet of pages", object: "a packet of pages", route: ["Village Square", "Old Church", "Dark Forest"], depart: 0, duration: 7, secret: true },
+    dialogue: { follow: "Rosa leaves a packet of pages beneath a boundary stone.", revealsSecret: true, secretSummary: "she writes under another name" }
+  }];
+  config.forcedBeats = [
+    { id: "fog-at-church", type: "atmosphere", slot: 0, location: "*", text: "The bell sounds once through the fog." },
+    { id: "rosa-secret-lead", type: "encounter", slot: 0, location: "Old Church", actorId: "rosa", text: "Rosa crosses the lantern and keeps walking.", meta: { secretLead: true, critical: true } }
+  ];
+  var state = Director.createNight(config);
+  state.visibility[0].rosa = true;
+  assert.deepStrictEqual(state.schedules.rosa.route, ["Village Square", "Old Church", "Dark Forest"], "the sampled corridor lead is preserved instead of replaced by direct travel");
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  assert(state.currentBeat && state.currentBeat.id === "rosa-secret-lead", "the secret-bearing villager crosses the chosen location even when weather lands in the same hour");
+  assert(Director.guidedActions(state, { kind: "search", target: "Old Church", actorId: "rosa" }).some(function (action) { return action.type === "FOLLOW" && action.actorId === "rosa"; }), "following the lead remains the player's choice");
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  assert.strictEqual(state.player.location, "Dark Forest");
+  assert(Director.consequenceProjection(state).secrets.some(function (entry) { return entry.actorId === "rosa"; }), "following the corridor lead reveals the human secret");
+})();
+
 (function followingTheActiveHostEndsAllSocialChoices() {
   var config = baseConfig("recognition-is-not-a-chat");
   config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" }, revealText: "The muzzle opens through Rosa's face, but her long frame and eyes remain unmistakable." };
@@ -1257,10 +1282,21 @@ function take(state, wanted) {
   assert(sampledNight.includes('if (active && m.reach !== "home" && huntLoc)'), "every outdoor hunt night, not only night one or a werewolf night, checks for a real quarry");
   assert(sampledNight.includes("delete secretOut[forced.id]") && sampledNight.includes("delete griefOut[forced.id]"), "a fallback hunt route cannot retain a contradictory secret or mourning destination");
   assert(!sampledNight.includes('if (n === 1 && active && m.reach !== "home")'), "the retired first-night-only guarantee cannot return");
+  var secretCadence = html.slice(html.indexOf("function primeDirectorSecret"), html.indexOf("/* ================= V5 NIGHT DIRECTOR ADAPTER"));
+  assert(secretCadence.includes("secretDroughtNights(s, n) < 2"), "two nights without a discovery activate the secret corridor safeguard");
+  assert(secretCadence.includes("npc.id !== facts.guaranteedVictimId") && secretCadence.includes("npc.id !== s.monster.vid"), "the safeguard cannot reroute the hunt's quarry or its host");
+  assert(secretCadence.includes("facts.secretCatch[chosen.id] = true") && start.includes("primeDirectorSecret"), "a primed secret is readable and enters the Director before the walk is compiled");
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
   assert(compiledNight.includes("facts.guaranteedVictimId") && compiledNight.includes("guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }"), "the fallback neighbour is physically on the hunting ground throughout the attack hour");
   assert(compiledNight.includes("activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }"), "an active monster host leaves its house before it hunts");
   assert(html.includes("then followed them to the ${log.you.followedTo}"), "the final night history distinguishes following a watched suspect from remaining at their door");
+  var chunkSource = html.slice(html.indexOf("function nightTextChunks"), html.indexOf("/* Director prose", html.indexOf("function nightTextChunks")));
+  var chunkContext = {};
+  vm.createContext(chunkContext);
+  vm.runInContext(chunkSource + "; this.nightTextChunks = nightTextChunks;", chunkContext);
+  var paced = chunkContext.nightTextChunks("One short sentence. This deliberately longer sentence contains enough separate words to require more than one compact typed line on a narrow phone screen.");
+  assert(paced.length >= 3 && paced.every(function (words) { return words.length <= 18; }), "night prose is divided into sentence-sized runs of at most eighteen words");
+  assert(html.includes("!terminal && flowReady") && html.includes("terminal && flowReady"), "night choices remain hidden until the current typed scene has finished or the player reveals it");
   assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
   assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");
