@@ -1239,12 +1239,12 @@
     return beat;
   }
 
-  function recordFollow(state, actorId, slot) {
+  function recordFollow(state, actorId, slot, locationOverride) {
     var villager = state.cast.find(function (v) { return v.id === actorId; });
     var schedule = state.schedules[actorId];
     if (!villager || !schedule) return;
     var dialogue = villager.dialogue || {};
-    var destination = schedule.motive.destination === HOME ? state.player.location : schedule.motive.destination;
+    var destination = locationOverride || (schedule.motive.destination === HOME ? state.player.location : schedule.motive.destination);
     var changedAftermath = !!(villager.changed && state.ledgers.truth.some(function (row) {
       return row.kind === "investigated_attack" && row.victimId === villager.id;
     }));
@@ -1285,29 +1285,43 @@
   function resolveFollow(state, action) {
     var schedule = state.schedules[action.actorId];
     if (!schedule) return invalid(state, action, "There is nobody there to follow.");
+    var followedVillager = state.cast.find(function (entry) { return entry.id === action.actorId; });
+    var acceptedMonsterLure = !!(state.monsterSchedule.active
+      && action.actorId === state.monsterSchedule.hostId
+      && followedVillager && followedVillager.dialogue && followedVillager.dialogue.luresFollow);
+    var followStartedAt = state.player.location;
     var destination = schedule.motive.destination;
     var targetSlot = Math.min(state.slots - 1, state.cursor + 1);
     for (var probe = state.cursor + 1; probe < state.slots; probe += 1) {
       targetSlot = probe;
       if (actorLocation(state, action.actorId, probe) === destination) break;
     }
-    for (var slot = state.cursor + 1; slot <= targetSlot; slot += 1) {
-      var actorLoc = actorLocation(state, action.actorId, slot);
-      if (actorLoc && actorLoc !== HOME) state.player.location = actorLoc;
-      state.cursor = slot;
-      state.player.route.push({ slot: slot, location: state.player.location, action: "FOLLOW", actorId: action.actorId });
-      processAttack(state, slot);
-      if (state.phase !== "active") return state;
+    if (acceptedMonsterLure) {
+      /* An invitation is an ambush in the place where it was accepted. Do not
+         silently carry the player to the host's eventual destination before
+         showing the recognition screen or naming the place of death. */
+      state.cursor = targetSlot;
+      state.player.location = followStartedAt;
+      state.player.route.push({ slot: targetSlot, location: followStartedAt, action: "FOLLOW", actorId: action.actorId });
+    } else {
+      for (var slot = state.cursor + 1; slot <= targetSlot; slot += 1) {
+        var actorLoc = actorLocation(state, action.actorId, slot);
+        if (actorLoc && actorLoc !== HOME) state.player.location = actorLoc;
+        state.cursor = slot;
+        state.player.route.push({ slot: slot, location: state.player.location, action: "FOLLOW", actorId: action.actorId });
+        processAttack(state, slot);
+        if (state.phase !== "active") return state;
+      }
     }
     /* A sighting can happen in the last sampled hour. Following then resolves
        inside that hour instead of advancing beyond the outcome tape. */
-    if (state.cursor >= state.slots - 1 && destination !== HOME && state.player.location !== destination) {
+    if (!acceptedMonsterLure && state.cursor >= state.slots - 1 && destination !== HOME && state.player.location !== destination) {
       state.player.location = destination;
       state.player.route.push({ slot: state.cursor, location: destination, action: "FOLLOW", actorId: action.actorId });
     }
     state.actionHistory.push({ slot: state.cursor, type: "FOLLOW", to: state.player.location, actorId: action.actorId });
     appendTruth(state, { id: "player:" + state.cursor + ":follow", slot: state.cursor, kind: "player_action", action: "FOLLOW", location: state.player.location, actorId: action.actorId });
-    var followedEvent = recordFollow(state, action.actorId, state.cursor);
+    var followedEvent = recordFollow(state, action.actorId, state.cursor, acceptedMonsterLure ? followStartedAt : null);
     /* Discovering the active host ends the social scene immediately. The
        player is still hidden for one breath, as in the established walk,
        but may only flee, risk staying to learn, or confront it. */
@@ -1332,7 +1346,6 @@
       appendBeat(state, makeBeat("recognition-beat:" + state.cursor + ":" + action.actorId, "threat", state.cursor, state.player.location,
         recognitionText, { actorId: action.actorId, sign: state.pendingThreat.sign, truthEventId: followedEvent && followedEvent.id, meta: { recognition: true, critical: true } }));
     }
-    var followedVillager = state.cast.find(function (entry) { return entry.id === action.actorId; });
     if (state.phase === "active" && state.cursor >= state.slots - 1 && destination !== HOME && !(followedVillager && followedVillager.changed) && !(followedEvent && followedEvent.changedAftermath)) {
       state.followPause = {
         actorId: action.actorId,

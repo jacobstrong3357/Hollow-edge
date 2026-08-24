@@ -869,6 +869,16 @@ function take(state, wanted) {
   var actions = Director.guidedActions(state, { actorId: "rosa", interacted: { "rosa|HAIL": true } });
   var follow = actions.find(function (action) { return action.type === "FOLLOW"; });
   assert(follow && follow.label === "Accept. Walk with Rosa", "a masked invitation has a natural acceptance instead of a generic tailing command");
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  assert.strictEqual(state.phase, "threat");
+  assert.strictEqual(state.pendingThreat.location, "Village Square", "an invited monster reveals itself where the player accepted, not at its later destination");
+  assert.strictEqual(state.player.location, "Village Square", "the danger screen and any resulting death retain the lived encounter location");
+  assert.strictEqual(state.ledgers.truth.find(function (event) { return event.kind === "followed"; }).location, "Village Square", "the follow ledger agrees with the visible ambush location");
+  state.outcomes[state.cursor].hide = 0.01;
+  state = take(state, { type: "WATCH_MONSTER" });
+  var caught = state.ledgers.truth.find(function (event) { return event.kind === "monster_reveal_choice"; });
+  assert.strictEqual(state.phase, "dead");
+  assert(caught && caught.caught && caught.location === "Village Square", "the caught outcome carries the same location into the death resolver");
 })();
 
 (function aCorrectArmedConfrontationCanEndAtTheReveal() {
@@ -2293,7 +2303,7 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=9'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=10'), "the local page cache-busts the current Director runtime");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
     HOME_LOC: { rosa: "Village Square" },
