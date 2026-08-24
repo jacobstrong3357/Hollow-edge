@@ -1015,6 +1015,19 @@ function take(state, wanted) {
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.silent.some(function (row) { return /silence|without making a sound|refuses/i.test(row.open); }), "silent horrors take sound away instead of borrowing a beast or speaker cue");
   assert(html.includes("if (!s.playerSigns.includes(stamp.sign)) s.playerSigns.push(stamp.sign)"), "a Director sign is already stamped when it reaches the Journal");
   assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
+  var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
+  assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
+  [
+    "none of them breaks into the wrong shape you feared",
+    "The earth is disturbed only where the gravedigger expected it",
+    "keeps its counsel",
+    "keeping whatever it keeps",
+    "Something in the dark refuses a simple explanation",
+    "Whatever was there kept what it knows"
+  ].forEach(function (phrase) {
+    assert(!runtimeCopy.includes(phrase), "retired vague prose cannot return: " + phrase);
+  });
+  assert(runtimeCopy.includes("The soil shows bootprints and recent shovel cuts, but no grave has been opened."), "an empty graveyard search reports concrete visible evidence");
 })();
 
 console.log("v5-night-director: all tests passed");

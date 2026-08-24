@@ -373,7 +373,7 @@ const SIGN_SENSE = {
   tracks: [
     "A print in the soft ground, too large, too deep, the toes wrong in number or wrong in spacing, and going one direction only.",
     "Something crossed here on more weight than it should carry, and did not slow down to do it.",
-    "The prints stop clean, as if whatever made them simply stopped touching the ground.",
+    "The prints stop clean in open ground. There is no landing mark or return trail.",
   ],
   bite: [
     "The wound is a bite, unmistakably, and the jaw that made it did not belong to anything you have skinned or eaten.",
@@ -386,7 +386,7 @@ const SIGN_SENSE = {
     "You shiver, and keep shivering three steps past where the shiver should have stopped.",
   ],
   flora: [
-    "The green here has gone grey and brittle from the root up, as if the ground itself stopped feeding it.",
+    "The plants here have gone grey and brittle from the root up. Green growth begins again one stride away.",
     "Everything growing within a long stride has curled in on itself, days before its season.",
     "The leaves are the wrong colour for the time of year, and none of them fell naturally.",
   ],
@@ -406,7 +406,7 @@ const SIGN_SENSE = {
   wail: [
     "A grief that is not yours moves through your chest and out the other side.",
     "Somewhere behind your own ribs, a sound arrives that did not come in through your ears.",
-    "Tonight the night makes no sound at all, which is not the same as quiet.",
+    "Tonight there are no insects, dogs or wind. Even your steps sound muffled.",
   ],
 };
 const senseFor = (sg, i = null) => (i === null ? pickFreshIdx(`sense:${sg}`, SIGN_SENSE[sg]) : SIGN_SENSE[sg][i % SIGN_SENSE[sg].length]);
@@ -425,7 +425,7 @@ const SIGN_SENSE_BODY = {
   ],
   tracks: [
     "Prints circle the body, too large and too deep, the toes wrong in number. They come in from the dark and go back to it, one direction each.",
-    "The ground beside them holds a single line of prints, heavier than any villager, that stop dead a stride away, as if the maker stopped touching the ground.",
+    "Beside them, one line of prints lies deeper than any villager could make. It stops a stride away with no landing mark or return trail.",
   ],
   cold: [
     "The body is colder than the night can account for, and the ground beneath it is rimed white in a perfect outline. You touch the wrist once and pull your hand back; the cold stays in your fingertips.",
@@ -437,7 +437,7 @@ const SIGN_SENSE_BODY = {
     "Scratched into the floor beneath the body, half-hidden by it: a sigil, its angles wrong, rubbed dark with something that dried like old blood. The cold pools at its centre, where the body lay.",
   ],
   flora: [
-    "The plants nearest the body have gone grey and brittle to the root, curled in on themselves days before their season, as if the dying spread outward from the corpse.",
+    "The plants nearest the body have gone grey and brittle to the root. The damage forms a circle around the corpse.",
   ],
 };
 const senseForBody = (sg) => (SIGN_SENSE_BODY[sg] ? pickFreshIdx(`senseBody:${sg}`, SIGN_SENSE_BODY[sg]) : senseFor(sg));
@@ -513,7 +513,7 @@ const MONSTERS = [
   { id: "succubus", name: "Succubus", signs: ["flora", "hex", "bite"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "kill", reach: "home", method: "bell", hunts: ["Tavern", "Dark Forest"], lore: "It calls victims out smiling, then leaves them bitten where it sang. One note of the consecrated bell breaks its charm." },
   /* -- The sixteenth. Locked behind the whole Black Book: it can only be
      drawn once every other horror has been ended at least once. It talks. -- */
-  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "tracks"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Faceless and taller than any door, it walks outdoors among sickening trees. Burn its effigy while it watches—and talks." },
+  { id: "hollowed", name: "The Hollowed", signs: ["claw", "flora", "tracks"], rhythm: { kind: "loose", p: 0.55, gap: 0 }, attack: "kill", reach: "out", method: "effigy", hunts: ["Dark Forest", "Graveyard"], lore: "Faceless and taller than any door, it walks outdoors among sickening trees. Burn its effigy while it watches and talks." },
 ];
 
 const SIGN_CATS = {
@@ -530,7 +530,7 @@ const INVEST_ACTS = [
   { key: "wounds", label: "Examine the wounds", none: ["Too much wound and too little body to read one clean mark in it.", "The damage runs together: no telling where one wound ends and the next begins.", "The crows got here first. Teeth, claws, or nothing with hands at all: it will not say."] },
   { key: "ground", label: "Search the ground nearby", none: ["Mud, frost, and half the village's tracks over each other. Nothing left to read.", "So much was dragged through here that no single print survives."] },
   { key: "air", label: "Feel the air, the chill of it", none: ["Only cold the way any dawn is cold. It left no chill of its own to find.", "The air says only that it is morning, and that something died here. Nothing of what."] },
-  { key: "surroundings", label: "Study the surroundings", none: ["Whatever stood here took its nature with it. The place kept nothing back.", "You turn a slow circle over the ruin. If the ground remembers, it keeps it to itself."] },
+  { key: "surroundings", label: "Study the surroundings", none: ["You find no print, residue or damage that identifies what stood here.", "You circle the ruin slowly. The ground shows no fresh marks."] },
 ];
 
 /* Night sounds are deliberately ambiguous: every line fits five or six of
@@ -567,7 +567,7 @@ const DUSK_LINES = [
   "The sun dies behind the tree line. Doors bang shut, one after another.",
   "Dusk comes down like a lid. The last cart rattles home.",
   "The light goes from gold to grey to nothing. A bolt is drawn across a door.",
-  "The church bell rings the hour early, as if the ringer wanted to be home first.",
+  "The church bell rings the hour early. The bell rope is already tied off when anyone looks.",
   "Fog comes up off the fields at sundown and stands in the lanes like something waiting.",
   "The dogs go quiet all at once, every evening now, at the exact same failing of the light.",
   "Swallows leave the eaves in one dark ribbon, together, and do not come back.",
@@ -678,7 +678,7 @@ const DOOR_OUT_BARE = [
 ];
 
 const OUT_LINES = [
-  (l) => `You go over the back wall like a thief in your own village, and the dark closes over you the whole road to the ${l}.`,
+  (l) => `You climb the back wall and take the unlit lane to the ${l}.`,
   (l) => `The knife, the hooded lantern, a prayer you no longer trust. Thus armed, you make for the ${l}.`,
   (l) => `Your boots know the way to the ${l}. Your blood begs you not to take it.`,
   (l) => `You take the lantern, hood it to a sliver, and slip out toward the ${l}.`,
@@ -705,15 +705,15 @@ const CIRCLE_LINES = [
   "Gates are found open at dawn that were shut at dusk. Nothing was taken.",
 ];
 const QUIET_NIGHT = [
-  "Nothing comes. That is not the same as nothing being out there.",
-  "Around midnight every candle in the village dips at once, as if the same breath passed every window.",
+  "Nothing comes to the door. Twice, footsteps stop beyond the shutter and resume before you can look.",
+  "Around midnight every visible candle in the village dips at once. The air at your shutter remains still.",
   "You wake at three with your heart slamming and no memory of the sound that did it.",
   "A quiet night, or a patient one. From behind a barred door you cannot tell which.",
   "Frost ticks against the glass all night like fingernails asking to be let in.",
   "The night passes empty. You dream of teeth anyway, and wake with your jaw aching.",
   "The hours crawl. An owl. A fox. Nothing more.",
-  "The night gives you nothing but cold feet and the sound of your own blood.",
-  "Rain comes after midnight, soft, and whatever else is out there keeps its own company.",
+  "You hear only your pulse and the small shift of your cold feet.",
+  "Soft rain begins after midnight. No footstep, voice or knock follows it.",
   "A long, ordinary night. You had forgotten what one felt like.",
   "Nothing. All night, gloriously, terribly, nothing.",
   "A cart passes through the village in the small hours without stopping. You lie awake wondering what they knew.",
@@ -722,8 +722,8 @@ const QUIET_NIGHT = [
 const QUIET_NIGHT_WEATHER = {
   fog: [
     "Fog presses against the panes until the outside of the glass disappears. Once, a lantern-blur pauses beyond it, then thins away without approaching.",
-    "The fog keeps the village close and soundless. A bell carries one broken note through it; no second stroke follows.",
-    "Nothing comes clearly through the fog—only a gate somewhere, a cough that may be next door or across the square, and then the long muffled hours.",
+    "Fog hides the far houses and muffles the lanes. A bell carries one broken note through it; no second stroke follows.",
+    "Nothing comes clearly through the fog. A gate moves somewhere. A cough might be next door or across the square. Then come the long muffled hours.",
   ],
   storm: [
     "Rain works at the roof until dawn. Once the thunder pauses long enough for you to hear a gate dragging; the next downpour takes the direction from it.",
@@ -754,7 +754,7 @@ const AT = (w) => (w && w !== "home"
   ? (/\b(taproom|nave|floor)\b/i.test(w) ? `, inside the ${w}` : `, out by the ${w}`)
   : "");
 const SCREAM_LINES = [
-  (w) => `A scream${AT(w)} that starts as a name and ends with no shape left in it. The ordinary night keeps going.`,
+  (w) => `A scream${AT(w)} begins with a name and breaks into a choking cry. No door opens.`,
   (w) => `Something wet gives way${AT(w)}. One high sound, cut off mid-note, like a fiddle string snapping.`,
   (w) => `A door splinters${AT(w)}. One word, maybe a name, then a wet, rhythmic sound, slowing.`,
   (w) => `It is not loud${AT(w)}. That is the horror of it: something is taking its time.`,
@@ -809,9 +809,9 @@ const NO_BODY_SHARP = [
 const SEARCH_NOTHING = [
   (l) => `You search the ${l} until the bell. You find no print, wound, disturbed earth or other mark worth recording.`,
   (l) => `Nothing at the ${l}. On the road home, though, every dog you pass is awake, and silent, and watching the same direction.`,
-  (l) => `You go over the ${l} inch by inch until your lantern gutters low, and the ground gives up nothing but cold and your own tracks, doubled back on themselves.`,
+  (l) => `You search the ${l} inch by inch until your lantern gutters low. You find only your own tracks crossing back over one another.`,
   (l) => `Hours at the ${l}, and nothing for it but wet boots and a racing heart at every fox.`,
-  (l) => `The ${l} keeps its secrets tonight. If anything passed through, it left nothing you can find by lantern light.`,
+  (l) => `You find no fresh print, broken plant or displaced object at the ${l}.`,
   (l) => `You keep watch at the ${l} until your knees lock. Nobody arrives and nothing moves beyond ordinary rats and branches.`,
   (l) => `You quarter the ${l} twice. If anything passed through tonight, it left no mark you can distinguish from ordinary traffic.`,
   (l) => `You search the ${l} by lantern light, checking walls, ground and hedges. The only tracks you can follow are your own.`,
@@ -879,7 +879,7 @@ const DAY_TRACES = [
   (l) => `A child's giggle, short and bright, from a corner of the ${l} with no child in it. When you look, a bird lifts off. You choose to believe it was always a bird.`,
   (l) => `Scratched small and neat into a post, fresh this morning: a tally. Six strokes. You do not know of six of anything. Yet.`,
   (l) => `Pebbles on the ground at the ${l}, set in a tidy little ring, too deliberate for children and too careful for weather. You scatter them with your boot, and feel watched doing it.`,
-  (l) => `The back of your neck prickles halfway across the ${l}, and something, very far off or very close, hums three notes. Kind ones. That is somehow worse.`,
+  (l) => `Halfway across the ${l}, someone hums three gentle notes. You cannot tell whether the sound came from beside you or beyond the wall.`,
   (l) => `In the dust low on a wall of the ${l}, in a fine small hand: "STILL LOOKING?" The morning's rain-spots have not touched it.`,
   (l) => `A whistle starts up somewhere past the ${l}, the kind a man uses to call a dog. No dog comes. It goes on a while, unbothered, and you never find the mouth it belongs to.`,
 ];
@@ -1035,7 +1035,7 @@ const DEATH_SCENES = {
     `The sound has always been a name, and the name is yours. Your heart stops arguing. They find you unmarked, wearing an expression nobody calls peaceful twice.`,
   ],
   lich: (nm, w) => [
-    `The cold reaches you first, a cold from inside, as if your own warmth were being called away toward the ${w}.`,
+    `The cold reaches you first. Your hands and chest lose warmth with every step toward the ${w}.`,
     `${nm} is simply there, unhurried, one hand open, and where the hand passes the years go with it: your legs, your breath, the strength to lift your head.`,
     `"It does not hurt," ${nm} says, almost kindly. "Everything you were will keep in the vessel with the rest." At first light they find you cold, and small, and older than you lived to be.`,
   ],
@@ -1106,8 +1106,8 @@ function monsterKillsAccuser(s, beats, intro, where) {
   const mn = npcById(s, s.monster.vid);
   if (intro) beats.push(intro);
   /* an accusation gone fatally wrong has a cinematic of its own to play
-     first — the rite doing nothing, the name wrong again, the thing crossing
-     the broken circle — before the death screen. Unlike a night-walk kill
+     first: the rite doing nothing, the name wrong again, the thing crossing
+     the broken circle, before the death screen. Unlike a night-walk kill
      (whose encounter was already lived in the lanes), this one is NOT shown
      immediately; the JUDGMENT beats run, then the dark. */
   s.deathAfterBeats = true;
@@ -1266,7 +1266,7 @@ const N1_TENSION_2 = [
 ];
 const N1_DEATH = [
   (nm, s, S, o, p) => `It comes fast, no scream worth the name. The lane is empty again, and Hollow's Edge is one soul lighter.`,
-  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch. The dark closes over ${o} and keeps its counsel.`,
+  (nm, s, S, o, p) => `For one moment ${nm} sees it plainly, close enough to touch. Then ${o} passes beyond the lantern before ${nm} can make out more.`,
   (nm, s, S, o, p) => `It is quick, or not; no one is left to say. The night grants ${o} only this: knowing ${s} had been right to be afraid.`,
 ];
 const N1_TENSION_1_HOME = [
@@ -1400,22 +1400,22 @@ const ROPE_SUSPICION = [
 
 const WALK_CLOSURES = [
   (l) => `In the end, the ${l} is only the ${l} tonight. You take the lanes home, checking behind you exactly as often as you swore you wouldn't, and bar the door.`,
-  (l) => `Nothing more comes. The ${l} keeps whatever it knows. You head home the long way, past lit windows and barred doors, and add yours to them.`,
-  (l) => `The cold finally argues you home. Behind your own bolt you stand a while, listening to the village breathe, before sleep takes what's left of the night.`,
-  (l) => `You leave the ${l} the way you'd leave a room where someone had just stopped talking about you. You do not once manage to walk instead of hurry.`,
-  (l) => `Dawn is still hours off, but your nerve has spent itself. You bar the door and sit a long while with your back to it, listening to the ${l}'s silence follow you home.`,
-  (l) => `You give the ${l} back to the dark and take the lanes home at a pace just short of running, telling yourself dignity is not worth what it costs tonight.`,
-  (l) => `You quit the ${l} while your legs are still yours to command, and count doors the whole way home, inside your own before you can name why.`,
-  (l) => `Enough. The ${l} has taken your warmth and given what it means to give. You go home down the middle of the lanes, the way everyone walks now.`,
+  (l) => `Nothing more comes. You find no fresh mark at the ${l}. You head home past lit windows and barred doors, then draw your own bolt.`,
+  (l) => `Cold drives you home. Behind your own bolt, you wait until the sounds outside settle before trying to sleep.`,
+  (l) => `You leave the ${l} at a hurried walk and do not slow until your door is barred.`,
+  (l) => `Dawn is still hours off, but your nerve has spent itself. You bar the door and sit with your back to it until your breathing slows.`,
+  (l) => `You leave the ${l} and take the lanes home at a pace just short of running.`,
+  (l) => `You leave the ${l} and count each barred door until you reach your own.`,
+  (l) => `Enough. You are cold and have found all you can at the ${l}. You go home down the middle of the lanes.`,
   (l) => `The bell says the worst hour is coming. You give the ${l} one last look and carry your findings home at a pace your grandfather would have called undignified.`,
-  (l) => `Home, then. The night lets you go the whole way without incident, which somehow unsettles you more than an incident would have.`,
-  (l) => `You leave the ${l} to whatever owns it after midnight. Every window you pass is dark, and behind one of them somebody is awake, watching you go by.`,
+  (l) => `Home, then. You meet no one on the road. Every gate is shut and every window is dark.`,
+  (l) => `You leave the ${l} after midnight. Every window you pass is dark. One shutter moves as you go by.`,
 ];
 
 /* An empty boundary circuit still tells you something: the roads were not used. */
 const CIRCLE_EMPTY = [
   "You walk the whole boundary of Hollow's Edge, gate by gate, dark window by dark window. Every door barred. Whatever walks tonight is not using the roads.",
-  "The full circuit, byre to churchyard and back, and nothing moving in it but you. The night is keeping its people indoors, or keeping them somewhere you did not look.",
+  "The full circuit, byre to churchyard and back, and nothing moving in it but you. Every visible door is barred from within.",
   "Round the village's edge, one slow circuit: no figures, no lanterns, one fox. If anything crossed between the houses tonight, it crossed before you came.",
 ];
 
@@ -1438,10 +1438,10 @@ const AFTER_WALK_LINES = [
 const WALK_ODD_SIGHTS = [
   (l) => `On the way to the ${l} you pass a hen-house standing open, every bird dead and not one taken. Something did this for the doing of it.`,
   (l) => `A dog is out on its chain in a yard you pass, facing the tree line, rigid and silent, and does not so much as glance at you. Whatever it watches, it is not you.`,
-  (l) => `The frost holds a single track for a few yards: too long for a boot, too deep, the toes splayed wrong. Then it stops mid-stride, as if lifted off the ground.`,
+  (l) => `Frost shows a single track for several yards: too long for a boot, too deep, with the toes splayed wrong. It stops mid-stride with no landing mark.`,
   (l) => `You pass the well. The bucket is up and overturned, the water black and still, and a smell comes off it like old iron.`,
   (l) => `Every window on the lane is dark but one, and behind it a candle burns, and a shape sits against it, perfectly still, and is still not moving when you look back.`,
-  (l) => `Something has been at the churchyard wall: a long pale scrape through the moss, shoulder-height, as though a hand had trailed along it, testing.`,
+  (l) => `A fresh scrape runs through the moss along the churchyard wall at shoulder height. Five parallel lines mark its end.`,
   (l) => `The eaves you pass under are empty of birds, all of them, on a night cold enough they should be huddled there.`,
   (l) => `A gate swings open and shut on the wind ahead, except there is no wind tonight, and when you reach it the latch is whole and it hangs perfectly still.`,
   (l) => `A cart stands abandoned in the lane on the way to the ${l}, load still roped, horse gone from the traces. The traces were bitten through.`,
@@ -1464,9 +1464,9 @@ const ANIMAL_SIGN = {
   bite: ["A cat lies dead by the path, small and cold and barely marked but for two deep punctures at the throat, paired and clean. Nothing that hunts cats leaves a bite like that.", "A farm dog is dead against its own kennel, and the only wound on it is a single bite, wider than a wolf's, that went through the neck in one closing."],
   claw: ["A dog lies opened along the fence, four deep parallel tears down its flank, torn and not bitten. No fox did that. Something with a hand did.", "A dead ewe in the ditch, raked open in four long lines, evenly spaced, far too wide for any paw you could name."],
   tracks: ["A dead hare in the frost, and around it a single line of prints too large and too deep for the thing that should have been hunting hares, going one way only and stopping dead.", "A goat lies dead in the mud, and the tracks that circle it are wrong in the toes and heavier than any beast that walks on four legs."],
-  graves: ["A dead crow lies half-buried in fresh-turned earth by the churchyard wall, in ground nothing living had cause to open tonight.", "Something has been at a dog's grave by the path, dug up and left half out, the old earth loose again as if it is still being used."],
+  graves: ["A dead crow lies half-buried in fresh-turned earth by the churchyard wall, in ground nothing living had cause to open tonight.", "A dog's grave by the path has been opened. Half the body lies above fresh clawed earth."],
   cold: ["A dog lies dead in the open, its coat rimed white with a frost that has touched nothing else around it, and the cold off the small body has nothing to do with the weather.", "A dead cat on the wall is frozen stiff through, though the night is mild, and your breath clouds when you lean close and nowhere else."],
-  flora: ["A cat lies dead in a ring of grass gone grey and brittle from the root up, days before its season, as though the ground beneath it stopped feeding anything.", "A dead bird in the hedgerow, and the leaves around it have curled and blackened in a neat circle, out of all season."],
+  flora: ["A cat lies dead in a ring of grass gone grey and brittle from the root up. Green growth begins again one stride from the body.", "A dead bird in the hedgerow, and the leaves around it have curled and blackened in a neat circle, out of all season."],
   hex: ["A cat lies dead at the centre of marks scratched into the flagstones around it, a pattern that means nothing and unsettles anyway, cut with intent.", "A dead crow is laid at the heart of lines scored deliberately into the earth, a working of some kind, and you find you cannot look at the shapes for long."],
 };
 const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pickFreshIdx(`animalSign:${sg}`, ANIMAL_SIGN[sg]) : null);
@@ -1477,7 +1477,7 @@ const animalSignScene = (sg) => (ANIMAL_SIGN[sg] ? pickFreshIdx(`animalSign:${sg
    succubus calls the living out of their beds to it. Each gets its own
    night beat and its own morning, because HOW these two kill IS the clue. */
 const NECRO_KILL = [
-  (v, d) => `A knocking somewhere down the lanes, soft, even, repeated. Then ${v}'s voice, glad and disbelieving through the dark, saying a name the whole village buried: "${d}?" A bolt is drawn back. After that the night simply goes on, as if nothing had happened at all.`,
+  (v, d) => `Soft, even knocking sounds down the lane. Then ${v}'s voice says a name the whole village buried: "${d}?" A bolt is drawn back. No scream follows.`,
   (v, d) => `Late, very late, boots come up the lane with grave-mud in the tread and no hurry in the step, and stop at ${v}'s door. Whoever answers, answers gladly, by name. There is no scream for a long while. Then there is.`,
 ];
 /* Deliberately ambiguous: no forced door, no struggle, a visitor let in
@@ -1548,7 +1548,7 @@ const TURNED_RAVING = [
   `"Don't go in the woods." A pause. "Don't go in the house. Don't go in the ground." Their eyes track something past your shoulder. "There's nowhere that's a door he can't open."`,
   `"The graves talk, if you lie down close enough. I lie down. I listen. They're all so happy now." They hum a little. It is not a tune.`,
   `They answer a question you did not ask, a second voice threaded under theirs: "Yes. Soon. All of them." Then they blink at you, mild and empty. "Did you want something?"`,
-  `"I used to be afraid of him." They say it wonderingly, as if someone else's life. "Isn't that funny." They laugh, until it stops being a laugh.`,
+  `"I used to be afraid of him." They sound surprised by the memory. "Isn't that funny." They laugh until the sound turns into a sob.`,
   `"Count us," they whisper, leaning in too close. "The number's wrong. It's been wrong for days and only I can hear it." They tap their own temple, gently, again and again.`,
   `They recite your own history back at you, flat and word-perfect, and finish with something that was never in it: "...and you die at the Graveyard, I think. He hasn't decided yet."`,
   `"Shh." They put a finger to their lips, delighted. "You'll wake the others. There are so many of us now. You just haven't finished counting."`,
@@ -1569,13 +1569,13 @@ const WALK_SOUND_LINES = [
   "A sound like a lullaby hummed backwards drifts across the dark, from no window you can name.",
   "Off in the black, something heavy is being dragged in short pulls. Rest. Drag. Rest. Drag.",
   "A shutter opens somewhere in the dark, and does not close, and no light comes on behind it.",
-  "From off your road, one note of laughter - a child's, or pitched like one - cut off as if finished with.",
+  "Off your road, a childlike laugh cuts off after one note.",
   "Water, where there is no water: a slow, deliberate lapping from a lane with no trough in it.",
   "From two lanes over, a latch being tried. Then the next. Then the next, patient, like a pedlar with all night to sell.",
   "A cow lows once in somebody's byre and stops so sharply the silence afterward has edges.",
   "Above you, slates shift on a roof: the sound a roof makes when weight crosses it, spread wide, in no hurry.",
   "Down toward the mill, something strikes the water once, flat and heavy, like a sack going in.",
-  "The church bell gives one soft note, not rung: touched, as if something reached up to feel the size of it.",
+  "The church bell gives one soft note. The rope does not move.",
   "Out in the fields, a long tearing of turf, over and over. Grazing pauses between bites. This does not pause.",
   "Someone in a house you pass is saying a name in their sleep, over and over, rising. It is your name.",
   "On the other side of the wall you are passing, something breathes out: one long, slow breath.",
@@ -1593,7 +1593,7 @@ const SOUND_CHASE_MUNDANE = [
   "You track it to the mill leat: a branch, jammed and knocking with the current. You pull it free, and take no comfort in having been right to check.",
   "You run the sound to earth at somebody's woodpile: a marten, spitting fury, gone over the logs in a flash of pale throat. The night snaps back to its ordinary size.",
   "It turns out to be the miller's tarpaulin, torn loose at one corner, filling and slapping with each gust. You lash it down and take the long way home.",
-  "You follow the sound three lanes over and it simply stops, mid-note, the way nothing natural stops. The dark offers you a choice of things to believe, and none of them helps.",
+  "You follow the sound across three lanes. It cuts off mid-note. You find no person, animal or open window nearby.",
   "The sound keeps exactly one corner ahead of you, and then there are no more corners, and no more sound. A dog, you tell yourself, all the way home.",
   "The sound is a gate-chain, swinging and striking. You still it with one hand. In the quiet that follows, you'd swear the night has started listening to you instead.",
   "Behind the hedge you find a ewe on her back in the ditch, kicking, absurd, alive. You right her, and she blunders off. If anything watched, it kept its opinions to itself.",
@@ -1637,7 +1637,7 @@ const WEATHER = {
    Giving it a beat on the walk would be a content change, not a cleanup. */
 const WEATHER_WALK = {
   fog: [
-    "Ten steps out, the fog takes the village away. Your own gate is a rumour behind you, and every shape ahead answers itself only when it is close enough to touch.",
+    "Ten steps out, you can no longer see the village. Your gate is hidden behind you. Shapes ahead become hedges, posts or people only at arm's length.",
     "Fog has filled the low lanes first. Roofs float without houses beneath them, and lanterns appear as pale stains long before they become people.",
     "The village ends at the edge of your lantern. Beyond it, fog rubs every road and doorway down to the same uncertain grey.",
     "Mist closes over the back lane behind you. Distance has gone soft; the bell sounds near, then impossibly far, without ringing twice.",
@@ -1657,7 +1657,7 @@ const WEATHER_WALK = {
 };
 const WEATHER_WALK_CONTINUED = {
   fog: [
-    "The fog has returned for a second night, as though daylight only taught it where the doors are. It lies thicker in the same low lanes.",
+    "The fog has returned for a second night. It lies thicker in the same low lanes and hides the doors from the road.",
     "Another night of fog. By now you know which pale blurs are hedges; the ones that move still make you stop.",
     "The fog never truly lifted today. At dusk it simply closes the remaining distance and takes the village again.",
   ],
@@ -1669,14 +1669,14 @@ const WEATHER_WALK_CONTINUED = {
   frost: [
     "The frost never left the shaded ground. A second night hardens yesterday's tracks beneath the new ones until the lanes resemble overwritten testimony.",
     "Another hard freeze takes the village. Old prints remain under a fresh white skin, and only the newest edges can still be trusted.",
-    "The cold has held for two nights. Doors drag in their frames, breath lingers longer, and the ground remembers more than anyone wants it to.",
+    "The cold has held for two nights. Doors drag in their frames, breath lingers longer and old tracks remain beneath the fresh ones.",
   ],
 };
 const WEATHER_DAWN = {
   fog: [
     "The fog hangs on until mid-morning. Neighbours pass unrecognised in the lanes, and every voice inside it sounds like it is asking who's there.",
     "Daylight changes the fog's colour but not its depth. Searchers work from wall to wall, calling names before they approach any shape.",
-    "Morning finds the roofs and loses the roads. Whatever crossed open ground in the night keeps the advantage of having crossed unseen.",
+    "At morning, the roofs are visible but the roads remain hidden. Anything that crossed open ground left no visible route.",
   ],
   storm: [
     "The storm weakens before dawn. Branches are down, a shutter is gone, and rain has worried every unprotected mark out of the road.",
@@ -1684,7 +1684,7 @@ const WEATHER_DAWN = {
     "Thunder moves off at first light, leaving gates ajar and the lanes running brown. Anything the ground knew has travelled downhill.",
   ],
   frost: [
-    "The frost holds until mid-morning, and every print made in the night remains sharp enough for anyone with the stomach to read it.",
+    "The frost lasts until mid-morning. Every print made overnight remains sharp enough to examine.",
     "Dawn blues the frozen lanes. Fresh routes stand clean above yesterday's traffic, breath gone but footfalls preserved.",
     "The village wakes to hard ground and honest edges. Every crossing left a direction; concealment must find some other place to live.",
   ],
@@ -1692,7 +1692,7 @@ const WEATHER_DAWN = {
 const WEATHER_DAWN_CONTINUED = {
   fog: ["The second foggy morning begins where the first ended: neighbours calling before they come close, every uncertain shape already acquiring a story."],
   storm: ["After a second storm night, the lanes are water rather than evidence. Even deep prints have slumped shut, and every witness remembers thunder first."],
-  frost: ["A second frozen dawn layers fresh tracks over old ones. The uppermost edges are clear; deciding which night owns the rest is harder."],
+  frost: ["A second frozen dawn layers fresh tracks over old ones. The newest edges are clear, but older trails overlap beneath them."],
 };
 function weatherContinues(s, wx, night) {
   const previous = [...(s.nightLogs || [])].reverse().find((log) => log.night < night);
@@ -1709,8 +1709,8 @@ function weatherDawnLine(s, wx, night) {
 }
 const WEATHER_DIRECTOR = {
   fog: {
-    move: (place) => `The fog closes behind you on the road to the ${place}. Houses become silhouettes; lanterns become people only when they are close enough to speak.`,
-    searchEmpty: (place) => `You search the ${place} one lantern-width at a time. The fog gives you wet stone, blank ground, and no edge you can trust.`,
+    move: (place) => `Fog hides the road behind you on the way to the ${place}. Houses become silhouettes; lanterns reveal people only when they are close enough to speak.`,
+    searchEmpty: (place) => `You search the ${place} one lantern-width at a time. You find wet stone and blank ground, but cannot see far enough to trace a route.`,
     listenEmpty: "You lower the lantern. Fog muffles the village until your own breathing seems like company. A distant bell sounds once; nothing nearer answers.",
     follow: (name, place) => `You follow ${name}'s lantern through the fog to the ${place}.`,
     monster: "The fog moves against the wind. A large silhouette forms inside it, and the breathing is closer than the shape.",
@@ -1724,7 +1724,7 @@ const WEATHER_DIRECTOR = {
   },
   frost: {
     move: (place) => `The frozen road to the ${place} creaks under every step. Your breath goes ahead of you, and your bootprints write the way back in hard blue ground.`,
-    searchEmpty: (place) => `You search the ${place} slowly. Frost preserves every ordinary crossing—boot, paw, wheel—and none of them breaks into the wrong shape you feared.`,
+    searchEmpty: (place) => `You search the ${place} slowly. Frost preserves bootprints, paw marks and wheel ruts. Every trail follows an ordinary route.`,
     listenEmpty: "You lower the lantern. In the sparse, brittle silence the ground creaks, your breath rasps, and nothing else moves close enough to mark the frost.",
     follow: (name, place) => `You follow ${name}'s fresh tracks to the ${place}.`,
     monster: "The frozen road creaks under weight that is not yours. A second breath clouds behind you, then stops.",
@@ -1758,14 +1758,14 @@ const HIDE_CHOICES = {
     "You slide into the nearest doorway and become part of the frame.",
   ],
   shadow: [
-    "You drop low behind the nearest wall, trough, whatever the dark offers, and become a shape among shapes.",
+    "You crouch behind the nearest wall or trough and lower the lantern.",
     "You go down behind a rain barrel and stop being a person, a sack, a stump, nothing worth pausing for.",
     "You fold down into the black beside a water butt and let the dark do the rest.",
   ],
   still: [
     "You stand exactly where you are and go as still as the stones, telling yourself stillness is its own kind of hiding.",
     "You freeze in the open like a hare under a hawk, every instinct screaming two different orders at once.",
-    "You stop where you stand, mid-lane, and give the night nothing that moves.",
+    "You stop in the middle of the lane and hold still.",
   ],
 };
 /* The payoff, always its own beat, never a throwaway line: what the thing
@@ -1820,7 +1820,7 @@ const TENSION_FLEE = [
   "A loose stone rolls under your foot, loud as a bell in your own ears.",
   "It pauses over its work. You stop being a thing that breathes.",
 ];
-const FATE_LIVE = "Then it moves off about its own business, at its own pace, and the night gives you back.";
+const FATE_LIVE = "It passes the hiding place and continues down the lane. You wait until its steps are gone before moving.";
 const FATE_DIE = "It stops moving. Everything stops.";
 
 /* ---------- watching it happen ----------
@@ -1849,7 +1849,7 @@ const WITNESS_KILL = {
   tracks: (nm, l) => `${nm} is there. Then ${nm} is not, and the ground where they were standing is printed deep, twice, by something that has never worn a boot.`,
   graves: (nm, l) => `Something comes up out of the dark, low and wrong, and takes ${nm} down into it. What rolls over you afterward is turned earth and long burial.`,
   flora: (nm, l) => `${nm} goes down without a word, and the grass around them browns and curls outward in a ring while you watch, faster than any season does it.`,
-  hex: (nm, l) => `${nm} stops as though a hand were laid flat on their chest, and cannot move, and something scratches a shape into the ground beside them before it finishes.`,
+  hex: (nm, l) => `${nm} stops and clutches their chest. Their feet will not move. Beside them, a point scratches a shape into the ground without any visible hand.`,
 };
 /* and the taking, for the kinds that do not kill outright */
 const WITNESS_TAKEN = [
@@ -1897,7 +1897,7 @@ const BRUSH_NOTICE = [
 const BRUSH_NEARER = [
   (l) => `It comes on. Not fast. A pace, then a pause, then another pace, and the pauses are worse than the paces.`,
   (l) => `It starts toward you across the ${l}, stopping now and then to be certain it still has you. Nothing in a hurry was ever that certain.`,
-  (l) => `Closer. Then closer. It sets its feet down one after another with great care, as though the noise of walking were a courtesy it extends to you.`,
+  (l) => `Closer. Then closer. It places each foot slowly, making every step clear enough to count.`,
 ];
 const BRUSH_CLOSE = [
   (l) => `Close enough now to smell: wool unwashed in a long season, wet earth, and under both something sweet that has no business being sweet. You decide, calmly, never to breathe again.`,
@@ -1907,7 +1907,7 @@ const BRUSH_CLOSE = [
 const BRUSH_TAUNT = [
   `Then it laughs, delighted, and speaks into the dark without troubling to look at you. "Who is the little spy in my dark?"`,
   `Then it laughs, low, like a man enjoying a joke somebody else told. "Usually I have to fetch my supper," it says. "You have saved me the walk."`,
-  `Then it says, conversationally, to nobody at all, "Breathe, then. Everyone breathes eventually." And laughs, as though that were kind.`,
+  `Then it says, conversationally, to nobody at all, "Breathe, then. Everyone breathes eventually." It laughs softly after the last word.`,
   `It makes a sound very nearly a laugh. "I know that heart," it says. "I have heard it in the square, in daylight, being polite to me."`,
   `Then, gently, in a voice with a neighbour's warmth badly fitted over it: "You can come out. I never mind the company." The worst of it is how real the invitation is.`,
   `It crouches, unhurried, and speaks at the height your face would be if you were braver. "You have been writing things down," it says, fondly. "I do hope I am spelled properly."`,
@@ -1933,7 +1933,7 @@ const QUARRY_DAWN = {
   claw: (a, l) => `The ${a} that bought your night lies at the ${l} in the morning, opened along one flank in four long parallel tears, evenly spaced and far too wide. Nothing eaten. Whatever caught it lost interest.`,
   tracks: (a, l) => `You find the ${a} at the ${l} by daylight, dead and hardly marked, and around it one line of prints too large and too deep for anything that hunts a ${a}, stopping dead where it did.`,
   cold: (a, l) => `The ${a} is at the ${l} in the morning, stiff as a board and furred white with a frost that has touched nothing else in the field. The morning is mild. Your breath clouds over it and nowhere else.`,
-  graves: (a, l) => `The ${a} is at the ${l} by daylight, half pressed into fresh-turned earth that nobody in this village turned, grave dirt worked deep into its coat as though it had been carried there.`,
+  graves: (a, l) => `The ${a} is at the ${l} by daylight, half pressed into fresh-turned earth. Grave dirt is packed deep into its coat and mouth.`,
   flora: (a, l) => `You find the ${a} at the ${l} in the morning, dead at the centre of a ring of grass gone grey and brittle from the root up, out of all season, wide as a cartwheel.`,
   hex: (a, l) => `The ${a} lies at the ${l} in the morning inside marks scored deliberately into the ground around it, cut with intent. Whatever ran it down stopped afterward to do that.`,
 };
@@ -1987,7 +1987,7 @@ const FOLLOW_PLAIN_SCENES = [
   (nm, dest) => `${nm} sits alone at the ${dest} for nearly an hour, crying quietly and wiping their face whenever footsteps sound in the lane.`,
   (nm, dest) => `${nm} walks between the ${dest} and home three times without entering either, too restless to stay indoors and too frightened to stop moving.`,
   (nm, dest) => `At the ${dest}, ${nm} drinks alone from a flask, joyless and methodical, muttering to someone who is not there. Grief, or guilt, or only the drink.`,
-  (nm, dest) => `${nm}'s whole errand is to stand at the ${dest} and look back at the village, counting the lit windows as if making sure of them, then go home.`,
+  (nm, dest) => `${nm} stands at the ${dest}, counts every lit village window twice, then goes home.`,
   (nm, dest) => `At the ${dest}, ${nm} kneels beside a limping dog, cleans its paw, and ties a strip of cloth around the cut before letting it go.`,
   (nm, dest) => `${nm} meets someone at the ${dest}: two people who should not be seen together, standing too close, parting too carefully. Whose business it is, is theirs.`,
   (nm, dest) => `At the ${dest}, ${nm} prays - not the Sunday kind, the desperate kind, fast and bargaining. You hope something is listening.`,
@@ -2015,9 +2015,9 @@ const HAIL_MONSTER_LINES = [
   (nm, dest) => `"Couldn't sleep either?" ${nm} falls in beside you, warm, easy, asking after your health, your rest, your habits. Every answer you give, you can feel being filed away somewhere.`,
 ];
 const HAIL_TURNED_LINES = [
-  (nm) => `${nm} turns slowly, as if the sound of their own name took a long while to reach them. "Home is behind you," they say. Nothing else. They do not blink enough.`,
-  (nm) => `${nm} turns before your hail is finished, as though waiting on it, and speaks a little past your shoulder. "You should sleep," they say. "It's easier." They do not say what is easier.`,
-  (nm) => `${nm} stops, but takes three heartbeats to turn, as if stopping and turning were separate instructions. "You are out late," they say, to a point just left of you.`,
+  (nm) => `${nm} waits three heartbeats before turning. "Home is behind you," they say. Nothing else. They do not blink.`,
+  (nm) => `${nm} turns before your hail is finished and speaks to a point beside your shoulder. "You should sleep," they say. "It's easier."`,
+  (nm) => `${nm} stops. Three heartbeats later, they turn. "You are out late," they say to a point just left of you.`,
   (nm) => `"${nm}?" They consider the name the way you'd consider a coat that might be yours. "Yes," they decide. "Go home now." And walk on, at exactly the pace they walked before.`,
 ];
 const HAIL_PLAIN_LINES = [
@@ -2026,7 +2026,7 @@ const HAIL_PLAIN_LINES = [
   (nm, dest) => `${nm} spins with a fist half-raised, then sags. "Don't. DO not." A breath. "The ${dest}. Quick errand, then home behind the bolt, same as you should be. We never met, agreed?"`,
   (nm, dest) => `${nm} rounds on you, breath gone ragged. "Sweet mercy. Do NOT do that." They will not say where they are bound, then say it anyway: "The ${dest}. Don't ask. Get home."`,
   (nm, dest) => `"Who goes-" ${nm}'s voice cracks, and they laugh at themselves, shaky and furious. "Fine guard I'd make. The ${dest}, if it's your business, which it isn't."`,
-  (nm, dest) => `${nm} sags instead of stepping back, as if braced for worse all week. "Oh. You." A breath. "The ${dest}. If anyone asks, you never saw me."`,
+  (nm, dest) => `${nm}'s shoulders drop. "Oh. You." A breath. "The ${dest}. If anyone asks, you never saw me."`,
 ];
 const LANE_CHAT_LINES = [
   `"Seen? I've seen everyone's business but my own, lately. Which is to say - nothing you'd want to hear standing in a lane."`,
@@ -2389,7 +2389,7 @@ const GRIEF_CLOSE = {
   ],
   rosa: [
     (d) => `The needle does not move. "I sewed the shroud. I have sewn four now." A stitch, finally. "I did not know the others. I knew ${d}. That changes the work entirely."`,
-    (d) => `"I came here with nothing, and ${d} behaved as though that were ordinary." She looks at the cloth rather than at you. "Two springs. I had exactly enough people to lose."`,
+    (d) => `"I came here with nothing, and ${d} never asked me to explain it." She looks at the cloth rather than at you. "Two springs. I had exactly enough people to lose."`,
   ],
 };
 /* the death of somebody you had not spoken to in a year: not grief, and
@@ -2424,7 +2424,7 @@ const GRIEF_OFF = [
    fills the shape is gone. Never diagnostic on its own - the shocked and the
    exhausted answer this way too. */
 const GRIEF_TURNED = [
-  (d) => `"${d} is dead," they agree, and nod, and go on nodding a beat longer than the sentence needs, as though waiting to see whether anything else arrives. Nothing does.`,
+  (d) => `"${d} is dead," they agree. They nod several times after the sentence ends, then fall still.`,
   (d) => `"It is sad." They say it the way you would read it off a page in a language you have only just learned. Their hands stay exactly where they were.`,
 ];
 
@@ -2565,7 +2565,7 @@ const SECRET_POOL = {
       hail: (nm) => `${nm} does not startle. Old men are past startling. "Evening," he says, spade over his shoulder, offering nothing else, and walks on toward the stones.`,
       confess: `He looks at his own hands a long time. "I dig them early. Before they're needed. The ground goes soft where it knows, and it's known all month. Folk would call it unlucky. Folk would be right. But someone has to be ready."` },
     { loc: "Village Square", outP: 0.3, short: "he leaves a certain neighbour's gate unlatched at night, half-hoping the thing finds that door first",
-      walk: (nm) => `${nm} stops at a gate that is not his and works the latch open with great care, then stands a moment looking into the dark beyond it, as if willing something out of the night to notice the way in. It is the gate of the man he has blamed forty years for the fever that took his first wife. If the horror wants a door on this lane, he has left it this one. He walks on without looking back.`,
+      walk: (nm) => `${nm} opens another man's gate and leaves it unlatched. The man lives alone. ${nm} has blamed him for forty years for the fever that killed his first wife.`,
       hail: (nm) => `${nm} lets the latch fall shut again, slow about it, caught and not much caring. "Gate was open. I closed it. Or opened it. Old hands, boy. Go home."`,
       confess: `"There's a man in this village I've hated longer than you've been alive. When the killing started I found myself leaving his gate open, on the nights. Telling myself the thing would choose, and if it chose him, well. I'm old and I'll answer for it soon enough. But I'll not stand here and pretend I didn't."` },
     { loc: "Graveyard", outP: 0.3, short: "he steals keepsakes from fresh graves",
@@ -2584,7 +2584,7 @@ const SECRET_POOL = {
       confess: `"There is a child in this valley who calls another man father. The fault is mine, from before I took the collar, and I have spent twenty years and a great deal of ink making certain the ledger never says so. That is where I go at night. Not to God. To the book, to keep on lying in it. Now there are two of us who know."` },
     { loc: "Graveyard", outP: 0.3, short: "he rereads by moonlight the letters of a man he loved, and grieves him where no one can see",
       walk: (nm) => `${nm} sits among the stones with a bundle of letters gone soft at the folds, reading them by moonlight, his mouth moving over words that are plainly not scripture, plainly meant for one person, plainly the kind of love the pulpit he stands in would damn.`,
-      hail: (nm) => `${nm} folds the letters away against his chest as if they might be taken from him. "A parishioner's effects. I was deciding what to do with them." He has been deciding for years, and you both hear it.`,
+      hail: (nm) => `${nm} folds the letters away and holds them against his chest. "A parishioner's effects. I was deciding what to do with them." The paper is yellow at the folds.`,
       confess: `"His name was Anton. We were young men together at the seminary, and then we were rather more than that, and then he died a long way from here. I read his letters at night because it is the one hour I let myself have him. I preach against it on Sunday and I grieve it on Tuesday. That is the whole shape of my faith now. Do with it what you will."` },
   ],
   greta: [
@@ -2714,7 +2714,7 @@ const DEMEANOR = {
     "The words come too fast, tripping over each other, the particular haste of someone who has learned that hesitation gets you hanged these days.",
     "They exhale when you ask the first question and answer immediately, with the cadence of words rehearsed many times.",
     "They keep folding and unfolding the same cloth while they answer, eyes fixed on the work rather than on you.",
-    "They lower their voice at every third word, as if the walls had grown ears. Perhaps they have.",
+    "They lower their voice whenever footsteps pass outside, even when the footsteps continue away.",
     "There is a tremor in them, but it is the honest kind, the kind fear puts in everyone now.",
   ],
   monsterTell: [
@@ -2725,7 +2725,7 @@ const DEMEANOR = {
     "They answer easily. Too easily, perhaps, or perhaps you are past trusting ease.",
   ],
   turnedTell: [
-    "They seem far away, as if listening to something under the floor.",
+    "They keep pausing and looking down at the floorboards before answering.",
     "Their hands are cold. You notice it when they take yours in greeting.",
     "They flinch, very slightly, when the church bell sounds the hour.",
     "There is a pallor on them that was not there a week ago.",
@@ -2766,7 +2766,7 @@ const DISP_LINES = {
     `They pour you something without asking. "Sit. You look like a man who's been counting graves."`,
   ],
   fond: [
-    "There is tea already poured, a second cup set out, as if they knew you were coming.",
+    "There is tea already poured and a second cup set at your usual chair.",
     `"There you are," they say, with real relief in it, and mean every word.`,
     "They greet you like family, which these days is its own kind of rare.",
     `They bolt the door behind you, which frightens you for half a second, and then: "There. Now the village can't hear us, and we can talk properly."`,
@@ -2784,7 +2784,7 @@ const TALK_LINES = {
   ],
   tobias: [
     `He tells you about the frost of '09, when the ground froze so hard they stored the winter's dead in the church like cordwood until spring. "Buried six friends that thaw," he says. "Ground takes everyone eventually. That's not the sad part. The sad part is it takes its time about the rest of us." He offers you his flask. It is terrible. You drink it anyway.`,
-    `For a while he says nothing at all, and you sit with him in it, and it is somehow the easiest conversation you have had in days. "You sit quiet well," he says finally. "Rare, that. Most folk fill a silence like it owed them money."`,
+    `For a while he says nothing. You sit beside him without needing to fill the pause. "You sit quiet well," he says finally. "Rare, that. Most folk fill a silence like it owed them money."`,
   ],
   ansel: [
     `He speaks of the seminary, of a city he has not seen in twenty years, of a professor who threw chalk at sleeping students. It is the first time you have heard him talk about anything other than God or the dead, and he seems to notice this himself, halfway through, and keeps going anyway, gratefully.`,
@@ -2833,7 +2833,7 @@ const HOWARE_OFF = [
   `"Fine." Flat as a shut door. Some people armour themselves in courtesy. This one has run out.`,
 ];
 const PAST_OFF = [
-  `"Before?" They look at you as if you had asked after a country that sank. "What use is before." It is not mystery. It is grief, guarding what it has left.`,
+  `"Before?" They look down and grip the chair. "What use is before." They do not answer again.`,
   `They start the story twice and lose it twice: "Ask someone else. Not tonight." Fear has been at their memories like moths at wool.`,
 ];
 /* "How are you holding up?" - one honest, human answer each. */
@@ -3073,7 +3073,7 @@ function officiantFor(s, excludeId) {
 /* ---------- Rite of Unbinding: what leaves, and what is left ---------- */
 function unbindSuccessScene(nm) {
   return [
-    `${nm} arches up off the ground as if something inside them is trying to leave through the ceiling. For a moment there are two voices coming out of one throat, and only one of them is ${nm}'s.`,
+    `${nm} arches off the ground. Their jaw opens and two voices come from the same throat. Only one belongs to ${nm}.`,
     `Then it goes out of them all at once, like a held breath finally let go: through the mouth, or the eyes, or nowhere you can point to. The room goes cold, and then, slowly, does not.`,
     `${nm} collapses, sobbing, entirely their own again, and the first thing they do with their own mouth is apologize for whatever it made them say while it was wearing them.`,
   ];
@@ -3434,9 +3434,9 @@ function directorIntentLine(s, intent, wx) {
   return weatherLine ? `${intentLine} ${weatherLine}` : intentLine;
 }
 function directorWeatherMonsterSound(wx, base) {
-  if (wx === "fog") return `The fog swallows the far end of the lane. ${base} Distance has gone wrong; the sound seems to come from just outside the lantern.`;
-  if (wx === "storm") return `For one break between thunderclaps: ${base} Rain closes over it before you can judge direction or distance.`;
-  if (wx === "frost") return `The frost gives every small sound an edge. ${base} Fresh marks begin to show on the pale ground.`;
+  if (wx === "fog") return `Fog hides the far end of the lane. ${base} The sound seems close, but you cannot place its direction.`;
+  if (wx === "storm") return `For one break between thunderclaps: ${base} Rain drowns it before you can judge direction or distance.`;
+  if (wx === "frost") return `In the frozen air, every small sound is distinct. ${base} Fresh marks begin to show on the pale ground.`;
   return base;
 }
 function directorWeatherDelusion(wx, fragments) {
@@ -3474,27 +3474,27 @@ const DIRECTOR_MONSTER_TEMPERAMENT = {
 const DIRECTOR_TEMPERAMENT_QUIET = {
   beast: [
     { open: "Every dog along the lane falls quiet. A low growl moves behind the hedges, too heavy for any dog among them.", response: "You turn and wait. Something shoulders through a distant hedge and keeps going. No cry follows it; no shape enters the lantern." },
-    { open: "Claws—or something close enough to claws—scrape once across stone beyond the next turning. Then comes one vast, impatient breath.", response: "You listen until your own breathing settles. The other breath recedes toward open ground and does not circle back." },
+    { open: "Four hard points scrape once across stone beyond the next turning. Then comes one vast, impatient breath.", response: "You listen until your own breathing settles. The other breath recedes toward open ground and does not circle back." },
     { open: "A growl passes through the road under your boots rather than through the air. Loose grit trembles, then lies still.", response: "You lower the lantern to the road. Nothing has crossed it; whatever made the sound stayed beyond the light and moved on." },
     { open: "Something large runs for six strides behind the wall, stops with impossible suddenness, and sniffs at the gap.", response: "You face the gap. A branch lifts, showing empty dark beneath it, and settles only after the weight has gone." },
     { open: "The sheep begin striking their pen before any village dog gives warning. Beneath the panic, a rough throat tests one short growl.", response: "You wait for the rush that never comes. The animals quiet by degrees; the unseen weight withdraws toward the fields." },
     { open: "A heavy tread joins yours on the other side of the hedge for three steps. It is not following; it merely wants you to hear the pace.", response: "You stop. The answering tread takes one more step, then turns away without showing what carried it." },
   ],
   speaker: [
-    { open: "A soft laugh comes from behind a shuttered window. The house is empty, and the laugh knows you know that.", response: "You listen. The same laugh answers from another lane, farther away now, pleased to have moved you without touching you." },
-    { open: "Someone says your name just beyond the lantern, warmly and without urgency. No figure stands where the voice should be.", response: "You turn toward it. The voice repeats only the last syllable, then lets the village have its ordinary sounds back." },
-    { open: "A neighbour's chuckle slips out of an alley and becomes a stranger's before it ends. Neither owner steps into view.", response: "You hold still and listen. A second chuckle starts, thinks better of it, and retreats behind three closed doors." },
-    { open: "From the dark beside you: ‘Not tonight.’ The voice is amused, almost companionable, and impossible to place.", response: "You ask the silence nothing. Far down the road, something laughs once at the answer you did not give." },
+    { open: "A soft laugh comes from behind a shuttered window. You know the house is empty.", response: "You listen. The same laugh sounds from another lane, farther away now." },
+    { open: "Someone says your name just beyond the lantern, warmly and without urgency. No figure stands where the voice should be.", response: "You turn toward it. The voice repeats only the last syllable, then stops. Footsteps and insects become audible again." },
+    { open: "A neighbour's chuckle comes from an alley and changes into a stranger's voice before it ends. No one steps into view.", response: "You hold still and listen. A second chuckle starts, stops and sounds again behind three closed doors." },
+    { open: "From beside you: ‘Not tonight.’ The voice is amused and impossible to place.", response: "You do not answer. Far down the road, something laughs once." },
     { open: "Two voices whisper behind the wall. One is coaxing; the other keeps interrupting with small, delighted laughter.", response: "You move close enough to separate the words. Both voices stop together, leaving only your name unfinished between them." },
-    { open: "A tune follows you for half the lane, hummed by a mouth that never needs to breathe between phrases.", response: "You stop walking. The tune continues without you, turns the corner, and fades as though it had somewhere else to be." },
+    { open: "A tune follows you for half the lane, hummed without a single breath between phrases.", response: "You stop walking. The tune continues, turns the corner and fades into the next lane." },
   ],
   silent: [
-    { open: "The insects stop first. Then the dogs, the eaves and even the wind lose their voices, leaving a silence with weight behind it.", response: "You turn inside the silence. Cold passes across the lane without body or shadow; ordinary sound returns in its wake." },
-    { open: "Your foot lands without making a sound. The next does the same. For six paces the whole road refuses to admit you are on it.", response: "You stamp once, hard. The sound returns late from somewhere ahead, after whatever held it has moved away." },
+    { open: "The insects stop first. Then the dogs and the wind. In the complete silence, you hear only your own breathing.", response: "You turn. A band of cold air crosses the lane without wind, body or shadow. The insects begin again behind it." },
+    { open: "Your foot lands without making a sound. The next does the same. For six paces, neither boots nor gravel make any noise.", response: "You stamp once, hard. The sound comes from several yards ahead. Then ordinary footsteps return." },
     { open: "The church bell moves in its frame without ringing. Every loose metal thing nearby answers with the same perfect quiet.", response: "You watch the bell settle. Nothing approaches, but the cold beside you takes several breaths longer to leave." },
-    { open: "A human-shaped absence crosses the far lane: not a shadow, but a place where moonlight and weather both fail.", response: "You raise the lantern. The absence thins through the wall instead of passing around it, and leaves no mark behind." },
-    { open: "Your breath clouds once, then vanishes in front of your mouth. Something colder than the night has taken even that small proof.", response: "You hold the next breath. When you release it, the cloud returns; the deeper cold is already moving elsewhere." },
-    { open: "A gate swings open without hinge, footstep or wind. The darkness beyond it seems no darker, yet every animal refuses the road.", response: "You face the open gate. Nothing crosses. After a long while it closes with no more sound than it opened." },
+    { open: "A human-shaped gap crosses the moonlit lane. Through it, you can see neither rain nor the wall behind.", response: "You raise the lantern. The gap passes through the wall and leaves no mark." },
+    { open: "Your breath clouds once, then vanishes in front of your mouth. The air ahead is suddenly much colder.", response: "You hold the next breath. When you release it, the cloud returns. The colder patch has moved down the lane." },
+    { open: "A gate swings open without a creak, footstep or wind. Every nearby animal stops at the road.", response: "You face the open gate. Nothing crosses. After a long while it closes without a sound." },
   ],
 };
 function directorHostBuild(build) {
@@ -3515,21 +3515,21 @@ const DIRECTOR_MONSTER_REVEALS = {
   ghoul: (nm, b) => `Grave-dirt cakes the mouth and something has worried the cheeks almost to bone. Beneath it, ${directorHostBuild(b)} is enough: the thing crouching there is ${nm}.`,
   witch: (nm, b) => `Thorn and hair turn between blackened fingers while the shadow bends toward them against the lantern. The face is still plainly ${nm}'s; ${directorHostBuild(b)} has not changed at all.`,
   demon: (nm, b) => `Rotted flesh divides into black, ember-lit seams, and a second expression moves beneath the first. Under that ruin, ${directorHostBuild(b)} is unmistakable. This is ${nm}.`,
-  shifter: (nm, b) => `The body changes faster than sight can keep it—jaw, hands, height—but keeps returning to one mistake. ${directorHostBuild(b)} settles into place, and the fixed eyes belong to ${nm}.`,
+  shifter: (nm, b) => `The jaw widens, the fingers lengthen and the spine rises. Between changes, ${directorHostBuild(b)} returns. The fixed eyes belong to ${nm}.`,
   banshee: (nm, b) => `Torn burial linen lifts around a body too thin to carry its own wail. Through the streaming face and ${directorHostBuild(b)}, you know ${nm}.`,
   lich: (nm, b) => `The skin has drawn tight and old around a face that did not wear those years by daylight. The posture remains: ${directorHostBuild(b)}, and beneath it ${nm}.`,
   revenant: (nm, b) => `Burial earth falls from clothes stiff with the grave. The hands are ruined, the face grey, but ${directorHostBuild(b)} belongs to ${nm} and nobody else.`,
   doppel: (nm, b) => `Your own face moves across its features and slips. Beneath the borrowed expression, ${directorHostBuild(b)} returns for one breath, followed by ${nm}'s eyes.`,
   hag: (nm, b) => `The joints fold in directions the human body never agreed to, bringing the grinning face too low and too close. Even folded wrong, ${directorHostBuild(b)} still belongs to ${nm}.`,
   necromancer: (nm, b) => `Dead hands move at a gesture from fingers stained black to the knuckle. The commanding figure keeps ${directorHostBuild(b)}; the voice that answers is ${nm}'s.`,
-  mimic: (nm, b) => `Claws, frost and grave-mould pass over it in unfinished layers. One thing refuses to change: ${directorHostBuild(b)}, anchoring every wrong shape to ${nm}.`,
+  mimic: (nm, b) => `Claws, frost and grave-mould pass over it in unfinished layers. Through every change, ${directorHostBuild(b)} and ${nm}'s eyes remain.`,
   succubus: (nm, b) => `The beautiful face alters with every want you have tried not to name. The illusion cannot hide ${directorHostBuild(b)} or the fact that the eyes are ${nm}'s.`,
   hollowed: (nm, b) => `The body unfolds far beyond its human height, rotted skin opening around a courteous blank where the face should be. Beneath the impossible height, ${directorHostBuild(b)} still belongs to ${nm}.`,
 };
 const DIRECTOR_SEARCH_PAYOFF = {
   "Village Square": "Behind the well bucket you find a heel of bread wrapped in a child's arithmetic page. Someone came to feed a household too proud to ask, and left in a hurry.",
   "Old Church": "The vestry latch is warm. Beneath it, fresh candle wax holds the print of a thumb and one dark thread from a coat. Somebody met here after the bell.",
-  "Graveyard": "One grave has been visited since sunset: not opened, but tended. A dead flower was replaced with a living sprig, and the footprints stop to kneel.",
+  "Graveyard": "Fresh kneeling prints mark one grave. A dead flower lies beside a newly cut sprig. The soil over the coffin is undisturbed.",
   "Dark Forest": "A strip of clean linen marks the safe path between two trees. Farther in, another strip has been torn down and tied deliberately toward the marsh.",
   "Old Mill": "Fresh filings glitter beneath the dead wheel beside a cup still warm at the rim. Somebody worked here tonight, then left without finishing.",
   "Tavern": "A chair has been dragged beneath the back window. On its seat: a list of names, each crossed off only after their owner reached home.",
@@ -3549,14 +3549,14 @@ const DIRECTOR_SITE_SEARCH_EMPTY = {
     onward: "You circle the church again, trying each entrance before returning through the churchyard. Every fastening remains in place.",
   },
   "Graveyard": {
-    ground: "You walk the newer graves and the paths between them. The earth is disturbed only where the gravedigger expected it.",
-    edges: "You search the old plots, leaning stones and boundary wall. Ivy, lichen and settled earth keep their ordinary shapes.",
-    onward: "You take another row of graves, reading each stone and every narrow space between. Nothing asks you to stop.",
+    ground: "You walk the newer graves and the paths between them. The soil shows bootprints and recent shovel cuts, but no grave has been opened.",
+    edges: "You search the old plots, leaning stones and boundary wall. The ivy is unbroken and the settled soil bears no fresh mark.",
+    onward: "You take another row of graves, checking each stone and every narrow space between. You find no fresh disturbance.",
   },
   "Dark Forest": {
     ground: "You follow the game trail until it divides, checking each hollow before returning. The woods offer no certain direction.",
     edges: "You push through bracken and exposed roots beside the path. Branches catch your coat; nothing else answers.",
-    onward: "You go farther beneath the trees and make a slow loop back to the path. The forest keeps no clear account of passage.",
+    onward: "You go farther beneath the trees and make a slow loop back to the path. Leaf fall and exposed roots hide any clear trail.",
   },
   "Old Mill": {
     ground: "You trace the millrace and cross the wheel-yard. Water and old traffic have worked every impression together.",
@@ -3700,7 +3700,7 @@ const DIRECTOR_MONSTER_ACTIVITY = {
   werewolf: (dest) => `It works the edge of the ${dest} with its nose close to the ground, sorting one human trail from all the others. It has chosen a scent.`,
   ghoul: (dest) => `It kneels at the ${dest} and tests the soil with both hands, loosening earth as carefully as Tobias preparing a grave. Something beneath answers the touch.`,
   shifter: (dest) => `It studies the windows around the ${dest}, trying a neighbour's posture, then another's voice, deciding which shape will be admitted after a knock.`,
-  revenant: (dest) => `It crosses the ${dest} in the same straight line again and again, stopping at one door each time as though completing an old journey that ended there.`,
+  revenant: (dest) => `It crosses the ${dest} in the same straight line again and again. Each time it stops at the same door and reaches for the latch.`,
   wraith: (dest) => `It passes among the stones at the ${dest}. Frost takes each name after it reads it and melts everywhere except one fresh grave.`,
   banshee: (dest) => `It faces the houses from the ${dest} and draws breath for a cry it has not yet released. Every dog in the village is already hiding.`,
   vampire: (dest) => `It listens beneath the lit windows around the ${dest}, patient at each pulse, passing over one sleeping house and choosing the next.`,
@@ -3781,7 +3781,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
     hail = temperament.mode === "beast"
       ? `${npc.name} stops without turning. Their shoulders lift around one deep breath. The answer to your hail is a low growl forced through a throat still trying to pass for human.`
       : temperament.mode === "silent"
-        ? `${npc.name} turns. Their mouth opens, but the lane loses every sound before an answer can form. They walk on while the silence holds.`
+        ? `${npc.name} turns. Their mouth opens, but you hear no voice, wind or footstep. They walk on in complete silence.`
         : directorStableLine(seed + npc.id + ":hail-monster", HAIL_MONSTER_LINES, npc.name, dest);
     follow = `${travel} There, ${npc.name}'s human gait breaks. They begin hunting.`;
     honest = temperament.mode === "beast"
@@ -4801,7 +4801,7 @@ function resolveNight(prev, planIn, preEvents) {
       /* saw their blameless errand and went home */
     } else if (mods.approach === "back") {
       beats.push(`Short of the ${plan.loc}, your nerve makes the decision for you. You turn for home, skin prickling, and do not run only because running invites the chase.`);
-      dawn.push(ev(`You turned back before the ${plan.loc} last night. Whatever was there kept what it knows, and so did you. But you are alive to be careful again.`));
+      dawn.push(ev(`You turned back before reaching the ${plan.loc} last night. You found no evidence there, but you returned alive.`));
     } else if (active && plan.loc === huntLoc && (exposureMap[s.monster.vid] || "outdoor") === "outdoor" && mods.follow !== s.monster.vid && !mods.witnessKill) {
       const press = mods.approach === "press";
       /* a hunt playing out at the edge of an event's own firelight/crowd gives
@@ -5027,7 +5027,7 @@ function resolveNight(prev, planIn, preEvents) {
             shiftMonsterBond(s, 1);
             s.playerSaw.push({ night: n, id: watching, loc: huntLoc });
             s.clues.push(`Night ${n}: ${target.name} stopped in the lane, turned, and looked directly at the shadow you stood in. Then walked on. It knows you follow, and you know its face: ${target.name}.`);
-            beats.push("It stops in the lane. Turns. Looks directly at the shadow you are standing in, for three long heartbeats. Then it walks on, unhurried, as if you were nothing worth the trouble. Yet.");
+            beats.push("It stops in the lane and looks directly at your hiding place for three heartbeats. Then it walks on without changing pace.");
             dawn.push(ev(`You have seen the face it wears: ${target.name}. It saw you seeing, and said nothing, and did nothing, and that is the worst answer of all. Now you need only its true nature.`, watching, 2));
           } else {
             s.faceKnown = watching;
@@ -5197,7 +5197,7 @@ function resolveNight(prev, planIn, preEvents) {
             : huntsCrowd && victimWhere === eventLoc
             ? pick(EVENT_KILL)(evn.name, victim.name, victimPlace)
             : wx === "storm" && chance(0.5)
-            ? "Under the thunder, something happens that no one hears. The storm keeps its counsel till morning."
+            ? "Thunder covers the attack. The body is not found until morning."
             : pickFreshIdx("screamLines", SCREAM_LINES)(victimPlace));
         }
         s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, alive: false } : x));
@@ -5375,7 +5375,7 @@ function resolveNight(prev, planIn, preEvents) {
       s.npcs = s.npcs.map((x) => (x.id === dv.id ? { ...x, alive: false, known: true } : x));
       s.deaths.push({ night: n, id: dv.id, name: dv.name, kind: "drained", where: "home", examined: false, found: [] });
       beats.push(`Somewhere in the dark, a breathing you had stopped noticing simply stops. ${dv.name} has been greying and cold for nights, and tonight there is nothing left in them to grey.`);
-      dawn.push(ev(`${dv.name} is found in their own bed, unmarked and cold, shrunken as though every year they owned was drawn off at once. Whatever visited ${dv.name} some nights ago has finished. There was never a wound to find.`, dv.id, 2));
+      dawn.push(ev(`${dv.name} is found in their own bed, unmarked and cold. Their skin is loose, their hair has whitened and their face looks decades older. There is no wound.`, dv.id, 2));
       if (!s.drainClueGiven) {
         s.drainClueGiven = true;
         s.clues.push(`Night ${n}: ${dv.name} died in bed with no wound and no blood, withered like something emptied out over nights. They had gone strange and cold days before the end. Whatever hunts here does not tear: it drains, and the touched die on their own, a night or three after it takes them.`);
@@ -5921,7 +5921,7 @@ function actSearch(prev, loc) {
       const seed = s.deaths.find((d) => d.kind === "slain" || d.kind === "executed" || d.kind === "mobbed");
       if (seed && chance(0.4)) {
         s.necroGraveFound = true;
-        s.clues.push(`Day ${s.dayNum}: ${seed.name}'s plot stands open, dug from the inside, the earth thrown outward and heaped wrong, as if the digging went the wrong direction entirely. Whatever left that grave did not need help getting out of it.`);
+        s.clues.push(`Day ${s.dayNum}: ${seed.name}'s grave stands open. Soil is thrown outward from the coffin, and claw marks score the underside of the lid.`);
         s.dayEvents.push(evPlaque(ev(`Something at the ${loc} stops you cold: ${seed.name}'s grave, freshly turned again though the burying was days ago, the dirt piled the wrong way. You did not imagine that.`, seed.id), "bone"));
         return s;
       }
@@ -6144,7 +6144,7 @@ function reportFavour(s, id) {
         summary = `${target.name} is changed. I watched it happen with my own eyes, and I will not forget it.`;
         useful = true;
       } else if (!loc || loc === "home") {
-        summary = `${target ? target.name : "They"} never left the house. Whatever you feared, it was a quiet night.`;
+        summary = `${target ? target.name : "They"} never left the house. No visitor came to the door.`;
       } else {
         summary = `${target.name} was out at the ${loc}, plain as anything, the whole night.`;
         useful = true;
@@ -6833,8 +6833,8 @@ function answerFor(s, id, night, q, targetId) {
       ]);
     } else if (npc.turned) {
       quote = pickFreshIdx(`pressTurned:${id}`, [
-        `A long pause, as if the answer had to travel a distance to reach them. "I was mistaken. I am often mistaken now." They touch their own wrist, once.`,
-        `"Did I lie?" they say, mildly, as though asking about the weather. "Then I lied. It hardly seems to matter anymore, does it."`,
+        `They stare past you for several breaths. "I was mistaken. I am often mistaken now." They touch their own wrist once.`,
+        `"Did I lie?" they say without changing expression. "Then I lied. It hardly seems to matter anymore, does it."`,
       ]);
     } else if (sec && secretNight !== null && !npc.secretKnown) {
       s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, secretKnown: true } : x));
@@ -6978,7 +6978,7 @@ function answerFor(s, id, night, q, targetId) {
         : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
     } else if (npc.turned) {
       quote = pickFreshIdx(`howareTurned:${id}`, [
-        `"I am well," they say, and stop, as if the sentence has run out of the things it was given to say. "I am well," they say again, softer, checking the fit of it.`,
+        `"I am well," they say. After a long pause, they repeat it more softly while looking at their hands.`,
         `A long pause. "It is quieter now," they say at last. "Inside." They seem to believe that answers the question. Perhaps, somewhere, it does.`,
       ]);
     } else {
@@ -10381,7 +10381,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
   .heVictoryVerdictCard .heMonsterDeath { width:min(29vh,174px) !important; height:min(29vh,174px) !important; }
 }
 
-/* BUTTONS — made by the same unsteady hand as the ink illustrations.
+/* BUTTONS: made by the same unsteady hand as the ink illustrations.
    Large controls get an imperfect second rule, mismatched corners and a very
    slight lean. Portrait-only taps and prose links stay quiet: wobble is a
    visual promise that a bordered object can be pressed, not general noise. */
@@ -10936,7 +10936,7 @@ const LOSS_DEATHS = {
   ],
   witch: [
     (nm) => `${nm} stopped walking one evening, mid-stride, at the edge of the trees, and did not start again. Not a mark on them, only a face gone the wrong kind of still.`,
-    (nm) => `They found ${nm} kneeling in the garden as if in prayer, quite dead, quite untouched, a knot of hair and thorn in one fist clenched too tight to open.`,
+    (nm) => `They found ${nm} dead on their knees in the garden, unmarked, with a knot of hair and thorn clenched in one fist.`,
     (nm) => `${nm} came apart from the inside without a wound the doctor could name. The witch need not be near a thing to be thorough with it, and thoroughness is her only mercy.`,
   ],
   demon: [
@@ -10951,7 +10951,7 @@ const LOSS_DEATHS = {
   ],
   banshee: [
     (nm) => `${nm} heard the wailing three nights running and told no one. On the fourth it did not stop at their door, and their heart stopped listening to itself, mid-beat.`,
-    (nm) => `They found ${nm} unmarked, face caught between grief and recognition, as if mourned to death by someone who knew and loved them. Which, in its way, they had.`,
+    (nm) => `They found ${nm} unmarked, eyes open and cheeks wet. Their heart had stopped during the wail.`,
     (nm) => `${nm}'s heart stopped mid-sentence, and the last sound anyone heard through the wall was a wail that already knew their name, and had known it for some time.`,
   ],
   lich: [
@@ -11082,8 +11082,8 @@ function epilogueLine(s, x) {
     : `${x.name} came back from what took them, one of the few mercies bought before the end. Wakes screaming some nights, in a village that may not survive to hear it.`;
   if (x.turned) return win
     ? (x.known
-        ? `${x.name} woke at dawn as if from a long fever, remembering nothing. Their hands are still cold. Their hands will always be cold.`
-        : `${x.name} was quieter in the weeks after, and colder to the touch than seemed right, and once looked at you as though placing where they had seen you in the dark. Whether it reached them, or whether that is only your own suspicion talking, no one will ever say.`)
+        ? `${x.name} woke at dawn weak and sweating, remembering nothing. Their hands are still cold. Their hands will always be cold.`
+        : `${x.name} was quieter in the weeks after and cold to the touch. Once, they stared at you for several breaths before looking away. They never explained why.`)
     : joined ? joinedFate(s, x) : lossFate(s, x, "enslaved");
   if (!win) return joined ? joinedFate(s, x) : lossFate(s, x, m.attack === "turn" ? "enslaved" : "dead");
   /* secretKnown only ever means the PLAYER learned it. Whether it stayed
@@ -11785,8 +11785,8 @@ function MonsterVillage() {
     };
     /* A night-walk kill was already lived in the lanes, so its death screen is
        the only screen. But an accusation gone wrong (deathAfterBeats) plays
-       its JUDGMENT cinematic first — the rite, the wrong name, the thing
-       crossing the circle — and only then advances to the death screen. */
+       its JUDGMENT cinematic first: the rite, the wrong name, the thing
+       crossing the circle, and only then advances to the death screen. */
     const dying = !!(s.over && !s.over.win && s.deathBeats && s.deathBeats.length);
     const beatsFirst = dying && s.deathAfterBeats && !deathShown;
     const advance = beatsFirst
@@ -13071,7 +13071,7 @@ function MonsterVillage() {
                 {beat(walk.soundLine)}
                 <Btn full kind="red" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, soundChase: true, soundHeard: walk.soundHeard }, stage: "chased", pre: ["You turn off your road, toward it."] })}>Follow the sound</Btn>
                 <Btn full kind="amber" onClick={() => setWalk({ ...walk, mods: { ...walk.mods, soundListen: true, soundHeard: walk.soundHeard }, stage: "listened", pre: [] })}>Stand still. Let it come to you</Btn>
-                <Btn full onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: ["You let the dark keep its noises, and press on."] })}>Keep to your road</Btn>
+                <Btn full onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: ["You leave the sound behind and press on."] })}>Keep to your road</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "chased" && (() => {
@@ -13093,8 +13093,8 @@ function MonsterVillage() {
             {!isWatch && walk.stage === "listened" && (
               <div className="flex flex-col gap-2">
                 {beat(walk.facts.active
-                  ? `You plant your feet and give the night nothing to chase. The sound circles wide once, twice, closer, reading you the way you are reading it. ${walk.soundHeard}`
-                  : "You stand until your knees ache, and the sound thins, and resolves into wind working at something loose, streets away. Not everything abroad tonight is the thing. Most of the dark is only dark.", walk.facts.active ? C.redBright : undefined)}
+                  ? `You stop. The sound moves from your left to your right, then comes closer. ${walk.soundHeard}`
+                  : "You stand until your knees ache. The sound thins into wind working at a loose shutter several streets away.", walk.facts.active ? C.redBright : undefined)}
                 <Btn full kind="amber" onClick={() => setWalk({ ...walk, stage: nextStage(walk, "sound"), pre: ["You give your road your attention again."] })}>On, toward the {walkPlace} →</Btn>
               </div>
             )}
@@ -13104,7 +13104,7 @@ function MonsterVillage() {
                 <Btn full kind="amber" onClick={() => chooseHide("doorway")}>Press into a doorway</Btn>
                 <Btn full kind="amber" onClick={() => chooseHide("shadow")}>Drop into shadow and wait it out</Btn>
                 <Btn full kind="red" onClick={() => chooseHide("still")}>Stand very still, and hope</Btn>
-                <Btn full onClick={() => setWalk({ ...walk, mods: { ...walk.mods, approach: "back" }, stage: "return", pre: [], closureLine: "You give the night back its road and go home the way you came, one careful step at a time. You do not learn what it was. You are alive not to know." })}>Back away the way you came. Home</Btn>
+                <Btn full onClick={() => setWalk({ ...walk, mods: { ...walk.mods, approach: "back" }, stage: "return", pre: [], closureLine: "You back away and go home by the same road, one careful step at a time. You do not learn what followed you." })}>Back away the way you came. Home</Btn>
               </div>
             )}
             {!isWatch && walk.stage === "hidden" && (
@@ -13397,7 +13397,7 @@ function MonsterVillage() {
               const hw = walk.facts.homeWatch;
               const settled = hw && hw.kind !== "quiet";
               const retireText = settled
-                ? `You have carried enough out of the dark for one night. You go back the way you came, turning it over, and do not breathe easy until your own bolt is thrown.`
+                ? `You have seen enough for one night. You go back the way you came and do not slow until your own bolt is thrown.`
                 : walk.retireLine || RETIRE_LINES[0](t.name);
               return (
                 <div className="flex flex-col gap-2">
@@ -13688,7 +13688,7 @@ function MonsterVillage() {
     /* Choosing a destination is still reversible. The daylight is committed
        only when the player chooses how to work the place. */
     setDayScene({ loc, beats: [], stage: "arrive", idx: 0, open: pickFreshIdx("daySearchOpen", [
-      (l) => `The ${l} lies open under the morning light, ordinary and unhelpful, keeping whatever it keeps. The daylight is yours. How will you spend it?`,
+      (l) => `The ${l} lies open under the morning light. No fresh mark is visible from the road. How will you spend the daylight?`,
       (l) => `Morning light is honest light, and the ${l} sits in it looking like it has nothing to hide. That is what everything looks like now. The daylight is yours. How will you spend it?`,
       (l) => `You reach the ${l} with the dew still down, before the village can trample whatever the night left. The daylight is yours. How will you spend it?`,
     ])(loc) });
@@ -13882,7 +13882,7 @@ function MonsterVillage() {
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
     /* the deepest cut of all: the player took their one secret and spent it */
     if (s2.secretSpread && s2.secretSpread[id] && s2.secretSpread[id].reached) opener.push(pickFreshIdx(`spreadOpener:${id}`, [
-      `They do not offer a greeting. "The whole village has my secret now, and only one soul had it to give away." A silence you are meant to sit in. "Ask your questions. It is not as if you could take anything more from me."`,
+      `They do not offer a greeting. "The whole village has my secret now, and only one soul had it to give away." They wait for you to answer. "Ask your questions. It is not as if you could take anything more from me."`,
       `"You know what they call me now, since it got out." A flat look. "I trusted you with the one thing I had, and you spent it like market coin. Ask what you came to ask, and then leave."`,
     ]));
     /* a lasting affliction re-colours the room this person receives you in */
@@ -13942,7 +13942,7 @@ function MonsterVillage() {
       : `Day ${s2.dayNum}: showing ${npc.name} the note loosened something. What came out today: ${bc.pair[0]} of build, or ${bc.pair[1]}; still not certain which.`);
     s2.noteExposedPending = true;
     setS(s2); setIvSub(null);
-    setIv({ ...iv, transcript: [...iv.transcript, { q: "Show them the note", night: iv.night, a: `${npc.name} reads it twice, in silence, going pale around the mouth at "${namedTarget.name}." Then looks up at you as if seeing you clearly for the first time. "Show the others," ${npc.name} says at last, quiet and not at all friendly. "Show everyone."`, followUps: [] }] });
+    setIv({ ...iv, transcript: [...iv.transcript, { q: "Show them the note", night: iv.night, a: `${npc.name} reads it twice and goes pale at "${namedTarget.name}." They look directly at you. "Show the others," ${npc.name} says. "Show everyone."`, followUps: [] }] });
   };
   const endInterview = () => {
     const npc = npcById(s, iv.id);
@@ -15119,7 +15119,7 @@ function MonsterVillage() {
       </div>
 
       {/* the fixed foot: the night's two decisions, and beneath them the
-          journal — the staple that stays at the very bottom of the screen */}
+          journal, the staple that stays at the very bottom of the screen */}
       <div className="fixed bottom-0 inset-x-0 z-10 mvIvDock" style={{ background: "linear-gradient(#141830,#0C0F1A)", borderTop: `1px solid ${C.line}` }}>
         <div className="w-full" style={{ padding: "10px 18px", paddingBottom: "max(env(safe-area-inset-bottom), 15px)", display: "flex", flexDirection: "column", gap: 8 }}>
           <button onClick={() => { setTab("evidence"); setClueSeen(s.clues.length + s.foundSigns.length); }}

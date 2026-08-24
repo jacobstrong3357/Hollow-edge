@@ -39,7 +39,7 @@
         stamp: "You almost pass it: the fog has flattened the ground to grey.",
         clue: "You find it only when the lantern is nearly over it.",
         whisper: "The fog brings the voice close and leaves its direction behind.",
-        delusion: "The fog gives every false shape somewhere to stand."
+        delusion: "In the fog, hedges and gateposts resemble figures until the lantern is close."
       },
       storm: {
         stamp: "Under the lee of the wall, one mark has survived the rain.",
@@ -48,7 +48,7 @@
         delusion: "Lightning fixes the sight in white, then takes it away."
       },
       frost: {
-        stamp: "The frost holds every edge of it, sharp as new writing.",
+        stamp: "Frost outlines every edge of the mark.",
         clue: "Frost rims the object where a warm hand set it down.",
         whisper: "In the brittle silence, the smallest voice carries.",
         delusion: "Your breath crosses the lantern and the shape changes behind it."
@@ -60,11 +60,11 @@
   function weatherEncounterText(state, villager, acknowledged) {
     if (acknowledged) {
       if (state.weather === "storm") return villager.name + " has to come beneath your lantern and raise their voice over the rain before the greeting can be understood.";
-      if (state.weather === "fog") return villager.name + " comes close enough for the fog to give their face back. They answer your greeting without lowering their hood.";
+      if (state.weather === "fog") return villager.name + " comes close enough for you to see their face. They answer your greeting without lowering their hood.";
       if (state.weather === "frost") return villager.name + " stops in the blue light, breath showing between you, and answers your greeting.";
       return villager.name + " stops beneath your lantern and answers your greeting.";
     }
-    if (state.weather === "fog") return "A familiar-sized silhouette crosses the lantern's blurred edge. The fog keeps the face until the figure is already gone.";
+    if (state.weather === "fog") return "A familiar-sized silhouette crosses the lantern's blurred edge. You cannot see the face before the figure is gone.";
     if (state.weather === "storm") return "Lightning gives you a familiar coat and a bowed head for one white instant. Rain takes the face before you can name it.";
     if (state.weather === "frost") return villager.name + " crosses the hard blue lane. Their breath and bootprints remain visible after the rest of them has passed.";
     return "A familiar figure crosses your lantern at the edge of the road.";
@@ -74,7 +74,7 @@
     var near = distance === "near";
     if (state.weather === "fog") return near
       ? "The fog presses inward. A silhouette forms inside it much too close, while breathing sounds closer still."
-      : "The fog swallows the far lane. Something large displaces it without ever showing a whole shape.";
+      : "The far lane is hidden by fog. Something large moves through it without showing a whole shape.";
     if (state.weather === "storm") return near
       ? "Thunder breaks directly overhead. In the flash, something is between you and home; the rain has hidden every sound of its approach."
       : "A gate slams under the thunder. Whatever moves beyond it is drowned by rain before you can judge its pace.";
@@ -210,8 +210,8 @@
   var DELUSION_SEQUENCES = [
     [
       "Your footprints continue six paces ahead of you.",
-      "The last print turns sideways, as though whoever made it stopped to watch you approach.",
-      "You raise the lantern. There are no prints ahead—only your own behind. The road is unbroken mud. It was not real."
+      "The last print turns sideways. Its toe points directly at you.",
+      "You raise the lantern. There are no prints ahead, only your own behind. The road is unbroken mud. It was not real."
     ],
     [
       "Every shutter on the lane opens together.",
@@ -239,7 +239,7 @@
     },
     {
       kind: "breath",
-      text: "Breathing gathers against the door, slow and tired, as though something has followed you home and leaned its forehead to the wood.",
+      text: "Slow breathing sounds against the door. Between breaths, something shifts its weight against the wood.",
       look: "The breathing stops when the shutter moves. The frost on the outer latch is already melting.",
       answer: "You ask what it wants. The breath takes the shape of a laugh and moves to the window beside you."
     },
@@ -253,7 +253,7 @@
       kind: "familiar_voice",
       text: "A familiar voice says your name from the step. It belongs to somebody you left alive in the village. It does not ask to come in.",
       look: "The step is empty. Far down the lane, a figure reaches the corner without making the walk between.",
-      answer: "You answer the voice by name. It repeats the name back as though trying it for size, then goes quiet."
+      answer: "You answer the voice by name. It repeats each syllable slowly, then goes quiet."
     }
   ];
 
@@ -579,7 +579,7 @@
     var forced = config.forcedBeats || [];
     forced.forEach(function (raw, index) {
       if (raw.type === "stamp" && (stateLike.monsterSchedule.signs.indexOf(raw.sign) < 0 || raw.sign === "wail")) return;
-      add(makeBeat(raw.id || "forced:" + index, raw.type, raw.slot, raw.location, raw.text || (raw.type === "stamp" ? STAMP_TEXT[raw.sign] : "Something in the dark refuses a simple explanation."), raw));
+      add(makeBeat(raw.id || "forced:" + index, raw.type, raw.slot, raw.location, raw.text || (raw.type === "stamp" ? STAMP_TEXT[raw.sign] : "You find a mark you cannot identify."), raw));
     });
     for (var slot = 0; slot < stateLike.slots; slot += 1) {
       var locs = Object.keys(stateLike.graph).filter(function (x) { return x !== HOME; });
@@ -834,7 +834,7 @@
     if (witnessed) {
       appendObservation(state, { eventId: event.id, slot: slot, kind: "attack_aftermath", location: event.location, actors: [victimId], clarity: "partial", reliability: "direct", sign: sign });
       appendBeat(state, makeBeat("aftermath:" + slot + ":" + victimId, "aftermath", slot, event.location,
-        victim.name + " falls beyond the lantern. What moved there is already gone, but the ground keeps one mark.", { actorId: victimId, sign: sign, truthEventId: event.id }));
+        victim.name + " falls beyond the lantern. The attacker is gone. One fresh mark remains on the ground.", { actorId: victimId, sign: sign, truthEventId: event.id }));
     } else if (state.player.location !== HOME) {
       /* An unwitnessed attack must still disturb the lived night. This is
          intentionally sensory rather than evidential: the player hears the
@@ -1018,7 +1018,7 @@
     var suspicious = possibleWitnesses.length > 0 && keyedNumber(state.seed, "body-suspicion:" + event.id) < 0.48;
     var witnessIds = suspicious ? possibleWitnesses.slice(0, Math.min(2, possibleWitnesses.length)).map(function (row) { return row.id; }) : [];
     var text = event.kind === "changed"
-      ? "You reach the " + event.location + ". " + victimName + " is alive, but crouched where the cry ended, staring through you as though the person has gone elsewhere."
+      ? "You reach the " + event.location + ". " + victimName + " is alive, but crouched where the cry ended. They do not answer when you speak or touch their shoulder."
       : "You reach the " + event.location + ". " + victimName + " lies where the cry ended.";
     if (lastWords) text += " They are breathing just long enough to catch your sleeve and say, " + lastWords;
     else if (event.kind === "slain") text += " You are too late for an answer.";
@@ -1137,7 +1137,7 @@
       var host = state.cast.find(function (villager) { return villager.id === action.actorId; });
       var recognitionText = state.monsterSchedule.revealText
         || ((host && host.name || "Your neighbour") + " turns close enough for the lantern to catch the human shape still trapped inside the monster.");
-      if (state.weather === "fog") recognitionText = "The fog gives the face back only when it is almost within reach. " + recognitionText;
+      if (state.weather === "fog") recognitionText = "You see the face only when it is almost within reach. " + recognitionText;
       else if (state.weather === "storm") recognitionText = "Lightning holds it still in one white instant. " + recognitionText;
       else if (state.weather === "frost") recognitionText = "Its breath crosses yours in the hard blue air. " + recognitionText;
       appendBeat(state, makeBeat("recognition-beat:" + state.cursor + ":" + action.actorId, "threat", state.cursor, state.player.location,
@@ -1334,8 +1334,8 @@
     var voice = state.monsterSchedule.voice || { mode: "silent" };
     if (moment === "start") {
       if (voice.mode === "beast") return "You run. Claws strike the road behind you; one vast breath breaks into a growl and gathers speed.";
-      if (voice.mode === "speaker") return "You run. Something laughs—not loudly, only close—and calls after you in a voice pleased that you understood.";
-      return "You run. No footfall follows. Your shadow still shortens from behind as though something is gaining on the lantern.";
+      if (voice.mode === "speaker") return "You run. A quiet laugh sounds close behind you. Then the voice calls your name.";
+      return "You run. No footfall follows, but your shadow shortens ahead of you with every stride.";
     }
     if (voice.mode === "beast") return gained
       ? "The panting falls back for three breaths, then the claws find the road again. It is " + chaseDistanceWord(distance) + "."
@@ -1373,7 +1373,7 @@
     var chase = state.chase;
     appendTruth(state, { id: "escape:" + chase.slot + ":" + action.type.toLowerCase(), slot: chase.slot, kind: "escape", method: action.type.toLowerCase(), location: chase.location, succeeded: false, chaseSteps: chase.step });
     appendBeat(state, makeBeat("chase-caught:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location,
-      "The lane gives you one more stride. The thing behind you does not need it.", { outcome: "caught" }));
+      "You manage one more stride. The thing behind you catches you before the next.", { outcome: "caught" }));
     state.player.alive = false;
     state.phase = "dead";
     state.chase = null;
@@ -1501,8 +1501,8 @@
       if (!survival) {
         appendBeat(state, makeBeat("reveal-caught:" + threat.slot, "flee", threat.slot, threat.location,
           wrongName
-            ? "You say the wrong name. It looks at what you brought as though it were a child's toy, and closes the distance while you are still understanding."
-            : "It turns before you finish moving. The road gives you three strides. It needs only two.",
+            ? "You say the wrong name. The rite has no effect. It charges before you can speak again."
+            : "It turns before you finish moving. You manage three strides. It catches you in two.",
           { actorId: threat.actorId, outcome: "caught" }));
         state.player.alive = false;
         state.phase = "dead";
@@ -1510,11 +1510,11 @@
         return state;
       }
       var resultText = action.type === "FLEE"
-        ? "You leave while it is bent to its work, placing each foot as though the road might hear. Only at the first barred gate do you let yourself run."
+        ? "You step backward while it is bent to its work. At the first barred gate, you turn and run."
         : action.type === "WATCH_MONSTER"
           ? "You stay. You watch the borrowed body at its work and force yourself to remember the mark showing through it. " + (learnedSign ? STAMP_TEXT[learnedSign] : "The shape and gait are enough to know the face, but give you no clean mark to stamp.")
           : wrongName
-            ? "The rite is wrong. It laughs—and that laugh gives you the half-heartbeat you need to reach the wall before it reaches you."
+            ? "The rite is wrong. It laughs. While its head is thrown back, you reach the wall and climb."
             : "You step out and say the human name. It turns. You survive the answer, but it has seen you clearly now.";
       appendBeat(state, makeBeat("reveal-escape:" + threat.slot + ":" + action.type.toLowerCase(), "flee", threat.slot, threat.location,
         resultText, { actorId: threat.actorId, sign: learnedSign, outcome: "escaped" }));
@@ -1526,7 +1526,7 @@
         var saved = outcome.intervene < 0.35;
         appendTruth(state, { id: "intervene:" + threat.slot, slot: threat.slot, kind: "intervention", location: threat.location, actors: ["player", threat.victimId], succeeded: saved });
         appendBeat(state, makeBeat("intervene-beat:" + threat.slot, "flee", threat.slot, threat.location,
-          saved ? "You shout. Your neighbour breaks for the wall, and the dark follows the louder courage instead of the easier body." : "You shout. The figure turns, but not quickly enough. The night takes the distance back.", { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
+          saved ? "You shout. Your neighbour runs for the wall. The figure turns toward you instead." : "You shout. Your neighbour runs, but the figure reaches them before the wall.", { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
         if (!saved) killVillager(state, threat.victimId, threat.slot, true);
         else if (state.monsterSchedule.relentless) {
           /* The warning saves the neighbour from the first rush by making the
@@ -1569,15 +1569,15 @@
     var methodText = hideMode === "cover"
       ? "You press into the nearest cover and let it pass within arm's reach."
       : hideMode === "shadow"
-        ? "You drop out of the lantern light and make yourself smaller than the dark around you."
+        ? "You lower the lantern and crouch behind the deepest part of the wall's shadow."
         : hideMode === "still"
           ? "You stand without moving while it comes close enough to share your breath."
-          : "You fold into the dark and keep still while breathing passes close enough to warm your hair.";
+          : "You crouch behind the nearest cover and keep still while breathing passes close enough to warm your hair.";
     var readingText = learnedIdentity
       ? (state.monsterSchedule.revealText || ("The shape and gait resolve into " + hostName + "."))
       : learnedBuild
         ? "At the lantern's edge you fix one human fact: the build is " + (hostBuild || "familiar") + "."
-        : learnedSign ? STAMP_TEXT[learnedSign] : "It passes without giving the dark a face.";
+        : learnedSign ? STAMP_TEXT[learnedSign] : "It passes beyond the lantern before you can see its face.";
     var resultText = survival ? methodText + " " + readingText : "It checks the hiding place before you have finished becoming still.";
     var closeRead = appendTruth(state, {
       id: "monster-close-read:" + threat.slot + ":" + hideMode,
@@ -1697,7 +1697,7 @@
       resolveAttackInvestigation(next, action, slot);
     }
     if (presentingBeat && presentingBeat.meta && presentingBeat.meta.quietPresence && action.type === "LISTEN" && next.phase === "active") {
-      var quietResponse = presentingBeat.meta.responseText || "You turn toward it. Whatever moved in the dark does not come closer tonight.";
+      var quietResponse = presentingBeat.meta.responseText || "You turn toward it. The movement stops and does not come closer.";
       var quietTruth = appendTruth(next, {
         id: "quiet-presence-response:" + presentingBeat.id,
         slot: slot,

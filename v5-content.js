@@ -7,7 +7,7 @@
       id: "watcher_in_yews", authorLabel: "The watcher in the yews", actorPool: "out_here", when: "out_here", weight: 5,
       monsterTags: ["cunning", "haunt", "church"], perceptions: ["clear", "partial", "heard"],
       audio: ["gate_turn", "crickets_cut", "breathing_far"],
-      opening: "The iron gate gives beneath your hand. Beyond it, the yews lean over the graves as though conferring. One upstairs window in the village goes dark when you step through.",
+      opening: "The iron gate gives beneath your hand. Beyond it, yew branches scrape together over the graves. One upstairs window in the village goes dark when you step through.",
       silence: "The wind stops. The grass stops. Even your coat seems to know better than to move. The village has not gone to sleep. It has gone quiet.",
       reveal: {
         clear: "For one instant, {actor} stands beyond the last stone, watching you rather than the church. You blink. The place is empty.",
@@ -43,7 +43,7 @@
       silence: "Fibres complain against the beam. Someone inside catches the rope before it can swing again.",
       reveal: {
         clear: "Father Ansel steps into the doorway with the rope wound around one wrist. He looks less surprised to see you than he should.",
-        partial: "A narrow figure crosses behind the vestry glass and takes the rope with them. The sleeve might be a cassock. The fog refuses the rest.",
+        partial: "A narrow figure crosses behind the vestry glass carrying the rope. Fog hides the face and the rest of the coat.",
         heard: "From inside, Father Ansel's voice says, very softly, ‘Not tonight.’ Whether he is speaking to the bell is less clear.",
       },
       question: "Why were you holding the bell rope after midnight?",
@@ -106,7 +106,7 @@
       opening: "Something inside the ruined porch is breathing in careful counts. Four in. Nothing out. Four in again.",
       silence: "Fingers move over the dry font with the patience of someone reading raised letters.",
       reveal: {
-        clear: "{actor} bends over the empty font, mouth almost touching the stone. They straighten when your light reaches them and smile as though interrupted at prayer.",
+        clear: "{actor} bends over the empty font, mouth almost touching the stone. Your light reaches them. They straighten, take one hand from the rim and smile.",
         partial: "A neighbour-shaped silhouette rises from the font. Its head turns farther than the shoulders do. The porch swallows the face.",
         heard: "Stone rasps under fingernails. A familiar voice repeats your name from inside the porch, trying several ways of saying it.",
       },
@@ -180,7 +180,7 @@
       monsterTags: ["haunt", "voice", "home"], perceptions: ["heard"],
       audio: ["gate_turn", "gate_latch", "breathing_far"],
       opening: "The churchyard gate turns inward after you have already latched it. Slowly. The hinges make no sound.",
-      silence: "You pull it shut. Three breaths later it opens the same width again, as if something on the other side has learned the weight.",
+      silence: "You pull it shut. Three breaths later it opens to the same width again. No hand or figure is visible beyond it.",
       reveal: { heard: "No figure waits beyond it. Only the lane, one set of your own prints, and a second latch-click from behind you." },
       question: null, honest: null, evasive: null, memory: null,
     },
@@ -207,7 +207,7 @@
     crickets_cut: { bus: "ambience", fallback: "silence", intendedPath: "assets/audio-v5/crickets-stop-01.ogg", caption: "The insects stop together." },
     crickets_loop: { bus: "ambience", fallback: "crickets", intendedPath: "assets/audio-v5/crickets-night-loop-01.ogg", caption: "Crickets pulse in the grass." },
     village_bustle: { bus: "ambience", fallback: "bustle", intendedPath: "assets/audio-v5/village-day-bustle-loop-01.ogg", caption: "Work and low voices carry across the square." },
-    empty_room: { bus: "ambience", fallback: "room", intendedPath: "assets/audio-v5/empty-church-roomtone-01.ogg", caption: "The empty church holds its breath." },
+    empty_room: { bus: "ambience", fallback: "room", intendedPath: "assets/audio-v5/empty-church-roomtone-01.ogg", caption: "The empty church is silent." },
     silence_drop: { bus: "threat", fallback: "silence", intendedPath: "assets/audio-v5/village-silence-drop-01.ogg", caption: "The village sound falls away." }
   };
 
