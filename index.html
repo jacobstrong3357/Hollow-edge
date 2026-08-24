@@ -11308,10 +11308,23 @@ function demeanorLine(s, id) {
 
 /* One clean sentence per disabled/empty button state, instead of the run-on
    fragments that used to get concatenated together in the JSX. */
+function deathSceneLoc(freshDeath) {
+  if (!freshDeath) return null;
+  return freshDeath.where === "home" ? (HOME_LOC[freshDeath.id] || "Cottage") : freshDeath.where;
+}
+function deathScenePlace(freshDeath) {
+  if (!freshDeath) return null;
+  if (freshDeath.where === "home") return `${freshDeath.name}'s house`;
+  return placeNoun(deathSceneLoc(freshDeath), "outdoor");
+}
+function investigateTitle(freshDeath) {
+  return freshDeath ? `Where ${freshDeath.name} Fell` : "Where They Fell";
+}
 function investigateLabel(s, freshDeath) {
-  if (s.investigatedNight === s.nightNum) return "You have already searched where the body fell today.";
-  if (!freshDeath) return "No one died last night. There is nothing to investigate.";
-  return `Go to where ${freshDeath.name} fell`;
+  if (s.investigatedNight === s.nightNum) return "You have already searched this death scene today.";
+  if (!freshDeath) return "No one was killed last night. There is no death scene to search.";
+  const place = deathScenePlace(freshDeath);
+  return freshDeath.where === "home" ? `Search ${place} after last night` : `Search the ${place} after last night`;
 }
 /* The village counts its days the way it would say them aloud, and stops
    counting in words once a run has gone on longer than anyone expected. */
@@ -14508,7 +14521,8 @@ function MonsterVillage() {
     setInvest({ left: 2, used: [], findings: [] });
   };
   const investModal = invest && freshDeath && (() => {
-    const loc = freshDeath.where === "home" ? (HOME_LOC[freshDeath.id] || "Cottage") : freshDeath.where;
+    const loc = deathSceneLoc(freshDeath);
+    const place = deathScenePlace(freshDeath);
     const investIcon = { wounds: "wounds", ground: "ground", air: "air", surroundings: "walls" };
     const tb = npcById(s, "tobias");
     return (
@@ -14521,7 +14535,7 @@ function MonsterVillage() {
                 <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(40,12,16,0.35), rgba(20,10,14,0.92))", pointerEvents: "none" }} />
                 {/* a shrouded shape low on the right, clear of the title */}
                 <div className="absolute" style={{ right: 14, bottom: 6, pointerEvents: "none" }}><ShroudH /></div>
-                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 12, letterSpacing: 2.5, color: "#E8A0A8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.35)" }}>DAY {s.dayNum} · THE DEATH SCENE</div>
+                <div className="absolute top-2.5 left-3 mv-display rounded px-2 py-0.5" style={{ fontSize: 12, letterSpacing: 2.5, color: "#E8A0A8", background: "rgba(8,10,18,0.55)", border: "1px solid rgba(194,68,80,0.35)" }}>NIGHT {freshDeath.night} · {place.toUpperCase()}</div>
                 <div className="absolute left-4 bottom-2.5 mv-display" style={{ fontSize: 17, letterSpacing: 2.5, color: C.redBright, textShadow: "0 1px 8px #000" }}>WHERE {freshDeath.name.toUpperCase()} FELL</div>
               </div>
             </div>
@@ -15592,7 +15606,7 @@ function MonsterVillage() {
             </span>
           </div>
           <div className="grid grid-cols-2 heActionGrid" style={{ gap: 8, marginTop: 10 }}>
-            {actCard("invest", "Where They Fell", investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum)}
+            {actCard("invest", investigateTitle(freshDeath), investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum)}
             {actCard("search", "Search a Place", "Turn a place over by daylight", () => setModal("search"), s.ap < 1)}
             {actCard("talk", "Hold Interview", "Three questions, one visit", () => setModal("question"), s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length)}
             {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => { setExamRes(null); setModal("examine"); }, s.ap < 1 || !canExamine)}
