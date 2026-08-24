@@ -6184,13 +6184,22 @@ function settleGiveUpInPlace(s, id, night) {
   return npc;
 }
 
-/* -- Pass G2: acting on the coercion note. Giving in kills the named person
-   and buys the thing's quiet satisfaction. */
-function actGiveUp(prev, id) {
-  const s = JSON.parse(JSON.stringify(prev));
-  const npc = settleGiveUpInPlace(s, id, s.nightNum);
-  if (!npc) return s;
-  s.dayEvents.push(ev(`You do as the note asked. By morning ${npc.name} is dead all the same, and beside the body, in the same small unhurried hand as before: "GOOD. I KNEW YOU WOULD. GO HOME WHEN I TELL YOU, AND I SHALL REMEMBER WHICH LIFE IS YOURS."`, id, 2));
+/* One short-lived build allowed the profile page to execute the note during
+   daylight. Repair only that exact saved event, then put the choice back at
+   nightfall where it belongs. */
+function repairDaylightGiveUp(s) {
+  const obsolete = (s.dayEvents || []).find((event) => event && typeof event.t === "string" && event.t.startsWith("You do as the note asked. By morning "));
+  if (!obsolete || !obsolete.pid) return s;
+  const target = npcById(s, obsolete.pid);
+  const death = (s.deaths || []).find((entry) => entry.id === obsolete.pid && entry.night === s.nightNum && entry.kind === "slain" && entry.where === "home");
+  if (!target || target.alive || !death) return s;
+  s.npcs = s.npcs.map((npc) => npc.id === target.id ? { ...npc, alive: true } : npc);
+  s.deaths = s.deaths.filter((entry) => entry !== death);
+  s.dayEvents = (s.dayEvents || []).filter((event) => event !== obsolete);
+  s.clues = (s.clues || []).filter((line) => !line.startsWith(`Night ${s.nightNum}: you gave it ${target.name}.`));
+  s.coerceNote = { target: target.id, night: s.nightNum, shown: false };
+  s.monsterProtects = false;
+  s.bond = Math.max(0, (s.bond || 0) - 2);
   return s;
 }
 
@@ -11249,7 +11258,6 @@ function MonsterVillage() {
      then "watch"/"search" for who or where, with no second sheet on top */
   const [planStage, setPlanStage] = useState(null);
   const [factPage, setFactPage] = useState(-1);
-  const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const [clueSeen, setClueSeen] = useState(0);
   const [armedDetail, setArmedDetail] = useState(true);
   const [meta, setMeta] = useState(null);
@@ -11295,6 +11303,7 @@ function MonsterVillage() {
             run.foundSigns = (run.foundSigns || []).filter((sg) => valid.includes(sg));
             Object.keys(run.locEvidence || {}).forEach((l) => { run.locEvidence[l] = (run.locEvidence[l] || []).filter((sg) => valid.includes(sg)); });
             run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
+            repairDaylightGiveUp(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
                it has already sampled the night and recorded player choices.
@@ -14904,21 +14913,6 @@ function MonsterVillage() {
           </div>
           {n.alive && !n.fled && (
             <div className="px-4 pt-3 mvIvDock heDockSpill" style={{ flexShrink: 0, background: "linear-gradient(#161B30,#111528)", borderTop: `1px solid ${C.line}`, paddingBottom: "max(env(safe-area-inset-bottom),21px)" }}>
-              {s.coerceNote && s.coerceNote.target === n.id && (
-                giveUpConfirm ? (
-                  <div className="mb-2">
-                    <p style={{ fontSize: 13.5, color: C.redBright, fontStyle: "italic" }} className="mb-1.5">There is no telling whether it keeps its word. There is no undoing this.</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Btn onClick={() => setGiveUpConfirm(false)}>Keep them safe</Btn>
-                      <Btn kind="red" onClick={() => { setGiveUpConfirm(false); setProfile(null); doAction((x) => actGiveUp(x, n.id)); }}>Give them up, truly</Btn>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-2">
-                    <Btn full kind="red" onClick={() => setGiveUpConfirm(true)}>Give them up to it</Btn>
-                  </div>
-                )
-              )}
               {/* striking a name is free and reversible, so it stays quiet;
                   the two that cost something sit below it, and the interview
                   is filled amber because it spends an hour of daylight */}
