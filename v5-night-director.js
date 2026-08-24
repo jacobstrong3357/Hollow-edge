@@ -1870,6 +1870,15 @@
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
     }
+    /* A person presently framed by the scene is the immediate dramatic
+       choice. Put both social reactions ahead of routine location work so
+       the three-button corridor cannot silently cut Follow off as item four. */
+    if (guide.actorId) {
+      var hailKey = guide.actorId + "|HAIL";
+      var followKey = guide.actorId + "|FOLLOW";
+      if (!(guide.interacted || {})[hailKey]) add(all.find(function (item) { return item.type === "HAIL" && item.actorId === guide.actorId; }));
+      if (!(guide.interacted || {})[followKey]) add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }));
+    }
     var atTarget = !!target && state.player.location === target;
     if (target && !atTarget) {
       var path = shortestPath(state.graph, state.player.location, target);
@@ -1901,10 +1910,6 @@
       add(all.find(function (item) { return item.type === "WAIT"; }), "Take up watch near " + (guide.actorName || "their") + " door");
     }
     if (guide.actorId) {
-      var hailKey = guide.actorId + "|HAIL";
-      var followKey = guide.actorId + "|FOLLOW";
-      if (!(guide.interacted || {})[hailKey]) add(all.find(function (item) { return item.type === "HAIL" && item.actorId === guide.actorId; }));
-      if (!(guide.interacted || {})[followKey]) add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }));
       if (guide.intentDone && (guide.kind !== "search" || atTarget)) add(all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); }));
     } else if (atTarget && guide.intentDone) {
       add(all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); }));

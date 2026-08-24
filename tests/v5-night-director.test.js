@@ -244,6 +244,27 @@ function take(state, wanted) {
   }
 })();
 
+(function aFramedVillagerKeepsBothSocialChoicesInsideTheCorridor() {
+  var config = baseConfig("greta-follow-visible");
+  config.monster.active = false;
+  config.currentFacts = { weather: "storm", active: false, outMap: { greta: "Dark Forest" } };
+  config.forcedBeats = [];
+  config.villagers = [{
+    id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Dark Forest",
+    motive: { id: "night-herbs", family: "medicine", destination: "Dark Forest", reason: "gather night herbs", object: "a small bundle", depart: 0, duration: 4 }
+  }];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Dark Forest";
+  state.schedules.greta.slots[0] = "Dark Forest";
+  state.visibility[0].greta = true;
+  state.currentBeat = { id: "greta-crosses", type: "encounter", slot: 0, location: "Dark Forest", actorId: "greta", text: "Greta crosses the lantern." };
+  var actions = Director.guidedActions(state, { target: "Dark Forest", kind: "search", actorId: "greta", intentDone: false, searches: {}, interacted: {} });
+  assert.deepStrictEqual(actions.slice(0, 2).map(function (item) { return item.type; }), ["HAIL", "FOLLOW"], "Hail and Follow take priority when a villager is visibly crossing the scene");
+  assert(actions.some(function (item) { return item.type === "SEARCH"; }), "one location-specific search choice remains beside the social choices");
+})();
+
 (function searchChoicesBelongToThePlaceInsteadOfAdvertisingEvidence() {
   var expected = {
     "Village Square": /well|market|alley|doorway/i,
