@@ -404,6 +404,32 @@ function take(state, wanted) {
   assert(sawClue && heardWords && drewSuspicion, "the deterministic investigation tape contains evidence, last-word and social-suspicion outcomes");
 })();
 
+(function aTavernScreamAlwaysOpensItsBodyScene() {
+  for (var i = 0; i < 40; i += 1) {
+    var config = baseConfig("tavern-investigation:" + i);
+    config.slots = 6;
+    config.openingIntent = { kind: "search", loc: "Old Mill" };
+    config.player = {};
+    config.forcedBeats = [];
+    config.villagers = [
+      { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "tavern-delivery", family: "work", destination: "Tavern", reason: "deliver cloth", object: "a parcel", depart: 0, duration: 6 } },
+      { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true, home: "Old Church" }
+    ];
+    config.monster = { id: "ghoul", hostId: "greta", active: true, signs: ["bite", "graves"], hunts: ["Tavern"], attack: "kill", reach: "out", huntSlot: 1 };
+    config.currentFacts = { weather: "storm", active: true, huntLoc: "Tavern", attackSlot: 1, outMap: { rosa: "Tavern", falk: "home" } };
+    var state = Director.createNight(config);
+    state = take(state, { type: "LEAVE", to: "Old Mill" });
+    state.discoverySchedule = {};
+    state = take(state, { type: "SEARCH", searchMode: "ground" });
+    var investigate = Director.guidedActions(state, { target: "Old Mill", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} }).find(function (action) { return action.investigateEventId; });
+    assert(investigate && investigate.to === "Tavern", "the Tavern scream has an investigation route");
+    state.ledgers.memories = {};
+    state = take(state, investigate);
+    assert.strictEqual(state.player.location, "Tavern");
+    assert(state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.bodyInvestigation, "the Tavern investigation renders the body scene even when an older save lacks memory buckets");
+  }
+})();
+
 (function discoveriesAreEarnedAndFair() {
   var config = baseConfig("discoveries");
   var state = Director.createNight(config);
@@ -961,6 +987,8 @@ function take(state, wanted) {
   var html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   var start = html.slice(html.indexOf("const startDirectorNight"), html.indexOf("/* ---------- The night walk", html.indexOf("const startDirectorNight")));
   assert(start.indexOf("setWalk({") < start.indexOf("Snd.scene("), "the Director walk state must be queued before optional ambience runs");
+  assert(html.includes('catch (e) { console.warn("Night sound cue could not play", e); }'), "a failed Director sound effect cannot unmount the night screen");
+  assert(html.includes('catch (e) { console.warn("Night heartbeat could not play", e); }'), "a failed heartbeat cannot unmount the night screen");
   assert(html.includes("node.volume.linearRampTo(db, seconds)"), "weather volume fades must use a linear ramp that accepts the silent decibel floor");
   assert(!html.includes("windFilter.frequency.rampTo("), "the LFO-owned wind filter parameter must not be automated directly");
   var sightings = html.slice(html.indexOf("const DIRECTOR_SIGHTING_LINES"), html.indexOf("function directorSightingFor"));

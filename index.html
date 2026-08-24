@@ -302,7 +302,10 @@ const Snd = {
       this.volume_(this.foleyVol, this.sceneState && this.sceneState.weather === "storm" ? -17 : -20, 0.04);
       this.foleyFilter.frequency.rampTo(760, 0.04);
       [0, 0.2, 0.43].forEach((off, i) => this.foleyNoise.triggerAttackRelease(i === 1 ? 0.16 : 0.12, t + off, i === 1 ? 0.38 : 0.24));
-      window.setTimeout(() => this.volume_(this.foleyVol, restoreDb, 0.45), 720);
+      window.setTimeout(() => {
+        try { this.volume_(this.foleyVol, restoreDb, 0.45); }
+        catch (e) { console.warn("Whisper ambience could not settle", e); }
+      }, 720);
       return;
     }
     if (kind === "breath" || kind === "breath_close") {
@@ -11367,7 +11370,8 @@ function MonsterVillage() {
   useEffect(() => {
     const directorDanger = walk && walk.mode === "director" && walk.director && ["threat", "chase", "dead"].includes(walk.director.phase);
     const danger = walk && (directorDanger || walk.stage === "hide" || walk.stage === "hidden" || walk.stage === "fate" || (walk.stage === "chased" && walk.facts.active) || (walk.stage === "approach" && walk.facts.active && walk.facts.huntLoc === walk.loc));
-    Snd.beat(!!danger);
+    try { Snd.beat(!!danger); }
+    catch (e) { console.warn("Night heartbeat could not play", e); }
   }, [walk]);
 
   /* -- Pass H: a sharp stinger the instant the hide beat opens, and a
@@ -11378,35 +11382,37 @@ function MonsterVillage() {
     const directorBeat = walk && walk.mode === "director" && walk.director && walk.director.currentBeat;
     const stage = directorBeat ? `director:${directorBeat.id}` : walk && walk.mode === "director" ? `director:${walk.director.phase}:${walk.director.cursor}` : walk && walk.stage;
     if (stage !== walkStageRef.current) {
-      if (directorBeat && directorBeat.meta && (directorBeat.meta.soundCue || directorBeat.meta.weatherSoundCue)) {
-        if (directorBeat.meta.weatherSoundCue) Snd.cue(directorBeat.meta.weatherSoundCue);
-        Snd.silence(directorBeat.meta.soundCue === "silence");
-        if (directorBeat.meta.soundCue === "wail") Snd.wail();
-        else if (directorBeat.meta.soundCue === "song") Snd.wail("song");
-        else Snd.cue(directorBeat.meta.soundCue);
-      }
-      else if (directorBeat && directorBeat.type === "threat") { Snd.silence(true); Snd.danger(); }
-      else if (directorBeat && directorBeat.type === "doorstep") { Snd.silence(true); Snd.knock(); }
-      else if (directorBeat && directorBeat.type === "whisper") Snd.cue("whisper");
-      else if (directorBeat && directorBeat.type === "stamp") Snd.cue("earth");
-      else if (directorBeat && directorBeat.type === "delusion") { Snd.silence(true); Snd.cue("breath_close"); }
-      else if (directorBeat && directorBeat.type === "flee") { Snd.silence(false); Snd.cue("leaves"); }
-      else if (walk && walk.mode === "director") {
-        Snd.silence(false);
-        Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: walk.director.phase === "threat" ? 1 : 0.15 });
-      }
-      else if (stage === "hide") Snd.danger();
-      /* the succubus's night-sound is a song, not a grief: the audio keeps
-         faith with the text (its ambient lines already say "nearer a song")
-         and only on nights it is truly abroad. Everything else wails. */
-      else if (stage === "sound") Snd.wail(walk && walk.facts.active && s && s.monster.type === "succubus" ? "song" : undefined);
-      else if (stage === "churchThreshold") {
-        Snd.scene({ location: "Old Church", weather: walk && walk.facts.wx, watched: true, proximity: 0.25 });
-        Snd.cue((((walk || {}).churchScenario || {}).audio || [])[0]);
-      }
-      else if (stage === "churchStill") { Snd.cue((((walk || {}).churchScenario || {}).audio || [])[1]); Snd.silence(true); }
-      else if (stage === "churchSeen") Snd.cue((((walk || {}).churchScenario || {}).audio || [])[2]);
-      else if (stage === "churchDoor") Snd.knock();
+      try {
+        if (directorBeat && directorBeat.meta && (directorBeat.meta.soundCue || directorBeat.meta.weatherSoundCue)) {
+          if (directorBeat.meta.weatherSoundCue) Snd.cue(directorBeat.meta.weatherSoundCue);
+          Snd.silence(directorBeat.meta.soundCue === "silence");
+          if (directorBeat.meta.soundCue === "wail") Snd.wail();
+          else if (directorBeat.meta.soundCue === "song") Snd.wail("song");
+          else Snd.cue(directorBeat.meta.soundCue);
+        }
+        else if (directorBeat && directorBeat.type === "threat") { Snd.silence(true); Snd.danger(); }
+        else if (directorBeat && directorBeat.type === "doorstep") { Snd.silence(true); Snd.knock(); }
+        else if (directorBeat && directorBeat.type === "whisper") Snd.cue("whisper");
+        else if (directorBeat && directorBeat.type === "stamp") Snd.cue("earth");
+        else if (directorBeat && directorBeat.type === "delusion") { Snd.silence(true); Snd.cue("breath_close"); }
+        else if (directorBeat && directorBeat.type === "flee") { Snd.silence(false); Snd.cue("leaves"); }
+        else if (walk && walk.mode === "director") {
+          Snd.silence(false);
+          Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: walk.director.phase === "threat" ? 1 : 0.15 });
+        }
+        else if (stage === "hide") Snd.danger();
+        /* the succubus's night-sound is a song, not a grief: the audio keeps
+           faith with the text (its ambient lines already say "nearer a song")
+           and only on nights it is truly abroad. Everything else wails. */
+        else if (stage === "sound") Snd.wail(walk && walk.facts.active && s && s.monster.type === "succubus" ? "song" : undefined);
+        else if (stage === "churchThreshold") {
+          Snd.scene({ location: "Old Church", weather: walk && walk.facts.wx, watched: true, proximity: 0.25 });
+          Snd.cue((((walk || {}).churchScenario || {}).audio || [])[0]);
+        }
+        else if (stage === "churchStill") { Snd.cue((((walk || {}).churchScenario || {}).audio || [])[1]); Snd.silence(true); }
+        else if (stage === "churchSeen") Snd.cue((((walk || {}).churchScenario || {}).audio || [])[2]);
+        else if (stage === "churchDoor") Snd.knock();
+      } catch (e) { console.warn("Night sound cue could not play", e); }
     }
     walkStageRef.current = stage;
   }, [walk && walk.stage, walk && walk.mode === "director" && walk.director && walk.director.currentBeat && walk.director.currentBeat.id, walk && walk.mode === "director" && walk.director && walk.director.cursor]);

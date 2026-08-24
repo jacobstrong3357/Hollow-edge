@@ -1043,6 +1043,7 @@
       witnessIds: witnessIds
     });
     witnessIds.forEach(function (witnessId) {
+      state.ledgers.memories[witnessId] = state.ledgers.memories[witnessId] || [];
       state.ledgers.memories[witnessId].push({
         eventId: truth.id, slot: slot, subject: "player", kind: "found_near_body", location: event.location,
         clarity: "clear", acknowledged: false, interpretation: "They arrived to find the player alone beside the fresh body."
@@ -1292,6 +1293,11 @@
     if (state.encounterBudget == null) state.encounterBudget = 2;
     state.visibility = state.visibility || {};
     state.outcomes = state.outcomes || {};
+    state.ledgers = state.ledgers || { truth: [], observations: [], memories: {} };
+    state.ledgers.truth = state.ledgers.truth || [];
+    state.ledgers.observations = state.ledgers.observations || [];
+    state.ledgers.memories = state.ledgers.memories || {};
+    (state.cast || []).forEach(function (villager) { state.ledgers.memories[villager.id] = state.ledgers.memories[villager.id] || []; });
     for (var slot = 0; slot < state.slots; slot += 1) {
       state.visibility[slot] = state.visibility[slot] || {};
       (state.cast || []).forEach(function (villager) {
