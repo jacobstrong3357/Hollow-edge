@@ -737,6 +737,45 @@ function take(state, wanted) {
   assert(!state.ledgers.truth.some(function (event) { return event.kind === "hunt_empty"; }));
 })();
 
+(function guaranteedOutdoorQuarryOccupiesTheAttackHour() {
+  var config = {
+    seed: "guaranteed-outdoor-quarry", night: 8, slots: 6,
+    villagers: [
+      { id: "ansel", name: "Father Ansel", role: "the Priest", alive: true, home: "Old Church", motive: { id: "host-hunt", family: "faith", destination: "Graveyard", reason: "cross the churchyard", object: "a lantern", depart: 1, duration: 6 } },
+      { id: "hazel", name: "Hazel", role: "the Midwife", alive: true, home: "Village Square", motive: { id: "late-errand", family: "obligation", destination: "Graveyard", reason: "leave a promised parcel", object: "a parcel", depart: 0, duration: 6 } }
+    ],
+    monster: { id: "ghoul", hostId: "ansel", active: true, signs: ["tracks", "graves", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out" },
+    currentFacts: { weather: "frost", active: true, huntLoc: "Graveyard", attackSlot: 3, guaranteedVictimId: "hazel", outMap: { ansel: "Graveyard", hazel: "Graveyard" } },
+    forcedBeats: []
+  };
+  var state = Director.createNight(config);
+  assert.strictEqual(state.schedules.ansel.slots[1], "Graveyard", "the host has left the watched church door before the hunt");
+  assert.strictEqual(state.schedules.hazel.slots[3], "Graveyard", "the fallback neighbour is present at the sampled attack hour");
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  while (state.phase === "active" && state.cursor < 3) state = take(state, { type: "KEEP_WATCH" });
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "slain" && event.victimId === "hazel"; }), "an uninterrupted active hunt lands on the scheduled neighbour");
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "hunt_empty"; }), "an uninterrupted active hunt cannot report empty ground");
+})();
+
+(function watchedDoorResultOutranksCoincidentWeather() {
+  var config = {
+    seed: "door-opens-through-thunder", night: 4, slots: 5,
+    openingIntent: { kind: "watch", id: "ansel" },
+    villagers: [{ id: "ansel", name: "Father Ansel", role: "the Priest", alive: true, home: "Old Church", motive: { id: "night-crossing", family: "faith", destination: "Graveyard", reason: "cross the churchyard", object: "a lantern", depart: 0, duration: 5 } }],
+    monster: { id: "ghoul", hostId: "greta", active: false, signs: ["tracks", "graves"], hunts: ["Graveyard"], attack: "kill", reach: "out" },
+    currentFacts: { weather: "storm", active: false, outMap: { ansel: "Graveyard" } },
+    forcedBeats: [
+      { id: "thunder-at-door", type: "atmosphere", slot: 1, location: "Old Church", text: "Thunder rolls over the church." },
+      { id: "door-opens", type: "watch", slot: 1, location: "Old Church", actorId: "ansel", text: "Father Ansel's door opens.", meta: { departure: true, critical: true } }
+    ]
+  };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  state = take(state, { type: "KEEP_WATCH" });
+  assert.strictEqual(state.currentBeat.id, "door-opens", "weather cannot overwrite the watched suspect's departure");
+  assert(Director.guidedActions(state, { kind: "watch", actorName: "Father Ansel", target: "Old Church" }).some(function (action) { return action.type === "FOLLOW" && action.actorId === "ansel"; }), "the departure still exposes the required follow action");
+})();
+
 (function anEmptyOutdoorHuntStillDisturbsTheLivedNight() {
   var config = {
     seed: "empty-ghoul-ground", night: 5, slots: 5,
@@ -1213,6 +1252,15 @@ function take(state, wanted) {
   assert(start.indexOf("setWalk({") < start.indexOf("Snd.scene("), "the Director walk state must be queued before optional ambience runs");
   assert(html.includes('catch (e) { console.warn("Night sound cue could not play", e); }'), "a failed Director sound effect cannot unmount the night screen");
   assert(html.includes('catch (e) { console.warn("Night heartbeat could not play", e); }'), "a failed heartbeat cannot unmount the night screen");
+  var sampledNight = html.slice(html.indexOf("function sampleNight"), html.indexOf("/* ================= V5 NIGHT DIRECTOR ADAPTER"));
+  assert(sampledNight.indexOf("if (s.warnedLoc") < sampledNight.indexOf("let guaranteedVictimId"), "natural, secret and warned routes settle before an empty hunting ground receives a fallback villager");
+  assert(sampledNight.includes('if (active && m.reach !== "home" && huntLoc)'), "every outdoor hunt night, not only night one or a werewolf night, checks for a real quarry");
+  assert(sampledNight.includes("delete secretOut[forced.id]") && sampledNight.includes("delete griefOut[forced.id]"), "a fallback hunt route cannot retain a contradictory secret or mourning destination");
+  assert(!sampledNight.includes('if (n === 1 && active && m.reach !== "home")'), "the retired first-night-only guarantee cannot return");
+  var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
+  assert(compiledNight.includes("facts.guaranteedVictimId") && compiledNight.includes("guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }"), "the fallback neighbour is physically on the hunting ground throughout the attack hour");
+  assert(compiledNight.includes("activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }"), "an active monster host leaves its house before it hunts");
+  assert(html.includes("then followed them to the ${log.you.followedTo}"), "the final night history distinguishes following a watched suspect from remaining at their door");
   assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
   assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");

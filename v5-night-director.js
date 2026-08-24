@@ -832,7 +832,12 @@
        tomorrow about an event the interface never showed. */
     if (state.currentBeat && state.currentBeat.type === "atmosphere" && state.gathering && state.gathering.shown) return;
     var key = slot + "|" + state.player.location;
-    var entries = (state.discoverySchedule[key] || []).concat(state.discoverySchedule[slot + "|*"] || []);
+    var entries = (state.discoverySchedule[key] || []).concat(state.discoverySchedule[slot + "|*"] || []).sort(function (a, b) {
+      /* The watched door is the player's chosen purpose for this hour. Show
+         its result after coincident weather and atmosphere so a thunderclap
+         cannot conceal the fact that the suspect left or stayed. */
+      return (a.type === "watch" ? 1 : 0) - (b.type === "watch" ? 1 : 0);
+    });
     entries.forEach(function (beat) {
       var reveal = discoveryReveals(beat, action);
       if (!reveal) return;

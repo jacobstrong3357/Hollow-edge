@@ -3352,18 +3352,6 @@ function sampleNight(s, m, n) {
       else setOut(npc.id, "home", "indoor");
     }
   }
-  /* Night one always draws blood: if the horror can only take those caught
-     outdoors, force one villager into its path so the first kill cannot fail
-     to land. (Monsters that can reach into homes never needed this push.) */
-  if (n === 1 && active && m.reach !== "home") {
-    const cand = s.npcs.filter((npc) => npc.alive && !npc.turned && npc.id !== s.monster.vid);
-    const firstHuntLoc = outMap[s.monster.vid];
-    const someoneOnHuntingGround = cand.some((npc) => outMap[npc.id] === firstHuntLoc);
-    if (cand.length && !someoneOnHuntingGround) {
-      const forced = pick(cand);
-      setOut(forced.id, firstHuntLoc || pick(m.hunts));
-    }
-  }
   /* a villager's whispered warning does not fall on dead ground: for a few
      nights after "keep away from the X", that place is made to LIVE - half
      the time the horror really does hunt there (if it can), and otherwise a
@@ -3380,30 +3368,33 @@ function sampleNight(s, m, n) {
     }
   }
   const huntLoc = active ? outMap[s.monster.vid] : null;
-  /* A werewolf's active third-night rhythm is a law, not a roll. Put one
-     living non-host villager on its final hunting ground now. If the player
-     becomes the first quarry and escapes, the Director already has somebody
-     physically exposed to inherit the hunt; dawn never invents a substitute. */
-  let relentlessVictimId = null;
-  if (active && m.id === "werewolf" && huntLoc) {
-    const exposed = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && outMap[npc.id] === huntLoc);
-    if (exposed.length) relentlessVictimId = pick(exposed).id;
-    else {
-      const candidates = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid);
-      if (candidates.length) {
-        const forced = pick(candidates);
-        outMap[forced.id] = huntLoc;
-        relentlessVictimId = forced.id;
-      }
+  /* Resolve ordinary routes first. If an outdoor hunt would otherwise have
+     nobody on its ground, give one eligible neighbour a final plausible
+     errand there. This is part of the sampled night, not a victim invented at
+     dawn, and the Director will keep them there through the attack hour. */
+  let guaranteedVictimId = null;
+  if (active && m.reach !== "home" && huntLoc) {
+    const eligible = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid);
+    const naturallyThere = eligible.filter((npc) => outMap[npc.id] === huntLoc && canReachExposure(m, exposureMap[npc.id] || "outdoor"));
+    if (naturallyThere.length) guaranteedVictimId = pick(naturallyThere).id;
+    else if (eligible.length) {
+      const forced = eligible[stableIdx(`${s.gameId}:hunt-fallback:${n}:${huntLoc}`, eligible.length)];
+      setOut(forced.id, huntLoc, "outdoor");
+      delete secretOut[forced.id];
+      delete griefOut[forced.id];
+      guaranteedVictimId = forced.id;
     }
   }
+  /* A werewolf continues after a witnessed escape. Its fallback is the same
+     real neighbour already scheduled onto the hunting ground above. */
+  const relentlessVictimId = active && m.id === "werewolf" ? guaranteedVictimId : null;
   /* whether tonight's vantage could actually DECODE a crossed-paths secret
      errand (the "wait" watch), sampled here so the live walk and the recap
      agree. Half the time you only see a neighbour abroad, not the why:
      secrets should be a payoff, not a nightly harvest. */
   const secretCatch = {};
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(0.35);
-  return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, relentlessVictimId, affliction };
+  return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, guaranteedVictimId, relentlessVictimId, affliction };
 }
 
 /* ================= V5 NIGHT DIRECTOR ADAPTER =================
@@ -3964,7 +3955,8 @@ function compileDirectorNight(s, facts, openingIntent) {
   } : null;
   const afflictionText = directorAfflictionText(s, facts.affliction);
   const firstNightTarget = n === 1 && facts.active ? s.npcs.find((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && facts.outMap[npc.id] === facts.huntLoc) : null;
-  const guaranteedHuntTarget = facts.relentlessVictimId ? npcById(s, facts.relentlessVictimId) : firstNightTarget;
+  const guaranteedHuntTarget = facts.guaranteedVictimId ? npcById(s, facts.guaranteedVictimId)
+    : facts.relentlessVictimId ? npcById(s, facts.relentlessVictimId) : firstNightTarget;
   const forcedBeats = [];
   /* Quiet is a valid outcome. A whisper is an authored possibility, not a
      nightly appointment, so a short uneventful walk can remain exactly that. */
@@ -4011,15 +4003,23 @@ function compileDirectorNight(s, facts, openingIntent) {
   }
   const directorConfig = {
     seed, night: n, slots, openingIntent,
-    villagers: s.npcs.map((npc) => ({
-      id: npc.id, name: npc.name, role: npc.role, alive: npc.alive, fled: npc.fled,
-      build: npc.build, disposition: npc.disp || 0, home: HOME_LOC[npc.id] || "Village Square",
-      changed: !!npc.turned, afflicted: !!npc.turned,
-      bonds: BONDS.filter((b) => b.a === npc.id || b.b === npc.id).map((b) => b.a === npc.id ? b.b : b.a),
-      motive: guaranteedHuntTarget && guaranteedHuntTarget.id === npc.id
-        ? { ...(directorMotiveFor(s, facts, npc) || { id: `first-blood:${npc.id}`, family: "obligation", destination: facts.huntLoc, reason: "finish an errand promised before sunset", object: "a small parcel that never reached its door" }), depart: 2, duration: 5 }
-        : directorMotiveFor(s, facts, npc),
-    })),
+    villagers: s.npcs.map((npc) => {
+      const sampledMotive = directorMotiveFor(s, facts, npc);
+      const guaranteedTarget = guaranteedHuntTarget && guaranteedHuntTarget.id === npc.id;
+      const activeHost = facts.active && npc.id === s.monster.vid;
+      const fallbackMotive = { id: `hunt-route:${npc.id}`, family: "obligation", destination: facts.huntLoc, reason: "finish an errand promised before sunset", object: "a small parcel" };
+      return {
+        id: npc.id, name: npc.name, role: npc.role, alive: npc.alive, fled: npc.fled,
+        build: npc.build, disposition: npc.disp || 0, home: HOME_LOC[npc.id] || "Village Square",
+        changed: !!npc.turned, afflicted: !!npc.turned,
+        bonds: BONDS.filter((b) => b.a === npc.id || b.b === npc.id).map((b) => b.a === npc.id ? b.b : b.a),
+        /* A hunt cannot happen while its host remains behind the watched door.
+           The quarry also reaches the sampled ground before the attack slot. */
+        motive: guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }
+          : activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }
+            : sampledMotive,
+      };
+    }),
     monster: {
       id: monsterTruth.id, hostId: s.monster.vid, active: facts.active,
       signs: monsterTruth.signs, hunts: monsterTruth.hunts,
@@ -4038,7 +4038,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   const currentFacts = {
     weather: facts.wx || "still", active: facts.active, huntLoc: facts.huntLoc,
     outMap: facts.outMap, griefOut: facts.griefOut, secretOut: facts.secretOut,
-    eventLoc: facts.eventLoc, attackSlot, relentlessVictimId: facts.relentlessVictimId,
+    eventLoc: facts.eventLoc, attackSlot, guaranteedVictimId: facts.guaranteedVictimId, relentlessVictimId: facts.relentlessVictimId,
   };
   /* Compile a private preview only to place one mundane object on a route
      that really exists. Recompiling with the same seed is byte-stable; the
@@ -4111,7 +4111,7 @@ function compileDirectorNight(s, facts, openingIntent) {
         : facts.wx === "storm" ? `You reach ${target.name}'s door by the back lanes, then wedge yourself beneath an eave where the rain cannot drum directly on your hood.`
           : facts.wx === "frost" ? `You take the back lanes to ${target.name}'s door. You choose bare stone, where your own prints will not betray the watch.`
             : `You take the back lanes and set yourself outside ${target.name}'s door.`,
-      meta: { setup: true },
+      meta: { setup: true, critical: true },
     });
     const watchText = directorHomeWatchText(s, facts, openingIntent.id);
     const leaves = target && facts.outMap && facts.outMap[openingIntent.id] && facts.outMap[openingIntent.id] !== "home";
@@ -4123,17 +4123,17 @@ function compileDirectorNight(s, facts, openingIntent) {
         id: `n${n}:door-departure:${openingIntent.id}`, type: "watch", slot: departSlot >= 0 ? departSlot : Math.min(slots - 1, setupSlot + 1),
         location: watchLocation, actorId: openingIntent.id,
         text: `${target.name}'s door opens. ${facts.wx === "fog" ? "A lantern-smudge moves into the fog" : facts.wx === "storm" ? "Lightning catches a figure stepping into the rain" : facts.wx === "frost" ? "A figure and a white breath cross the untouched frost" : "A light moves out"} toward the ${destination}.`,
-        meta: { departure: true },
+        meta: { departure: true, critical: true },
       });
     } else if (target && watchText) directorConfig.forcedBeats.push({
       id: `n${n}:door-watch:${openingIntent.id}`, type: "watch", slot: Math.min(slots - 1, Math.max(setupSlot + 1, slots - 1)),
       location: watchLocation, actorId: openingIntent.id, text: watchText,
-      meta: { revealsSecret: facts.homeWatch && facts.homeWatch.kind === "secret", secretSummary: facts.homeWatch && facts.homeWatch.short || null, noDeparture: true },
+      meta: { revealsSecret: facts.homeWatch && facts.homeWatch.kind === "secret", secretSummary: facts.homeWatch && facts.homeWatch.short || null, noDeparture: true, critical: true },
     });
     else if (target) directorConfig.forcedBeats.push({
       id: `n${n}:door-quiet:${openingIntent.id}`, type: "watch", slot: slots - 1,
       location: watchLocation, actorId: openingIntent.id,
-      text: `${target.name} does not leave all night. At dawn, you go home.`, meta: { noDeparture: true },
+      text: `${target.name} does not leave all night. At dawn, you go home.`, meta: { noDeparture: true, critical: true },
     });
   }
   return HE_DIRECTOR.fromExistingFacts(directorConfig, currentFacts);
@@ -4661,7 +4661,11 @@ function resolveNight(prev, planIn, preEvents) {
     /* Deaths and flight can happen anywhere in the night resolution. Apply
        the favour invariant again after all of those rare paths settle. */
     cancelUnavailableFavour(s);
-    s.nightLogs.push({ night: n, active, huntLoc, outMap, exposureMap, secretOut, griefOut, you: watching ? { kind: "watch", id: watching } : out ? { kind: "out", loc: plan.loc } : { kind: "home" }, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, exposure: evn.exposure || "outdoor", odd: evOdd, fight: evFight, pair: evPair } : null });
+    const watchedFollow = director && watching ? [...(director.actionHistory || [])].reverse().find((action) => action.type === "FOLLOW" && action.actorId === watching) : null;
+    const playerLog = watching
+      ? { kind: "watch", id: watching, followedTo: watchedFollow && (watchedFollow.to || outMap[watching]) || null }
+      : out ? { kind: "out", loc: plan.loc } : { kind: "home" };
+    s.nightLogs.push({ night: n, active, huntLoc, outMap, exposureMap, secretOut, griefOut, you: playerLog, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, exposure: evn.exposure || "outdoor", odd: evOdd, fight: evFight, pair: evPair } : null });
     /* Cap the morning at five cards, keeping the most important: rank by pri
        (deaths, a villager marked, the note first), stable within a tier so the
        night still reads in order, and drop trailing atmosphere. */
@@ -12349,7 +12353,9 @@ function MonsterVillage() {
                 const itTxt = log.active ? (log.huntLoc ? `it hunted from the ${log.huntLoc}` : "it walked in the open") : "it kept perfectly still";
                 const youTxt = !log.you ? "the village stood siege"
                   : log.you.kind === "out" ? `you searched the ${log.you.loc}`
-                  : log.you.kind === "watch" ? `you watched ${(npcById(s, log.you.id) || {}).name}'s door`
+                  : log.you.kind === "watch" ? (log.you.followedTo
+                    ? `you watched ${(npcById(s, log.you.id) || {}).name}'s door, then followed them to the ${log.you.followedTo}`
+                    : `you watched ${(npcById(s, log.you.id) || {}).name}'s door`)
                   : "you barred your door";
                 return (
                   <div key={log.night} className="flex gap-2 py-0.5" style={{ fontSize: 14.5, borderBottom: `1px solid ${C.line}` }}>
