@@ -1848,7 +1848,12 @@ function take(state, wanted) {
   vm.createContext(chunkContext);
   vm.runInContext(chunkSource + "; this.nightTextChunks = nightTextChunks;", chunkContext);
   var paced = chunkContext.nightTextChunks("One short sentence. This deliberately longer sentence contains enough separate words to require more than one compact typed line on a narrow phone screen.");
-  assert(paced.length >= 3 && paced.every(function (words) { return words.length <= 18; }), "night prose is divided into sentence-sized runs of at most eighteen words");
+  assert(paced.length >= 3 && paced.every(function (chunk) { return chunk.words.length <= 18; }), "night prose is divided into sentence-sized runs of at most eighteen words");
+  var wrappedPhrase = chunkContext.nightTextChunks("In a lightning flash, the figure becomes Hazel only when your lantern reaches them; they hold a small bundle.");
+  assert.strictEqual(wrappedPhrase.length, 2, "a long sentence still pauses after eighteen words");
+  assert.strictEqual(wrappedPhrase[1].breakBefore, false, "a pacing pause inside one sentence does not force a visual paragraph break");
+  var flowSource = html.slice(html.indexOf("function NightTextFlow"), html.indexOf("/* Staged suspense", html.indexOf("function NightTextFlow")));
+  assert(flowSource.includes('display: chunk.breakBefore ? "block" : "inline"') && flowSource.includes('i > 0 && !chunk.breakBefore ? " " : ""'), "continued chunks remain inline with a real word space");
   assert(html.includes("!terminal && flowReady") && html.includes("terminal && flowReady"), "night choices remain hidden until the current typed scene has finished or the player reveals it");
   assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");

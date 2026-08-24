@@ -12093,9 +12093,11 @@ function nightTextChunks(text, maxWords = 18) {
     const fragment = sentence.trim();
     if (/^[,;:'"‘’“”]+$/.test(fragment)) return;
     const words = fragment.split(/\s+/).filter(Boolean);
-    for (let i = 0; i < words.length; i += maxWords) chunks.push(words.slice(i, i + maxWords));
+    for (let i = 0; i < words.length; i += maxWords) {
+      chunks.push({ words: words.slice(i, i + maxWords), breakBefore: i === 0 && chunks.length > 0 });
+    }
   });
-  return chunks.length ? chunks : [[]];
+  return chunks.length ? chunks : [{ words: [], breakBefore: false }];
 }
 
 /* Director prose arrives in short sentence-sized runs. Earlier runs remain
@@ -12103,7 +12105,7 @@ function nightTextChunks(text, maxWords = 18) {
    words land. A click or key press reveals the whole card immediately. */
 function NightTextFlow({ text, italic, onComplete }) {
   const chunks = nightTextChunks(text);
-  const total = chunks.reduce((sum, words) => sum + words.length, 0);
+  const total = chunks.reduce((sum, chunk) => sum + chunk.words.length, 0);
   const [shown, setShown] = useState(0);
   const completeRef = useRef(onComplete);
   const finishedRef = useRef(false);
@@ -12124,7 +12126,7 @@ function NightTextFlow({ text, italic, onComplete }) {
     }
     const boundaries = new Set();
     let boundary = 0;
-    chunks.forEach((words) => { boundary += words.length; boundaries.add(boundary); });
+    chunks.forEach((chunk) => { boundary += chunk.words.length; boundaries.add(boundary); });
     let count = 0;
     let timer = null;
     const typeNext = () => {
@@ -12140,13 +12142,16 @@ function NightTextFlow({ text, italic, onComplete }) {
   let used = 0;
   return (
     <div onClick={reveal} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); reveal(); } }} role="button" tabIndex={0} aria-label={`${text} Press to reveal the full card.`} style={{ cursor: shown < total ? "pointer" : "default" }}>
-      {chunks.map((words, i) => {
+      <p style={{ margin: "6px 0 0", fontSize: 16.5, lineHeight: 1.48, color: C.parch, fontStyle: italic ? "italic" : "normal" }}>
+      {chunks.map((chunk, i) => {
+        const words = chunk.words;
         const visible = Math.max(0, Math.min(words.length, shown - used));
         used += words.length;
         if (!visible) return null;
         const current = shown < total && visible < words.length;
-        return <p key={i} style={{ margin: i ? "5px 0 0" : "6px 0 0", fontSize: 16.5, lineHeight: 1.48, color: C.parch, fontStyle: italic ? "italic" : "normal" }}>{words.slice(0, visible).join(" ")}{current && <span style={{ opacity: .42 }}> ▍</span>}</p>;
+        return <span key={i} style={{ display: chunk.breakBefore ? "block" : "inline", marginTop: chunk.breakBefore ? 5 : 0 }}>{i > 0 && !chunk.breakBefore ? " " : ""}{words.slice(0, visible).join(" ")}{current && <span style={{ opacity: .42 }}> ▍</span>}</span>;
       })}
+      </p>
     </div>
   );
 }
