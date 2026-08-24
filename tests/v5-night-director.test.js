@@ -1051,6 +1051,39 @@ function take(state, wanted) {
   assert.strictEqual(state.phase, "complete");
 })();
 
+(function aThresholdQuestionBecomesANaturalFollowUp() {
+  var config = baseConfig("threshold-question-conversation");
+  config.villagers = [{ id: "greta", name: "Greta", role: "the Herbalist", alive: true }];
+  config.monster.hostId = "ansel";
+  config.monster.active = false;
+  config.currentFacts = { weather: "storm", active: false, huntLoc: "Graveyard", outMap: { greta: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "greta";
+  state.thresholdEvent.purpose = "question";
+  state.thresholdEvent.clueLocation = "Graveyard";
+  state.thresholdEvent.requestRoll = 0;
+  state.thresholdEvent.dialogueRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Graveyard" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert.strictEqual((state.currentBeat.text.match(/Were you near the Graveyard tonight/g) || []).length, 1, "the opening asks the question once");
+  assert(!/I need to ask you something/.test(state.currentBeat.text), "the question does not announce another question");
+  assert.strictEqual(Director.availableActions(state)[2].label, "Yes. I was near the Graveyard");
+  state = take(state, { type: "LOOK_THROUGH" });
+  assert(/Greta/.test(state.currentBeat.text) && /wait for your answer/i.test(state.currentBeat.text));
+  assert(!/Were you near/.test(state.currentBeat.text), "looking through the shutter does not repeat the question");
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(/“Yes,” you say/.test(state.currentBeat.text) && /follow me/i.test(state.currentBeat.text), "the player's answer receives a direct reply");
+  var followAction = Director.availableActions(state).find(function (action) { return action.type === "STEP_OUTSIDE"; });
+  assert(followAction && followAction.label === "Follow Greta to the Graveyard", "the next choice names the agreed action");
+  state = take(state, followAction);
+  assert.strictEqual(state.phase, "complete");
+  assert(/follow Greta to the Graveyard/.test(state.currentBeat.text) && /fresh earth/.test(state.currentBeat.text));
+  assert(state.found.clues.some(function (clue) { return clue.source === "threshold_neighbour" && clue.location === "Graveyard"; }), "following the neighbour produces a concrete lead");
+})();
+
 (function aThresholdNeighbourCanReturnSomethingFromTheSearchedPlace() {
   var config = baseConfig("searched-place-threshold");
   config.openingIntent = { kind: "search", loc: "Old Church" };
@@ -1191,7 +1224,7 @@ function take(state, wanted) {
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
   state = take(state, { type: "ANSWER_DOOR" });
-  assert(/found something at the Graveyard/i.test(state.currentBeat.text));
+  assert(/show you the mark|clearer if you see it yourself/i.test(state.currentBeat.text), "the neighbour answers once and asks the player to follow");
   state = take(state, { type: "STEP_OUTSIDE" });
   assert(state.player.alive && state.phase === "complete");
   assert(state.found.stamps.some(function (stamp) { return stamp.sign === "bite" && stamp.source === "threshold_neighbour"; }), "following a real neighbour to physical evidence creates a Journal stamp");
@@ -1493,6 +1526,8 @@ function take(state, wanted) {
   assert(!html.includes("SOMETHING ABROAD"), "quiet monster sounds use a concrete heading instead of the removed phrase");
   assert(html.includes('directorBeat.type === "doorstep") {\n          Snd.silence(false);'), "a doorstep visit keeps storm ambience running");
   assert(html.includes('this.doorVol = new Tone.Volume(-8)') && html.includes('this.door.triggerAttackRelease("C1", "8n", t, 1)'), "the door has a dedicated louder knock voice");
+  assert(html.includes("[.!?]+[”\"’']?"), "typed night text keeps a closing curly quote with the sentence instead of rendering it alone");
+  assert(html.includes('beat.meta.thresholdAnswer ? "YOUR ANSWER"') && html.includes('beat.meta.thresholdLook ? "THROUGH THE SHUTTER"'), "each doorstep exchange has a stage-specific heading instead of repeating AT YOUR DOOR");
   assert(!html.includes("an uncertain sight: ${delusion.text}"), "resolved hallucinations do not clutter the evidence journal");
   assert(!html.includes("outside ${actorName}'s door in the ${target}"), "watch prose does not redundantly route a doorstep scene through its map label");
   assert(!/storm drowned half the night|storm drowned words/.test(html), "storm interview copy does not echo the same drowned-sound sentence in question and answer");
