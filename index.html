@@ -4331,7 +4331,10 @@ function resolveNight(prev, planIn, preEvents) {
     const relationshipMemories = relationshipEvents.map((rel) => ({
       eventId: rel.eventId, night: n, actorId: rel.actorId, target: "player", kind: rel.kind,
       location: rel.location, confidence: "certain", acknowledged: true,
-      text: rel.kind === "rescued" ? "They remember the player drawing the danger away." : rel.kind === "attempted_rescue" ? "They remember the player trying to reach them." : "They remember the player choosing the road home.",
+      text: rel.kind === "rescued" ? "They remember the player drawing the danger away."
+        : rel.kind === "attempted_rescue" ? "They remember the player trying to reach them."
+          : rel.kind === "caught_watching" ? "They found what the player dropped and confronted them at their door."
+            : "They remember the player choosing the road home.",
     }));
     const bodyInvestigations = (projection.investigations || []).map((entry) => ({ ...entry, night: n, kind: "director_body_investigation" }));
     s.worldEvents = [...(s.worldEvents || []), ...directorEvents, ...findingEvents, ...bodyInvestigations];
@@ -4366,6 +4369,8 @@ function resolveNight(prev, planIn, preEvents) {
         dawn.push(ev(`${target.name} came back from the dark remembering that you were close enough to help, and chose not to.`, target.id, 2));
       } else if (rel.kind === "abandoned") {
         s.clues.push(`Night ${n}: you left ${target.name} to what was moving in the ${rel.location}. Nobody has accused you of it. You know.`);
+      } else if (rel.kind === "caught_watching") {
+        s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) - 1) } : npc);
       }
     }
     for (const inquiry of bodyInvestigations) {
@@ -4420,8 +4425,9 @@ function resolveNight(prev, planIn, preEvents) {
     const thresholdChoice = (director.ledgers.truth || []).find((e) => e.kind === "threshold_choice");
     if (thresholdChoice) {
       s.doorVisits = (s.doorVisits || 0) + 1;
-      if (thresholdChoice.action !== "KEEP_BARRED") s.clues.push(`Night ${n}: something followed you to your door and tested the threshold. ${director.thresholdEvent && (thresholdChoice.action === "ANSWER_DOOR" ? director.thresholdEvent.answer : director.thresholdEvent.look)} It left no physical proof.`);
     }
+    const thresholdLook = (director.ledgers.truth || []).find((e) => e.kind === "threshold_look" && e.visitorKind === "monster" && e.actorId);
+    if (thresholdLook) s.faceKnown = thresholdLook.actorId;
     /* sawYouOut remains a compatibility projection only. The Director's
        memory ledger is the source; disposition will decide later whether a
        living witness actually speaks for the player. */
@@ -4430,9 +4436,10 @@ function resolveNight(prev, planIn, preEvents) {
       return memories.length ? { ...npc, sawYouOut: [...(npc.sawYouOut || []), ...memories.map((mem) => ({ night: n, loc: mem.location, met: mem.acknowledged, eventId: mem.eventId, timeSlot: mem.timeSlot, nearAttack: mem.nearAttack }))] } : npc;
     });
     if (!director.player.alive) {
-      s.over = { win: false, reason: "lost", text: "The village heard you running. It did not hear you reach your door." };
+      const thresholdDeath = (director.ledgers.truth || []).some((event) => event.kind === "player_slain" && event.source === "threshold");
+      s.over = { win: false, reason: "lost", text: thresholdDeath ? "You answered the voice at your door. By morning, the bolt was still drawn from inside." : "The village heard you running. It did not hear you reach your door." };
       const host = npcById(s, s.monster.vid);
-      const deathPlace = director.player.location === "Home" ? "road home" : (director.player.location || "lanes");
+      const deathPlace = director.player.location === "Home" ? "your cottage" : (director.player.location || "lanes");
       s.deathBeats = (DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name : "someone you knew", deathPlace);
       s.deathAfterBeats = false;
     }
@@ -12762,7 +12769,7 @@ function MonsterVillage() {
       else if (["SEARCH", "SEARCH_ON"].includes(action.type)) Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : "earth");
       else if (action.type === "HAIL") Snd.cue("bustle");
       else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
-      else if (action.type === "ANSWER_DOOR") Snd.cue("whisper");
+      else if (action.type === "ANSWER_DOOR") { if (next.phase === "dead") Snd.danger(); else Snd.cue(next.thresholdEvent && next.thresholdEvent.visitorKind === "neighbour" ? "bustle" : "whisper"); }
       else if (action.type === "REACH_HOME") Snd.cue("latch");
     } catch (e) { console.warn("Night sound cue could not play", e); }
   };

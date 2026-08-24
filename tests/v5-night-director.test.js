@@ -948,26 +948,36 @@ function take(state, wanted) {
   assert(state.player.alive && state.ledgers.truth.some(function (event) { return event.kind === "slain" && event.victimId === "rosa"; }), "even a successful intervention changes the route of the kill, not the werewolf's rhythm");
 })();
 
-(function theThresholdIsSafeButNotQuiet() {
+(function aNeighbourAtTheThresholdNamesThePlayersNightAction() {
   var config = baseConfig("door-2");
+  config.openingIntent = { kind: "watch", id: "rosa" };
   config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
   config.player = { monsterSawYou: true };
   config.monster.active = false;
   config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home" } };
   var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorRoll = 0.9;
+  state.thresholdEvent.dialogueRoll = 0;
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
   assert.strictEqual(state.phase, "returning", "the forest does not turn directly into the player's threshold");
   state = take(state, { type: "REACH_HOME" });
   assert.strictEqual(state.phase, "threshold");
+  assert.strictEqual(state.thresholdEvent.visitorKind, "neighbour", "a real neighbour can be selected instead of the monster");
+  assert.strictEqual(state.thresholdEvent.actorId, "rosa");
   assert.strictEqual(state.currentBeat.type, "doorstep");
   assert.deepStrictEqual(Director.availableActions(state).map(function (a) { return a.type; }), ["KEEP_BARRED", "LOOK_THROUGH", "ANSWER_DOOR"]);
+  assert.strictEqual(Director.availableActions(state)[2].label, "Answer without looking");
   state = take(state, { type: "ANSWER_DOOR" });
   assert.strictEqual(state.phase, "complete");
-  assert(state.player.alive, "the barred cottage remains a hard safety promise");
-  assert.strictEqual(state.found.whispers.length, 1, "answering may preserve a voice, never a physical stamp");
+  assert(state.player.alive, "answering a real neighbour through the closed door is safe");
+  assert(/outside my door/.test(state.currentBeat.text) && /watching me/.test(state.currentBeat.text), "the watched neighbour confronts the player about that specific watch");
+  assert.strictEqual(state.found.whispers.length, 0, "a neighbour's threshold conversation is not filed as supernatural evidence");
   assert.strictEqual(state.found.stamps.length, 0);
   assert(state.ledgers.truth.some(function (e) { return e.kind === "threshold_choice"; }));
+  assert(state.ledgers.truth.some(function (e) { return e.kind === "threshold_confrontation" && e.actorId === "rosa"; }), "being caught watching creates a social consequence");
+  assert(Director.consequenceProjection(state).relationships.some(function (event) { return event.kind === "caught_watching" && event.actorId === "rosa"; }));
 })();
 
 (function thresholdDetailsRespectTheSampledWeather() {
@@ -979,14 +989,83 @@ function take(state, wanted) {
   var state = Director.createNight(config);
   state.thresholdEvent.roll = 0;
   state.thresholdEvent.kind = "breath";
-  state.thresholdEvent.look = "The breathing stops when the shutter moves. The frost on the outer latch is already melting.";
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.item = "a button from your coat";
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
   assert.strictEqual(state.phase, "threshold");
   assert(/Rain rattles/.test(state.currentBeat.text) && !/frost/i.test(state.currentBeat.text));
   state = take(state, { type: "LOOK_THROUGH" });
-  assert(/Rainwater/.test(state.currentBeat.text) && !/frost/i.test(state.currentBeat.text), "a storm threshold cannot borrow the frost latch");
+  assert.strictEqual(state.phase, "threshold", "looking reveals the visitor without ending the decision");
+  assert(/Rain/.test(state.currentBeat.text) && /Rosa/.test(state.currentBeat.text) && !/frost/i.test(state.currentBeat.text), "a storm threshold reveals the real visitor in the sampled weather");
+  assert.deepStrictEqual(Director.availableActions(state).map(function (action) { return action.type; }), ["KEEP_BARRED", "ANSWER_DOOR"], "the player may answer or remain barred after looking");
+  assert(/Answer Rosa/.test(Director.availableActions(state)[1].label));
+  state = take(state, { type: "KEEP_BARRED" });
+  assert.strictEqual(state.phase, "complete");
+})();
+
+(function aThresholdNeighbourCanReturnSomethingFromTheSearchedPlace() {
+  var config = baseConfig("searched-place-threshold");
+  config.openingIntent = { kind: "search", loc: "Old Church" };
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.player = { monsterSawYou: false };
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.item = "your scarf pin";
+  state.thresholdEvent.dialogueRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(/scarf pin at the Old Church/.test(state.currentBeat.text) && /searching for/.test(state.currentBeat.text), "the neighbour returns the dropped item and names the place the player searched");
+})();
+
+(function answeringAnIndoorMonsterCanBeFatal() {
+  var config = baseConfig("indoor-threshold-kill");
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.hostId = "rosa";
+  config.monster.reach = "home";
+  config.currentFacts = { weather: "fog", active: false, outMap: { rosa: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "monster";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.canEnter = true;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert.strictEqual(state.phase, "dead", "answering blindly lets an indoor-reaching monster kill inside the cottage");
+  assert.strictEqual(state.player.alive, false);
+  assert(/room behind you|bolt never moved/i.test(state.currentBeat.text), "the death text makes the indoor breach explicit");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "player_slain" && event.source === "threshold"; }));
+})();
+
+(function anOutdoorMonsterCannotCrossTheBarredDoor() {
+  var config = baseConfig("outdoor-threshold-safe");
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.hostId = "rosa";
+  config.monster.reach = "out";
+  config.currentFacts = { weather: "frost", active: false, outMap: { rosa: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "monster";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.canEnter = false;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert.strictEqual(state.phase, "complete");
+  assert(state.player.alive && /bolt holds/.test(state.currentBeat.text), "an outdoor-only monster can threaten the threshold but not cross it");
 })();
 
 (function goingHomeDoesNotStopTheVillageClock() {
