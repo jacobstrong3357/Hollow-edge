@@ -2351,7 +2351,7 @@ function rollHomeWatch(s, id, outMap, n = s.nightNum + 1) {
      it over. The villager keeps their errands and their lies either way;
      this only governs how often a single night's watching catches them out. */
   const drought = secretDroughtNights(s, n);
-  const secretChance = drought >= 3 ? 0.5 : drought >= 2 ? 0.34 : 0.18;
+  const secretChance = drought >= 5 ? 0.35 : drought >= 4 ? 0.26 : drought >= 3 ? 0.18 : 0.12;
   if (secretOf(s, id) && !target.secretKnown && roll < secretChance) return { kind: "secret", short: secretOf(s, id).short };
   if (others.length && roll < 0.4) return { kind: "visitor", visitorId: pick(others).id };
   if (roll < 0.62) return { kind: "restless", ri: freshIndex(`watchRestless:${id}`, WATCH_RESTLESS.length) };
@@ -3773,7 +3773,13 @@ function sampleNight(s, m, n) {
   let afflictionAnchorId = null;
   const sc = s.searchCount || {};
   const secretDrought = secretDroughtNights(s, n);
-  const secretOutChance = (sec) => Math.min(0.62, sec.outP + (secretDrought >= 3 ? 0.25 : secretDrought >= 2 ? 0.15 : 0.08));
+  /* A secret is a village-wide possibility, not an independent 35% roll for
+     every neighbour. At most one eligible human takes their hidden route on
+     an ordinary night. Everyone else who goes out keeps a visible, mundane
+     errand, so crossed paths are not synonymous with uncovering a secret. */
+  const secretCandidates = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && !npc.secretKnown && secretOf(s, npc.id));
+  const secretNightChance = 0.35;
+  const secretWalkerId = secretCandidates.length && chance(secretNightChance) ? pick(secretCandidates).id : null;
   for (const npc of s.npcs) {
     /* the fled are gone from the village: they hold no place in the night's
        roster, cannot be met in the lanes, and cannot be taken */
@@ -3803,17 +3809,17 @@ function sampleNight(s, m, n) {
         if (chance(0.5)) setOut(npc.id, eventLoc, evn.exposure || "outdoor");
         else setOut(npc.id, "home", "indoor");
       } else if (chance(0.75)) setOut(npc.id, eventLoc, evn.exposure || "outdoor");
-      else if (secretOf(s, npc.id) && chance(secretOutChance(secretOf(s, npc.id)))) { const sec = secretOf(s, npc.id); secretOut[npc.id] = true; setOut(npc.id, sec.loc, sec.exposure || "outdoor"); }
+      else if (npc.id === secretWalkerId && secretOf(s, npc.id)) { const sec = secretOf(s, npc.id); secretOut[npc.id] = true; setOut(npc.id, sec.loc, sec.exposure || "outdoor"); }
       else setOut(npc.id, "home", "indoor");
     } else if (npc.turned) {
       /* the changed do not keep to their beds: they serve it, and wander to
          the eerie ground it keeps, where the player can catch them at it */
       if (chance(0.55)) setOut(npc.id, pick([...m.hunts, "Graveyard", "Dark Forest", "Old Mill"].filter((l) => l !== HOME_LOC[npc.id])));
       else setOut(npc.id, "home", "indoor");
-    } else if (secretOf(s, npc.id) && chance(secretOutChance(secretOf(s, npc.id)))) {
+    } else if (npc.id === secretWalkerId && secretOf(s, npc.id)) {
       const sec = secretOf(s, npc.id); secretOut[npc.id] = true; setOut(npc.id, sec.loc, sec.exposure || "outdoor");
     } else {
-      if (chance(0.25)) setOut(npc.id, pick(LOCS.filter((l) => l !== HOME_LOC[npc.id])));
+      if (chance(0.48)) setOut(npc.id, pick(LOCS.filter((l) => l !== HOME_LOC[npc.id])));
       else setOut(npc.id, "home", "indoor");
     }
   }
@@ -3836,15 +3842,15 @@ function sampleNight(s, m, n) {
      nights after "keep away from the X", that place is made to LIVE - half
      the time the horror really does hunt there (if it can), and otherwise a
      neighbour is drawn there on some human errand of their own, so a player
-     who heeds or defies the warning finds either danger or a secret waiting,
+     who heeds or defies the warning finds either danger or a human errand,
      never nothing. */
   if (s.warnedLoc && n <= s.warnedLoc.until && !huntsCrowd) {
     const L = s.warnedLoc.loc;
     if (active && m.reach !== "home" && m.hunts.includes(L) && chance(0.5)) {
       setOut(s.monster.vid, L);
     } else {
-      const keeper = s.npcs.find((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && x.id !== s.warnedLoc.by && !afflictionCrowd.includes(x.id) && secretOf(s, x.id) && !x.secretKnown && (!outMap[x.id] || outMap[x.id] === "home"));
-      if (keeper) { setOut(keeper.id, L); secretOut[keeper.id] = true; }
+      const keeper = s.npcs.find((x) => x.alive && !x.fled && !x.turned && x.id !== s.monster.vid && x.id !== s.warnedLoc.by && !afflictionCrowd.includes(x.id) && (!outMap[x.id] || outMap[x.id] === "home"));
+      if (keeper) setOut(keeper.id, L);
     }
   }
   const huntLoc = active ? outMap[s.monster.vid] : null;
@@ -3877,7 +3883,7 @@ function sampleNight(s, m, n) {
      agree. Half the time you only see a neighbour abroad, not the why:
      secrets should be a payoff, not a nightly harvest. */
   const secretCatch = {};
-  const secretCatchChance = secretDrought >= 3 ? 0.82 : secretDrought >= 2 ? 0.68 : 0.55;
+  const secretCatchChance = secretDrought >= 5 ? 0.65 : secretDrought >= 4 ? 0.52 : secretDrought >= 3 ? 0.42 : 0.35;
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(secretCatchChance);
   return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, guaranteedVictimId, relentlessVictimId, affliction, afflictionLoc: afflictLoc || null, afflictionCrowd, afflictionAnchorId };
 }
@@ -3912,13 +3918,13 @@ function monsterDangerWarning(s) {
   return null;
 }
 
-/* After two nights without learning one, put a still-unknown human secret
+/* After five nights without learning one, put a still-unknown human secret
    across the player's chosen corridor. The player only sees a suspicious
    departure at first and must still choose to follow. Hunt victims, changed
    villagers and the monster's host are never repurposed for this cadence. */
 function primeDirectorSecret(s, facts, openingIntent, n) {
   if (facts && facts.affliction) return facts;
-  if (secretDroughtNights(s, n) < 2) return facts;
+  if (secretDroughtNights(s, n) < 5) return facts;
   const eligible = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && !npc.secretKnown
     && npc.id !== s.monster.vid && npc.id !== facts.guaranteedVictimId && secretOf(s, npc.id));
   let chosen = null;
@@ -4278,6 +4284,19 @@ const DIRECTOR_HAIL_BY_FAMILY = {
   ],
 };
 
+/* The first hail remains an ordinary roadside greeting. Once the player has
+   actually followed the villager and seen the hidden errand, pretending that
+   nothing happened becomes incoherent. These replies acknowledge being
+   caught without turning a ten-second meeting into a full confession. */
+const DIRECTOR_CAUGHT_SECRET_HAIL = [
+  (nm) => `“You saw what I came here to do,” ${nm} says. “Keep it quiet until I can explain.”`,
+  (nm) => `“You followed me, so you know,” ${nm} says. “Ask me tomorrow. Not here.”`,
+  (nm) => `“Yes. You saw it,” ${nm} says. “Please do not make me explain it on this road.”`,
+  (nm) => `“Now you know why I came out,” ${nm} says. “Give me until daylight to tell you the rest.”`,
+  (nm) => `“I know what you witnessed,” ${nm} says. “Keep your voice down and let me finish.”`,
+  (nm) => `“You caught me,” ${nm} says. “That does not make it monstrous, but I owe you an answer tomorrow.”`,
+];
+
 /* A roadside hail is not always an interrogation. Neighbours who like the
    player often spend their one sentence on concern instead, in their own
    voice. Neutral neighbours do this occasionally; hostile neighbours keep
@@ -4455,7 +4474,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   const activeHost = facts.active && npc.id === s.monster.vid;
   const temperament = DIRECTOR_MONSTER_TEMPERAMENT[monsterOf(s).id] || { mode: "silent" };
   const travel = directorFollowLead(wx, npc.name, dest);
-  let hail, follow, honest, evasive, question, reaffirm, secretSummary = null;
+  let hail, caughtHail = null, follow, honest, evasive, question, reaffirm, secretSummary = null;
   if (activeHost) {
     hail = temperament.mode === "beast"
       ? `${npc.name} stops without turning. Their shoulders lift around one deep breath. The answer to your hail is a low growl forced through a throat still trying to pass for human.`
@@ -4480,6 +4499,9 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
     reaffirm = honest;
   } else if (secret) {
     hail = directorHailFor(seed, npc, "secret", ctx);
+    caughtHail = secretCaught
+      ? directorStableLine(`${seed}:${npc.id}:caught-secret-hail`, DIRECTOR_CAUGHT_SECRET_HAIL, npc.name)
+      : null;
     follow = secretCaught
       ? directorFollowSecret(wx, npc, dest, secret.short)
       : `${travel} ${npc.name} slips through a door before you can see what they came to do.`;
@@ -4514,7 +4536,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   const sighting = directorSightingFor(seed, npc, motive, ctx, wx);
   return {
     sighting,
-    hail, follow, honest, evasive, question,
+    hail, caughtHail, follow, honest, evasive, question,
     reaffirm,
     revealsSecret: secretCaught,
     secretSummary,
@@ -14048,6 +14070,10 @@ function MonsterVillage() {
     if (!truth || !truth.acknowledged) {
       return dialogue.sighting || `${actor.name} enters your lantern light carrying ${motive.object || "something held close"}. The road beneath their feet leads toward the ${motive.destination === "Home" ? "dark houses" : motive.destination}.`;
     }
+    const witnessedSecret = motive.family === "secret" && (director.ledgers.truth || []).some((event) =>
+      event.kind === "followed" && event.actorId === beat.actorId && event.revealedSecret
+    );
+    if (witnessedSecret && dialogue.caughtHail) return dialogue.caughtHail;
     if (dialogue.hail) return dialogue.hail;
     if (motive.secret) {
       if ((actor.disp || 0) >= 2) return `“A promise I made before all this,” ${actor.name} says. “Private does not mean monstrous. Not yet.”`;

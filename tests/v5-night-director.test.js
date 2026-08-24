@@ -1677,9 +1677,13 @@ function take(state, wanted) {
   assert(sampledNight.includes("delete secretOut[forced.id]") && sampledNight.includes("delete griefOut[forced.id]"), "a fallback hunt route cannot retain a contradictory secret or mourning destination");
   assert(!sampledNight.includes('if (n === 1 && active && m.reach !== "home")'), "the retired first-night-only guarantee cannot return");
   var secretCadence = html.slice(html.indexOf("function primeDirectorSecret"), html.indexOf("/* ================= V5 NIGHT DIRECTOR ADAPTER"));
-  assert(secretCadence.includes("secretDroughtNights(s, n) < 2"), "two nights without a discovery activate the secret corridor safeguard");
+  assert(secretCadence.includes("secretDroughtNights(s, n) < 5"), "only a five-night drought activates the secret corridor safeguard");
   assert(secretCadence.includes("npc.id !== facts.guaranteedVictimId") && secretCadence.includes("npc.id !== s.monster.vid"), "the safeguard cannot reroute the hunt's quarry or its host");
   assert(secretCadence.includes("facts.secretCatch[chosen.id] = true") && start.includes("primeDirectorSecret"), "a primed secret is readable and enters the Director before the walk is compiled");
+  assert(sampledNight.includes("const secretWalkerId") && sampledNight.includes("npc.id === secretWalkerId"), "an ordinary night can schedule at most one secret-carrying villager");
+  assert(sampledNight.includes("const secretNightChance = 0.35"), "secrets use one 35% village-wide roll rather than a separate roll for every villager");
+  assert(sampledNight.includes("chance(0.48)"), "ordinary errands remain the common reason a human neighbour is out at night");
+  assert(sampledNight.includes("const secretCatchChance") && sampledNight.includes(": 0.35"), "meeting a secret-carrying villager does not automatically decode the errand");
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
   assert(compiledNight.includes("directorAfflictionBeats(s, facts, slots)") && html.includes('crisisStage: "arrival"') && html.includes('crisisStage: "struggle"') && html.includes('crisisStage: "aftermath"') && html.includes('crisisStage: "resolution"'), "a sampled village crisis owns a multi-beat Director sequence through its final outcome");
   assert(html.includes("afflictionLocation: scene.location") && html.includes("afflictionWound: scene.wound"), "the crisis carries its authored location and damaged-night artwork into every beat");
@@ -1889,6 +1893,19 @@ function take(state, wanted) {
   });
   var secretHails = hailRows.filter(function (entry) { return entry.family === "secret"; }).map(function (entry) { return entry.line("Greta", { dest: "Old Church" }, "Rosa"); });
   assert(secretHails.every(function (line) { return !/private|contents|promise|leave this alone|answer in daylight/i.test(line); }), "a casual hail cannot make a villager defend an errand the player never asked about");
+  var caughtHailSource = html.slice(html.indexOf("const DIRECTOR_CAUGHT_SECRET_HAIL"), html.indexOf("/* A roadside hail", html.indexOf("const DIRECTOR_CAUGHT_SECRET_HAIL")))
+    .replace("const DIRECTOR_CAUGHT_SECRET_HAIL =", "DIRECTOR_CAUGHT_SECRET_HAIL =");
+  var caughtHailContext = {};
+  vm.createContext(caughtHailContext);
+  vm.runInContext(caughtHailSource, caughtHailContext);
+  assert.strictEqual(caughtHailContext.DIRECTOR_CAUGHT_SECRET_HAIL.length, 6, "a witnessed secret has several concise acknowledgements");
+  caughtHailContext.DIRECTOR_CAUGHT_SECRET_HAIL.forEach(function (line) {
+    var text = line("Greta");
+    var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words >= 10 && words <= 25, "a caught-secret hail stays concise: " + text);
+  });
+  var beatTextSource = html.slice(html.indexOf("const directorBeatText"), html.indexOf("const commitDirector", html.indexOf("const directorBeatText")));
+  assert(beatTextSource.includes('event.kind === "followed"') && beatTextSource.includes("event.revealedSecret") && beatTextSource.includes("dialogue.caughtHail"), "hailing after a revealed follow acknowledges what the player witnessed");
   var roadsideSource = html.slice(html.indexOf("const DIRECTOR_ROADSIDE_WARNING"), html.indexOf("function directorHailFor"))
     .replace("const DIRECTOR_ROADSIDE_WARNING =", "DIRECTOR_ROADSIDE_WARNING =");
   var roadsideContext = {};
