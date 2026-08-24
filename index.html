@@ -4745,6 +4745,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       text: facts.evn.intro,
     } : null,
     encounterBudget: 2,
+    knownSigns: s.foundSigns || [],
     recentSignatures: directorRecentSignatures(s), forcedBeats,
   };
   const currentFacts = {

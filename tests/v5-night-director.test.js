@@ -519,6 +519,51 @@ function take(state, wanted) {
   assert(stayed.currentBeat && /No second cry comes/.test(stayed.currentBeat.text), "staying receives a concrete outcome rather than a generic wait line");
 })();
 
+(function bodyEvidenceIsOccasionalSpecificAndNeverRestamped() {
+  function investigateClaw(seed, knownSigns) {
+    var config = baseConfig(seed);
+    config.player = {};
+    config.knownSigns = knownSigns || [];
+    config.forcedBeats = [];
+    config.currentFacts = { weather: "frost", active: false };
+    config.monster.active = false;
+    config.villagers = [{ id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Village Square" }];
+    var state = Director.createNight(config);
+    state.phase = "active";
+    state.cursor = 1;
+    state.player.location = "Old Mill";
+    state.cast[0].alive = false;
+    state.ledgers.truth.push({ id: "attack:1:tobias", slot: 1, kind: "slain", location: "Old Mill", victimId: "tobias", sign: "claw", actors: ["greta", "tobias"] });
+    state.currentBeat = {
+      id: "claw-scream", type: "atmosphere", slot: 1, location: "Old Mill", truthEventId: "attack:1:tobias",
+      meta: { investigable: true, disturbanceLocation: "Old Mill", victimId: "tobias", attackEventId: "attack:1:tobias" }
+    };
+    state.beats.push(state.currentBeat);
+    return Director.reduce(state, { type: "INVESTIGATE_HERE", investigateEventId: "attack:1:tobias" });
+  }
+
+  var clues = 0;
+  var samples = 240;
+  for (var i = 0; i < samples; i += 1) {
+    var state = investigateClaw("body-evidence-rate:" + i);
+    var inquiry = Director.consequenceProjection(state).investigations[0];
+    if (inquiry.clueFound) {
+      clues += 1;
+      assert(/Old Tobias's blood covers the ground/.test(state.currentBeat.text));
+      assert(/Four deep claw marks/.test(state.currentBeat.text), "the prose names the stamped mark instead of referring to generic physical evidence");
+      assert(/No human hand made them/.test(state.currentBeat.text));
+    }
+    assert(!/Do not follow the breathing/.test(state.currentBeat.text), "abstract last words are removed");
+    assert(!/breathing just long enough/.test(state.currentBeat.text), "last words use a short physical beat");
+  }
+  assert(clues / samples > 0.32 && clues / samples < 0.58, "frost preserves evidence sometimes, not on every investigated body");
+
+  var known = investigateClaw("known-claw-body", ["claw"]);
+  var knownInquiry = Director.consequenceProjection(known).investigations[0];
+  assert.strictEqual(knownInquiry.clueFound, false, "a mark already stamped in the Journal is not awarded again from another body");
+  assert.strictEqual(known.currentBeat.type, "aftermath");
+})();
+
 (function aTavernScreamAlwaysOpensItsBodyScene() {
   for (var i = 0; i < 40; i += 1) {
     var config = baseConfig("tavern-investigation:" + i);

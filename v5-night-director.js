@@ -306,6 +306,16 @@
     graves: "Old grave earth lies on top of the road mud, fresh enough to hold a thumbprint."
   };
 
+  var BODY_SIGN_TEXT = {
+    claw: function (name) { return name + "'s blood covers the ground. Four deep claw marks have opened their side. No human hand made them."; },
+    tracks: function (name) { return "Blood fills one heavy footprint beside " + name + ". The prints lead away, then stop in open ground."; },
+    bite: function (name) { return "Two deep punctures mark " + name + "'s throat. The bite is wider than any human jaw."; },
+    cold: function (name) { return "The wound on " + name + " is frozen white. Their blood has turned to ice against the ground."; },
+    flora: function (name) { return "The flesh around " + name + "'s wound has gone grey. Black veins spread from it like blighted roots."; },
+    hex: function (name) { return "An angular mark has been cut into " + name + "'s skin. Dark wax fills the lines."; },
+    graves: function (name) { return "Fresh grave soil is packed into " + name + "'s wound. More of it lies beneath their nails."; }
+  };
+
   /* Watching the revealed host earns a sign by showing the action that made
      it. Search copy describes evidence already left behind; these lines show
      the monster producing that evidence in front of the player. */
@@ -320,11 +330,11 @@
   };
 
   var LAST_WORDS = [
-    "‘I knew the voice.’",
-    "‘It was already waiting.’",
-    "‘Do not follow the breathing.’",
-    "‘The lantern went out first.’",
-    "‘It came from behind me.’",
+    "‘It knew my name.’",
+    "‘It was waiting by the road.’",
+    "‘I heard it behind me.’",
+    "‘It put out my lantern.’",
+    "‘I never saw its face.’",
     "‘Tell them I tried to run.’"
   ];
 
@@ -783,6 +793,7 @@
         route: [{ slot: -1, location: HOME }]
       },
       currentFacts: facts,
+      knownSigns: (config.knownSigns || []).slice(),
       gathering: config.gathering ? Object.assign({ shown: false }, clone(config.gathering)) : null,
       presentedActorIds: [],
       followedActorIds: [],
@@ -1166,9 +1177,10 @@
     if (!event || (event.kind !== "slain" && event.kind !== "changed")) return null;
     var victim = state.cast.find(function (row) { return row.id === event.victimId; });
     var victimName = victim && victim.name || "Your neighbour";
-    var wxClue = state.weather === "frost" ? 0.72 : state.weather === "fog" ? 0.52 : state.weather === "storm" ? 0.36 : 0.58;
-    var clueFound = !!event.sign && keyedNumber(state.seed, "investigate-clue:" + event.id) < wxClue;
-    var wordChance = state.weather === "storm" ? 0.18 : state.weather === "fog" ? 0.32 : 0.4;
+    var wxClue = state.weather === "frost" ? 0.45 : state.weather === "fog" ? 0.25 : state.weather === "storm" ? 0.18 : 0.32;
+    var alreadyStamped = (state.knownSigns || []).indexOf(event.sign) >= 0 || state.found.stamps.some(function (stamp) { return stamp.sign === event.sign; });
+    var clueFound = !!event.sign && !alreadyStamped && keyedNumber(state.seed, "investigate-clue:" + event.id) < wxClue;
+    var wordChance = state.weather === "storm" ? 0.08 : state.weather === "fog" ? 0.16 : state.weather === "frost" ? 0.24 : 0.2;
     var heardLastWords = event.kind === "slain" && keyedNumber(state.seed, "investigate-words:" + event.id) < wordChance;
     var lastWords = heardLastWords ? LAST_WORDS[Math.floor(keyedNumber(state.seed, "investigate-words-line:" + event.id) * LAST_WORDS.length) % LAST_WORDS.length] : null;
     var possibleWitnesses = state.cast.filter(function (row) {
@@ -1181,11 +1193,9 @@
     var text = event.kind === "changed"
       ? "You reach the " + event.location + ". " + victimName + " is alive, but the attack has changed them. They do not answer their name or react when you touch their shoulder."
       : "You reach the " + event.location + ". " + victimName + " lies where the cry ended.";
-    if (lastWords) text += " They are breathing just long enough to catch your sleeve and say, " + lastWords;
-    else if (event.kind === "slain") text += " You are too late for an answer.";
-    if (clueFound) text += event.kind === "changed"
-      ? " Beside them, one physical mark remains clear enough to stamp into the Journal."
-      : " Close to the body, one physical mark remains clear enough to stamp into the Journal.";
+    if (lastWords) text += " " + victimName + " catches your sleeve. " + lastWords;
+    else if (event.kind === "slain") text += " You are too late.";
+    if (clueFound) text += " " + (BODY_SIGN_TEXT[event.sign] ? BODY_SIGN_TEXT[event.sign](victimName) : STAMP_TEXT[event.sign]);
     if (suspicious) text += event.kind === "changed"
       ? " Footsteps arrive behind you. What they see first is you beside " + victimName + "."
       : " Footsteps arrive behind you. What they see first is you beside the body.";
@@ -1786,6 +1796,7 @@
     if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
     state.presentedActorIds = state.presentedActorIds || [];
     state.followedActorIds = state.followedActorIds || [];
+    state.knownSigns = state.knownSigns || [];
     if (!Object.prototype.hasOwnProperty.call(state, "followPause")) state.followPause = null;
     if (state.encounterBudget == null) state.encounterBudget = 2;
     state.visibility = state.visibility || {};
