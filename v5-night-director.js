@@ -1868,7 +1868,7 @@
       return result.slice(0, 3);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.requiresResponse) {
-      add(all.find(function (item) { return item.type === "LISTEN"; }), "Turn toward the sound");
+      add(all.find(function (item) { return item.type === "LISTEN"; }), state.weather === "storm" ? "Hold still. Listen for the voice again" : "Turn toward the sound and listen");
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
     }

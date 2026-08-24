@@ -297,9 +297,17 @@ const Snd = {
       this.chime.triggerAttackRelease("D6", 0.12, t + 0.04, 0.16);
       return;
     }
-    if (kind === "breath" || kind === "breath_close" || kind === "whisper") {
+    if (kind === "whisper") {
+      const restoreDb = this.sceneState && this.sceneState.weather === "storm" ? -29 : this.sceneState && this.sceneState.weather === "fog" ? -25 : -23;
+      this.volume_(this.foleyVol, this.sceneState && this.sceneState.weather === "storm" ? -17 : -20, 0.04);
+      this.foleyFilter.frequency.rampTo(760, 0.04);
+      [0, 0.2, 0.43].forEach((off, i) => this.foleyNoise.triggerAttackRelease(i === 1 ? 0.16 : 0.12, t + off, i === 1 ? 0.38 : 0.24));
+      window.setTimeout(() => this.volume_(this.foleyVol, restoreDb, 0.45), 720);
+      return;
+    }
+    if (kind === "breath" || kind === "breath_close") {
       this.foleyFilter.frequency.rampTo(kind === "breath_close" ? 520 : 760, 0.08);
-      this.foleyNoise.triggerAttackRelease(kind === "breath_close" ? 1.1 : 0.65, t, kind === "whisper" ? 0.32 : 0.58);
+      this.foleyNoise.triggerAttackRelease(kind === "breath_close" ? 1.1 : 0.65, t, 0.58);
       return;
     }
     if (["leaves", "earth", "branch", "cloth", "stone", "rope"].includes(kind)) {
@@ -3435,7 +3443,7 @@ function directorIntentLine(s, intent, wx) {
 }
 function directorWeatherMonsterSound(wx, base) {
   if (wx === "fog") return `Fog hides the far end of the lane. ${base} The sound seems close, but you cannot place its direction.`;
-  if (wx === "storm") return `For one break between thunderclaps: ${base} Rain drowns it before you can judge direction or distance.`;
+  if (wx === "storm") return `Thunder pauses. ${base} Rain drowns the final sound. You cannot tell where the voice went.`;
   if (wx === "frost") return `In the frozen air, every small sound is distinct. ${base} Fresh marks begin to show on the pale ground.`;
   return base;
 }
@@ -3458,7 +3466,7 @@ const DIRECTOR_MONSTER_TEMPERAMENT = {
   revenant: { mode: "silent", cue: "earth", hallucination: 0.04, sound: "A dragging tread crosses the road ahead, slow as a burial. It never hurries and never seems farther away." },
   wraith: { mode: "silent", cue: "silence", hallucination: 0.16, sound: "Every insect stops in the same instant. Cold moves across the lane without wind, footstep or breath." },
   banshee: { mode: "silent", cue: "wail", hallucination: 0.22, sound: "A wail reaches the village from no direction you can point to. It sounds less like pain than pain remembering your name." },
-  vampire: { mode: "speaker", cue: "whisper", hallucination: 0.10, sound: "A pleasant voice says your name from beyond the next turning. When you reach it, the lane is empty and the voice is behind you." },
+  vampire: { mode: "speaker", cue: "whisper", hallucination: 0.10, sound: "A pleasant voice says your name beyond the next turning. Before you move, it repeats your name close behind you." },
   witch: { mode: "speaker", cue: "whisper", hallucination: 0.34, sound: "A woman giggles once beyond the hedge. A second giggle answers from the other side of the road, using exactly the same breath." },
   demon: { mode: "speaker", cue: "whisper", hallucination: 0.38, sound: "Two voices speak together from an empty doorway. One says, ‘Closer.’ The other laughs because you understood." },
   lich: { mode: "speaker", cue: "breath_close", hallucination: 0.18, sound: "A dry voice counts backward somewhere under the ground. Each number leaves the air colder than the last." },
@@ -3923,16 +3931,16 @@ function compileDirectorNight(s, facts, openingIntent) {
   });
   if (facts.active) forcedBeats.push({
     id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(0, attackSlot - 1), location: "*",
-    text: directorWeatherMonsterSound(facts.wx, temperament.sound), meta: { soundCue: facts.wx === "storm" ? "thunder" : temperament.cue, voiceMode: temperament.mode, requiresResponse: true, weather: facts.wx || "still" },
+    text: directorWeatherMonsterSound(facts.wx, temperament.sound), meta: { soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, weather: facts.wx || "still" },
   });
   else {
     const quietPool = DIRECTOR_TEMPERAMENT_QUIET[temperament.mode] || DIRECTOR_TEMPERAMENT_QUIET.silent;
     const quietPresence = quietPool[Math.floor(rng.next() * quietPool.length)];
-    const quietCue = facts.wx === "storm" ? "thunder" : temperament.mode === "beast" ? "leaves" : temperament.mode === "speaker" ? "whisper" : "silence";
+    const quietCue = temperament.mode === "beast" ? "leaves" : temperament.mode === "speaker" ? "whisper" : "silence";
     forcedBeats.push({
       id: `n${n}:quiet-monster-presence`, type: "atmosphere", slot: Math.min(slots - 1, Math.max(1, Math.floor(slots * 0.55))), location: "*",
       text: directorWeatherMonsterSound(facts.wx, quietPresence.open),
-      meta: { soundCue: quietCue, voiceMode: temperament.mode, requiresResponse: true, quietPresence: true, responseText: quietPresence.response, weather: facts.wx || "still" },
+      meta: { soundCue: quietCue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, quietPresence: true, responseText: quietPresence.response, weather: facts.wx || "still" },
     });
   }
   if (facts.active && facts.huntLoc && realGroundSigns.length) forcedBeats.push({
@@ -11370,7 +11378,8 @@ function MonsterVillage() {
     const directorBeat = walk && walk.mode === "director" && walk.director && walk.director.currentBeat;
     const stage = directorBeat ? `director:${directorBeat.id}` : walk && walk.mode === "director" ? `director:${walk.director.phase}:${walk.director.cursor}` : walk && walk.stage;
     if (stage !== walkStageRef.current) {
-      if (directorBeat && directorBeat.meta && directorBeat.meta.soundCue) {
+      if (directorBeat && directorBeat.meta && (directorBeat.meta.soundCue || directorBeat.meta.weatherSoundCue)) {
+        if (directorBeat.meta.weatherSoundCue) Snd.cue(directorBeat.meta.weatherSoundCue);
         Snd.silence(directorBeat.meta.soundCue === "silence");
         if (directorBeat.meta.soundCue === "wail") Snd.wail();
         else if (directorBeat.meta.soundCue === "song") Snd.wail("song");

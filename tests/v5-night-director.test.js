@@ -677,6 +677,21 @@ function take(state, wanted) {
   assert(!state.ledgers.truth.some(function (event) { return event.kind === "slain" || event.kind === "changed" || event.kind === "player_slain"; }), "temperament can own an inactive night without inventing a victim");
 })();
 
+(function stormSoundResponseDoesNotPretendToKnowADirection() {
+  var config = baseConfig("storm-voice-response");
+  config.monster.active = false;
+  config.currentFacts = { weather: "storm", active: false, outMap: {} };
+  config.villagers = [];
+  config.forcedBeats = [{
+    id: "storm-voice", type: "atmosphere", slot: 0, location: "*", text: "Rain drowns the voice.",
+    meta: { requiresResponse: true, soundCue: "whisper", weatherSoundCue: "thunder", voiceMode: "speaker" }
+  }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Old Mill" });
+  var actions = Director.guidedActions(state, { target: "Old Mill", kind: "search", intentDone: false, searches: {}, interacted: {} });
+  assert.deepStrictEqual(actions.map(function (action) { return action.label; }), ["Hold still. Listen for the voice again", "Run. Head for home"]);
+})();
+
 (function interventionProjectsAsARescueRelationship() {
   var state = Director.createNight(baseConfig("relationship-rescue"));
   state.phase = "threat";
@@ -1002,6 +1017,10 @@ function take(state, wanted) {
   assert(html.includes("I was only passing through, taking the back lane toward"), "interviews explain a route waypoint separately from the villager's destination");
   assert(html.includes("WEATHER_WALK_CONTINUED") && html.includes("WEATHER_DAWN_CONTINUED"), "consecutive weather has authored second-night openings and dawn consequences");
   assert(html.includes("QUIET_NIGHT_WEATHER") && html.includes('quietNight:${wx || "still"}'), "quiet Director recaps are selected from the sampled weather instead of the generic frost-capable pool");
+  assert(html.includes('soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null'), "storm keeps the monster voice cue instead of replacing it with thunder");
+  assert(html.includes("if (directorBeat.meta.weatherSoundCue) Snd.cue(directorBeat.meta.weatherSoundCue)"), "the weather cue and creature cue are both played for the same Director beat");
+  assert(html.includes("[0, 0.2, 0.43].forEach"), "the whisper cue has its own audible three-part texture");
+  assert(!html.includes("When you reach it, the lane is empty and the voice is behind you."), "a sound opening cannot move the player before they choose a response");
   assert(html.includes("allDelusionFragments.slice(0, 1)"), "an unresolved strange sight shows only its opening image before asking the player what to do");
   assert(!html.includes("outside ${actorName}'s door in the ${target}"), "watch prose does not redundantly route a doorstep scene through its map label");
   assert(!/storm drowned half the night|storm drowned words/.test(html), "storm interview copy does not echo the same drowned-sound sentence in question and answer");
