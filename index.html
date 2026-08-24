@@ -12700,11 +12700,13 @@ function MonsterVillage() {
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
       const allDelusionFragments = beat && beat.type === "delusion" && beat.meta && beat.meta.fragments;
       const delusionFragments = allDelusionFragments && beat.meta.requiresResponse ? allDelusionFragments.slice(0, 1) : allDelusionFragments;
+      const directorWeatherLabel = { fog: "FOG", storm: "STORM", frost: "FROST" }[walk.facts.wx] || "STILL";
       return (
         <NightShell loc={location} kicker={slotLabel} tone={danger ? "siege" : "night"} danger={danger} wound={nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
           <div style={{ minHeight: "clamp(235px,34dvh,295px)", flexShrink: 0 }} />
-          <div style={{ marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
+          <div className="flex items-baseline" style={{ gap: 10, marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
             <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
+            <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap" }}>{directorWeatherLabel}</span>
           </div>
           <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
