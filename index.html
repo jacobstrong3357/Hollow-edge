@@ -4027,10 +4027,65 @@ const DIRECTOR_HAIL_BY_FAMILY = {
     (nm, c, d) => `“I know it is foolish. Knowing has not made turning back any easier.”`,
   ],
 };
+
+/* A roadside hail is not always an interrogation. Neighbours who like the
+   player often spend their one sentence on concern instead, in their own
+   voice. Neutral neighbours do this occasionally; hostile neighbours keep
+   the exchange guarded and situation-specific. */
+const DIRECTOR_ROADSIDE_WARNING = {
+  marta: [
+    (nm, c) => `“Dangerous night to be walking, dear. Keep your lantern high and take the short road home.”`,
+    (nm, c) => `“Mind yourself tonight, dear. If anything follows you, shout before you try being brave.”`,
+    (nm, c) => `“You look half frozen. Finish your errand, then get behind your own bolt.”`,
+  ],
+  tobias: [
+    (nm, c) => `“Bad hour for wandering. Keep to the hard ground, where you can hear what follows.”`,
+    (nm, c) => `“Watch the road behind you. The living ought to make more noise than the dead.”`,
+    (nm, c) => `“Do what brought you out, then go home. Nothing improves after the last bell.”`,
+  ],
+  ansel: [
+    (nm, c) => `“Please take care tonight. The church door is open if the road turns unsafe.”`,
+    (nm, c) => `“Keep your light visible. If you hear the bell twice, come straight to the church.”`,
+    (nm, c) => `“This is a dangerous hour to be alone. Walk with me as far as the church.”`,
+  ],
+  greta: [
+    (nm, c) => `“Keep your lantern low. If the birds stop before you reach home, turn back.”`,
+    (nm, c) => `“Dangerous night for a walk. Listen to the hedges, not the stories in your head.”`,
+    (nm, c) => `“Take care. If you smell wet earth where there is none, do not stop to investigate.”`,
+  ],
+  wilhelm: [
+    (nm, c) => `“Keep to the open road. If something comes close, shout and run. Pride can wait.”`,
+    (nm, c) => `“Bad night to be out. Come by the forge if you need light or company.”`,
+    (nm, c) => `“Watch yourself. I would rather open my door at midnight than hear about you tomorrow.”`,
+  ],
+  liesel: [
+    (nm, c) => `“Dangerous night to be out, love. Keep your lantern high and look after yourself.”`,
+    (nm, c) => `“Careful on the way home, love. If you hear laughing, make certain you recognise it.”`,
+    (nm, c) => `“Do not stay out proving anything, love. The brave and the dead share too many habits.”`,
+  ],
+  falk: [
+    (nm, c) => `“Try not to become my next patient. Keep warm, keep moving, and go home early.”`,
+    (nm, c) => `“A poor night for unnecessary risks. If you are hurt, come straight to me.”`,
+    (nm, c) => `“Take care of your breathing in this cold. Panic spends air faster than running.”`,
+  ],
+  rosa: [
+    (nm, c) => `“Please be careful. There are too many empty windows and too few people watching them.”`,
+    (nm, c) => `“Keep to the lit road tonight. Whatever you are seeking can survive until morning.”`,
+    (nm, c) => `“I would rather see you embarrassed at dawn than missing. Turn back if anything feels wrong.”`,
+  ],
+};
+
 function directorHailFor(seed, npc, family, ctx, deadName) {
   const group = family === "mourning" ? "grief" : family === "grief" ? "remembrance"
     : family === "secret" || family === "medicine" || family === "faith" || family === "work" ? family
       : ["bond", "debt", "duty"].includes(family) ? "bond" : ["ward", "obligation"].includes(family) ? "work" : "personal";
+  const warnings = DIRECTOR_ROADSIDE_WARNING[npc.id] || [];
+  const disposition = npc.disposition || 0;
+  const warningThreshold = disposition >= 1 ? 3 : disposition === 0 ? 1 : 0;
+  const warningRoll = stableIdx(`${seed}:${npc.id}:${family}:warning-or-errand`, 4);
+  if (warnings.length && warningRoll < warningThreshold) {
+    return directorStableLine(`${seed}:${npc.id}:${family}:roadside-warning`, warnings, npc.name, ctx);
+  }
   return directorStableLine(`${seed}:${npc.id}:${family}:situational-hail`, DIRECTOR_HAIL_BY_FAMILY[group], npc.name, ctx, deadName || "the dead");
 }
 const DIRECTOR_INTERVIEW_WEATHER = {

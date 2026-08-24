@@ -1786,6 +1786,24 @@ function take(state, wanted) {
     var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
     assert(words >= 10 && words <= 25, entry.family + " hail must remain within 10–25 words: " + text);
   });
+  var roadsideSource = html.slice(html.indexOf("const DIRECTOR_ROADSIDE_WARNING"), html.indexOf("function directorHailFor"))
+    .replace("const DIRECTOR_ROADSIDE_WARNING =", "DIRECTOR_ROADSIDE_WARNING =");
+  var roadsideContext = {};
+  vm.createContext(roadsideContext);
+  vm.runInContext(roadsideSource, roadsideContext);
+  var roadsideRows = Object.keys(roadsideContext.DIRECTOR_ROADSIDE_WARNING).reduce(function (rows, actorId) {
+    return rows.concat(roadsideContext.DIRECTOR_ROADSIDE_WARNING[actorId].map(function (line) { return { actorId: actorId, line: line }; }));
+  }, []);
+  assert.strictEqual(roadsideRows.length, 24, "every villager has three concise roadside warnings in their own voice");
+  roadsideRows.forEach(function (entry) {
+    var text = entry.line("Liesel", { dest: "Graveyard" });
+    var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words >= 10 && words <= 25, entry.actorId + " roadside warning must remain within 10–25 words: " + text);
+  });
+  assert(roadsideContext.DIRECTOR_ROADSIDE_WARNING.liesel.some(function (line) { return /Dangerous night to be out, love/.test(line("Liesel", {})); }), "Liesel can warn the player warmly instead of treating every meeting as an interrogation");
+  var hailFunctionSource = html.slice(html.indexOf("function directorHailFor"), html.indexOf("const DIRECTOR_INTERVIEW_WEATHER"));
+  assert(hailFunctionSource.includes("npc.disposition") && hailFunctionSource.includes("warningThreshold"), "warm roadside concern is more likely when the villager likes the player");
+  assert(hailFunctionSource.includes("situational-hail"), "the concrete errand reply remains the fallback when concern does not fire");
   var followWeatherSource = html.slice(html.indexOf("const WEATHER_DIRECTOR ="), html.indexOf("/* ---------- Zork", html.indexOf("const WEATHER_DIRECTOR =")));
   var followHelperSource = html.slice(html.indexOf("function directorFollowLead"), html.indexOf("function directorDialogueFor", html.indexOf("function directorFollowLead")));
   var followContext = {};
