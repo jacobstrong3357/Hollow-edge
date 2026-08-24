@@ -1014,7 +1014,7 @@ function take(state, wanted) {
   state = take(state, { type: "ANSWER_DOOR" });
   assert.strictEqual(state.phase, "threshold", "speaking through the closed door does not commit the player to opening it");
   assert(state.player.alive, "answering a real neighbour through the closed door is safe");
-  assert(/outside my door/.test(state.currentBeat.text) && /watching me/.test(state.currentBeat.text), "the watched neighbour confronts the player about that specific watch");
+  assert(/watching|hid|hiding|outside my house/.test(state.currentBeat.text), "the watched neighbour confronts the player about that specific watch");
   assert.deepStrictEqual(Director.availableActions(state).map(function (a) { return a.type; }), ["KEEP_BARRED", "LOOK_THROUGH", "STEP_OUTSIDE"]);
   state = take(state, { type: "STEP_OUTSIDE" });
   assert.strictEqual(state.phase, "complete");
@@ -1075,7 +1075,7 @@ function take(state, wanted) {
   assert(/Greta/.test(state.currentBeat.text) && /wait for your answer/i.test(state.currentBeat.text));
   assert(!/Were you near/.test(state.currentBeat.text), "looking through the shutter does not repeat the question");
   state = take(state, { type: "ANSWER_DOOR" });
-  assert(/“Yes,” you say/.test(state.currentBeat.text) && /follow me/i.test(state.currentBeat.text), "the player's answer receives a direct reply");
+  assert(/“Yes[,.]”/.test(state.currentBeat.text) && /follow me|bring your lantern/i.test(state.currentBeat.text), "the player's answer receives a direct reply");
   var followAction = Director.availableActions(state).find(function (action) { return action.type === "STEP_OUTSIDE"; });
   assert(followAction && followAction.label === "Follow Greta to the Graveyard", "the next choice names the agreed action");
   state = take(state, followAction);
@@ -1101,8 +1101,10 @@ function take(state, wanted) {
   state = take(state, { type: "LEAVE", to: "Old Church" });
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
+  assert(!/Open the door and I will return it/.test(state.currentBeat.text), "a real neighbour does not issue an unnatural command before returning an item");
   state = take(state, { type: "ANSWER_DOOR" });
-  assert(/scarf pin at the Old Church/.test(state.currentBeat.text) && /searching for/.test(state.currentBeat.text), "the neighbour returns the dropped item and names the place the player searched");
+  assert(/scarf pin/.test(state.currentBeat.text) && /Old Church/.test(state.currentBeat.text), "the neighbour returns the dropped item and names the place the player searched");
+  assert(!/answers quietly|Be more careful next time/.test(state.currentBeat.text), "the reply is a conversation rather than the repeated stock warning");
   state = take(state, { type: "STEP_OUTSIDE" });
   assert.strictEqual(state.phase, "complete");
 })();
@@ -1175,7 +1177,7 @@ function take(state, wanted) {
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
-  assert(/May I come in/i.test(state.currentBeat.text), "the vampire asks for the permission it needs");
+  assert(/May I come in|Invite me in|Say I may enter/i.test(state.currentBeat.text), "the vampire asks for the permission it needs");
   state = take(state, { type: "ANSWER_DOOR" });
   assert(state.player.alive && state.phase === "threshold", "conversation alone is not an invitation");
   assert(Director.availableActions(state).some(function (action) { return action.type === "INVITE_IN"; }));
@@ -1773,6 +1775,11 @@ function take(state, wanted) {
   assert(html.includes('THE VILLAGE HAS TURNED AGAINST YOU') && html.includes("hostileMajority"), "village-wide hostility is visible and changes cooperation");
   assert(html.includes('askQ("apologise")') && html.includes('askQ("help")'), "the player has deliberate ways to repair disposition");
   assert(html.includes('standing.hostileMajority ? 0.08'), "a hostile village makes calming a mob nearly impossible");
+  assert(!directorSource.includes("Open the door and I will return it") && !directorSource.includes("Be more careful next time"), "retired return-item dialogue cannot recur");
+  var thresholdRequestSource = directorSource.slice(directorSource.indexOf("function thresholdRequestText"), directorSource.indexOf("function thresholdNeighbourAnswer"));
+  assert(!/[‘’]/.test(thresholdRequestSource), "doorstep requests use paired double quotation marks rather than stray single marks");
+  assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
+  assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");

@@ -11298,7 +11298,9 @@ function nightTextChunks(text, maxWords = 18) {
   const sentences = String(text || "").trim().match(/[^.!?]+(?:[.!?]+[”"’']?|$)/g) || [String(text || "")];
   const chunks = [];
   sentences.forEach((sentence) => {
-    const words = sentence.trim().split(/\s+/).filter(Boolean);
+    const fragment = sentence.trim();
+    if (/^[,;:'"‘’“”]+$/.test(fragment)) return;
+    const words = fragment.split(/\s+/).filter(Boolean);
     for (let i = 0; i < words.length; i += maxWords) chunks.push(words.slice(i, i + maxWords));
   });
   return chunks.length ? chunks : [[]];

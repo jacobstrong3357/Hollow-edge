@@ -1410,6 +1410,11 @@
     return thresholdActor(state, state.thresholdEvent && state.thresholdEvent.concernId);
   }
 
+  function thresholdLine(state, roll, lines) {
+    var nightOffset = Math.max(0, Number(state.night || 1) - 1);
+    return lines[(Math.floor((roll || 0) * lines.length) + nightOffset) % lines.length];
+  }
+
   function thresholdRequestText(state, revealed) {
     var threshold = state.thresholdEvent;
     var actor = thresholdActor(state, threshold.actorId);
@@ -1417,45 +1422,53 @@
     var name = revealed && actor ? actor.name : "A neighbour";
     var place = threshold.clueLocation || "Village Square";
     function choose(lines) {
-      return lines[Math.floor(threshold.requestRoll * lines.length) % lines.length];
+      return thresholdLine(state, threshold.requestRoll, lines);
     }
     if (threshold.visitorKind === "monster") {
       if (state.monsterSchedule.id === "vampire") {
         return (revealed ? name : "A familiar voice") + " says, " + choose([
-          "‘Please. May I come in? I am frightened.’",
-          "‘It is me. Invite me in before it comes back.’",
-          "‘Open the door. Say I may enter.’"
+          "“Please. May I come in? I am frightened.”",
+          "“It is me. Invite me in before it comes back.”",
+          "“Open the door. Say I may enter.”"
         ]);
       }
       var mode = state.monsterSchedule.voice && state.monsterSchedule.voice.mode;
       if (mode === "beast") return choose([
-        "A neighbour's voice says, ‘Come outside. Someone is hurt.’ A growl catches beneath the last word.",
-        "A neighbour calls, ‘Quickly. Help me lift them.’ Something sniffs along the sill.",
-        "A frightened voice says, ‘I cannot carry them alone.’ Claws scrape once against the step."
+        "A neighbour's voice says, “Come outside. Someone is hurt.” A growl catches beneath the last word.",
+        "A neighbour calls, “Quickly. Help me lift them.” Something sniffs along the sill.",
+        "A frightened voice says, “I cannot carry them alone.” Claws scrape once against the step."
       ]);
       if (mode === "speaker") return choose([
-        "A familiar voice says, ‘Come outside. I found something for you.’ A small laugh follows.",
-        "A neighbour calls, ‘Come see what followed you home.’ They giggle, then catch themself.",
-        "A soft voice says, ‘Just one step outside.’ It sounds amused by the request."
+        "A familiar voice says, “Come outside. I found something for you.” A small laugh follows.",
+        "A neighbour calls, “Come see what followed you home.” They giggle, then catch themself.",
+        "A soft voice says, “Just one step outside.” It sounds amused by the request."
       ]);
       return choose([
-        "A familiar voice says, ‘Come outside. I need your help.’",
-        "A neighbour whispers, ‘Bring your lantern. Do not make me wait here.’",
-        "Someone you know says, ‘There is something in the lane you must see.’"
+        "A familiar voice says, “Come outside. I need your help.”",
+        "A neighbour whispers, “Bring your lantern. Do not make me wait here.”",
+        "Someone you know says, “There is something in the lane you must see.”"
       ]);
     }
-    if (threshold.purpose === "return_item") return name + " says, " + choose(["‘I found something of yours. Come outside and take it.’", "‘You dropped this tonight. Open the door and I will return it.’"]);
-    if (threshold.purpose === "concern") return name + " says, ‘" + (target ? target.name : "Someone") + choose([" has not come home. Please help me look.’", " is missing. Will you come and help?’"]);
-    if (threshold.purpose === "question") return name + " says, " + choose(["‘Were you near the " + place + " tonight?’", "‘Did you go to the " + place + " tonight?’"]);
-    if (threshold.purpose === "sign") return name + " says, " + choose(["‘I found something at the " + place + ". Bring your lantern outside.’", "‘There is a mark at the " + place + ". You need to see it.’"]);
-    if (threshold.purpose === "rumour") return name + " says, ‘I saw " + (target ? target.name : "someone") + choose([" near the " + place + ". Come outside. Keep quiet.’", " leaving the " + place + ". I do not want the street to hear.’"]);
-    return name + " says, " + choose(["‘Please let me in. Something followed me.’", "‘May I come in? I heard steps behind me.’", "‘Open the door. I do not want to stand out here alone.’"]);
+    if (threshold.purpose === "return_item") return name + " says, " + choose([
+      "“I found something of yours. Shall I leave it on the step?”",
+      "“You dropped something tonight. I brought it back.”",
+      "“I have something that belongs to you. Are you awake?”",
+      "“This is yours. May we speak?”",
+      "“You left something behind tonight. I thought you would want it back.”",
+      "“I found one of your things in the lane. What were you doing out there?”"
+    ]);
+    if (threshold.purpose === "concern") return name + " says, “" + (target ? target.name : "Someone") + choose([" has not come home. Please help me look.”", " is missing. Will you come and help?”"]);
+    if (threshold.purpose === "question") return name + " says, " + choose(["“Were you near the " + place + " tonight?”", "“Did you go to the " + place + " tonight?”"]);
+    if (threshold.purpose === "sign") return name + " says, " + choose(["“I found something at the " + place + ". Bring your lantern outside.”", "“There is a mark at the " + place + ". You need to see it.”"]);
+    if (threshold.purpose === "rumour") return name + " says, “I saw " + (target ? target.name : "someone") + choose([" near the " + place + ". Come outside. Keep quiet.”", " leaving the " + place + ". I do not want the street to hear.”"]);
+    return name + " says, " + choose(["“Please let me in. Something followed me.”", "“May I come in? I heard steps behind me.”", "“Open the door. I do not want to stand out here alone.”"]);
   }
 
   function thresholdNeighbourAnswer(state, neighbour) {
     var threshold = state.thresholdEvent;
     var name = neighbour ? neighbour.name : "A neighbour";
     var item = threshold.item || "your glove";
+    var playerItem = item.replace(/^your\s+/i, "my ");
     var intent = state.openingIntent || {};
     var watched = intent.kind === "watch" ? thresholdActor(state, intent.id) : null;
     var lines;
@@ -1469,51 +1482,82 @@
         "“No,” you say. " + name + " pauses. “Then come with me. You need to see what I found there.”",
         "“Not tonight.” " + name + " looks down the lane. “Then I want another pair of eyes. Follow me.”"
       ];
-      return lines[Math.floor(threshold.dialogueRoll * lines.length) % lines.length];
+      return thresholdLine(state, threshold.dialogueRoll, lines);
     }
     if (threshold.purpose === "sign") {
       lines = [
         "“All right,” you say. " + name + " lifts the covered lantern. “Follow me. I will show you the mark.”",
         name + " steps back from the door. “Bring your lantern. It is clearer if you see it yourself.”"
       ];
-      return lines[Math.floor(threshold.dialogueRoll * lines.length) % lines.length];
+      return thresholdLine(state, threshold.dialogueRoll, lines);
     }
     if (threshold.purpose === "concern") return "“I will help,” you say. " + name + " answers, “Bring your lantern. We start at the " + threshold.clueLocation + ".”";
     if (threshold.purpose === "rumour") return "“All right,” you say. " + name + " glances toward the road. “Not at the door. Walk with me.”";
     if (threshold.purpose === "refuge") return "“Wait there,” you say. " + name + " answers, “Please hurry. I heard it behind me.”";
-    if (watched && neighbour && watched.id === neighbour.id) {
-      lines = [
-        "“You left " + item + " outside my door,” " + name + " says. “You were watching me.”",
-        name + " answers from the step. “I found " + item + " by my door. How long were you there?”",
-        "“This was beside my window,” " + name + " says, holding " + item + ". “You followed me home.”",
-        name + " keeps their voice low. “You dropped " + item + " outside my house. I know you were watching.”",
-        "“I brought back " + item + ",” " + name + " says. “Next time, knock instead of hiding.”",
-        name + " answers plainly. “You watched my door and left " + item + " behind. I want to know why.”"
+    if (threshold.purpose === "return_item" && !threshold.looked) {
+      if (watched && neighbour && watched.id === neighbour.id) lines = [
+        "“What did I drop?” you ask. “Your " + item.replace(/^your\s+/i, "") + ", outside my door,” " + name + " says. “You were watching me.”",
+        "“What is it?” you ask. “" + item.replace(/^your\s+/i, "Your ") + ",” " + name + " says. “It was beside my window. How long were you there?”",
+        "“Where did you find it?” you ask. “Outside my house,” " + name + " answers. “Why were you hiding there?”",
+        "“Leave it on the step,” you say. “Not yet,” " + name + " answers. “Tell me why you watched my door.”"
       ];
-    } else if (watched) {
-      lines = [
-        "“I found " + item + " outside " + watched.name + "'s door,” " + name + " says. “Were you watching them?”",
-        name + " answers from the step. “You dropped " + item + " near " + watched.name + "'s house. Why were you hiding there?”",
-        "“This was by " + watched.name + "'s window,” " + name + " says. “What were you waiting to see?”",
-        name + " holds up " + item + ". “I found it outside " + watched.name + "'s door. They should know.”"
+      else if (watched) lines = [
+        "“What did I drop?” you ask. “" + item.replace(/^your\s+/i, "Your ") + ",” " + name + " says. “It was outside " + watched.name + "'s door. Were you watching them?”",
+        "“Where did you find it?” you ask. “Near " + watched.name + "'s house,” " + name + " says. “Why were you hiding there?”",
+        "“Leave it on the step,” you say. “Tell " + watched.name + " yourself,” " + name + " answers. “I found it by their window.”",
+        "“What is it?” you ask. “One of your things,” " + name + " says. “Left outside " + watched.name + "'s door.”"
       ];
-    } else if (intent.kind === "search" && intent.loc) {
+      else if (intent.kind === "search" && intent.loc) lines = [
+        "“What did I drop?” you ask. “Your " + item.replace(/^your\s+/i, "") + ",” " + name + " says. “I found it at the " + intent.loc + ". What were you searching for?”",
+        "“Where did you find it?” you ask. “At the " + intent.loc + ",” " + name + " answers. “It is " + item + ".\u201d",
+        "“What is it?” you ask. “" + item.replace(/^your\s+/i, "Your ") + ",” " + name + " says. “It was beneath the wall at the " + intent.loc + ".\u201d",
+        "“Leave it on the step,” you say. “I will,” " + name + " answers. “You dropped it while searching the " + intent.loc + ".\u201d",
+        "“Is it damaged?” you ask. “No,” " + name + " says. “It is " + item + ", found at the " + intent.loc + ".\u201d",
+        "“Can you leave it outside?” you ask. “Yes,” " + name + " answers. “I found it beside the " + intent.loc + ".\u201d"
+      ];
+      else lines = [
+        "“What did I drop?” you ask. “" + item.replace(/^your\s+/i, "Your ") + ",” " + name + " says, and sets it on the step.",
+        "“Where was it?” you ask. “In the lane,” " + name + " answers. “I brought it straight here.”",
+        "“Leave it by the door,” you say. " + name + " sets down " + item + " and wishes you good night."
+      ];
+      return thresholdLine(state, threshold.dialogueRoll, lines);
+    }
+    if (threshold.purpose === "return_item" && watched && neighbour && watched.id === neighbour.id) {
       lines = [
-        name + " answers from the step. “You dropped " + item + " at the " + intent.loc + ". What were you searching for?”",
-        "“I found " + item + " at the " + intent.loc + ",” " + name + " says. “You were there after dark.”",
-        name + " holds up " + item + ". “This was at the " + intent.loc + ". I thought you would want it back.”",
-        "“You left " + item + " at the " + intent.loc + ",” " + name + " says. “I will not ask why tonight.”",
-        name + " answers quietly. “I found " + item + " where you were searching. Be more careful next time.”",
-        "“This belongs to you,” " + name + " says. “I found it at the " + intent.loc + " after you left.”"
+        "“Where did you find it?” you ask. “Outside my door,” " + name + " says. “You were watching me.”",
+        "“That is mine,” you say. " + name + " answers, “You left it by my window. How long were you there?”",
+        "“Leave it on the step,” you say. “Not yet,” " + name + " answers. “Why were you watching my house?”",
+        "“Thank you,” you say. " + name + " keeps hold of it. “First tell me why you hid outside my door.”",
+        "“I wondered when you would notice,” " + name + " says. “Next time, knock instead of watching from the road.”",
+        "“Where was it?” you ask. “Outside my house,” " + name + " says. “I know you were watching.”"
+      ];
+    } else if (threshold.purpose === "return_item" && watched) {
+      lines = [
+        "“Where did you find it?” you ask. “Outside " + watched.name + "'s door,” " + name + " says. “Were you watching them?”",
+        "“That is mine,” you say. " + name + " answers, “It was near " + watched.name + "'s house. Why were you hiding there?”",
+        "“Leave it on the step,” you say. " + name + " keeps hold of it. “What were you waiting to see outside " + watched.name + "'s window?”",
+        "“Thank you,” you say. “Tell " + watched.name + " yourself,” " + name + " answers. “I found it outside their door.”"
+      ];
+    } else if (threshold.purpose === "return_item" && intent.kind === "search" && intent.loc) {
+      lines = [
+        "“Where did you find " + playerItem + "?” you ask. “At the " + intent.loc + ",” " + name + " says. “What were you searching for?”",
+        "“That is mine,” you say. " + name + " nods. “I found it at the " + intent.loc + " after dark.”",
+        "“Where was " + playerItem + "?” you ask. “Beneath the wall at the " + intent.loc + ",” " + name + " says. “You must have dropped it while searching.”",
+        "“Please leave it on the step,” you say. “I will,” " + name + " answers. “It was at the " + intent.loc + ". I will not ask why.”",
+        "“Thank you for bringing " + playerItem + ",” you say. " + name + " answers, “It was lying where you searched at the " + intent.loc + ".”",
+        "“Is " + playerItem + " damaged?” you ask. “No,” " + name + " says. “I found it at the " + intent.loc + " after you left.”"
+      ];
+    } else if (threshold.purpose === "return_item") {
+      lines = [
+        "“Leave it on the step, please,” you say. " + name + " sets down " + item + ".",
+        "“Thank you,” you say. “I found it in the lane,” " + name + " answers. “It is not damaged.”",
+        "“Where was it?” you ask. “On the road,” " + name + " says. “I brought it straight here.”",
+        "“That is mine,” you say. " + name + " places " + item + " beside the door."
       ];
     } else {
-      lines = [
-        name + " answers from the step. “You dropped " + item + " on the road. I brought it back.”",
-        "“This is yours,” " + name + " says, holding " + item + ". “I found it before the rain did.”",
-        name + " keeps their distance. “You left " + item + " in the lane. I thought you should know.”"
-      ];
+      lines = [name + " waits for your answer."];
     }
-    return lines[Math.floor(threshold.dialogueRoll * lines.length) % lines.length];
+    return thresholdLine(state, threshold.dialogueRoll, lines);
   }
 
   function thresholdLookText(state) {
