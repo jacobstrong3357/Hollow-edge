@@ -1643,10 +1643,10 @@
         "“Leave it on the step,” you say. “Not yet,” " + name + " answers. “Tell me why you watched my door.”"
       ];
       else if (watched) lines = [
-        "“What did I drop?” you ask. “" + item.replace(/^your\s+/i, "Your ") + ",” " + name + " says. “It was outside " + watched.name + "'s door. Were you watching them?”",
-        "“Where did you find it?” you ask. “Near " + watched.name + "'s house,” " + name + " says. “Why were you hiding there?”",
-        "“Leave it on the step,” you say. “Tell " + watched.name + " yourself,” " + name + " answers. “I found it by their window.”",
-        "“What is it?” you ask. “One of your things,” " + name + " says. “Left outside " + watched.name + "'s door.”"
+        "“What did I drop?” you ask. “" + item.replace(/^your\s+/i, "Your ") + ",” " + name + " says. “I found it outside " + watched.name + "'s door.”",
+        "“Where did you find it?” you ask. “Outside " + watched.name + "'s door,” " + name + " says. “Ask whether anyone came by.”",
+        "“Leave it on the step,” you say. “I will,” " + name + " answers. “It was outside " + watched.name + "'s door.”",
+        "“What is it?” you ask. “One of your things,” " + name + " says. “I found it outside " + watched.name + "'s door.”"
       ];
       else if (intent.kind === "search" && intent.loc) lines = [
         "“What did I drop?” you ask. “Your " + item.replace(/^your\s+/i, "") + ",” " + name + " says. “I found it at the " + intent.loc + ". What were you searching for?”",
@@ -1674,10 +1674,10 @@
       ];
     } else if (threshold.purpose === "return_item" && watched) {
       lines = [
-        "“Where did you find it?” you ask. “Outside " + watched.name + "'s door,” " + name + " says. “Were you watching them?”",
-        "“That is mine,” you say. " + name + " answers, “It was near " + watched.name + "'s house. Why were you hiding there?”",
-        "“Leave it on the step,” you say. " + name + " keeps hold of it. “What were you waiting to see outside " + watched.name + "'s window?”",
-        "“Thank you,” you say. “Tell " + watched.name + " yourself,” " + name + " answers. “I found it outside their door.”"
+        "“Where did you find it?” you ask. “Outside " + watched.name + "'s door,” " + name + " says. “Ask whether they saw who left it.”",
+        "“That is mine,” you say. " + name + " nods. “I found it outside " + watched.name + "'s door.”",
+        "“Leave it on the step,” you say. “I will,” " + name + " answers. “Ask " + watched.name + " how it got there.”",
+        "“Thank you,” you say. " + name + " lowers their voice. “It was outside " + watched.name + "'s door.”"
       ];
     } else if (threshold.purpose === "return_item" && intent.kind === "search" && intent.loc) {
       lines = [
@@ -1964,6 +1964,9 @@
     var threshold = state.thresholdEvent;
     if (!threshold || threshold.resolved) return invalid(state, action, "Nothing is waiting at the threshold.");
     var actor = thresholdActor(state, threshold.actorId);
+    var answeredIntent = state.openingIntent || {};
+    var watchedActor = answeredIntent.kind === "watch" ? thresholdActor(state, answeredIntent.id) : null;
+    var watchedActorReturnedItem = watchedActor && actor && watchedActor.id === actor.id;
     if (action.type === "LOOK_THROUGH") {
       if (threshold.looked) return invalid(state, action, "You already know who is outside.");
       var lookText = thresholdLookText(state);
@@ -1986,10 +1989,26 @@
       threshold.spoken = true;
       threshold.answer = spokenText;
       appendTruth(state, { id: "threshold-spoken:" + state.cursor, slot: state.cursor, kind: "threshold_spoken", action: action.type, location: HOME, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, purpose: threshold.purpose, requestMode: threshold.requestMode, looked: !!threshold.looked, text: spokenText });
-      if (threshold.visitorKind === "neighbour" && threshold.purpose === "return_item" && actor) {
+      if (threshold.visitorKind === "neighbour" && threshold.purpose === "return_item" && watchedActorReturnedItem) {
         appendTruth(state, { id: "threshold-confrontation:" + state.cursor + ":" + actor.id, slot: state.cursor, kind: "threshold_confrontation", location: HOME, actorId: actor.id, actors: ["player", actor.id], acknowledged: true });
         state.ledgers.memories[actor.id] = state.ledgers.memories[actor.id] || [];
         state.ledgers.memories[actor.id].push({ eventId: "threshold-confrontation:" + state.cursor + ":" + actor.id, slot: state.cursor, subject: "player", kind: "threshold_confrontation", location: HOME, clarity: "clear", acknowledged: true, interpretation: "They confronted the player about what was left behind during the night's watch." });
+      } else if (threshold.visitorKind === "neighbour" && threshold.purpose === "return_item" && watchedActor && actor) {
+        var reportedItem = (threshold.item || "what you dropped").replace(/^your\s+/i, "my ");
+        appendTruth(state, {
+          id: "threshold-report:" + state.cursor + ":" + watchedActor.id,
+          slot: state.cursor,
+          kind: "threshold_watched_item_report",
+          location: watchedActor.home || "Village Square",
+          actorId: watchedActor.id,
+          subjectId: watchedActor.id,
+          reporterId: actor.id,
+          item: reportedItem,
+          text: actor.name + " found " + reportedItem + " outside " + watchedActor.name + "'s door.",
+          question: actor.name + " found " + reportedItem + " outside your door. Did you see who left it?",
+          honest: "“I saw no one outside my door. Ask " + actor.name + " who else was on the road.”",
+          evasive: "“You watched my house and dropped it there. What else do you expect me to explain?”"
+        });
       }
       var spokenBeat = appendBeat(state, makeBeat("threshold-spoken-beat:" + state.cursor, threshold.visitorKind === "monster" ? "threat" : "doorstep", state.cursor, HOME, spokenText, {
         actorId: threshold.looked || threshold.visitorKind === "neighbour" ? threshold.actorId || null : null,
@@ -2003,10 +2022,14 @@
     var killed = false;
     if (action.type === "KEEP_BARRED") {
       if (threshold.visitorKind === "neighbour") {
-        text = threshold.spoken
-          ? "You refuse. " + (actor ? actor.name : "Your neighbour") + " waits, then leaves before dawn."
-          : "You keep silent. The visitor waits, then leaves before dawn.";
-        if (threshold.purpose === "return_item") text += " " + (threshold.item || "Your glove") + " rests on the step.";
+        if (threshold.spoken && threshold.purpose === "return_item") {
+          text = "You ask " + (actor ? actor.name : "your neighbour") + " to leave " + (threshold.item || "what you dropped") + " on the step. They do, then head home.";
+        } else {
+          text = threshold.spoken
+            ? "You refuse. " + (actor ? actor.name : "Your neighbour") + " waits, then leaves before dawn."
+            : "You keep silent. The visitor waits, then leaves before dawn.";
+          if (threshold.purpose === "return_item") text += " " + (threshold.item || "Your glove") + " rests on the step.";
+        }
       } else if (state.monsterSchedule.id === "vampire") {
         text = "You give no invitation. The voice asks once more, then stops. At dawn, the step is empty.";
       } else {
@@ -2048,6 +2071,14 @@
         }[questionPlace] || "Fresh marks cross the ground where the road narrows.";
         text = "You follow " + (actor ? actor.name : "your neighbour") + " to the " + questionPlace + ". " + questionFinding;
         state.found.clues.push({ id: "threshold-question:" + state.cursor, slot: state.cursor, location: questionPlace, text: text, source: "threshold_neighbour" });
+      } else if (threshold.purpose === "return_item" && watchedActor && watchedActorReturnedItem) {
+        text = "You open the door. " + actor.name + " returns " + (threshold.item || "what you dropped") + ". They ask why you watched their house.";
+      } else if (threshold.purpose === "return_item" && watchedActor) {
+        text = "You open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it outside " + watchedActor.name + "'s door.";
+      } else if (threshold.purpose === "return_item" && answeredIntent.kind === "search" && answeredIntent.loc) {
+        text = "You open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it at the " + answeredIntent.loc + ".";
+      } else if (threshold.purpose === "return_item") {
+        text = "You open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ".";
       } else {
         text = "You step outside. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + " and leaves you with an uncomfortable question about the night's watch.";
       }
@@ -2636,9 +2667,12 @@
       return chaseActions;
     }
     if (state.phase === "threshold") {
-      var thresholdActions = [action("KEEP_BARRED", state.thresholdEvent.spoken ? "Refuse. Keep the door barred" : "Keep silent. Keep the door barred", "quiet")];
-      if (!state.thresholdEvent.looked) thresholdActions.push(action("LOOK_THROUGH", "Look through the shutter", "quiet"));
       var thresholdVisitor = thresholdActor(state, state.thresholdEvent.actorId);
+      var keepBarredLabel = state.thresholdEvent.spoken && state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "return_item"
+        ? "Ask " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " to leave " + (state.thresholdEvent.item || "what you dropped") + " on the step"
+        : state.thresholdEvent.spoken ? "Refuse. Keep the door barred" : "Keep silent. Keep the door barred";
+      var thresholdActions = [action("KEEP_BARRED", keepBarredLabel, "quiet")];
+      if (!state.thresholdEvent.looked) thresholdActions.push(action("LOOK_THROUGH", "Look through the shutter", "quiet"));
       if (!state.thresholdEvent.spoken) {
         var visitedQuestionPlace = (state.player.route || []).some(function (step) { return step.location === state.thresholdEvent.clueLocation; });
         var answerLabel = state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "question"
@@ -2662,7 +2696,7 @@
         var outsideLabel = state.thresholdEvent.visitorKind === "neighbour" && ["question", "sign", "concern"].indexOf(state.thresholdEvent.purpose) >= 0
           ? "Follow " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " to the " + (state.thresholdEvent.clueLocation || "Village Square")
           : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "return_item"
-            ? "Open the door to " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour")
+            ? "Open the door and take back " + (state.thresholdEvent.item || "what you dropped")
             : "Unbar the door. Step outside";
         thresholdActions.push(action("STEP_OUTSIDE", outsideLabel, state.thresholdEvent.visitorKind === "neighbour" ? "bone" : "danger"));
       }
@@ -2999,6 +3033,22 @@
     var findings = (state.found.clues || []).filter(function (beat) { return !!beat.actorId; }).map(function (beat) {
       return { eventId: "n" + state.night + ":finding:" + safeId(beat.id), actorId: beat.actorId, location: beat.location, slot: beat.slot, text: beat.text, beatId: beat.id };
     });
+    findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
+      return event.kind === "threshold_watched_item_report";
+    }).map(function (event) {
+      return {
+        eventId: event.id,
+        actorId: event.subjectId,
+        reporterId: event.reporterId,
+        location: event.location,
+        slot: event.slot,
+        text: event.text,
+        question: event.question,
+        honest: event.honest,
+        evasive: event.evasive,
+        source: "threshold_report"
+      };
+    }));
     var secrets = (state.ledgers.truth || []).filter(function (event) {
       return event.kind === "followed" && event.revealedSecret;
     }).map(function (event) {

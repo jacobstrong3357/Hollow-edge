@@ -5067,7 +5067,7 @@ function resolveNight(prev, planIn, preEvents) {
       };
     });
     const sourceEncounterIds = new Set(encounters.flatMap((thread) => thread.sourceEventIds || []));
-    const findingBeatIds = new Set((projection.findings || []).map((finding) => finding.beatId));
+    const findingBeatIds = new Set((projection.findings || []).map((finding) => finding.beatId).filter(Boolean));
     const directorObservations = (director.ledgers.observations || []).filter((o) => !sourceEncounterIds.has(o.eventId) && !findingBeatIds.has(o.beatId)).map((o) => {
       const subjectId = (o.actors || []).find((id) => id !== "player") || null;
       return {
@@ -5098,9 +5098,9 @@ function resolveNight(prev, planIn, preEvents) {
       return {
         eventId: finding.eventId, night: n, location: finding.location, kind: "director_finding",
         actorIds: [finding.actorId], subjectId: finding.actorId,
-        question: `I found ${object} at the ${finding.location}. Why was it there?`,
-        honest: `“It is mine. I carried it because I went out to ${reason}. I must have dropped it.”`,
-        evasive: `“You found a thing in the road and brought it to my door. That does not make it mine.”`,
+        question: finding.question || `I found ${object} at the ${finding.location}. Why was it there?`,
+        honest: finding.honest || `“It is mine. I carried it because I went out to ${reason}. I must have dropped it.”`,
+        evasive: finding.evasive || `“You found a thing in the road and brought it to my door. That does not make it mine.”`,
         findingText: finding.text, weather: director.weather,
       };
     });

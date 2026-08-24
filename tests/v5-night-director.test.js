@@ -1350,6 +1350,44 @@ function take(state, wanted) {
   assert.strictEqual(state.phase, "complete");
 })();
 
+(function aThirdPartyDoorstepReportBecomesAQuestionForTheWatchedVillager() {
+  var config = baseConfig("third-party-watched-item");
+  config.openingIntent = { kind: "watch", id: "ansel" };
+  config.villagers = [
+    { id: "ansel", name: "Father Ansel", role: "the Priest", alive: true, home: "Old Church" },
+    { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true, home: "Old Mill" }
+  ];
+  config.player = { monsterSawYou: false };
+  config.monster.active = false;
+  config.currentFacts = { weather: "frost", active: false, outMap: { ansel: "home", falk: "home" } };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "falk";
+  state.thresholdEvent.item = "your scarf pin";
+  state.thresholdEvent.dialogueRoll = 0.3;
+  state.thresholdEvent.purpose = "return_item";
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(/outside Father Ansel's door/.test(state.currentBeat.text), "Falk clearly says where the item was found");
+  assert(!/Tell Father Ansel yourself/.test(state.currentBeat.text), "the report does not use the unclear stock dismissal");
+  var choices = Director.availableActions(state);
+  assert.strictEqual(choices.find(function (choice) { return choice.type === "KEEP_BARRED"; }).label, "Ask Doctor Falk to leave your scarf pin on the step");
+  assert.strictEqual(choices.find(function (choice) { return choice.type === "STEP_OUTSIDE"; }).label, "Open the door and take back your scarf pin");
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "threshold_confrontation" && event.actorId === "falk"; }), "a third-party finder is not treated as the person caught being watched");
+  var projection = Director.consequenceProjection(state);
+  var report = projection.findings.find(function (finding) { return finding.source === "threshold_report" && finding.actorId === "ansel"; });
+  assert(report, "the report becomes evidence tied to Father Ansel");
+  assert.strictEqual(report.question, "Doctor Falk found my scarf pin outside your door. Did you see who left it?");
+  var barred = take(state, { type: "KEEP_BARRED" });
+  assert(/ask Doctor Falk to leave your scarf pin on the step/.test(barred.currentBeat.text), "staying inside carries out the choice the player selected");
+  var opened = take(state, { type: "STEP_OUTSIDE" });
+  assert(/returns your scarf pin/.test(opened.currentBeat.text) && /outside Father Ansel's door/.test(opened.currentBeat.text), "opening the door resolves the handover without inventing a request");
+})();
+
 (function aFalseNeighbourMustLureThePlayerPastTheBolt() {
   var config = baseConfig("indoor-threshold-kill");
   config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
@@ -2192,6 +2230,7 @@ function take(state, wanted) {
   assert(html.includes('askQ("apologise")') && html.includes('askQ("help")'), "the player has deliberate ways to repair disposition");
   assert(html.includes('standing.hostileMajority ? 0.08'), "a hostile village makes calming a mob nearly impossible");
   assert(!directorSource.includes("Open the door and I will return it") && !directorSource.includes("Be more careful next time"), "retired return-item dialogue cannot recur");
+  assert(html.includes("question: finding.question ||") && html.includes("honest: finding.honest ||") && html.includes("evasive: finding.evasive ||"), "authored doorstep reports survive into the next interview");
   var thresholdRequestSource = directorSource.slice(directorSource.indexOf("function thresholdRequestText"), directorSource.indexOf("function thresholdNeighbourAnswer"));
   assert(!/[‘’]/.test(thresholdRequestSource), "doorstep requests use paired double quotation marks rather than stray single marks");
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
