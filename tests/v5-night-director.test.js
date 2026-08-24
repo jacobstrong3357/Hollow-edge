@@ -1490,6 +1490,7 @@ function take(state, wanted) {
   assert(!/STEADY NERVE|Steady nerve held|composure/.test(html), "the removed steady-nerve mechanic cannot leak into state or presentation");
   assert(html.includes('directorBeat.meta.requiresResponse) {\n          Snd.silence(false);'), "an unresolved strange sight keeps the weather ambience alive");
   assert(html.includes("action.approachDelusion || action.ignoreDelusion"), "both looking and deliberately looking away restore the live weather soundscape");
+  assert(!html.includes("SOMETHING ABROAD"), "quiet monster sounds use a concrete heading instead of the removed phrase");
   assert(!html.includes("an uncertain sight: ${delusion.text}"), "resolved hallucinations do not clutter the evidence journal");
   assert(!html.includes("outside ${actorName}'s door in the ${target}"), "watch prose does not redundantly route a doorstep scene through its map label");
   assert(!/storm drowned half the night|storm drowned words/.test(html), "storm interview copy does not echo the same drowned-sound sentence in question and answer");
