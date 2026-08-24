@@ -94,7 +94,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=7"></script>
+<script src="v5-night-director.js?v=8"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -12277,6 +12277,15 @@ function MonsterVillage() {
           else if (directorBeat.meta.soundCue === "song") Snd.wail("song");
           else Snd.cue(directorBeat.meta.soundCue);
         }
+        else if (directorBeat && directorBeat.type === "threat" && directorBeat.meta && directorBeat.meta.recognition) {
+          /* Recognition is a held decision, not a jump scare that cuts to
+             silence. Keep the weather low and let the heartbeat run beneath
+             flee, watch and confront until the player chooses. */
+          Snd.silence(false);
+          Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: 1 });
+          Snd.danger();
+          Snd.beat(true);
+        }
         else if (directorBeat && directorBeat.type === "threat") { Snd.silence(true); Snd.danger(); }
         else if (directorBeat && directorBeat.type === "doorstep") {
           Snd.silence(false);
@@ -13640,7 +13649,9 @@ function MonsterVillage() {
       const beat = d.currentBeat;
       const terminal = d.phase === "complete" || d.phase === "dead";
       const afflictionScene = beat && beat.meta && beat.meta.affliction ? DIRECTOR_AFFLICTION_SCENE[beat.meta.affliction] : null;
-      const routeLocation = d.player.location === "Home" ? "Cottage" : (d.player.location || "Village Square");
+      const monsterEndedHere = (d.ledgers.truth || []).find((event) => event.kind === "monster_slain");
+      const livedLocation = monsterEndedHere ? monsterEndedHere.location : d.player.location;
+      const routeLocation = livedLocation === "Home" ? "Cottage" : (livedLocation || "Village Square");
       const location = afflictionScene ? afflictionScene.location : routeLocation;
       const danger = !!afflictionScene || ["threat", "chase", "dead"].includes(d.phase) || (beat && (["threat", "flee", "aftermath"].includes(beat.type) || (beat.meta && beat.meta.bodyInvestigation)));
       const changedScene = !!(beat && beat.meta && (beat.meta.recognizedChanged || beat.meta.changedAftermath));
@@ -13668,11 +13679,14 @@ function MonsterVillage() {
       const flowKey = beat ? `${beat.id}:${flowText}` : `${d.phase}:${d.cursor}:${flowText}`;
       const flowReady = directorTextReadyKey === flowKey;
       const directorWeatherLabel = { fog: "FOG", storm: "STORM", frost: "FROST" }[walk.facts.wx] || "STILL";
+      const terminalAction = d.phase === "dead" ? "Let the village find what remains →"
+        : monsterEndedHere ? "Take the news back to the village →"
+          : livedLocation === "Home" ? "Draw the bolt. Let morning come →" : "Head home before morning →";
       return (
         <NightShell loc={location} kicker={afflictionScene ? "THE VILLAGE BREAKS" : slotLabel} tone={danger ? "siege" : "night"} danger={danger} wound={afflictionScene ? afflictionScene.wound : nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
           <div style={{ minHeight: "clamp(235px,34dvh,295px)", flexShrink: 0 }} />
           <div className="flex items-baseline" style={{ gap: 10, marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
-            <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{afflictionScene ? location.toUpperCase() : d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
+            <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{afflictionScene ? location.toUpperCase() : livedLocation === "Home" ? "YOUR THRESHOLD" : livedLocation.toUpperCase()}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap" }}>{directorWeatherLabel}</span>
           </div>
           <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
@@ -13697,7 +13711,7 @@ function MonsterVillage() {
               ))}
             </div>
           )}
-          {terminal && flowReady && <div className="mvIn" style={{ paddingBottom: 8 }}><Btn full kind={d.phase === "dead" ? "red" : "amber"} onClick={commitDirector}>{d.phase === "dead" ? "Let the village find what remains →" : "Draw the bolt. Let morning come →"}</Btn></div>}
+          {terminal && flowReady && <div className="mvIn" style={{ paddingBottom: 8 }}><Btn full kind={d.phase === "dead" ? "red" : "amber"} onClick={commitDirector}>{terminalAction}</Btn></div>}
         </NightShell>
       );
     }

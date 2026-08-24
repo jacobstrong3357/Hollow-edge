@@ -782,6 +782,9 @@ function take(state, wanted) {
   state = take(state, { type: "CONFRONT_MONSTER" });
   assert.strictEqual(state.phase, "complete");
   assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_slain"; }), "the true prepared name settles the confrontation without returning to social play");
+  assert.strictEqual(state.player.location, "Old Church", "ending the monster keeps the player at the confrontation scene instead of teleporting them behind their bolt");
+  assert(state.ledgers.truth.some(function (event) { return event.id === "night-complete" && event.kind === "ended_at_scene" && event.location === "Old Church"; }), "the night ledger distinguishes a victory at the scene from returning home");
+  assert(/The monster is dead\./.test(state.currentBeat.text), "the armed confrontation states its successful outcome plainly");
 })();
 
 (function fleeingARecognitionAtTheFinalSlotCannotLeaveTheNightTape() {
@@ -1657,6 +1660,8 @@ function take(state, wanted) {
   assert(start.indexOf("setWalk({") < start.indexOf("Snd.scene("), "the Director walk state must be queued before optional ambience runs");
   assert(html.includes('catch (e) { console.warn("Night sound cue could not play", e); }'), "a failed Director sound effect cannot unmount the night screen");
   assert(html.includes('catch (e) { console.warn("Night heartbeat could not play", e); }'), "a failed heartbeat cannot unmount the night screen");
+  assert(html.includes('directorBeat.meta.recognition') && html.includes('Snd.beat(true);'), "the monster-recognition choice keeps the heartbeat running beneath the decision");
+  assert(html.includes('monsterEndedHere ? "Take the news back to the village →"') && html.includes('const livedLocation = monsterEndedHere ? monsterEndedHere.location : d.player.location;'), "a night victory remains at its lived location and does not offer to draw a distant home bolt");
   var sampledNight = html.slice(html.indexOf("function sampleNight"), html.indexOf("/* ================= V5 NIGHT DIRECTOR ADAPTER"));
   assert(sampledNight.indexOf("if (s.warnedLoc") < sampledNight.indexOf("let guaranteedVictimId"), "natural, secret and warned routes settle before an empty hunting ground receives a fallback villager");
   assert(sampledNight.includes('if (active && m.reach !== "home" && huntLoc)'), "every outdoor hunt night, not only night one or a werewolf night, checks for a real quarry");
@@ -2013,7 +2018,7 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=7'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=8'), "the local page cache-busts the current Director runtime");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
     HOME_LOC: { rosa: "Village Square" },

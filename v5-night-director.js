@@ -1464,11 +1464,16 @@
     }
   }
 
-  function completeNight(state) {
+  function completeNight(state, finalLocation) {
     state.phase = "complete";
-    state.player.location = HOME;
+    state.player.location = finalLocation || HOME;
     if (!state.ledgers.truth.some(function (e) { return e.id === "night-complete"; })) {
-      appendTruth(state, { id: "night-complete", slot: state.cursor, kind: "returned_home", location: HOME });
+      appendTruth(state, {
+        id: "night-complete",
+        slot: state.cursor,
+        kind: finalLocation ? "ended_at_scene" : "returned_home",
+        location: finalLocation || HOME
+      });
     }
     return state;
   }
@@ -2093,9 +2098,11 @@
       if (correctName) {
         state.monsterSchedule.active = false;
         appendTruth(state, { id: "monster-slain:" + threat.slot, slot: threat.slot, kind: "monster_slain", location: threat.location, actorId: threat.actorId, monsterId: state.monsterSchedule.id, actors: ["player", threat.actorId] });
+        var slainHost = state.cast.find(function (actor) { return actor.id === threat.actorId; });
+        var slainName = slainHost && slainHost.name || "your neighbour";
         appendBeat(state, makeBeat("monster-slain-beat:" + threat.slot, "aftermath", threat.slot, threat.location,
-          "You step from hiding with the true name and its answering rite. For the first time tonight, the thing wearing your neighbour's face is afraid.", { actorId: threat.actorId, outcome: "named" }));
-        return completeNight(state);
+          "You step from hiding, speak the true name, and perform its answering rite. The thing wearing " + slainName + "'s face collapses. The monster is dead.", { actorId: threat.actorId, outcome: "named" }));
+        return completeNight(state, threat.location);
       }
       if (!survival) {
         appendBeat(state, makeBeat("reveal-caught:" + threat.slot, "flee", threat.slot, threat.location,
