@@ -135,6 +135,38 @@
     }
   };
 
+  /* Following somebody at the very end of the sampled night should not make
+     their destination vanish beneath a dawn button. These are short scene
+     choices, not extra clock slots: the hidden night has already resolved,
+     but the player may remain for one or two close observations before
+     choosing the road home. */
+  var FOLLOW_PAUSE_CHOICES = {
+    "Village Square": {
+      near: "Stay in the Square and watch them",
+      edges: "Check the nearest side lane"
+    },
+    "Old Church": {
+      near: "Stay beneath the vestry window",
+      edges: "Walk the churchyard wall"
+    },
+    Graveyard: {
+      near: "Stay close enough to hear",
+      edges: "Check the neighbouring graves"
+    },
+    "Dark Forest": {
+      near: "Stay beneath the trees and listen",
+      edges: "Check the trail around you"
+    },
+    "Old Mill": {
+      near: "Stay beside the millrace",
+      edges: "Check the wheel-yard once more"
+    },
+    Tavern: {
+      near: "Stay in the yard and watch them",
+      edges: "Check the stable and back windows"
+    }
+  };
+
   var ROLE_MOTIVES = {
     baker: [
       motive("late_bread", "work", "Village Square", "carry bread to a house where nobody has eaten", "a flour cloth and a cooling loaf"),
@@ -748,6 +780,7 @@
       encounterBudget: config.encounterBudget == null ? 2 : Math.max(0, Number(config.encounterBudget)),
       beats: [],
       currentBeat: null,
+      followPause: null,
       pendingThreat: null,
       ledgers: { truth: [], observations: [], memories: {} },
       found: { stamps: [], clues: [], whispers: [], delusions: [] },
@@ -1277,7 +1310,87 @@
       appendBeat(state, makeBeat("recognition-beat:" + state.cursor + ":" + action.actorId, "threat", state.cursor, state.player.location,
         recognitionText, { actorId: action.actorId, sign: state.pendingThreat.sign, truthEventId: followedEvent && followedEvent.id, meta: { recognition: true, critical: true } }));
     }
+    var followedVillager = state.cast.find(function (entry) { return entry.id === action.actorId; });
+    if (state.phase === "active" && state.cursor >= state.slots - 1 && destination !== HOME && !(followedVillager && followedVillager.changed) && !(followedEvent && followedEvent.changedAftermath)) {
+      state.followPause = {
+        actorId: action.actorId,
+        location: state.player.location,
+        remaining: 2,
+        used: [],
+        truthEventId: followedEvent && followedEvent.id
+      };
+    }
     finishIfNeeded(state);
+    return state;
+  }
+
+  function followPauseText(state, pause, mode) {
+    var villager = state.cast.find(function (entry) { return entry.id === pause.actorId; });
+    var name = villager && villager.name || "Your neighbour";
+    var griefName = villager && villager.dialogue && villager.dialogue.griefName;
+    var place = pause.location;
+    if (place === "Graveyard") return mode === "near"
+      ? griefName
+        ? "You stay close enough to hear. " + name + " says " + griefName + "'s name, then tells one quiet story about them."
+        : "You stay close enough to hear. " + name + " says a name, then tells one quiet story about the dead."
+      : state.weather === "storm"
+        ? "Rain has blurred most tracks. Fresh mud remains beside this grave and nowhere else nearby."
+        : state.weather === "frost"
+          ? "Frost holds the prints clearly. They approach this grave, pause, and turn back."
+          : "You check the neighbouring graves. Fresh footprints stop at this stone and nowhere else.";
+    if (place === "Old Church") return mode === "near"
+      ? "You wait beneath the vestry window. " + name + " remains inside for another minute, then the light goes out."
+      : "You walk the churchyard wall. One set of fresh prints leads back to the lane.";
+    if (place === "Dark Forest") return mode === "near"
+      ? "You stay beneath the trees and listen. " + name + " moves on. No second tread follows them."
+      : "You check the trail. Their prints keep to the path and turn back toward the village.";
+    if (place === "Old Mill") return mode === "near"
+      ? "You wait beside the millrace. " + name + " finishes their errand, then leaves by the road."
+      : "You check the wheel-yard. Their tracks are the only fresh marks in the mud.";
+    if (place === "Tavern") return mode === "near"
+      ? "You stay in the yard. " + name + " finishes at the back door, then leaves alone."
+      : "You check the stable and back windows. Nothing else moves inside.";
+    return mode === "near"
+      ? "You stay in the Square. " + name + " finishes their errand, then leaves alone."
+      : "You check the nearest side lane. No second set of steps follows them.";
+  }
+
+  function resolveFollowPause(state, action) {
+    var pause = state.followPause;
+    if (!pause || pause.remaining <= 0 || pause.used.indexOf(action.pauseMode) >= 0) return invalid(state, action, "That moment has passed.");
+    var slot = Math.max(0, state.cursor);
+    var text = followPauseText(state, pause, action.pauseMode);
+    pause.used.push(action.pauseMode);
+    pause.remaining -= 1;
+    state.actionHistory.push({ slot: slot, type: "LINGER_AFTER_FOLLOW", to: null, actorId: pause.actorId, pauseMode: action.pauseMode });
+    var truth = appendTruth(state, {
+      id: "follow-pause:" + slot + ":" + pause.actorId + ":" + action.pauseMode,
+      slot: slot,
+      kind: "follow_pause",
+      location: pause.location,
+      actorId: pause.actorId,
+      actors: ["player", pause.actorId],
+      pauseMode: action.pauseMode,
+      sourceEventId: pause.truthEventId
+    });
+    var beat = appendBeat(state, makeBeat("follow-pause-beat:" + slot + ":" + pause.actorId + ":" + action.pauseMode,
+      "linger", slot, pause.location, text, {
+        actorId: action.pauseMode === "near" ? pause.actorId : null,
+        truthEventId: truth.id,
+        meta: { followPause: true, pauseMode: action.pauseMode, critical: true }
+      }));
+    appendObservation(state, {
+      eventId: truth.id,
+      beatId: beat && beat.id,
+      slot: slot,
+      kind: "follow_pause",
+      location: pause.location,
+      actors: action.pauseMode === "near" ? [pause.actorId] : [],
+      clarity: "clear",
+      reliability: "direct",
+      text: text,
+      weather: state.weather
+    });
     return state;
   }
 
@@ -1615,6 +1728,7 @@
        rewritten as Home. Once the last beat is resolved, dawn starts the
        journey home; reaching the threshold remains its own explicit action. */
     if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.requiresResponse) return;
+    if (state.followPause) return;
     state.phase = "returning";
     if (!state.ledgers.truth.some(function (event) { return event.id === "dawn-return:" + state.cursor; })) {
       appendTruth(state, { id: "dawn-return:" + state.cursor, slot: state.cursor, kind: "started_home", location: state.player.location, reason: "dawn" });
@@ -1654,6 +1768,7 @@
     if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
     state.presentedActorIds = state.presentedActorIds || [];
     state.followedActorIds = state.followedActorIds || [];
+    if (!Object.prototype.hasOwnProperty.call(state, "followPause")) state.followPause = null;
     if (state.encounterBudget == null) state.encounterBudget = 2;
     state.visibility = state.visibility || {};
     state.outcomes = state.outcomes || {};
@@ -2174,7 +2289,9 @@
       }
       return next;
     }
+    if (action.type === "LINGER_AFTER_FOLLOW") return resolveFollowPause(next, action);
     if (action.type === "GO_HOME") {
+      next.followPause = null;
       next.phase = "returning";
       next.player.route.push({ slot: next.cursor, location: next.player.location, action: "GO_HOME" });
       appendTruth(next, { id: "go-home:" + next.cursor, slot: next.cursor, kind: "started_home", location: next.player.location });
@@ -2451,6 +2568,14 @@
       return thresholdActions;
     }
     if (state.phase === "returning") return [action("REACH_HOME", "Reach your door and throw the bolt", "amber")];
+    if (state.followPause) {
+      var pauseChoices = FOLLOW_PAUSE_CHOICES[state.followPause.location] || FOLLOW_PAUSE_CHOICES["Village Square"];
+      var pauseActions = [];
+      if (state.followPause.remaining > 0 && state.followPause.used.indexOf("near") < 0) pauseActions.push(action("LINGER_AFTER_FOLLOW", pauseChoices.near, "quiet", { pauseMode: "near", actorId: state.followPause.actorId }));
+      if (state.followPause.remaining > 0 && state.followPause.used.indexOf("edges") < 0) pauseActions.push(action("LINGER_AFTER_FOLLOW", pauseChoices.edges, "amber", { pauseMode: "edges", actorId: state.followPause.actorId }));
+      pauseActions.push(action("GO_HOME", "Leave for home", "bone"));
+      return pauseActions;
+    }
     var result = [];
     if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.hiddenFigure && state.currentBeat.meta.hiddenActorId) {
       if (!state.currentBeat.meta.hiddenFigureResolution) result.push(action("IDENTIFY_FIGURE", "Raise the lantern. Call out to them", "amber", { actorId: state.currentBeat.meta.hiddenActorId }));
@@ -2486,6 +2611,7 @@
     var all = availableActions(state);
     if (!state || state.phase === "dead" || state.phase === "complete") return [];
     if (["threat", "chase", "threshold", "returning"].indexOf(state.phase) >= 0) return all;
+    if (state.followPause) return all;
     var target = guide.target;
     if (state.phase === "planned") {
       var openingPath = target ? shortestPath(state.graph, HOME, target) : [];

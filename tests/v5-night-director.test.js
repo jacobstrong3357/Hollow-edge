@@ -633,6 +633,52 @@ function take(state, wanted) {
   assert(Director.consequenceProjection(state).secrets.some(function (entry) { return entry.actorId === "rosa"; }), "following the corridor lead reveals the human secret");
 })();
 
+(function aLastHourFollowCanLingerAtItsDestination() {
+  var config = baseConfig("last-hour-graveyard-pause");
+  config.slots = 3;
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { tobias: "Graveyard" } };
+  config.villagers = [{
+    id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Village Square",
+    motive: { id: "late-mourning", family: "grief", destination: "Graveyard", reason: "visit Father Ansel's grave", object: "a small sprig", depart: 1, duration: 3 },
+    dialogue: { follow: "You follow Old Tobias to the Graveyard. Old Tobias speaks softly to Father Ansel's grave. Once, they laugh; then they go quiet.", griefName: "Father Ansel" }
+  }];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 1;
+  state.player.location = "Village Square";
+  state.schedules.tobias.slots[1] = "Village Square";
+  state.schedules.tobias.slots[2] = "Graveyard";
+  state.visibility[1].tobias = true;
+  state.currentBeat = { id: "tobias-late", type: "encounter", slot: 1, location: "Village Square", actorId: "tobias", text: "Old Tobias crosses your lantern." };
+
+  state = take(state, { type: "FOLLOW", actorId: "tobias" });
+  assert.strictEqual(state.phase, "active", "arriving in the last hour does not immediately force the dawn return");
+  assert.strictEqual(state.player.location, "Graveyard");
+  assert.strictEqual(state.followPause.remaining, 2);
+  var choices = Director.guidedActions(state, { kind: "search", target: "Graveyard", intentDone: true });
+  assert.deepStrictEqual(choices.map(function (item) { return [item.type, item.pauseMode || null]; }), [
+    ["LINGER_AFTER_FOLLOW", "near"],
+    ["LINGER_AFTER_FOLLOW", "edges"],
+    ["GO_HOME", null]
+  ], "the graveyard offers two distinct beats and an immediate way home");
+
+  state = take(state, { type: "LINGER_AFTER_FOLLOW", actorId: "tobias", pauseMode: "near" });
+  assert.strictEqual(state.currentBeat.type, "linger");
+  assert(/stay close enough to hear/i.test(state.currentBeat.text) && /Father Ansel's name/.test(state.currentBeat.text));
+  assert.strictEqual(state.followPause.remaining, 1);
+  choices = Director.availableActions(state);
+  assert.deepStrictEqual(choices.map(function (item) { return item.pauseMode || item.type; }), ["edges", "GO_HOME"], "the unused second beat remains optional");
+
+  state = take(state, { type: "LINGER_AFTER_FOLLOW", actorId: "tobias", pauseMode: "edges" });
+  assert(/neighbouring graves/i.test(state.currentBeat.text));
+  assert.strictEqual(state.followPause.remaining, 0);
+  assert.deepStrictEqual(Director.availableActions(state).map(function (item) { return item.type; }), ["GO_HOME"], "after two beats the player chooses when to leave");
+  state = take(state, { type: "GO_HOME" });
+  assert.strictEqual(state.phase, "returning");
+  assert.strictEqual(state.followPause, null);
+})();
+
 (function followingTheActiveHostEndsAllSocialChoices() {
   var config = baseConfig("recognition-is-not-a-chat");
   config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" }, revealText: "The muzzle opens through Rosa's face, but her long frame and eyes remain unmistakable." };
