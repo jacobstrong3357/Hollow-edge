@@ -1737,7 +1737,7 @@
        morning button: its response actions disappeared and the location was
        rewritten as Home. Once the last beat is resolved, dawn starts the
        journey home; reaching the threshold remains its own explicit action. */
-    if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.requiresResponse) return;
+    if (state.currentBeat && state.currentBeat.meta && (state.currentBeat.meta.requiresResponse || state.currentBeat.meta.investigable)) return;
     if (state.followPause) return;
     state.phase = "returning";
     if (!state.ledgers.truth.some(function (event) { return event.id === "dawn-return:" + state.cursor; })) {
@@ -1789,6 +1789,12 @@
     state.ledgers.memories = state.ledgers.memories || {};
     (state.cast || []).forEach(function (villager) { state.ledgers.memories[villager.id] = state.ledgers.memories[villager.id] || []; });
     state.cursor = Math.max(-1, Math.min(state.slots - 1, Number(state.cursor == null ? -1 : state.cursor)));
+    if (state.phase === "returning" && state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.investigable && state.player.location !== HOME) {
+      /* Repair saves made while the final-scream bug was present. The old
+         state stored the road-home phase before the player answered the cry. */
+      state.phase = "active";
+      state.ledgers.truth = state.ledgers.truth.filter(function (event) { return event.id !== "dawn-return:" + state.cursor; });
+    }
     if (state.pendingThreat && (state.pendingThreat.slot < 0 || state.pendingThreat.slot >= state.slots)) state.pendingThreat.slot = state.cursor;
     if (state.chase && (state.chase.slot < 0 || state.chase.slot >= state.slots)) state.chase.slot = state.cursor;
     for (var slot = 0; slot < state.slots; slot += 1) {
@@ -2240,7 +2246,10 @@
       && (action.type === "IDENTIFY_FIGURE" || (action.type === "FOLLOW" && action.actorId === presentingBeat.meta.hiddenActorId));
     var forcedLocalInvestigation = presentingBeat && presentingBeat.meta && presentingBeat.meta.investigable
       && presentingBeat.meta.disturbanceLocation === next.player.location && action.type === "INVESTIGATE_HERE";
-    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var forcedRemoteInvestigation = presentingBeat && presentingBeat.meta && presentingBeat.meta.investigable
+      && presentingBeat.meta.disturbanceLocation !== next.player.location && action.type === "MOVE"
+      && action.to === presentingBeat.meta.disturbanceLocation && !!action.investigateEventId;
+    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || forcedRemoteInvestigation || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
     if (action.crisisChoice && presentingBeat && presentingBeat.meta && presentingBeat.meta.crisis) {
       appendTruth(next, {
@@ -2326,6 +2335,19 @@
       finishIfNeeded(next);
       return next;
     }
+    if (forcedRemoteInvestigation && next.cursor >= next.slots - 1) {
+      /* A scream in the last playable beat is still a real choice. Travelling
+         to it resolves inside that final beat rather than stepping the clock
+         beyond the sampled night and replacing the scene with the road home. */
+      var remoteInvestigationSlot = Math.max(0, next.cursor);
+      next.player.location = action.to;
+      next.actionHistory.push({ slot: remoteInvestigationSlot, type: "MOVE", to: action.to, actorId: null, investigateEventId: action.investigateEventId });
+      next.player.route.push({ slot: remoteInvestigationSlot, location: action.to, action: "INVESTIGATE_SCREAM", investigateEventId: action.investigateEventId });
+      appendTruth(next, { id: "player:" + remoteInvestigationSlot + ":investigate-scream", slot: remoteInvestigationSlot, kind: "player_action", action: "INVESTIGATE_SCREAM", investigateEventId: action.investigateEventId, location: action.to });
+      resolveAttackInvestigation(next, action, remoteInvestigationSlot);
+      finishIfNeeded(next);
+      return next;
+    }
     if (action.ignoreDisturbance && presentingBeat && presentingBeat.meta && presentingBeat.meta.investigable) {
       var ignoredSlot = Math.max(0, next.cursor);
       var ignoredHere = presentingBeat.meta.disturbanceLocation === next.player.location;
@@ -2345,6 +2367,10 @@
       });
       appendBeat(next, makeBeat("disturbance-ignored-beat:" + ignoredSlot + ":" + action.type, "atmosphere", ignoredSlot, next.player.location,
         ignoredText, { truthEventId: ignoredTruth.id, meta: { disturbanceDecision: true, critical: true } }));
+      if (next.cursor >= next.slots - 1 && action.type !== "GO_HOME") {
+        finishIfNeeded(next);
+        return next;
+      }
     }
     if (action.type === "LINGER_AFTER_FOLLOW") return resolveFollowPause(next, action);
     if (action.type === "GO_HOME") {

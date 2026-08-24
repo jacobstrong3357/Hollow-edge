@@ -449,6 +449,42 @@ function take(state, wanted) {
   assert(sawClue && heardWords && drewSuspicion, "the deterministic investigation tape contains evidence, last-word and social-suspicion outcomes");
 })();
 
+(function aFinalBeatScreamMustBeAnsweredBeforeGoingHome() {
+  var config = baseConfig("final-beat-scream");
+  config.slots = 3;
+  config.openingIntent = { kind: "search", loc: "Old Church" };
+  config.player = {};
+  config.forcedBeats = [];
+  config.villagers = [
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "mill-errand", family: "work", destination: "Old Mill", reason: "collect flour", object: "a flour sack", depart: 0, duration: 3 } }
+  ];
+  config.monster = { id: "ghoul", hostId: "greta", active: true, signs: ["bite"], hunts: ["Old Mill"], attack: "kill", reach: "out", huntSlot: 2 };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Old Mill", attackSlot: 2, outMap: { rosa: "Old Mill" } };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Old Church" });
+  state.discoverySchedule = {};
+  state = take(state, { type: "SEARCH", searchMode: "ground" });
+  state = take(state, { type: "SEARCH", searchMode: "edges" });
+
+  assert.strictEqual(state.cursor, 2, "the scream occurs in the final night slot");
+  assert.strictEqual(state.phase, "active", "a final scream keeps the night active until the player answers it");
+  assert(state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.investigable, "the final scream remains an actionable scene");
+  var savedDuringBug = JSON.parse(JSON.stringify(state));
+  savedDuringBug.phase = "returning";
+  savedDuringBug.ledgers.truth.push({ id: "dawn-return:2", slot: 2, kind: "started_home", location: "Old Church", reason: "dawn" });
+  var repairedSave = Director.upgradeState(savedDuringBug);
+  assert.strictEqual(repairedSave.phase, "active", "reloading a save stranded by the old bug restores the unanswered scream");
+  assert(!repairedSave.ledgers.truth.some(function (event) { return event.id === "dawn-return:2"; }), "save repair removes the premature journey-home record");
+  var choices = Director.guidedActions(state, { target: "Old Church", kind: "search", intentDone: true, searches: { ground: true, edges: true }, interacted: {} });
+  var investigate = choices.find(function (entry) { return entry.investigateEventId; });
+  assert(investigate && investigate.to === "Old Mill", "the player can go to the sound instead of being forced home");
+
+  state = take(state, investigate);
+  assert.strictEqual(state.cursor, 2, "following a final scream does not advance beyond the night");
+  assert.strictEqual(state.player.location, "Old Mill");
+  assert(state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.bodyInvestigation, "the sound opens its aftermath scene");
+})();
+
 (function aScreamInThePlayersCurrentPlaceCanBeInvestigatedDirectly() {
   var config = baseConfig("same-place-scream");
   config.monster.active = false;
