@@ -67,7 +67,7 @@
     if (state.weather === "fog") return "A familiar-sized silhouette crosses the lantern's blurred edge. You cannot see the face before the figure is gone.";
     if (state.weather === "storm") return "Lightning gives you a familiar coat and a bowed head for one white instant. Rain takes the face before you can name it.";
     if (state.weather === "frost") return villager.name + " crosses the hard blue lane. Their breath and bootprints remain visible after the rest of them has passed.";
-    return "A familiar figure crosses your lantern at the edge of the road.";
+    return "A figure crosses the edge of your lantern. Their coat looks familiar, but their face is turned away.";
   }
 
   function weatherMonsterText(state, mode, distance) {
@@ -1329,9 +1329,10 @@
       recordEncounter(state, v, slot, acknowledged, acknowledged ? "hailed" : "crossed_paths", acknowledged || v.id === framedId);
     });
     if (!gatheringShown && !priorityDiscovery && !framedId && hiddenByWeather.length && ["LEAVE", "MOVE", "WAIT", "KEEP_WATCH"].indexOf(action.type) >= 0) {
+      var hiddenFigure = hiddenByWeather[0];
       appendBeat(state, makeBeat("weather-hidden:" + slot + ":" + state.player.location, "atmosphere", slot, state.player.location,
-        state.weather === "frost" ? "A figure crosses the blue lane beyond clear recognition. Breath and bootprints remain after it has gone." : weatherEncounterText(state, hiddenByWeather[0], false),
-        { meta: { weatherHidden: true, weather: state.weather } }));
+        state.weather === "frost" ? "A figure crosses the blue lane. Their face is turned away, but breath and bootprints mark the road." : weatherEncounterText(state, hiddenFigure, false),
+        { meta: { weatherHidden: true, hiddenFigure: true, hiddenActorId: hiddenFigure.id, requiresResponse: true, weather: state.weather } }));
     }
     processDiscoveries(state, action, slot);
     var earnedFinding = state.currentBeat && (state.currentBeat.type === "stamp" || state.currentBeat.type === "clue") ? state.currentBeat : null;
@@ -2107,7 +2108,9 @@
       && action.type === "FOLLOW" && action.actorId === presentingBeat.actorId;
     var forcedClueInspect = presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected
       && action.type === "INSPECT_CLUE";
-    var legal = forcedWatchFollow || forcedClueInspect || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var forcedHiddenFigureAction = presentingBeat && presentingBeat.meta && presentingBeat.meta.hiddenFigure && presentingBeat.meta.hiddenActorId
+      && (action.type === "IDENTIFY_FIGURE" || (action.type === "FOLLOW" && action.actorId === presentingBeat.meta.hiddenActorId));
+    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
     if (action.dismissClue && presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected) {
       appendTruth(next, { id: "clue-left-closed:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "clue_left_closed", location: next.player.location, sourceBeatId: presentingBeat.id });
@@ -2127,6 +2130,49 @@
         finishIfNeeded(next);
         return next;
       }
+    }
+    if (action.ignoreHiddenFigure && presentingBeat && presentingBeat.meta && presentingBeat.meta.hiddenFigure) {
+      appendTruth(next, {
+        id: "hidden-figure-passed:" + presentingBeat.id,
+        slot: Math.max(0, next.cursor),
+        kind: "hidden_figure_passed",
+        location: next.player.location,
+        actorId: presentingBeat.meta.hiddenActorId,
+        actors: [presentingBeat.meta.hiddenActorId].filter(Boolean),
+        sourceBeatId: presentingBeat.id
+      });
+    }
+    if (action.type === "IDENTIFY_FIGURE" && presentingBeat && presentingBeat.meta && presentingBeat.meta.hiddenFigure && presentingBeat.meta.hiddenActorId) {
+      var hiddenActor = next.cast.find(function (villager) { return villager.id === presentingBeat.meta.hiddenActorId; });
+      if (!hiddenActor) return invalid(next, action, "The figure has already gone.");
+      var identifyChance = next.weather === "fog" ? 0.55 : next.weather === "storm" ? 0.72 : next.weather === "frost" ? 0.95 : 1;
+      var identified = keyedNumber(next.seed, "identify-hidden-figure:" + presentingBeat.id) < identifyChance;
+      next.actionHistory.push({ slot: Math.max(0, next.cursor), type: "IDENTIFY_FIGURE", to: null, actorId: hiddenActor.id });
+      if (identified) {
+        next.visibility[Math.max(0, next.cursor)] = next.visibility[Math.max(0, next.cursor)] || {};
+        next.visibility[Math.max(0, next.cursor)][hiddenActor.id] = true;
+        recordEncounter(next, hiddenActor, Math.max(0, next.cursor), true, "hailed", true);
+        next.delays[hiddenActor.id] = (next.delays[hiddenActor.id] || 0) + 1;
+        if (next.presentedActorIds.indexOf(hiddenActor.id) < 0) next.presentedActorIds.push(hiddenActor.id);
+        var identifiedText = next.weather === "fog"
+          ? "You raise the lantern and call out. The figure turns close enough for the fog to give back a face. It is " + hiddenActor.name + "."
+          : next.weather === "storm"
+            ? "You raise the lantern and call out. Lightning catches the face when the figure turns. It is " + hiddenActor.name + "."
+            : next.weather === "frost"
+              ? "You call out. The figure turns, breath white in the lantern light. It is " + hiddenActor.name + "."
+              : "You raise the lantern and call out. The figure turns. It is " + hiddenActor.name + ".";
+        var identifiedTruth = appendTruth(next, { id: "hidden-figure-identified:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "hidden_figure_identified", location: next.player.location, actorId: hiddenActor.id, actors: ["player", hiddenActor.id], sourceBeatId: presentingBeat.id });
+        appendBeat(next, makeBeat(presentingBeat.id + ":identified", "encounter", Math.max(0, next.cursor), next.player.location,
+          identifiedText, { actorId: hiddenActor.id, truthEventId: identifiedTruth.id, meta: { hiddenFigureResolution: "identified", critical: true } }));
+      } else {
+        var missedText = next.weather === "fog"
+          ? "You raise the lantern and call out. The figure turns into the fog before the light reaches their face."
+          : "You raise the lantern and call out. The figure turns away. You still cannot see the face.";
+        var missedTruth = appendTruth(next, { id: "hidden-figure-unidentified:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "hidden_figure_unidentified", location: next.player.location, actorId: hiddenActor.id, actors: [hiddenActor.id], sourceBeatId: presentingBeat.id });
+        appendBeat(next, makeBeat(presentingBeat.id + ":unidentified", "atmosphere", Math.max(0, next.cursor), next.player.location,
+          missedText, { truthEventId: missedTruth.id, meta: { hiddenFigure: true, hiddenFigureResolution: "missed", hiddenActorId: hiddenActor.id, requiresResponse: true, critical: true } }));
+      }
+      return next;
     }
     if (action.type === "GO_HOME") {
       next.phase = "returning";
@@ -2406,6 +2452,10 @@
     }
     if (state.phase === "returning") return [action("REACH_HOME", "Reach your door and throw the bolt", "amber")];
     var result = [];
+    if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.hiddenFigure && state.currentBeat.meta.hiddenActorId) {
+      if (!state.currentBeat.meta.hiddenFigureResolution) result.push(action("IDENTIFY_FIGURE", "Raise the lantern. Call out to them", "amber", { actorId: state.currentBeat.meta.hiddenActorId }));
+      result.push(action("FOLLOW", "Follow the figure", "amber", { actorId: state.currentBeat.meta.hiddenActorId }));
+    }
     if (state.currentBeat && state.currentBeat.type === "clue" && state.currentBeat.meta && state.currentBeat.meta.inspectable && !state.currentBeat.meta.inspected) {
       result.push(action("INSPECT_CLUE", state.currentBeat.meta.inspectLabel || "Examine what you found", "amber"));
     }
@@ -2528,10 +2578,28 @@
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave it. Head for home");
       return result.slice(0, 3);
     }
+    if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.hiddenFigure && beat.meta.hiddenActorId) {
+      if (!beat.meta.hiddenFigureResolution) add(all.find(function (item) { return item.type === "IDENTIFY_FIGURE"; }), "Raise the lantern. Call out to them");
+      add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.meta.hiddenActorId; }), "Follow the figure");
+      var letPass = all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); });
+      if (letPass) { letPass = clone(letPass); letPass.ignoreHiddenFigure = true; }
+      add(letPass, guide.kind === "search" ? "Let them pass. Continue your search" : "Let them pass. Take up the watch");
+      if (beat.meta.hiddenFigureResolution === "missed") add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave it. Head for home");
+      return result.slice(0, 3);
+    }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.requiresResponse) {
       add(all.find(function (item) { return item.type === "LISTEN"; }), state.weather === "storm" ? "Hold still. Listen for the voice again" : "Turn toward the sound and listen");
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
+    }
+    if (beat && beat.type === "encounter" && beat.actorId && beat.meta && beat.meta.hiddenFigureResolution === "identified") {
+      var knownFigure = state.cast.find(function (villager) { return villager.id === beat.actorId; });
+      var knownName = knownFigure && knownFigure.name || "them";
+      add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }), "Follow " + knownName);
+      var resumeAfterFigure = all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); });
+      add(resumeAfterFigure, guide.kind === "search" ? "Let " + knownName + " go. Continue your search" : "Let " + knownName + " go. Take up the watch");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave them. Head for home");
+      return result.slice(0, 3);
     }
     if (beat && beat.meta && beat.meta.bodyInvestigation && beat.actorId) {
       var changedVictim = state.cast.find(function (villager) { return villager.id === beat.actorId && villager.changed; });

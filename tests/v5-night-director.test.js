@@ -267,6 +267,7 @@ function take(state, wanted) {
   assert.strictEqual(actions[0].type, "LEAVE");
   assert.strictEqual(actions[0].to, "Old Church", "a church-bound walk takes the real back-lane edge instead of staging a visit to the Square");
   assert(/back lanes straight/.test(actions[0].label), "the opening choice names the route the simulation actually takes");
+  Object.keys(state.visibility[0] || {}).forEach(function (actorId) { state.visibility[0][actorId] = true; });
   state = take(state, actions[0]);
   actions = Director.guidedActions(state, guide);
   assert.deepStrictEqual(actions.map(function (a) { return [a.type, a.searchMode]; }), [["SEARCH", "ground"], ["SEARCH", "edges"]], "arrival offers two concrete ways to investigate the destination");
@@ -1316,6 +1317,40 @@ function take(state, wanted) {
   assert.strictEqual(projection.weather, "fog");
   assert.strictEqual(projection.encounters[0].clarity, "one_sided");
   assert(/fog hid/i.test(projection.encounters[0].weatherEffect), "the daylight thread preserves why recognition failed");
+})();
+
+(function anUnidentifiedFigureOffersARealDecision() {
+  var config = baseConfig("actionable-hidden-figure");
+  config.villagers = [{
+    id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+    motive: { id: "late-errand", family: "work", destination: "Old Church", reason: "deliver cloth", object: "a parcel", depart: 2, duration: 2 }
+  }];
+  config.monster.active = false;
+  config.player = {};
+  config.forcedBeats = [];
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "Old Church" } };
+  var state = Director.createNight(config);
+  state.discoverySchedule = {};
+  state.visibility[0].rosa = false;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert(state.currentBeat && state.currentBeat.meta.hiddenFigure && !state.currentBeat.actorId, "the first card does not magically name the turned-away figure");
+  var choices = Director.guidedActions(state, { target: "Village Square", kind: "watch", intentDone: false, interacted: {} });
+  assert.deepStrictEqual(choices.map(function (choice) { return choice.type; }), ["IDENTIFY_FIGURE", "FOLLOW", "KEEP_WATCH"]);
+  assert.deepStrictEqual(choices.map(function (choice) { return choice.label; }), ["Raise the lantern. Call out to them", "Follow the figure", "Let them pass. Take up the watch"]);
+
+  var called = take(JSON.parse(JSON.stringify(state)), choices[0]);
+  assert.strictEqual(called.currentBeat.actorId, "rosa");
+  assert(/It is Rosa/.test(called.currentBeat.text), "calling out in clear weather answers who the figure is");
+  assert(called.ledgers.truth.some(function (event) { return event.kind === "hidden_figure_identified" && event.actorId === "rosa"; }));
+  var namedChoices = Director.guidedActions(called, { target: "Village Square", kind: "watch", intentDone: false, interacted: {} });
+  assert.deepStrictEqual(namedChoices.map(function (choice) { return choice.label; }), ["Follow Rosa", "Let Rosa go. Take up the watch", "Leave them. Head for home"]);
+  assert(!namedChoices.some(function (choice) { return choice.type === "HAIL"; }), "calling out does not immediately offer the same greeting again");
+
+  var followed = take(JSON.parse(JSON.stringify(state)), choices[1]);
+  assert(followed.ledgers.truth.some(function (event) { return event.kind === "followed" && event.actorId === "rosa"; }), "the player can follow the unidentified figure instead of losing the scene");
+
+  var passed = take(JSON.parse(JSON.stringify(state)), choices[2]);
+  assert(passed.ledgers.truth.some(function (event) { return event.kind === "hidden_figure_passed" && event.actorId === "rosa"; }), "letting the figure pass is also recorded as a deliberate choice");
 })();
 
 (function weatherProfilesChangeEvidenceHearingAndRecognition() {
