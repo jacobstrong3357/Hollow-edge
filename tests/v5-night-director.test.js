@@ -449,6 +449,40 @@ function take(state, wanted) {
   assert(sawClue && heardWords && drewSuspicion, "the deterministic investigation tape contains evidence, last-word and social-suspicion outcomes");
 })();
 
+(function aScreamInThePlayersCurrentPlaceCanBeInvestigatedDirectly() {
+  var config = baseConfig("same-place-scream");
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 1;
+  state.player.location = "Village Square";
+  state.discoverySchedule = {};
+  var victim = state.cast.find(function (entry) { return entry.id === "rosa"; });
+  victim.alive = false;
+  state.ledgers.truth.push({ id: "attack:1:rosa", slot: 1, kind: "slain", location: "Village Square", victimId: "rosa", sign: "bite", actors: ["greta", "rosa"] });
+  state.currentBeat = {
+    id: "same-place-scream-beat", type: "atmosphere", slot: 1, location: "Village Square",
+    text: "A scream cuts across the Village Square.", truthEventId: "attack:1:rosa",
+    meta: { heardOnly: true, investigable: true, disturbanceLocation: "Village Square", victimId: "rosa", attackEventId: "attack:1:rosa" }
+  };
+  state.beats.push(state.currentBeat);
+  var guide = { target: "Village Square", kind: "search", intentDone: true, searches: {}, interacted: {} };
+  var choices = Director.guidedActions(state, guide);
+  assert.strictEqual(choices[0].type, "INVESTIGATE_HERE");
+  assert.strictEqual(choices[0].label, "Run toward the scream");
+  assert(!/from the Village Square/.test(choices[0].label), "the player is not told the scream came from somewhere else while standing there");
+
+  var investigated = take(state, choices[0]);
+  assert.strictEqual(investigated.player.location, "Village Square");
+  assert(investigated.currentBeat && investigated.currentBeat.meta && investigated.currentBeat.meta.bodyInvestigation, "running across the same place opens the body scene without a fake travel step");
+
+  var stayed = Director.reduce(state, choices[1]);
+  assert(stayed.ledgers.truth.some(function (entry) { return entry.kind === "disturbance_ignored"; }), "staying records the decision not to investigate");
+  assert(stayed.currentBeat && /No second cry comes/.test(stayed.currentBeat.text), "staying receives a concrete outcome rather than a generic wait line");
+})();
+
 (function aTavernScreamAlwaysOpensItsBodyScene() {
   for (var i = 0; i < 40; i += 1) {
     var config = baseConfig("tavern-investigation:" + i);
@@ -677,6 +711,30 @@ function take(state, wanted) {
   state = take(state, { type: "GO_HOME" });
   assert.strictEqual(state.phase, "returning");
   assert.strictEqual(state.followPause, null);
+})();
+
+(function aChosenFollowCannotBeSuppressedAsRepeatedProse() {
+  var config = baseConfig("follow-is-never-empty");
+  config.slots = 4;
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { tobias: "Graveyard" } };
+  config.villagers = [{
+    id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Village Square",
+    motive: { id: "mourning", family: "grief", destination: "Graveyard", reason: "visit a grave", object: "a flower", depart: 0, duration: 4 },
+    dialogue: { follow: "Old Tobias kneels at one grave and lays down a flower." }
+  }];
+  config.recentSignatures = [Director.semanticSignature({ family: "follow", actorId: "tobias", location: "Graveyard", interaction: "follow", outcome: "shown" })];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Village Square";
+  state.schedules.tobias.slots[0] = "Village Square";
+  state.schedules.tobias.slots[1] = "Graveyard";
+  state.visibility[0].tobias = true;
+  state.currentBeat = { id: "tobias-crosses", type: "encounter", slot: 0, location: "Village Square", actorId: "tobias", text: "Old Tobias crosses the road." };
+  state = take(state, { type: "FOLLOW", actorId: "tobias" });
+  assert(state.currentBeat && state.currentBeat.type === "follow", "a deliberate follow always produces its authored destination scene even when its signature appeared on an earlier night");
+  assert.strictEqual(state.currentBeat.text, "Old Tobias kneels at one grave and lays down a flower.");
 })();
 
 (function followingTheActiveHostEndsAllSocialChoices() {
@@ -1862,6 +1920,7 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
+  assert(html.includes('v5-night-director.js?v=6'), "the local page cache-busts the current Director runtime");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [

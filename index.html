@@ -94,7 +94,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js"></script>
+<script src="v5-night-director.js?v=6"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -13285,6 +13285,9 @@ function MonsterVillage() {
 
   const directorFallbackLine = (action, next, used) => {
     const place = next.player.location || "Village Square";
+    const followedActor = action.actorId && (next.cast || []).find((entry) => entry.id === action.actorId);
+    const followedSchedule = action.actorId && next.schedules && next.schedules[action.actorId];
+    const followedPlace = followedSchedule && followedSchedule.motive && followedSchedule.motive.destination;
     const wx = walk && walk.facts && walk.facts.wx;
     const weather = directorWeather(wx);
     const siteSearch = DIRECTOR_SITE_SEARCH_EMPTY[place];
@@ -13302,13 +13305,19 @@ function MonsterVillage() {
           : ["You step into the night.", "You leave by the quieter road."],
       MOVE: weather ? [weather.move(action.to), weather.move(action.to)] : [`You go to the ${action.to}.`, `You continue toward the ${action.to}.`],
       WAIT: ["You watch for a long time. Nothing happens, so you head home.", "You wait. Nothing comes. You go home."],
-      KEEP_WATCH: ["You watch for a long time. Nothing happens, so you head home.", "You keep watch. Nothing moves. You head home."],
+      KEEP_WATCH: action.ignoreDisturbance
+        ? [`You remain in the ${place}. No second cry comes. When the bell sounds, you turn for home.`]
+        : ["You watch for a long time. Nothing happens. When the bell sounds, you turn for home.", "You keep watch. Nothing moves. At first light, you leave for home."],
       SEARCH: siteSearchLine ? [siteSearchLine, siteSearchLine] : weather ? [weather.searchEmpty(place), weather.searchEmpty(place)] : [`You search the ${place}. Nothing catches the lantern.`, `You search the ${place}. You find only ordinary traces.`],
       SEARCH_ON: searchOnLine ? [searchOnLine, searchOnLine] : weather ? [weather.searchEmpty(place), weather.searchEmpty(place)] : [`You make another circuit of the ${place}. Nothing asks you to stop.`, `You work outward by lantern, leaving no corner unchecked.`],
       LISTEN: weather ? [weather.listenEmpty, weather.listenEmpty] : [`You listen at the ${place}. Nothing answers.`, `You listen. A sound stops. You find nothing.`],
       HAIL: ["You say hello. They answer quietly."],
-      FOLLOW: ["You follow them into the dark."],
-      GO_HOME: ["You turn away and head for home.", "You leave the place behind and take the quickest road home."],
+      FOLLOW: followedActor
+        ? [`You follow ${followedActor.name} toward the ${followedPlace || "next turning"}, but lose sight of them before they stop.`]
+        : ["The figure is gone before you reach the turning."],
+      GO_HOME: action.ignoreDisturbance
+        ? ["You leave the scream unanswered and take the quickest road home."]
+        : ["You turn away and head for home.", "You leave the place behind and take the quickest road home."],
       REACH_HOME: ["You reach your door and throw the bolt."],
       HIDE: ["You hide and hold your breath."],
       FLEE: ["You run for home."],
@@ -13323,7 +13332,7 @@ function MonsterVillage() {
     const current = walk.director;
     const next = HE_DIRECTOR.reduce(current, action);
     const emitted = next.beats.length > current.beats.length;
-    const feedback = emitted ? null : directorFallbackLine(action, next, walk.usedFeedback || []);
+    const feedback = emitted ? null : next.lastError ? next.lastError.reason : directorFallbackLine(action, next, walk.usedFeedback || []);
     const wx = walk.facts && walk.facts.wx;
     const target = walk.openingIntent.kind === "watch" ? (HOME_LOC[walk.openingIntent.id] || "Village Square") : walk.openingIntent.loc;
     const completesIntent = next.player.location === target && ((walk.openingIntent.kind === "watch" && ["WAIT", "KEEP_WATCH", "FOLLOW"].includes(action.type)) || (walk.openingIntent.kind !== "watch" && ["SEARCH", "SEARCH_ON"].includes(action.type)));
@@ -13355,6 +13364,7 @@ function MonsterVillage() {
       else if (action.type === "INSPECT_CLUE") Snd.cue("cloth");
       else if (action.type === "HAIL") Snd.cue("bustle");
       else if (action.type === "IDENTIFY_FIGURE") Snd.cue(wx === "storm" ? "thunder" : "bustle");
+      else if (action.type === "INVESTIGATE_HERE") { Snd.cue("bustle"); if (["threat", "dead"].includes(next.phase)) Snd.danger(); }
       else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
       else if (action.type === "ANSWER_DOOR") { if (next.phase === "dead") Snd.danger(); else Snd.cue(next.thresholdEvent && next.thresholdEvent.visitorKind === "neighbour" ? "bustle" : "whisper"); }
       else if (["STEP_OUTSIDE", "INVITE_IN"].includes(action.type)) { if (next.phase === "dead") Snd.danger(); else Snd.cue(action.type === "INVITE_IN" ? "latch" : "bustle"); }
@@ -13446,7 +13456,7 @@ function MonsterVillage() {
               {focusedActions.map((a, i) => (
                 <NightChoice key={`${a.type}:${a.to || ""}:${a.actorId || ""}:${a.pauseMode || i}`} quiet={a.tone === "quiet"} danger={a.tone === "danger"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
-                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN", "STEP_OUTSIDE"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON", "INSPECT_CLUE"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH", "LINGER_AFTER_FOLLOW"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : ["IDENTIFY_FIGURE", "WATCH_MONSTER"].includes(a.type) ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : ["ANSWER_DOOR", "INVITE_IN"].includes(a.type) ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
+                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN", "STEP_OUTSIDE", "INVESTIGATE_HERE"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON", "INSPECT_CLUE"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH", "LINGER_AFTER_FOLLOW"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : ["IDENTIFY_FIGURE", "WATCH_MONSTER"].includes(a.type) ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : ["ANSWER_DOOR", "INVITE_IN"].includes(a.type) ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
                     <span>{a.label}</span>
                   </span>
                 </NightChoice>

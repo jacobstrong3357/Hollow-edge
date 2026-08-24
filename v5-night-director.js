@@ -989,9 +989,12 @@
          intentionally sensory rather than evidential: the player hears the
          village react, but dawn is still where a victim and place are named. */
       var canInvestigate = event.location !== "home" && !!state.graph[event.location];
+      var heardAtScene = event.location === state.player.location;
       var farText = event.location === "home"
         ? "A dog begins barking behind the houses. One by one the other dogs join it. Then every one of them stops."
-        : "A scream tears out from the " + event.location + " and ends abruptly. For one breath, the road in that direction is perfectly still.";
+        : heardAtScene
+          ? "A scream cuts across the " + event.location + ", close enough to make you turn. It ends on the far side of the open ground."
+          : "A scream tears out from the " + event.location + " and ends abruptly. For one breath, the road in that direction is perfectly still.";
       appendBeat(state, makeBeat("distant-attack:" + slot + ":" + victimId, "atmosphere", slot, state.player.location, farText, {
         truthEventId: event.id,
         meta: { heardOnly: true, investigable: canInvestigate, disturbanceLocation: canInvestigate ? event.location : null, victimId: victimId, attackEventId: event.id }
@@ -1254,7 +1257,7 @@
       followText, {
         actorId: actorId,
         truthEventId: event.id,
-        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, critical: changedAftermath || (state.monsterSchedule.active && actorId === state.monsterSchedule.hostId) }
+        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, critical: true }
       }));
     if (state.followedActorIds.indexOf(actorId) < 0) state.followedActorIds.push(actorId);
     return event;
@@ -2225,7 +2228,9 @@
       && action.type === "INSPECT_CLUE";
     var forcedHiddenFigureAction = presentingBeat && presentingBeat.meta && presentingBeat.meta.hiddenFigure && presentingBeat.meta.hiddenActorId
       && (action.type === "IDENTIFY_FIGURE" || (action.type === "FOLLOW" && action.actorId === presentingBeat.meta.hiddenActorId));
-    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var forcedLocalInvestigation = presentingBeat && presentingBeat.meta && presentingBeat.meta.investigable
+      && presentingBeat.meta.disturbanceLocation === next.player.location && action.type === "INVESTIGATE_HERE";
+    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
     if (action.dismissClue && presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected) {
       appendTruth(next, { id: "clue-left-closed:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "clue_left_closed", location: next.player.location, sourceBeatId: presentingBeat.id });
@@ -2288,6 +2293,35 @@
           missedText, { truthEventId: missedTruth.id, meta: { hiddenFigure: true, hiddenFigureResolution: "missed", hiddenActorId: hiddenActor.id, requiresResponse: true, critical: true } }));
       }
       return next;
+    }
+    if (action.type === "INVESTIGATE_HERE" && forcedLocalInvestigation) {
+      var investigationSlot = Math.max(0, next.cursor);
+      next.actionHistory.push({ slot: investigationSlot, type: "INVESTIGATE_HERE", to: next.player.location, actorId: null, investigateEventId: action.investigateEventId });
+      next.player.route.push({ slot: investigationSlot, location: next.player.location, action: "INVESTIGATE_HERE", investigateEventId: action.investigateEventId });
+      appendTruth(next, { id: "player:" + investigationSlot + ":investigate-here", slot: investigationSlot, kind: "player_action", action: "INVESTIGATE_HERE", investigateEventId: action.investigateEventId, location: next.player.location });
+      resolveAttackInvestigation(next, action, investigationSlot);
+      finishIfNeeded(next);
+      return next;
+    }
+    if (action.ignoreDisturbance && presentingBeat && presentingBeat.meta && presentingBeat.meta.investigable) {
+      var ignoredSlot = Math.max(0, next.cursor);
+      var ignoredHere = presentingBeat.meta.disturbanceLocation === next.player.location;
+      var ignoredText = action.type === "GO_HOME"
+        ? "You leave the scream unanswered and take the quickest road home."
+        : ignoredHere
+          ? "You remain in the " + next.player.location + ". No second cry comes. When the bell sounds, you turn for home."
+          : "You stay where you are. No second cry comes. When the bell sounds, you turn for home.";
+      var ignoredTruth = appendTruth(next, {
+        id: "disturbance-ignored:" + (presentingBeat.truthEventId || ignoredSlot) + ":" + action.type,
+        slot: ignoredSlot,
+        kind: "disturbance_ignored",
+        action: action.type,
+        location: next.player.location,
+        disturbanceLocation: presentingBeat.meta.disturbanceLocation,
+        sourceEventId: presentingBeat.meta.attackEventId || presentingBeat.truthEventId
+      });
+      appendBeat(next, makeBeat("disturbance-ignored-beat:" + ignoredSlot + ":" + action.type, "atmosphere", ignoredSlot, next.player.location,
+        ignoredText, { truthEventId: ignoredTruth.id, meta: { disturbanceDecision: true, critical: true } }));
     }
     if (action.type === "LINGER_AFTER_FOLLOW") return resolveFollowPause(next, action);
     if (action.type === "GO_HOME") {
@@ -2577,6 +2611,12 @@
       return pauseActions;
     }
     var result = [];
+    if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.investigable && state.currentBeat.meta.disturbanceLocation === state.player.location) {
+      result.push(action("INVESTIGATE_HERE", "Run toward the scream", "danger", {
+        investigateEventId: state.currentBeat.meta.attackEventId || state.currentBeat.truthEventId,
+        investigateVictimId: state.currentBeat.meta.victimId
+      }));
+    }
     if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.hiddenFigure && state.currentBeat.meta.hiddenActorId) {
       if (!state.currentBeat.meta.hiddenFigureResolution) result.push(action("IDENTIFY_FIGURE", "Raise the lantern. Call out to them", "amber", { actorId: state.currentBeat.meta.hiddenActorId }));
       result.push(action("FOLLOW", "Follow the figure", "amber", { actorId: state.currentBeat.meta.hiddenActorId }));
@@ -2692,16 +2732,22 @@
       return result.slice(0, 2);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.investigable && beat.meta.disturbanceLocation) {
-      var investigate = all.find(function (item) { return item.type === "MOVE" && item.to === beat.meta.disturbanceLocation; });
+      var disturbanceHere = beat.meta.disturbanceLocation === state.player.location;
+      var investigate = disturbanceHere
+        ? all.find(function (item) { return item.type === "INVESTIGATE_HERE"; })
+        : all.find(function (item) { return item.type === "MOVE" && item.to === beat.meta.disturbanceLocation; });
       if (investigate) {
         investigate = clone(investigate);
         investigate.investigateEventId = beat.meta.attackEventId || beat.truthEventId;
         investigate.investigateVictimId = beat.meta.victimId;
       }
-      add(investigate, "Investigate the scream from the " + beat.meta.disturbanceLocation);
-      if (guide.kind === "search") add(all.find(function (item) { return item.type === "SEARCH_ON"; }), "Stay and continue searching the " + (guide.target || state.player.location));
-      else add(all.find(function (item) { return item.type === "KEEP_WATCH"; }), "Stay where you are");
-      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave it. Head for home");
+      add(investigate, disturbanceHere ? "Run toward the scream" : "Investigate the scream from the " + beat.meta.disturbanceLocation);
+      var stay = guide.kind === "search" ? all.find(function (item) { return item.type === "SEARCH_ON"; }) : all.find(function (item) { return item.type === "KEEP_WATCH"; });
+      if (stay) { stay = clone(stay); stay.ignoreDisturbance = true; }
+      add(stay, guide.kind === "search" ? "Stay and continue searching the " + (guide.target || state.player.location) : "Stay where you are");
+      var leaveScream = all.find(function (item) { return item.type === "GO_HOME"; });
+      if (leaveScream) { leaveScream = clone(leaveScream); leaveScream.ignoreDisturbance = true; }
+      add(leaveScream, "Leave it. Head for home");
       return result.slice(0, 3);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.hiddenFigure && beat.meta.hiddenActorId) {
