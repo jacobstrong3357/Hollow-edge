@@ -2227,6 +2227,27 @@ function take(state, wanted) {
   });
   assert(/claws, frost and grave mould/i.test(revealContext.DIRECTOR_MONSTER_REVEALS.mimic("Father Ansel", "tall")), "the mimic keeps its physical transformation while naming Father Ansel directly");
   assert(html.includes('(DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name'), "a Director death restores the monster-specific death scene with the actual host named");
+  var deathSource = html.slice(html.indexOf("const DEATH_SCENES ="), html.indexOf("/* A live walk may already have shown the face"))
+    .replace("const DEATH_SCENES =", "DEATH_SCENES =");
+  var deathContext = {};
+  vm.createContext(deathContext);
+  vm.runInContext(deathSource, deathContext);
+  assert.strictEqual(Object.keys(deathContext.DEATH_SCENES).length, 16, "every monster owns a distinct player-death finale");
+  Object.keys(deathContext.DEATH_SCENES).forEach(function (monsterId) {
+    var scene = deathContext.DEATH_SCENES[monsterId]("Hazel", "Village Square");
+    assert.strictEqual(scene.length, 3, monsterId + " death lands in three cinematic beats");
+    assert(scene[2].length > 70, monsterId + " death ends with a concrete killing rather than a vague fade-out");
+    scene.forEach(function (beat) {
+      assert((beat.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length <= 45, monsterId + " death beat remains readable on the night screen: " + beat);
+    });
+  });
+  ["vampire", "witch", "demon", "shifter", "lich", "doppel", "hag", "necromancer", "mimic", "succubus", "hollowed"].forEach(function (monsterId) {
+    assert(/[“”]/.test(deathContext.DEATH_SCENES[monsterId]("Hazel", "Village Square")[1]), monsterId + " speaks during the player's death");
+  });
+  assert(/always wanted your face/i.test(deathContext.DEATH_SCENES.shifter("Hazel", "Village Square").join(" ")), "the shapeshifter covets the player's face before taking it");
+  assert(/which one did you like best/i.test(deathContext.DEATH_SCENES.mimic("Hazel", "Village Square").join(" ")), "the mimic asks the player to choose among its killing shapes");
+  var playerDeathSource = html.slice(html.indexOf("function playerDeathBeats"), html.indexOf("/* Two wrong names", html.indexOf("function playerDeathBeats")));
+  assert(playerDeathSource.includes("return [opening, ...full.slice(1)];"), "an interactive recognition death keeps both the monster's taunt and its killing beat");
   var temperamentSource = html.slice(html.indexOf("const DIRECTOR_TEMPERAMENT_QUIET"), html.indexOf("function directorHostBuild"))
     .replace("const DIRECTOR_TEMPERAMENT_QUIET =", "DIRECTOR_TEMPERAMENT_QUIET =");
   var temperamentContext = {};
