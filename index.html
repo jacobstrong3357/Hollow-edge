@@ -3221,7 +3221,7 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0, quarry: null, doorVisits: 0,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, composure: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -3955,7 +3955,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   });
   const strained = !!(s.wasSpared || s.monsterSawYou || s.wrongExecutions >= 2);
   const hallucinationChance = Math.min(0.72, temperament.hallucination + (strained ? 0.22 : 0));
-  if (rng.next() < hallucinationChance) {
+  if (!(s.composure > 0) && rng.next() < hallucinationChance) {
     const fragments = directorWeatherDelusion(facts.wx, DIRECTOR_DELUSIONS[Math.floor(rng.next() * DIRECTOR_DELUSIONS.length)]);
     forcedBeats.push({
     id: `n${n}:delusion`, type: "delusion", slot: Math.min(slots - 1, 1 + Math.floor(rng.next() * Math.max(1, slots - 1))), location: "*",
@@ -3980,7 +3980,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       relentless: monsterTruth.id === "werewolf",
       voice: temperament, revealText,
     },
-    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, armedGuess },
+    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, composure: s.composure || 0, armedGuess },
     gathering: facts.evn && facts.eventLoc ? {
       id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
       text: [facts.evn.intro, afflictionText].filter(Boolean).join(" "),
@@ -4391,6 +4391,7 @@ function resolveNight(prev, planIn, preEvents) {
       }
     }
     s.monsterSawYou = !!(s.monsterSawYou || director.player.monsterSawYou);
+    s.composure = director.player.composure || 0;
     s.nightHistory = [...(s.nightHistory || []), {
       night: n,
       signatures: [...new Set(director.usedSignatures || [])],
@@ -4416,7 +4417,6 @@ function resolveNight(prev, planIn, preEvents) {
     }
     for (const clue of (director.found.clues || [])) s.clues.push(`Night ${n}: ${clue.text}`);
     for (const whisper of (director.found.whispers || [])) s.clues.push(`Night ${n}, heard at the ${whisper.location}: ${whisper.text} A voice is not proof.`);
-    for (const delusion of (director.found.delusions || [])) s.clues.push(`Night ${n}, an uncertain sight: ${delusion.text}`);
     const thresholdChoice = (director.ledgers.truth || []).find((e) => e.kind === "threshold_choice");
     if (thresholdChoice) {
       s.doorVisits = (s.doorVisits || 0) + 1;
@@ -12831,6 +12831,11 @@ function MonsterVillage() {
             <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap" }}>{directorWeatherLabel}</span>
           </div>
+          {d.player.composure > 0 && (
+            <div className="mv-display" style={{ marginBottom: 9, padding: "7px 10px", fontSize: 10.5, lineHeight: 1.35, letterSpacing: 1.7, color: "#E4C06B", background: "rgba(217,164,65,.09)", border: "1px solid rgba(217,164,65,.42)" }}>
+              STEADY NERVE · YOUR NEXT FAILED ESCAPE BECOMES A NARROW SUCCESS
+            </div>
+          )}
           <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
               {actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
@@ -15140,9 +15145,10 @@ function MonsterVillage() {
         {/* The night's recap belongs to the dawn reveal (once) and the journal's
             Nights log (summarised, in the Journal). The day homepage keeps only
             the active-danger warnings, never the full recap. */}
-        {s.enraged && (
+        {(s.enraged || s.composure > 0) && (
           <div className="mt-3">
             {s.enraged && <p style={{ color: C.redBright, fontSize: 14.5, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+            {s.composure > 0 && <p style={{ color: C.ink, fontSize: 14.5, fontWeight: 700 }}>Steady nerve held. Your next failed escape becomes a narrow success.</p>}
           </div>
         )}
 

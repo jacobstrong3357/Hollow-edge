@@ -627,7 +627,7 @@
           if (sign) add(makeBeat("stamp:" + key, "stamp", slot, location, STAMP_TEXT[sign], { sign: sign }));
         }
         if (keyedNumber(seed, "whisper:" + key) < wxProfile.whisperChance) add(makeBeat("whisper:" + key, "whisper", slot, location, rng.pick(WHISPERS)));
-        if (stateLike.player.afflicted && keyedNumber(seed, "delusion:" + key) < 0.24) {
+        if (stateLike.player.afflicted && !stateLike.player.composure && keyedNumber(seed, "delusion:" + key) < 0.24) {
           var sequence = rng.pick(DELUSION_SEQUENCES);
           add(makeBeat("delusion:" + key, "delusion", slot, location, sequence.join(" "), { reliability: "unreliable", meta: { fragments: sequence.slice(), resolvedAsUnreal: true } }));
         }
@@ -681,6 +681,7 @@
         afflicted: !!(config.player && config.player.afflicted),
         affliction: config.player && config.player.affliction || null,
         monsterSawYou: !!(config.player && config.player.monsterSawYou),
+        composure: Math.max(0, Math.min(1, Number(config.player && config.player.composure || 0))),
         armedGuess: clone(config.player && config.player.armedGuess || null),
         route: [{ slot: -1, location: HOME }]
       },
@@ -1331,6 +1332,7 @@
     if (!state) return state;
     state.player = state.player || { location: HOME, alive: true, route: [] };
     if (!Object.prototype.hasOwnProperty.call(state.player, "armedGuess")) state.player.armedGuess = null;
+    state.player.composure = Math.max(0, Math.min(1, Number(state.player.composure || 0)));
     if (state.monsterSchedule && state.monsterSchedule.relentless == null) state.monsterSchedule.relentless = state.monsterSchedule.id === "werewolf";
     if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
     state.presentedActorIds = state.presentedActorIds || [];
@@ -1408,6 +1410,13 @@
       : "The lane is perfectly silent. Something without tread or breath is " + chaseDistanceWord(distance) + ".";
   }
 
+  function spendComposure(state, slot, location, reason) {
+    if (!state.player.composure) return false;
+    state.player.composure = 0;
+    appendTruth(state, { id: "composure-spent:" + slot + ":" + reason, slot: slot, kind: "composure_spent", location: location, reason: reason });
+    return true;
+  }
+
   function startChase(state, threat) {
     state.resolvedAttackSlots.push(threat.slot);
     state.pendingThreat = null;
@@ -1455,6 +1464,8 @@
     else if (action.type === "BREAK_LINE") delta = roll >= 0.45 ? 2 : -1;
     else if (action.type === "HIDE") delta = roll >= 0.55 ? 3 : -2;
     else if (action.type === "DISTRACT") delta = roll >= 0.4 ? 1 : -1;
+    var composureSpent = delta < 0 && spendComposure(state, chase.slot, chase.location, "chase");
+    if (composureSpent) delta = Math.max(1, 4 - chase.distance);
     chase.step += 1;
     chase.distance += delta;
     if (action.to) {
@@ -1462,8 +1473,8 @@
       chase.location = action.to;
       state.player.route.push({ slot: chase.slot, location: action.to, action: action.type, chaseStep: chase.step });
     }
-    chase.history.push({ step: chase.step, action: action.type, to: action.to || null, delta: delta });
-    appendTruth(state, { id: "chase-step:" + chase.slot + ":" + chase.step, slot: chase.slot, kind: "chase_step", action: action.type, location: chase.location, distance: chase.distance, result: delta > 0 ? "gained" : "lost" });
+    chase.history.push({ step: chase.step, action: action.type, to: action.to || null, delta: delta, composureSpent: composureSpent });
+    appendTruth(state, { id: "chase-step:" + chase.slot + ":" + chase.step, slot: chase.slot, kind: "chase_step", action: action.type, location: chase.location, distance: chase.distance, result: delta > 0 ? "gained" : "lost", composureSpent: composureSpent });
     if (chase.distance >= 4) {
       var escapedText = action.type === "HIDE"
         ? "You fold into a gap between wall and hedge. Breathing passes close enough to move your hair, then carries on without you."
@@ -1472,12 +1483,13 @@
           : action.type === "DISTRACT"
             ? "The thing follows the sound you made instead of the body that made it. By the time it learns the difference, your door is near."
             : "You choose a road without looking and reach the first barred gate with one breath left. Nothing crosses into the light behind you.";
+      if (composureSpent) escapedText = "Your first move is wrong. Five measured breaths stop the panic, and you correct it. " + escapedText;
       return finishChaseEscape(state, action, escapedText);
     }
     if (chase.distance <= 0 || chase.step >= 3) return finishChaseDeath(state, action);
     appendBeat(state, makeBeat("chase-beat:" + chase.slot + ":" + chase.step, "flee", chase.slot, chase.location,
-      pursuitText(state, "step", chase.distance, delta > 0),
-      { outcome: delta > 0 ? "distance_gained" : "distance_lost", meta: { voiceMode: (state.monsterSchedule.voice || {}).mode || "silent" } }));
+      pursuitText(state, "step", chase.distance, delta > 0) + (composureSpent ? " Five measured breaths bring your feet back under you." : ""),
+      { outcome: delta > 0 ? "distance_gained" : "distance_lost", meta: { voiceMode: (state.monsterSchedule.voice || {}).mode || "silent", composureSpent: composureSpent } }));
     return state;
   }
 
@@ -1528,6 +1540,8 @@
         : action.type === "WATCH_MONSTER"
           ? outcome.hide >= 0.35
           : outcome.intervene >= (wrongName ? 0.70 : 0.60));
+      var composureSpent = !survival && action.type === "FLEE" && spendComposure(state, threat.slot, threat.location, "recognition_flee");
+      if (composureSpent) survival = true;
       var groundSigns = state.monsterSchedule.signs.filter(function (sign) { return GROUND_SIGNS.indexOf(sign) >= 0; });
       var learnedSign = action.type === "WATCH_MONSTER" && groundSigns.length
         ? groundSigns[Math.floor(outcome.sign * groundSigns.length) % groundSigns.length]
@@ -1570,7 +1584,9 @@
         return state;
       }
       var resultText = action.type === "FLEE"
-        ? "You step backward while it is bent to its work. At the first barred gate, you turn and run."
+        ? composureSpent
+          ? "It turns before you are clear. Five measured breaths stop the panic. You reach the first barred gate ahead of it."
+          : "You step backward while it is bent to its work. At the first barred gate, you turn and run."
         : action.type === "WATCH_MONSTER"
           ? "You stay hidden. " + (learnedSign ? MONSTER_WORK_TEXT[learnedSign] : "You learn its gait and shape, but it leaves no mark you can stamp.")
           : wrongName
@@ -1619,6 +1635,8 @@
     var roll = conceal ? conceal.survive : outcome.hide;
     var threshold = hideMode === "shadow" ? 0.16 : hideMode === "cover" ? 0.30 : hideMode === "still" ? 0.48 : 0.25;
     var survival = roll >= threshold;
+    var composureSpent = !survival && spendComposure(state, threat.slot, threat.location, "hide");
+    if (composureSpent) survival = true;
     var revealRoll = conceal ? conceal.reveal : 1;
     var learnedIdentity = survival && (hideMode === "still" ? revealRoll < 0.56 : hideMode === "cover" ? revealRoll < 0.18 : hideMode === "shadow" ? revealRoll < 0.03 : false);
     var learnedBuild = survival && (learnedIdentity || (hideMode === "still" ? revealRoll < 0.82 : hideMode === "cover" ? revealRoll < 0.48 : hideMode === "shadow" ? revealRoll < 0.10 : false));
@@ -1638,7 +1656,7 @@
       : learnedBuild
         ? "At the lantern's edge you fix one human fact: the build is " + (hostBuild || "familiar") + "."
         : learnedSign ? STAMP_TEXT[learnedSign] : "It passes beyond the lantern before you can see its face.";
-    var resultText = survival ? methodText + " " + readingText : "It checks the hiding place before you have finished becoming still.";
+    var resultText = survival ? (composureSpent ? "Your foot slips. Five measured breaths stop the panic before it becomes movement. " : "") + methodText + " " + readingText : "It checks the hiding place before you have finished becoming still.";
     var closeRead = appendTruth(state, {
       id: "monster-close-read:" + threat.slot + ":" + hideMode,
       slot: threat.slot,
@@ -1652,11 +1670,12 @@
       learnedIdentity: !!learnedIdentity,
       learnedBuild: !!learnedBuild,
       learnedSign: learnedSign,
-      succeeded: survival
+      succeeded: survival,
+      composureSpent: composureSpent
     });
     appendTruth(state, { id: "escape:" + threat.slot + ":hide:" + hideMode, slot: threat.slot, kind: "escape", method: "hide:" + hideMode, location: threat.location, succeeded: survival });
     var escapeBeat = appendBeat(state, makeBeat("escape-beat:" + threat.slot + ":hide:" + hideMode, "flee", threat.slot, threat.location,
-      resultText, { actorId: learnedIdentity ? state.monsterSchedule.hostId : null, sign: learnedSign, outcome: survival ? "escaped" : "caught", meta: { hideMode: hideMode, learnedIdentity: !!learnedIdentity, learnedBuild: !!learnedBuild, learnedSign: !!learnedSign, critical: true } }));
+      resultText, { actorId: learnedIdentity ? state.monsterSchedule.hostId : null, sign: learnedSign, outcome: survival ? "escaped" : "caught", meta: { hideMode: hideMode, learnedIdentity: !!learnedIdentity, learnedBuild: !!learnedBuild, learnedSign: !!learnedSign, composureSpent: composureSpent, critical: true } }));
     if (survival) appendObservation(state, { eventId: closeRead.id, beatId: escapeBeat && escapeBeat.id, slot: threat.slot, kind: "monster_close_read", location: threat.location, actors: learnedIdentity && state.monsterSchedule.hostId ? [state.monsterSchedule.hostId] : [], clarity: learnedIdentity ? "clear" : learnedBuild || learnedSign ? "partial" : "sensory", reliability: "direct", sign: learnedSign, build: learnedBuild ? hostBuild : null, text: resultText });
     if (learnedSign) state.found.stamps.push({ sign: learnedSign, slot: threat.slot, location: threat.location, beatId: escapeBeat && escapeBeat.id, source: "monster_close_read" });
     state.resolvedAttackSlots.push(threat.slot);
@@ -1708,8 +1727,11 @@
       if (next.monsterSchedule.active && approachRisk < 0.4) {
         triggerDelusionApproachThreat(next, responseSlot, next.player.location, approachFragments);
       } else {
+        var gainedComposure = !next.player.composure;
+        next.player.composure = 1;
+        appendTruth(next, { id: "composure-gained:" + responseSlot, slot: responseSlot, kind: "composure_gained", location: next.player.location, source: "tested_false_sight", gained: gainedComposure });
         appendBeat(next, makeBeat("delusion-resolution:" + responseSlot, "delusion", responseSlot, next.player.location,
-          approachFragments.slice(1).join(" "), { meta: { fragments: approachFragments.slice(1), resolvedAsUnreal: true, requiresResponse: false, critical: true } }));
+          approachFragments.slice(1).join(" "), { meta: { fragments: approachFragments.slice(1), resolvedAsUnreal: true, requiresResponse: false, gainedComposure: gainedComposure, critical: true } }));
       }
       finishIfNeeded(next);
       return next;
@@ -1907,8 +1929,13 @@
         approach = clone(approach);
         approach.approachDelusion = true;
       }
-      add(approach, "Move closer and inspect");
-      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
+      add(approach, "Move closer. If it is false, steady your nerve");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave it. End the night");
+      return result.slice(0, 2);
+    }
+    if (beat && beat.type === "delusion" && beat.meta && beat.meta.gainedComposure) {
+      add(all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); }), guide.kind === "search" ? "Continue your search" : "Continue your watch");
+      if (guide.intentDone) add(all.find(function (item) { return item.type === "GO_HOME"; }), "Head for home");
       return result.slice(0, 2);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.investigable && beat.meta.disturbanceLocation) {
