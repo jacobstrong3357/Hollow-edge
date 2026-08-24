@@ -1526,6 +1526,24 @@ function take(state, wanted) {
   var whoSex = sexCtx.turnedInterviewAnswer(sexState, sexState.npcs[0], "turnedWho");
   assert.strictEqual(sexState.knownSex, "m", "who changed you can instead yield the true host gender");
   assert(/A man/.test(whoSex.quote));
+  var unbindSceneSource = html.slice(html.indexOf("function unbindSuccessScene"), html.indexOf("/* A glimpse, or a dying whisper"));
+  var unbindSceneContext = {};
+  vm.createContext(unbindSceneContext);
+  vm.runInContext(unbindSceneSource + "; this.unbindSuccessScene = unbindSuccessScene; this.unbindFailDeathScene = unbindFailDeathScene; this.unbindFailSurviveScene = unbindFailSurviveScene;", unbindSceneContext);
+  [unbindSceneContext.unbindSuccessScene("Liesel"), unbindSceneContext.unbindFailDeathScene("Liesel"), unbindSceneContext.unbindFailSurviveScene("Liesel")].forEach(function (scene) {
+    assert.strictEqual(scene.length, 2, "each unbinding branch uses two short action beats before its result");
+    scene.forEach(function (line) {
+      var words = (line.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+      assert(words <= 14, "an unbinding beat stays short enough to reveal alone: " + line);
+    });
+  });
+  assert(!html.includes("What is left still stands, breathing"), "a death during unbinding cannot contradict the dead game state");
+  assert(html.includes("UNBOUND. ${npc.name} is alive and entirely themselves again."), "successful unbinding ends on an explicit living result");
+  assert(html.includes("RITE FAILED. ${npc.name} is alive, but still changed."), "a survived failure ends on an explicit unchanged result");
+  assert(html.includes("DEAD. There is nothing left in ${npc.name} to call back."), "a fatal failure ends on an explicit death result");
+  assert(html.includes("setUnbindRes({ id, beats: fresh, idx: 0, outcome })") && html.includes("unbindBeats[unbindIdx].t"), "the unbinding UI advances through one text beat at a time");
+  assert(html.includes('>NEXT</DockBtn>') && html.includes('success: { label: "UNBOUND"') && html.includes('failed: { label: "RITE FAILED"') && html.includes('dead: { label: "DEAD"'), "the final unbinding screen names each possible outcome plainly");
+  assert(html.includes("openUnbindInterview") && html.includes("committed: true"), "a surviving villager can be questioned after the result without charging another daylight action");
   assert(!html.includes("Their door is open, their bed is cold, and no body is found."), "an unwitnessed turning cannot identify its victim through omniscient dawn narration");
   assert(html.includes('pickFreshIdx("offscreenTurnDawn", OFFSCREEN_TURN_DAWN)'), "an unwitnessed turning reports only the public fact that nobody died");
   assert(!html.includes('dawn.push(ev(pickFreshIdx("rumorStrange"'), "hidden changed villagers are not named by an automatic dawn rumor");
