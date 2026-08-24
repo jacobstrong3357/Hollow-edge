@@ -583,7 +583,7 @@ function take(state, wanted) {
 (function followingTheActiveHostEndsAllSocialChoices() {
   var config = baseConfig("recognition-is-not-a-chat");
   config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" }, revealText: "The muzzle opens through Rosa's face, but her long frame and eyes remain unmistakable." };
-  config.currentFacts = { weather: "still", active: true, huntLoc: "Graveyard", attackSlot: 6, outMap: { rosa: "Old Church" } };
+  config.currentFacts = { weather: "fog", active: true, huntLoc: "Graveyard", attackSlot: 6, outMap: { rosa: "Old Church" } };
   config.villagers = [{
     id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
     motive: { id: "false-errand", family: "work", destination: "Old Church", reason: "carry a parcel", object: "a parcel", depart: 1, duration: 5 },
@@ -597,6 +597,8 @@ function take(state, wanted) {
   assert.strictEqual(state.pendingThreat.kind, "recognition");
   assert.strictEqual(state.currentBeat.type, "threat");
   assert(/Rosa's face/.test(state.currentBeat.text), "following the active host reaches the monster-specific body reveal before the survival choice");
+  assert(state.currentBeat.text.startsWith("Fog hides the face until it is close."), "recognition weather uses a short concrete opener");
+  assert((state.currentBeat.text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length <= 30, "the complete weather and recognition card fits a three-to-five-line mobile beat");
   var actions = Director.availableActions(state);
   assert(!actions.some(function (action) { return action.type === "HAIL" || action.type === "SEARCH"; }), "hail and search disappear after the mask drops");
   assert.deepStrictEqual(actions.map(function (action) { return action.type; }), ["FLEE", "WATCH_MONSTER", "CONFRONT_MONSTER"]);
@@ -1124,6 +1126,8 @@ function take(state, wanted) {
   Object.keys(revealContext.DIRECTOR_MONSTER_REVEALS).forEach(function (monsterId) {
     var reveal = revealContext.DIRECTOR_MONSTER_REVEALS[monsterId]("Father Ansel", "tall");
     assert(reveal.includes("Father Ansel is the monster."), monsterId + " reveal states the host identity as a direct conclusion");
+    var revealWords = (reveal.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(revealWords <= 22, monsterId + " reveal stays short enough for a three-to-five-line mobile card: " + reveal);
   });
   assert(/claws, frost and grave mould/i.test(revealContext.DIRECTOR_MONSTER_REVEALS.mimic("Father Ansel", "tall")), "the mimic keeps its physical transformation while naming Father Ansel directly");
   assert(html.includes('(DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name'), "a Director death restores the monster-specific death scene with the actual host named");

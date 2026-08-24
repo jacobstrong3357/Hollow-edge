@@ -1167,9 +1167,9 @@
       var host = state.cast.find(function (villager) { return villager.id === action.actorId; });
       var recognitionText = state.monsterSchedule.revealText
         || ((host && host.name || "Your neighbour") + " turns close enough for the lantern to catch the human shape still trapped inside the monster.");
-      if (state.weather === "fog") recognitionText = "You see the face only when it is almost within reach. " + recognitionText;
-      else if (state.weather === "storm") recognitionText = "Lightning holds it still in one white instant. " + recognitionText;
-      else if (state.weather === "frost") recognitionText = "Its breath crosses yours in the hard blue air. " + recognitionText;
+      if (state.weather === "fog") recognitionText = "Fog hides the face until it is close. " + recognitionText;
+      else if (state.weather === "storm") recognitionText = "Lightning shows the face. " + recognitionText;
+      else if (state.weather === "frost") recognitionText = "Its breath crosses yours. " + recognitionText;
       appendBeat(state, makeBeat("recognition-beat:" + state.cursor + ":" + action.actorId, "threat", state.cursor, state.player.location,
         recognitionText, { actorId: action.actorId, sign: state.pendingThreat.sign, truthEventId: followedEvent && followedEvent.id, meta: { recognition: true, critical: true } }));
     }
