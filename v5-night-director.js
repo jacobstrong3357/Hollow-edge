@@ -260,11 +260,24 @@
   var STAMP_TEXT = {
     claw: "Four deep scores rake the wood. They were torn into it, not cut.",
     tracks: "Heavy prints cross the soft ground and stop where nothing could have leapt.",
-    bite: "One clean bite marks what was left here. No ordinary jaw set those teeth.",
+    bite: "A dead fox lies beside the path. One bite broke its ribs; no ordinary jaw set those teeth.",
     cold: "Frost rims one patch of earth while the grass around it stays wet.",
     flora: "Everything growing within one long stride has greyed from the root.",
     hex: "A cramped working is scored into the stone. Looking at its angles makes your teeth ache.",
     graves: "Old grave earth lies on top of the road mud, fresh enough to hold a thumbprint."
+  };
+
+  /* Watching the revealed host earns a sign by showing the action that made
+     it. Search copy describes evidence already left behind; these lines show
+     the monster producing that evidence in front of the player. */
+  var MONSTER_WORK_TEXT = {
+    claw: "It braces one hand against a gate. Four claws open through its fingers and score the wood.",
+    tracks: "It crosses soft ground on feet too heavy for its body. Each print sinks deep.",
+    bite: "It pins a dead fox and bites once through the ribs. The jaw is far too wide.",
+    cold: "It presses one palm to the road. Frost spreads from its fingers across the wet earth.",
+    flora: "It passes through the weeds. Every stem it touches greys and folds at the root.",
+    hex: "It scratches a cramped symbol into the stone with one nail. The finished angles make your teeth ache.",
+    graves: "It digs bare hands into the verge. Fresh grave earth spills from beneath its nails."
   };
 
   var LAST_WORDS = [
@@ -1559,7 +1572,7 @@
       var resultText = action.type === "FLEE"
         ? "You step backward while it is bent to its work. At the first barred gate, you turn and run."
         : action.type === "WATCH_MONSTER"
-          ? "You stay. You watch the borrowed body at its work and force yourself to remember the mark showing through it. " + (learnedSign ? STAMP_TEXT[learnedSign] : "The shape and gait are enough to know the face, but give you no clean mark to stamp.")
+          ? "You stay hidden. " + (learnedSign ? MONSTER_WORK_TEXT[learnedSign] : "You learn its gait and shape, but it leaves no mark you can stamp.")
           : wrongName
             ? "The rite is wrong. It laughs. While its head is thrown back, you reach the wall and climb."
             : "You step out and say the human name. It turns. You survive the answer, but it has seen you clearly now.";

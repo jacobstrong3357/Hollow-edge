@@ -602,9 +602,12 @@ function take(state, wanted) {
   var actions = Director.availableActions(state);
   assert(!actions.some(function (action) { return action.type === "HAIL" || action.type === "SEARCH"; }), "hail and search disappear after the mask drops");
   assert.deepStrictEqual(actions.map(function (action) { return action.type; }), ["FLEE", "WATCH_MONSTER", "CONFRONT_MONSTER"]);
+  state.monsterSchedule.signs = ["bite"];
   state.outcomes[state.cursor].hide = 0.99;
   state = take(state, { type: "WATCH_MONSTER" });
   assert.strictEqual(state.phase, "returning");
+  assert(/pins a dead fox and bites once through the ribs/i.test(state.currentBeat.text), "watching a bite sign shows what the monster bites and what it does");
+  assert(!/what was left here|borrowed body at its work/.test(state.currentBeat.text), "a learned sign cannot be joined to vague unrelated fragments");
   var revealChoice = state.ledgers.truth.find(function (event) { return event.kind === "monster_reveal_choice" && event.action === "WATCH_MONSTER"; });
   assert(revealChoice && revealChoice.location === "Old Church", "the survival choice retains the place where the encounter actually happened");
 })();
