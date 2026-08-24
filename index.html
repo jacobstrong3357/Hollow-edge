@@ -297,6 +297,19 @@ const Snd = {
       this.chime.triggerAttackRelease("D6", 0.12, t + 0.04, 0.16);
       return;
     }
+    if (kind === "fire") {
+      this.foleyFilter.frequency.rampTo(1850, 0.05);
+      [0, 0.16, 0.38, 0.7].forEach((off, i) => this.foleyNoise.triggerAttackRelease(0.1 + i * 0.025, t + off, 0.24));
+      this.wood.triggerAttackRelease("C2", "32n", t + 0.08, 0.42);
+      this.wood.triggerAttackRelease("F1", "16n", t + 0.52, 0.34);
+      return;
+    }
+    if (kind === "water") {
+      this.foleyFilter.frequency.rampTo(480, 0.08);
+      this.foleyNoise.triggerAttackRelease(1.2, t, 0.5);
+      this.wood.triggerAttackRelease("D1", "8n", t + 0.12, 0.24);
+      return;
+    }
     if (kind === "whisper") {
       const restoreDb = this.sceneState && this.sceneState.weather === "storm" ? -29 : this.sceneState && this.sceneState.weather === "fog" ? -25 : -23;
       this.volume_(this.foleyVol, this.sceneState && this.sceneState.weather === "storm" ? -17 : -20, 0.04);
@@ -961,6 +974,13 @@ const AFFLICTION_WALK = {
   tavernShut: (nm) => `${nm || "The innkeeper"} drives the tavern's last bolt home while drinkers plead behind her. Hollow's Edge goes one lamp darker.`,
   churchBurn: (nm) => `The Old Church is burning and the village fetches no water. ${nm ? nm + " stands closest and does not weep." : "No one weeps."} The heat reaches the lane.`,
   millFlood: () => `The mill wheel tears off its axle with a crack like a shot. Black water takes the floor. You do not go closer.`,
+};
+const DIRECTOR_AFFLICTION_SCENE = {
+  breadRiot: { location: "Village Square", wound: "riot", label: "THE BREAD RIOT", soundCue: "bustle" },
+  wellFouled: { location: "Village Square", wound: "fouled", label: "THE WELL IS POISONED", soundCue: "water" },
+  tavernShut: { location: "Tavern", wound: "shut", label: "THE LAST BOLT", soundCue: "latch" },
+  churchBurn: { location: "Old Church", wound: "burn", label: "THE CHURCH BURNS", soundCue: "fire" },
+  millFlood: { location: "Old Mill", wound: "flood", label: "THE MILLRACE BREAKS", soundCue: "water" },
 };
 /* The muffled version, heard through your own shutters on a night you stayed in. */
 const AFFLICTION_HOME_BEAT = {
@@ -3987,6 +4007,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     carry: METHOD_CARRY[armedCandidates[0].method],
   } : null;
   const afflictionText = directorAfflictionText(s, facts.affliction);
+  const afflictionScene = DIRECTOR_AFFLICTION_SCENE[facts.affliction] || null;
   const firstNightTarget = n === 1 && facts.active ? s.npcs.find((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && facts.outMap[npc.id] === facts.huntLoc) : null;
   const guaranteedHuntTarget = facts.guaranteedVictimId ? npcById(s, facts.guaranteedVictimId)
     : facts.relentlessVictimId ? npcById(s, facts.relentlessVictimId) : firstNightTarget;
@@ -4003,12 +4024,24 @@ function compileDirectorNight(s, facts, openingIntent) {
       : facts.wx === "storm" ? `${facts.evn.intro} Lightning shows its glow over the ${facts.eventLoc}, but thunder drowns whatever the crowd is saying.`
         : `${facts.evn.intro} Its light and noise carry from the ${facts.eventLoc}; nobody abroad tonight can pretend not to know it is happening.`
     : null;
-  if ((distantEventText || afflictionText) && !(facts.evn && facts.eventLoc === "Village Square")) forcedBeats.push({
+  if (distantEventText && !(facts.evn && facts.eventLoc === "Village Square")) forcedBeats.push({
     id: `n${n}:village-pulse`, type: "atmosphere", slot: 0, location: "Village Square",
-    text: [distantEventText, afflictionText].filter(Boolean).join(" "),
+    text: distantEventText,
+  });
+  if (afflictionText && afflictionScene) forcedBeats.push({
+    id: `n${n}:affliction:${facts.affliction}`, type: "atmosphere", slot: 0, location: "*",
+    text: afflictionText,
+    meta: {
+      affliction: facts.affliction,
+      afflictionLocation: afflictionScene.location,
+      afflictionWound: afflictionScene.wound,
+      afflictionLabel: afflictionScene.label,
+      soundCue: afflictionScene.soundCue,
+      critical: true,
+    },
   });
   if (facts.active) forcedBeats.push({
-    id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(0, attackSlot - 1), location: "*",
+    id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(1, attackSlot - 1), location: "*",
     text: directorWeatherMonsterSound(facts.wx, temperament.sound), meta: { soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, weather: facts.wx || "still" },
   });
   else {
@@ -4069,7 +4102,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, composure: s.composure || 0, armedGuess },
     gathering: facts.evn && facts.eventLoc ? {
       id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
-      text: [facts.evn.intro, afflictionText].filter(Boolean).join(" "),
+      text: facts.evn.intro,
     } : null,
     encounterBudget: 2,
     recentSignatures: directorRecentSignatures(s), forcedBeats,
@@ -12983,8 +13016,10 @@ function MonsterVillage() {
       const d = walk.director;
       const beat = d.currentBeat;
       const terminal = d.phase === "complete" || d.phase === "dead";
-      const location = d.player.location === "Home" ? "Cottage" : (d.player.location || "Village Square");
-      const danger = ["threat", "chase", "dead"].includes(d.phase) || (beat && (["threat", "flee", "aftermath"].includes(beat.type) || (beat.meta && beat.meta.bodyInvestigation)));
+      const afflictionScene = beat && beat.meta && beat.meta.affliction ? DIRECTOR_AFFLICTION_SCENE[beat.meta.affliction] : null;
+      const routeLocation = d.player.location === "Home" ? "Cottage" : (d.player.location || "Village Square");
+      const location = afflictionScene ? afflictionScene.location : routeLocation;
+      const danger = !!afflictionScene || ["threat", "chase", "dead"].includes(d.phase) || (beat && (["threat", "flee", "aftermath"].includes(beat.type) || (beat.meta && beat.meta.bodyInvestigation)));
       const changedScene = !!(beat && beat.meta && (beat.meta.recognizedChanged || beat.meta.changedAftermath));
       const actorBase = beat && beat.actorId ? npcById(s, beat.actorId) : null;
       const directorActorState = beat && beat.actorId ? (d.cast || []).find((entry) => entry.id === beat.actorId) : null;
@@ -13000,7 +13035,7 @@ function MonsterVillage() {
         interacted: walk.interacted || {},
       });
       const recognition = d.phase === "threat" && d.pendingThreat && d.pendingThreat.kind === "recognition";
-      const labels = { atmosphere: beat && beat.meta && beat.meta.quietPresence ? "SOMETHING ABROAD" : beat && beat.meta && beat.meta.quietPresenceResolution ? "IT MOVES ON" : beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: recognition || (beat && beat.meta && beat.meta.recognition) ? "IT STOPS PRETENDING" : "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : beat && beat.meta && (beat.meta.learnedIdentity || beat.meta.learnedBuild || beat.meta.learnedSign) ? "WHAT YOU SAW" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "YOU FOLLOW" };
+      const labels = { atmosphere: afflictionScene ? afflictionScene.label : beat && beat.meta && beat.meta.quietPresence ? "SOMETHING ABROAD" : beat && beat.meta && beat.meta.quietPresenceResolution ? "IT MOVES ON" : beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: recognition || (beat && beat.meta && beat.meta.recognition) ? "IT STOPS PRETENDING" : "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : beat && beat.meta && (beat.meta.learnedIdentity || beat.meta.learnedBuild || beat.meta.learnedSign) ? "WHAT YOU SAW" : "RUN", doorstep: "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "YOU FOLLOW" };
       const nightRatio = d.cursor < 0 ? -1 : d.cursor / Math.max(1, d.slots - 1);
       const slotLabel = nightRatio < 0 ? "BEFORE THE LAST LIGHT" : nightRatio < .28 ? "AFTER THE BELL" : nightRatio < .7 ? "THE SMALL HOURS" : "BEFORE DAWN";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
@@ -13011,10 +13046,10 @@ function MonsterVillage() {
       const flowReady = directorTextReadyKey === flowKey;
       const directorWeatherLabel = { fog: "FOG", storm: "STORM", frost: "FROST" }[walk.facts.wx] || "STILL";
       return (
-        <NightShell loc={location} kicker={slotLabel} tone={danger ? "siege" : "night"} danger={danger} wound={nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
+        <NightShell loc={location} kicker={afflictionScene ? "THE VILLAGE BREAKS" : slotLabel} tone={danger ? "siege" : "night"} danger={danger} wound={afflictionScene ? afflictionScene.wound : nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
           <div style={{ minHeight: "clamp(235px,34dvh,295px)", flexShrink: 0 }} />
           <div className="flex items-baseline" style={{ gap: 10, marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
-            <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
+            <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{afflictionScene ? location.toUpperCase() : d.player.location === "Home" ? "YOUR THRESHOLD" : d.player.location.toUpperCase()}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap" }}>{directorWeatherLabel}</span>
           </div>
           {d.player.composure > 0 && (

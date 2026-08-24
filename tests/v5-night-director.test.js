@@ -1384,6 +1384,24 @@ function take(state, wanted) {
   assert.strictEqual(restored.monsterSchedule.relentless, false, "old monster schedules gain the deterministic rhythm flag without rerolling");
 })();
 
+(function aVillageCrisisInterruptsEveryDirectedRoute() {
+  var config = baseConfig("director-affliction-cutaway");
+  config.forcedBeats = [
+    {
+      id: "church-burning-now", type: "atmosphere", slot: 0, location: "*",
+      text: "The Old Church is burning.",
+      meta: { affliction: "churchBurn", afflictionLocation: "Old Church", afflictionWound: "burn", afflictionLabel: "THE CHURCH BURNS", soundCue: "fire", critical: true }
+    },
+    { id: "ordinary-same-hour", type: "atmosphere", slot: 0, location: "*", text: "A gate closes somewhere." }
+  ];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert.strictEqual(state.player.location, "Village Square", "the crisis cutaway does not rewrite the player's direct route");
+  assert.strictEqual(state.currentBeat.id, "church-burning-now", "a village-wide crisis appears even when the player did not route through its location or another sound shares its hour");
+  assert.strictEqual(state.currentBeat.meta.afflictionLocation, "Old Church");
+  assert.strictEqual(state.currentBeat.meta.afflictionWound, "burn");
+})();
+
 (function soundCannotBlockTheWalkTransition() {
   var html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   assert(!/\bsetGiveUpConfirm\s*\(/.test(html), "the retired daylight surrender setter cannot crash the app during its first effect pass");
@@ -1401,6 +1419,10 @@ function take(state, wanted) {
   assert(secretCadence.includes("npc.id !== facts.guaranteedVictimId") && secretCadence.includes("npc.id !== s.monster.vid"), "the safeguard cannot reroute the hunt's quarry or its host");
   assert(secretCadence.includes("facts.secretCatch[chosen.id] = true") && start.includes("primeDirectorSecret"), "a primed secret is readable and enters the Director before the walk is compiled");
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
+  assert(compiledNight.includes('id: `n${n}:affliction:${facts.affliction}`') && compiledNight.includes('slot: 0, location: "*"'), "a sampled village crisis interrupts every Director route instead of waiting at the Village Square");
+  assert(compiledNight.includes("afflictionLocation: afflictionScene.location") && compiledNight.includes("afflictionWound: afflictionScene.wound"), "the crisis carries its authored location and damaged-night artwork into the Director");
+  assert(html.includes('churchBurn: { location: "Old Church", wound: "burn"') && html.includes('wellFouled: { location: "Village Square", wound: "fouled"'), "church fire and poisoned-well nights select their existing crisis plates");
+  assert(html.includes('wound={afflictionScene ? afflictionScene.wound : nightWound(s, location)}'), "the live crisis art is shown before dawn persists the wound");
   assert(compiledNight.includes("facts.guaranteedVictimId") && compiledNight.includes("guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }"), "the fallback neighbour is physically on the hunting ground throughout the attack hour");
   assert(compiledNight.includes("activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }"), "an active monster host leaves its house before it hunts");
   assert(html.includes("then followed them to the ${log.you.followedTo}"), "the final night history distinguishes following a watched suspect from remaining at their door");

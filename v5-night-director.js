@@ -843,8 +843,8 @@
       /* The watched door is the player's chosen purpose for this hour. Show
          its result after coincident weather and atmosphere so a thunderclap
          cannot conceal the fact that the suspect left or stayed. */
-      var aPriority = a.type === "watch" ? 2 : a.meta && a.meta.secretLead ? 1 : 0;
-      var bPriority = b.type === "watch" ? 2 : b.meta && b.meta.secretLead ? 1 : 0;
+      var aPriority = a.meta && a.meta.affliction ? 3 : a.type === "watch" ? 2 : a.meta && a.meta.secretLead ? 1 : 0;
+      var bPriority = b.meta && b.meta.affliction ? 3 : b.type === "watch" ? 2 : b.meta && b.meta.secretLead ? 1 : 0;
       return aPriority - bPriority;
     });
     entries.forEach(function (beat) {
