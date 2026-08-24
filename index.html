@@ -6,10 +6,6 @@
 <title>Hollow's Edge</title>
 <meta name="description" content="A village. As many nights as it takes. Something among you." />
 <link rel="preload" href="assets/ink-v1/scenes/village-gate-ink-v1.webp" as="image" type="image/webp" fetchpriority="high" />
-<link rel="preload" href="assets/monster-concepts-v1/necromancer.webp" as="image" type="image/webp" />
-<link rel="preload" href="assets/monster-concepts-v1/mimic.webp" as="image" type="image/webp" />
-<link rel="preload" href="assets/monster-concepts-v1/succubus.webp" as="image" type="image/webp" />
-<link rel="preload" href="assets/monster-concepts-v1/the-hollowed.webp" as="image" type="image/webp" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -6618,18 +6614,22 @@ const MONSTER_VICTORY_ART = {
   succubus: "assets/monster-victory/succubus.webp",
   hollowed: "assets/monster-victory/hollowed.webp",
 };
+function monsterVictorySource(id) {
+  return MONSTER_VICTORY_ART[id]
+    ? MONSTER_VICTORY_ART[id].replace("assets/monster-victory/", "assets/monster-victory-transparent/")
+    : null;
+}
 function MonsterVictory({ id, size = 120, green = false }) {
   /* Victory cards keep their authored full-scene illustrations, but use the
      transparent-backed derivatives so their baked parchment does not bring
      a square image background into the card. */
-  const source = MONSTER_VICTORY_ART[id]
-    ? MONSTER_VICTORY_ART[id].replace("assets/monster-victory/", "assets/monster-victory-transparent/")
-    : null;
+  const source = monsterVictorySource(id);
   if (!source) return <MonsterArt id={id} size={size} light />;
   return (
     <span style={{ position: "relative", display: "block", width: size, height: size, overflow: "hidden", borderRadius: 3, background: "transparent" }}>
       <img src={source} alt="" width={size} height={size} draggable="false"
-        decoding="async" style={{ display: "block", width: size, height: size, objectFit: "contain" }} />
+        loading="eager" decoding="async" fetchPriority="high"
+        style={{ display: "block", width: size, height: size, objectFit: "contain" }} />
       {green && <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(102,132,78,.2),rgba(54,86,59,.48))", mixBlendMode: "color", boxShadow: "inset 0 0 0 1px rgba(143,166,120,.55)", pointerEvents: "none" }} />}
     </span>
   );
@@ -6692,7 +6692,7 @@ function MonsterDeath({ id, size = 120, flat = false }) {
   return (
     <span className={`heMonsterDeath${flat ? " is-flat" : ""}`} style={{ width: size, height: size }}>
       <img src={`assets/monster-defeated-v1/${plate}`} alt={`${name}, defeated`}
-        draggable="false" decoding="async" />
+        draggable="false" loading="eager" decoding="async" fetchPriority="high" />
     </span>
   );
 }
@@ -7204,10 +7204,8 @@ const INTERVIEW_ROOM_WOUND_ART = {
    the browser cache in low-priority batches. Likely day-one art goes first;
    the bestiary and ending sheets follow without competing with visible work. */
 const VILLAGER_ART_IDS = ["marta", "tobias", "ansel", "greta", "wilhelm", "liesel", "falk", "rosa"];
-const PRIORITY_MONSTER_PLATE_IDS = ["necromancer", "mimic", "succubus", "hollowed"];
 const GAME_IMAGE_WARM_LIST = Array.from(new Set([
   ...VILLAGER_ART_IDS.map((id) => `assets/ink-v1/portraits/${id}-ink-v1.webp`),
-  ...PRIORITY_MONSTER_PLATE_IDS.map((id) => `assets/monster-concepts-v1/${MONSTER_PLATES[id]}`),
   ...Object.values(LOCATION_DAY_ART),
   "assets/ink-v2/scenes/day-masthead-panorama-ink-v2.webp",
   ...Object.values(INTERVIEW_ROOM_ART),
@@ -7228,7 +7226,7 @@ const GAME_IMAGE_WARM_LIST = Array.from(new Set([
   "assets/ink-v3/scenes/death-sites-storybook-ink-v3.webp",
   ...Object.values(MONSTER_PLATES).map((file) => `assets/monster-concepts-v1/${file}`),
   ...Object.values(MONSTER_DEATH_PLATES).map((file) => `assets/monster-defeated-v1/${file}`),
-  ...Object.values(MONSTER_VICTORY_ART),
+  ...Object.keys(MONSTER_VICTORY_ART).map(monsterVictorySource),
 ]));
 let gameImageWarmStarted = false;
 function warmGameImageCache() {
@@ -7254,6 +7252,30 @@ function warmGameImageCache() {
   const begin = () => pump();
   if (window.requestIdleCallback) window.requestIdleCallback(begin, { timeout: 1200 });
   else window.setTimeout(begin, 450);
+}
+
+/* The run reveals which three monster plates can become critical long before
+   any ending mounts. Keep those exact Image objects alive, request them ahead
+   of the generic low-priority queue, and ask the browser to decode them now.
+   This also prevents mobile WebKit from waiting for a later tap or scroll to
+   decode an ending that has already become visible. */
+const activeMonsterImageCache = new Map();
+function warmActiveMonsterImages(id) {
+  if (!id || typeof Image === "undefined") return;
+  const sources = [
+    MONSTER_PLATES[id] && `assets/monster-concepts-v1/${MONSTER_PLATES[id]}`,
+    MONSTER_DEATH_PLATES[id] && `assets/monster-defeated-v1/${MONSTER_DEATH_PLATES[id]}`,
+    monsterVictorySource(id),
+  ].filter(Boolean);
+  sources.forEach((source) => {
+    if (activeMonsterImageCache.has(source)) return;
+    const img = new Image();
+    img.decoding = "async";
+    try { img.fetchPriority = "high"; } catch (e) {}
+    activeMonsterImageCache.set(source, img);
+    img.src = source;
+    if (img.decode) img.decode().catch(() => {});
+  });
 }
 function InterviewScene({ id, height = 92, afflicted }) {
   const source = (afflicted && INTERVIEW_ROOM_WOUND_ART[id]) || INTERVIEW_ROOM_ART[id] || INTERVIEW_ROOM_ART.marta;
@@ -9800,15 +9822,10 @@ function MonsterVillage() {
     } catch (e) {}
   }, [walk, s && s.gameId, bootReady]);
 
-  /* The ending sheet is known from the first moment of a run. Fetch that one
-     image quietly while the player is investigating, so a loss never lands
-     on an empty card; all other artwork remains demand-loaded. */
+  /* The monster is known from the first moment of a run. Fetch and decode its
+     portrait and both possible ending cards before any of them can mount. */
   useEffect(() => {
-    const source = s && s.monster && MONSTER_VICTORY_ART[s.monster.type];
-    if (!source || typeof Image === "undefined") return;
-    const img = new Image();
-    img.decoding = "async";
-    img.src = source;
+    warmActiveMonsterImages(s && s.monster && s.monster.type);
   }, [s && s.gameId]);
 
   const saveMeta = async (next) => {
