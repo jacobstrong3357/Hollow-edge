@@ -1868,9 +1868,9 @@
     }
     var beat = state.currentBeat;
     if (beat && beat.type === "watch" && beat.meta && beat.meta.departure) {
-      add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }) || action("FOLLOW", "Abandon the watch and follow " + (guide.actorName || "them"), "amber", { actorId: beat.actorId }), "Abandon the watch and follow " + (guide.actorName || "them"));
-      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Give up the watch and head for home");
-      return result.slice(0, 2);
+      var departureName = guide.actorName || (state.cast.find(function (villager) { return villager.id === beat.actorId; }) || {}).name || "them";
+      add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }) || action("FOLLOW", "Follow " + departureName, "amber", { actorId: beat.actorId }), "Follow " + departureName);
+      return result.slice(0, 1);
     }
     if (beat && beat.type === "watch" && beat.meta && beat.meta.noDeparture) {
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "They do not leave. Head home at dawn");

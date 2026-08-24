@@ -215,6 +215,23 @@ function take(state, wanted) {
   assert(!state.ledgers.truth.some(function (event) { return event.id.indexOf("encounter:") === 0 && event.actors.indexOf("rosa") >= 0; }), "the person still inside the watched house is not framed as a passer-by");
 })();
 
+(function aDoorWatchCommitsToFollowingTheDeparture() {
+  var config = baseConfig("watch-door-follows");
+  config.openingIntent = { kind: "watch", id: "rosa" };
+  config.monster.active = false;
+  config.currentFacts = { weather: "fog", active: false, outMap: { rosa: "Old Church", falk: "home", ansel: "home" } };
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "late-delivery", family: "work", destination: "Old Church", reason: "deliver cloth", object: "a parcel", depart: 1, duration: 3 } }];
+  config.forcedBeats = [{ id: "rosa-departs", type: "watch", slot: 1, location: "Village Square", actorId: "rosa", text: "Rosa's door opens.", meta: { departure: true } }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "WAIT" });
+  assert(state.currentBeat && state.currentBeat.meta.departure, "the watched departure owns the scene");
+  var actions = Director.guidedActions(state, { target: "Village Square", kind: "watch", actorId: "rosa", actorName: "Rosa", interacted: {} });
+  assert.deepStrictEqual(actions.map(function (action) { return [action.type, action.label]; }), [["FOLLOW", "Follow Rosa"]], "leaving the watched house commits the player to the follow instead of offering an abandoned watch");
+  state = Director.reduce(state, actions[0]);
+  assert(state.actionHistory.some(function (row) { return row.type === "FOLLOW" && row.actorId === "rosa"; }), "the single continuation begins the follow");
+})();
+
 (function guidedNightOffersAStoryCorridorNotTheWholeMap() {
   var state = Director.createNight(baseConfig("guided-corridor"));
   var guide = { target: "Old Church", kind: "search", intentDone: false, interacted: {} };
@@ -1081,6 +1098,7 @@ function take(state, wanted) {
   assert(html.includes('{directorWeatherLabel}</span>'), "the Director renders weather on the right side of its location row");
   assert(!html.includes("crosses the edge of your lantern with"), "the retired repeating sighting line cannot leak through a fallback");
   assert(html.includes('q: "sawContext"'), "a Director encounter offers a location-specific witness follow-up");
+  assert(!html.includes("The watch is over if you mean to know where they are going."), "the departure card does not pretend following is optional after the player chose to watch");
   assert(html.includes('No one else I could identify.'), "the witness follow-up gives one concise answer instead of joining two quoted replies");
   assert(!html.includes('quote += ` “I stayed only long enough to ${event.reason}.”`'), "a witness-list answer cannot append an unrelated errand explanation");
   assert(html.includes('reason: "keep a private appointment before dawn"'), "third-person secret summaries cannot be inserted after an infinitive in interviews");

@@ -4075,7 +4075,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       directorConfig.forcedBeats.push({
         id: `n${n}:door-departure:${openingIntent.id}`, type: "watch", slot: departSlot >= 0 ? departSlot : Math.min(slots - 1, setupSlot + 1),
         location: watchLocation, actorId: openingIntent.id,
-        text: `${target.name}'s door opens. ${facts.wx === "fog" ? "A lantern-smudge moves into the fog" : facts.wx === "storm" ? "Lightning catches a figure stepping into the rain" : facts.wx === "frost" ? "A figure and a white breath cross the untouched frost" : "A light moves out"} toward the ${destination}. The watch is over if you mean to know where they are going.`,
+        text: `${target.name}'s door opens. ${facts.wx === "fog" ? "A lantern-smudge moves into the fog" : facts.wx === "storm" ? "Lightning catches a figure stepping into the rain" : facts.wx === "frost" ? "A figure and a white breath cross the untouched frost" : "A light moves out"} toward the ${destination}.`,
         meta: { departure: true },
       });
     } else if (target && watchText) directorConfig.forcedBeats.push({
