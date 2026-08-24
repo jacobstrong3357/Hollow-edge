@@ -430,6 +430,38 @@ function take(state, wanted) {
   }
 })();
 
+(function aChangedScreamVictimNeverUsesOrdinaryErrandDialogue() {
+  var config = baseConfig("tavern-changed-survivor");
+  config.slots = 6;
+  config.openingIntent = { kind: "search", loc: "Old Mill" };
+  config.player = {};
+  config.forcedBeats = [];
+  config.villagers = [
+    { id: "liesel", name: "Liesel", role: "the Innkeeper", alive: true, home: "Village Square", disposition: 1, motive: { id: "tavern-work", family: "work", destination: "Tavern", reason: "deliver a parcel", object: "a parcel", depart: 0, duration: 6 }, dialogue: { hail: "A neighbour needs this before dawn. I intend to deliver it.", follow: "Liesel finishes an ordinary errand." } },
+    { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true, home: "Old Church" }
+  ];
+  config.monster = { id: "ghoul", hostId: "greta", active: true, signs: ["graves"], hunts: ["Tavern"], attack: "turn", reach: "out", huntSlot: 1 };
+  config.currentFacts = { weather: "storm", active: true, huntLoc: "Tavern", attackSlot: 1, outMap: { liesel: "Tavern", falk: "home" } };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Old Mill" });
+  state.discoverySchedule = {};
+  state = take(state, { type: "SEARCH", searchMode: "ground" });
+  var guide = { target: "Old Mill", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} };
+  var investigate = Director.guidedActions(state, guide).find(function (action) { return action.investigateEventId; });
+  state = take(state, investigate);
+  assert(/Liesel is alive, but the attack has changed them\./.test(state.currentBeat.text), "the investigation names a turning instead of describing ambiguous shock");
+  assert.strictEqual(state.currentBeat.meta.recognizedChanged, true, "the changed survivor is a certain witnessed consequence");
+  guide.actorId = "liesel";
+  var sceneActions = Director.guidedActions(state, guide);
+  assert.deepStrictEqual(sceneActions.slice(0, 2).map(function (action) { return action.label; }), ["Speak to Liesel", "Follow Liesel when they move"]);
+  state = take(state, { type: "HAIL", actorId: "liesel" });
+  assert(state.currentBeat.meta.changedAftermath, "speaking to the changed survivor keeps the aftermath context");
+  assert(!/neighbour needs this|ordinary errand/i.test(state.currentBeat.text), "pre-attack work dialogue cannot overwrite the changed survivor");
+  state = take(state, { type: "FOLLOW", actorId: "liesel" });
+  assert(state.currentBeat.meta.changedAftermath && /attack changed them/i.test(state.currentBeat.text), "following the changed survivor remains explicit about what happened");
+  assert(Director.consequenceProjection(state).investigations.some(function (entry) { return entry.victimId === "liesel" && entry.recognizedChanged; }), "dawn receives the witnessed turning as certain knowledge");
+})();
+
 (function discoveriesAreEarnedAndFair() {
   var config = baseConfig("discoveries");
   var state = Director.createNight(config);
@@ -989,6 +1021,9 @@ function take(state, wanted) {
   assert(start.indexOf("setWalk({") < start.indexOf("Snd.scene("), "the Director walk state must be queued before optional ambience runs");
   assert(html.includes('catch (e) { console.warn("Night sound cue could not play", e); }'), "a failed Director sound effect cannot unmount the night screen");
   assert(html.includes('catch (e) { console.warn("Night heartbeat could not play", e); }'), "a failed heartbeat cannot unmount the night screen");
+  assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
+  assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
+  assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");
   assert(html.includes("node.volume.linearRampTo(db, seconds)"), "weather volume fades must use a linear ramp that accepts the silent decibel floor");
   assert(!html.includes("windFilter.frequency.rampTo("), "the LFO-owned wind filter parameter must not be automated directly");
   var sightings = html.slice(html.indexOf("const DIRECTOR_SIGHTING_LINES"), html.indexOf("function directorSightingFor"));

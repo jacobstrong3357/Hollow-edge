@@ -276,6 +276,14 @@
     "‘Tell them I tried to run.’"
   ];
 
+  var CHANGED_AFTERMATH_REPLIES = [
+    function (name) { return name + " turns at their name. Their mouth forms an answer, but no voice comes."; },
+    function (name) { return name + " looks at you without recognition, then slowly gets to their feet."; },
+    function (name) { return name + " whispers, ‘Go home.’ The voice is theirs. The empty stare is not."; },
+    function (name) { return name + " flinches from the lantern, but not from the blood beside them."; },
+    function (name) { return name + " says your name once, without recognition, and turns toward the road."; }
+  ];
+
   function motive(id, family, destination, reason, object) {
     return { id: id, family: family, destination: destination, reason: reason, object: object };
   }
@@ -770,10 +778,17 @@
     if (seen) appendObservation(state, { eventId: truth.id, slot: slot, kind: acknowledged ? "meeting" : "sighting", location: state.player.location, actors: [villager.id], clarity: sightClarity, reliability: "direct", weather: state.weather });
     state.ledgers.memories[villager.id].push({ eventId: truth.id, slot: slot, subject: "player", kind: acknowledged ? "meeting" : "sighting", location: state.player.location, clarity: seen ? sightClarity : "one_sided", acknowledged: !!acknowledged, weather: state.weather, interpretation: memoryInterpretation(villager, acknowledged) });
     if (!seen) return;
+    var changedAftermath = !!(villager.changed && state.ledgers.truth.some(function (event) {
+      return event.kind === "investigated_attack" && event.victimId === villager.id;
+    }));
+    var encounterText = changedAftermath
+      ? CHANGED_AFTERMATH_REPLIES[Math.floor(keyedNumber(state.seed, "changed-aftermath-reply:" + villager.id) * CHANGED_AFTERMATH_REPLIES.length) % CHANGED_AFTERMATH_REPLIES.length](villager.name)
+      : weatherEncounterText(state, villager, acknowledged);
     appendBeat(state, makeBeat(id, "encounter", slot, state.player.location,
-      weatherEncounterText(state, villager, acknowledged), {
+      encounterText, {
         actorId: villager.id,
         truthEventId: truth.id,
+        meta: { changedAftermath: changedAftermath, critical: changedAftermath },
         signature: semanticSignature({ family: "encounter", actorId: villager.id, location: state.player.location, interaction: acknowledged ? "hail" : "glimpse", outcome: "mutual" })
       }));
   }
@@ -1021,12 +1036,16 @@
     var suspicious = possibleWitnesses.length > 0 && keyedNumber(state.seed, "body-suspicion:" + event.id) < 0.48;
     var witnessIds = suspicious ? possibleWitnesses.slice(0, Math.min(2, possibleWitnesses.length)).map(function (row) { return row.id; }) : [];
     var text = event.kind === "changed"
-      ? "You reach the " + event.location + ". " + victimName + " is alive, but crouched where the cry ended. They do not answer when you speak or touch their shoulder."
+      ? "You reach the " + event.location + ". " + victimName + " is alive, but the attack has changed them. They do not answer their name or react when you touch their shoulder."
       : "You reach the " + event.location + ". " + victimName + " lies where the cry ended.";
     if (lastWords) text += " They are breathing just long enough to catch your sleeve and say, " + lastWords;
     else if (event.kind === "slain") text += " You are too late for an answer.";
-    if (clueFound) text += " Close to the body, one physical mark survives clearly enough to take into the Journal.";
-    if (suspicious) text += " Footsteps arrive behind you. What they see first is you beside the body.";
+    if (clueFound) text += event.kind === "changed"
+      ? " Beside them, one physical mark remains clear enough to stamp into the Journal."
+      : " Close to the body, one physical mark remains clear enough to stamp into the Journal.";
+    if (suspicious) text += event.kind === "changed"
+      ? " Footsteps arrive behind you. What they see first is you beside " + victimName + "."
+      : " Footsteps arrive behind you. What they see first is you beside the body.";
     var truth = appendTruth(state, {
       id: "investigated:" + event.id,
       slot: slot,
@@ -1039,6 +1058,7 @@
       sign: clueFound ? event.sign : null,
       heardLastWords: heardLastWords,
       lastWords: lastWords,
+      recognizedChanged: event.kind === "changed",
       suspicious: suspicious,
       witnessIds: witnessIds
     });
@@ -1053,7 +1073,7 @@
       actorId: event.victimId,
       sign: clueFound ? event.sign : null,
       truthEventId: truth.id,
-      meta: { bodyInvestigation: true, lastWords: lastWords, suspicious: suspicious, witnessIds: witnessIds, critical: true }
+      meta: { bodyInvestigation: true, recognizedChanged: event.kind === "changed", lastWords: lastWords, suspicious: suspicious, witnessIds: witnessIds, critical: true }
     }));
     if (clueFound && beat && !state.found.stamps.some(function (stamp) { return stamp.sign === event.sign; })) {
       state.found.stamps.push({ sign: event.sign, slot: slot, location: event.location, beatId: beat.id });
@@ -1072,6 +1092,9 @@
     if (!villager || !schedule) return;
     var dialogue = villager.dialogue || {};
     var destination = schedule.motive.destination === HOME ? state.player.location : schedule.motive.destination;
+    var changedAftermath = !!(villager.changed && state.ledgers.truth.some(function (row) {
+      return row.kind === "investigated_attack" && row.victimId === villager.id;
+    }));
     var event = appendTruth(state, {
       id: "followed:" + slot + ":" + actorId,
       slot: slot,
@@ -1082,22 +1105,25 @@
       acknowledged: false,
       playerSaw: true,
       motiveFamily: schedule.motive.family,
-      revealedSecret: !!dialogue.revealsSecret,
-      secretSummary: dialogue.secretSummary || null
+      revealedSecret: !changedAftermath && !!dialogue.revealsSecret,
+      secretSummary: changedAftermath ? null : (dialogue.secretSummary || null),
+      changedAftermath: changedAftermath
     });
     var routePlace = destination === HOME ? "door" : destination;
     var fallbackLead = state.weather === "fog" ? "You follow " + villager.name + "'s lantern through the fog to the " + routePlace + "."
       : state.weather === "storm" ? "By lightning, you follow " + villager.name + " to the " + routePlace + "."
         : state.weather === "frost" ? "You follow " + villager.name + "'s fresh tracks to the " + routePlace + "."
           : "You follow " + villager.name + " to the " + routePlace + ".";
-    var followText = dialogue.follow || (fallbackLead + " There, " + villager.name + " finishes an ordinary errand and leaves.");
-    appendObservation(state, { eventId: event.id, slot: slot, kind: dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: state.weather === "storm" ? "weathered" : "clear", reliability: "direct", text: followText, weather: state.weather });
+    var followText = changedAftermath
+      ? "You follow " + villager.name + ". They never look back. At the " + routePlace + ", they stop and wait in silence. The attack changed them."
+      : dialogue.follow || (fallbackLead + " There, " + villager.name + " finishes an ordinary errand and leaves.");
+    appendObservation(state, { eventId: event.id, slot: slot, kind: !changedAftermath && dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: state.weather === "storm" ? "weathered" : "clear", reliability: "direct", text: followText, weather: state.weather });
     state.ledgers.memories[actorId].push({ eventId: event.id, slot: slot, subject: "player", kind: "followed", location: destination, clarity: "uncertain", acknowledged: false, interpretation: "They may not know whether the lantern behind them was yours." });
     appendBeat(state, makeBeat("follow-beat:" + slot + ":" + actorId, "follow", slot, destination,
       followText, {
         actorId: actorId,
         truthEventId: event.id,
-        meta: { motiveFamily: schedule.motive.family, revealedSecret: !!dialogue.revealsSecret, critical: state.monsterSchedule.active && actorId === state.monsterSchedule.hostId }
+        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, critical: changedAftermath || (state.monsterSchedule.active && actorId === state.monsterSchedule.hostId) }
       }));
     if (state.followedActorIds.indexOf(actorId) < 0) state.followedActorIds.push(actorId);
     return event;
@@ -1878,6 +1904,18 @@
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
     }
+    if (beat && beat.meta && beat.meta.bodyInvestigation && beat.actorId) {
+      var changedVictim = state.cast.find(function (villager) { return villager.id === beat.actorId && villager.changed; });
+      if (changedVictim) {
+        add(all.find(function (item) { return item.type === "HAIL" && item.actorId === beat.actorId; }), "Speak to " + changedVictim.name);
+        add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }), "Follow " + changedVictim.name + " when they move");
+        if (target && state.player.location !== target) {
+          var returnPath = shortestPath(state.graph, state.player.location, target);
+          add(all.find(function (item) { return item.type === "MOVE" && item.to === returnPath[1]; }), "Return to the " + target);
+        } else add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave them. Head for home");
+        return result.slice(0, 3);
+      }
+    }
     /* A person presently framed by the scene is the immediate dramatic
        choice. Put both social reactions ahead of routine location work so
        the three-button corridor cannot silently cut Follow off as item four. */
@@ -2022,6 +2060,7 @@
         sign: event.sign || null,
         heardLastWords: !!event.heardLastWords,
         lastWords: event.lastWords || null,
+        recognizedChanged: !!event.recognizedChanged,
         suspicious: !!event.suspicious,
         witnessIds: (event.witnessIds || []).slice()
       };

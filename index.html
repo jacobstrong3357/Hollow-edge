@@ -4342,6 +4342,10 @@ function resolveNight(prev, planIn, preEvents) {
     for (const inquiry of bodyInvestigations) {
       const victim = npcById(s, inquiry.victimId) || (director.cast || []).find((actor) => actor.id === inquiry.victimId);
       const victimName = victim ? victim.name : "the victim";
+      if (inquiry.recognizedChanged) {
+        s.npcs = s.npcs.map((npc) => npc.id === inquiry.victimId ? { ...npc, known: true } : npc);
+        s.clues.push(`Night ${n}: you reached ${victimName} after the scream at the ${inquiry.location}. The attack had changed them, and you saw it yourself.`);
+      }
       if (inquiry.heardLastWords && inquiry.lastWords) s.clues.push(`Night ${n}: ${victimName}'s last words at the ${inquiry.location}: ${inquiry.lastWords}`);
       if (inquiry.suspicious) {
         const witnessNames = (inquiry.witnessIds || []).map((id) => npcById(s, id)).filter(Boolean).map((npc) => npc.name);
@@ -5361,9 +5365,13 @@ function resolveNight(prev, planIn, preEvents) {
            lingers a night or three, greying, then dies emptied. That decay
            night is fixed now, so the walk and the recap agree. */
         const decayNight = m.id === "lich" ? n + (director ? 1 + Math.floor(((director.outcomes[director.monsterSchedule.attackSlot] || {}).sign || 0) * 3) : pick([1, 2, 3])) : undefined;
-        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, turned: true, ...(decayNight ? { decay: decayNight } : {}) } : x));
+        const directorSawChange = !!(director && (director.ledgers.truth || []).some((event) => event.kind === "investigated_attack" && event.victimId === victim.id && event.recognizedChanged));
+        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, turned: true, ...(directorSawChange ? { known: true } : {}), ...(decayNight ? { decay: decayNight } : {}) } : x));
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "turned" });
-        dawn.push(ev(director ? `${victim.name} does not come to the well. Their door is open, their bed is cold, and no body is found.` : chance(0.3) ? pickFreshIdx("noBodySharp", NO_BODY_SHARP) : pickFreshIdx("noBody", NO_BODY)));
+        dawn.push(ev(directorSawChange
+          ? `${victim.name} does not come to the well. You found them alive at the ${victimWhere} after the scream, and saw that the attack had changed them.`
+          : director ? `${victim.name} does not come to the well. Their door is open, their bed is cold, and no body is found.`
+            : chance(0.3) ? pickFreshIdx("noBodySharp", NO_BODY_SHARP) : pickFreshIdx("noBody", NO_BODY)));
       }
     } else {
       beats.push(pickFreshIdx("circleLines", CIRCLE_LINES));
@@ -12686,6 +12694,7 @@ function MonsterVillage() {
 
   const directorBeatText = (director, beat) => {
     if (!beat || !["encounter", "follow"].includes(beat.type) || !beat.actorId) return beat && beat.text;
+    if (beat.meta && beat.meta.changedAftermath) return beat.text;
     const actor = npcById(s, beat.actorId);
     const directorActor = (director.cast || []).find((entry) => entry.id === beat.actorId);
     const dialogue = (directorActor && directorActor.dialogue) || {};
@@ -12718,9 +12727,10 @@ function MonsterVillage() {
       const terminal = d.phase === "complete" || d.phase === "dead";
       const location = d.player.location === "Home" ? "Cottage" : (d.player.location || "Village Square");
       const danger = ["threat", "chase", "dead"].includes(d.phase) || (beat && (["threat", "flee", "aftermath"].includes(beat.type) || (beat.meta && beat.meta.bodyInvestigation)));
+      const changedScene = !!(beat && beat.meta && (beat.meta.recognizedChanged || beat.meta.changedAftermath));
       const actorBase = beat && beat.actorId ? npcById(s, beat.actorId) : null;
       const directorActorState = beat && beat.actorId ? (d.cast || []).find((entry) => entry.id === beat.actorId) : null;
-      const actor = actorBase && directorActorState ? { ...actorBase, alive: directorActorState.alive, turned: !!directorActorState.changed } : actorBase;
+      const actor = actorBase && directorActorState ? { ...actorBase, alive: directorActorState.alive, turned: !!directorActorState.changed, known: !!(actorBase.known || changedScene) } : actorBase;
       const intentTarget = walk.openingIntent.kind === "watch" ? (HOME_LOC[walk.openingIntent.id] || "Village Square") : walk.openingIntent.loc;
       const focusedActions = HE_DIRECTOR.guidedActions(d, {
         target: intentTarget,
@@ -12750,7 +12760,7 @@ function MonsterVillage() {
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
               {actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: danger ? C.redBright : beat && beat.type === "delusion" ? "#C0A8D8" : C.nightAmber }}>{beat ? (labels[beat.type] || "THE ROAD") : terminal ? (d.phase === "dead" ? "THE ROAD ENDS" : "BEHIND YOUR BOLT") : "THE ROAD"}</div>
+                <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: danger ? C.redBright : beat && beat.type === "delusion" ? "#C0A8D8" : C.nightAmber }}>{beat ? (changedScene ? "CHANGED" : labels[beat.type] || "THE ROAD") : terminal ? (d.phase === "dead" ? "THE ROAD ENDS" : "BEHIND YOUR BOLT") : "THE ROAD"}</div>
                 {delusionFragments ? (
                   <div style={{ marginTop: 7 }}>
                     {delusionFragments.map((fragment, i) => <p key={i} style={{ margin: i ? "5px 0 0" : 0, fontSize: i === delusionFragments.length - 1 ? 15.5 : 16.5, lineHeight: 1.4, color: i === delusionFragments.length - 1 ? "#D8CAE6" : C.parch, fontStyle: i === delusionFragments.length - 1 ? "normal" : "italic" }}>{fragment}</p>)}
