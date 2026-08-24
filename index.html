@@ -3603,7 +3603,10 @@ function directorFindingAlreadyRecorded(s, text, agenda) {
 function directorMotiveFor(s, facts, npc) {
   const secret = facts.secretOut && facts.secretOut[npc.id] ? secretOf(s, npc.id) : null;
   const mourns = facts.griefOut && facts.griefOut[npc.id];
-  if (secret) return { id: `secret:${npc.id}`, family: "secret", destination: facts.outMap[npc.id], reason: secret.short || "keep a private promise", object: "a small wrapped object", secret: true };
+  /* Secret summaries are third-person Journal notes, not grammatical action
+     phrases. Keep them out of "I went out to ..." interview sentences; the
+     specific secret is revealed only by actually catching it. */
+  if (secret) return { id: `secret:${npc.id}`, family: "secret", destination: facts.outMap[npc.id], reason: "keep a private appointment before dawn", object: "a small wrapped object", secret: true };
   if (mourns) {
     const dead = npcById(s, mourns);
     return { id: `grief:${npc.id}`, family: "grief", destination: "Graveyard", reason: `leave something at ${dead ? dead.name + "'s" : "a"} grave`, object: "a private mourning token" };
@@ -6623,11 +6626,8 @@ function answerFor(s, id, night, q, targetId) {
       const seen = [...atPlace].map((actorId) => npcById(s, actorId)).filter((x) => x && x.alive);
       seen.forEach((x) => mentions.push({ id: x.id, loc: event.location, kind: "with", night }));
       quote = seen.length
-        ? `“Near the ${event.location}, I saw ${seen.map((x) => x.name).join(" and ")}. That is who I can honestly name.”`
-        : `“Near the ${event.location}, no one I could honestly name.”`;
-      if (event.passingThrough && event.destination && event.destination !== event.location) {
-        quote += ` “I was only passing through, taking the back lane toward the ${event.destination}.”`;
-      } else if (event.reason) quote += ` “I stayed only long enough to ${event.reason}.”`;
+        ? `“I saw ${seen.map((x) => x.name).join(" and ")} near the ${event.location}. No one else I could identify.”`
+        : `“No one I could identify near the ${event.location}.”`;
     }
   }
 

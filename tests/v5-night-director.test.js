@@ -1081,7 +1081,10 @@ function take(state, wanted) {
   assert(html.includes('{directorWeatherLabel}</span>'), "the Director renders weather on the right side of its location row");
   assert(!html.includes("crosses the edge of your lantern with"), "the retired repeating sighting line cannot leak through a fallback");
   assert(html.includes('q: "sawContext"'), "a Director encounter offers a location-specific witness follow-up");
-  assert(html.includes("I was only passing through, taking the back lane toward"), "interviews explain a route waypoint separately from the villager's destination");
+  assert(html.includes('No one else I could identify.'), "the witness follow-up gives one concise answer instead of joining two quoted replies");
+  assert(!html.includes('quote += ` “I stayed only long enough to ${event.reason}.”`'), "a witness-list answer cannot append an unrelated errand explanation");
+  assert(html.includes('reason: "keep a private appointment before dawn"'), "third-person secret summaries cannot be inserted after an infinitive in interviews");
+  assert(html.includes('You saw me passing the ${thread.location} on my way to the ${destination}.'), "the main interview answer still explains a route waypoint separately from the villager's destination");
   assert(html.includes("WEATHER_WALK_CONTINUED") && html.includes("WEATHER_DAWN_CONTINUED"), "consecutive weather has authored second-night openings and dawn consequences");
   assert(html.includes("QUIET_NIGHT_WEATHER") && html.includes('quietNight:${wx || "still"}'), "quiet Director recaps are selected from the sampled weather instead of the generic frost-capable pool");
   assert(html.includes('soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null'), "storm keeps the monster voice cue instead of replacing it with thunder");
