@@ -37,19 +37,19 @@
     var lead = {
       fog: {
         stamp: "You almost pass it: the fog has flattened the ground to grey.",
-        clue: "You find it only when the lantern is nearly over it.",
+        clue: "Your lantern finds it at your feet.",
         whisper: "The fog brings the voice close and leaves its direction behind.",
         delusion: "In the fog, hedges and gateposts resemble figures until the lantern is close."
       },
       storm: {
         stamp: "Under the lee of the wall, one mark has survived the rain.",
-        clue: "The rain has worried at it, but not erased it.",
+        clue: "Rain beads on it.",
         whisper: "Between two thunderclaps, a few words reach you.",
         delusion: "Lightning fixes the sight in white, then takes it away."
       },
       frost: {
         stamp: "Frost outlines every edge of the mark.",
-        clue: "Frost rims the object where a warm hand set it down.",
+        clue: "Frost rims it.",
         whisper: "In the brittle silence, the smallest voice carries.",
         delusion: "Your breath crosses the lantern and the shape changes behind it."
       }
@@ -631,6 +631,22 @@
     return lead + " A folded note bears " + name + "'s name and asks " + name + " to " + reason + ". This belongs to " + name + ".";
   }
 
+  function siteClueWitness(state, beat) {
+    var slot = Math.max(0, state.cursor);
+    var candidates = actorsAt(state, state.player.location, slot).filter(function (villager) {
+      return villager.id !== state.monsterSchedule.hostId && villager.alive && !villager.changed;
+    });
+    if (!candidates.length) return null;
+    return candidates[Math.floor(keyedNumber(state.seed, "site-clue-witness:" + beat.id) * candidates.length) % candidates.length];
+  }
+
+  function inspectedSiteClueText(state, beat, witness) {
+    var payoff = beat.meta && beat.meta.sitePayoff || "You turn it over and find signs of a private errand.";
+    if (!witness) return payoff;
+    if (state.player.location === "Graveyard") return payoff + " " + witness.name + " sees you handling it. “That was left for the dead, not for you.”";
+    return payoff + " " + witness.name + " sees you disturb it. “You could have left a private thing alone.”";
+  }
+
   function makeDiscoverySchedule(seed, stateLike, config, rng) {
     var table = {};
     function add(beat) {
@@ -883,18 +899,20 @@
       if (beat.type === "stamp" && state.found.stamps.length) return;
       var presented = clone(beat);
       if (presented.location === "*") presented.location = state.player.location;
-      if (presented.type === "clue" && presented.actorId) {
-        var clueSchedule = state.schedules[presented.actorId];
+      if (presented.type === "clue" && (presented.actorId || presented.meta && presented.meta.siteObject)) {
+        var clueSchedule = presented.actorId && state.schedules[presented.actorId];
         presented.meta = Object.assign({}, presented.meta || {}, {
           inspectable: true,
           inspected: false,
           requiresResponse: true,
-          ownerId: presented.actorId,
+          ownerId: presented.actorId || null,
           object: clueSchedule && clueSchedule.motive && clueSchedule.motive.object || null,
-          inspectLabel: clueInspectionLabel(clueSchedule && clueSchedule.motive && clueSchedule.motive.object)
+          inspectLabel: presented.meta && presented.meta.inspectLabel || clueInspectionLabel(clueSchedule && clueSchedule.motive && clueSchedule.motive.object)
         });
-        presented.actorId = null;
-        presented.text = "You find " + (presented.meta.object || "something wrapped and left behind") + ". There is no name on the outside.";
+        if (presented.actorId) {
+          presented.actorId = null;
+          presented.text = "You find " + (presented.meta.object || "something wrapped and left behind") + ". There is no name on the outside.";
+        }
       }
       presented.text = weatherDiscoveryText(state, presented);
       var shown = appendBeat(state, presented);
@@ -2049,6 +2067,18 @@
     if (!legal) return invalid(next, action, "That action is not available now.");
     if (action.dismissClue && presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected) {
       appendTruth(next, { id: "clue-left-closed:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "clue_left_closed", location: next.player.location, sourceBeatId: presentingBeat.id });
+      if (presentingBeat.meta.siteObject) {
+        var restraintWitness = siteClueWitness(next, presentingBeat);
+        if (restraintWitness && keyedNumber(next.seed, "site-clue-restraint:" + presentingBeat.id) < 0.45) appendTruth(next, {
+          id: "site-restraint:" + presentingBeat.id,
+          slot: Math.max(0, next.cursor),
+          kind: "restraint_witnessed",
+          location: next.player.location,
+          actorId: restraintWitness.id,
+          actors: ["player", restraintWitness.id],
+          sourceBeatId: presentingBeat.id
+        });
+      }
       if (next.cursor >= next.slots - 1 && action.type !== "GO_HOME") {
         finishIfNeeded(next);
         return next;
@@ -2115,6 +2145,41 @@
       var ownerId = presentingBeat.meta.ownerId;
       var owner = next.cast.find(function (villager) { return villager.id === ownerId; });
       var ownerSchedule = next.schedules[ownerId];
+      if (presentingBeat.meta.siteObject) {
+        var siteWitness = siteClueWitness(next, presentingBeat);
+        var siteWitnessed = !!siteWitness && keyedNumber(next.seed, "site-clue-intrusion:" + presentingBeat.id) < 0.55;
+        var siteText = inspectedSiteClueText(next, presentingBeat, siteWitnessed ? siteWitness : null);
+        var siteTruth = appendTruth(next, {
+          id: "site-clue-inspected:" + presentingBeat.id,
+          slot: Math.max(0, next.cursor),
+          kind: "site_clue_inspected",
+          location: next.player.location,
+          actors: ["player"],
+          sourceBeatId: presentingBeat.id
+        });
+        if (siteWitnessed) appendTruth(next, {
+          id: "site-intrusion:" + presentingBeat.id,
+          slot: Math.max(0, next.cursor),
+          kind: "intrusion_witnessed",
+          location: next.player.location,
+          actorId: siteWitness.id,
+          actors: ["player", siteWitness.id],
+          sourceBeatId: presentingBeat.id
+        });
+        next.actionHistory.push({ slot: Math.max(0, next.cursor), type: "INSPECT_CLUE", to: null, actorId: null });
+        var siteBeat = appendBeat(next, makeBeat(presentingBeat.id + ":inspected", "clue", Math.max(0, next.cursor), next.player.location,
+          siteText, {
+            truthEventId: siteTruth.id,
+            meta: Object.assign({}, presentingBeat.meta, { inspected: true, inspectable: false, requiresResponse: false, critical: true }),
+            signature: semanticSignature({ family: "site_clue", location: next.player.location, interaction: "inspect", outcome: siteWitnessed ? "disapproved" : "discovered" })
+          }));
+        var siteFoundIndex = next.found.clues.findIndex(function (clue) { return clue.id === presentingBeat.id; });
+        if (siteFoundIndex >= 0 && siteBeat) next.found.clues[siteFoundIndex] = clone(siteBeat);
+        else if (siteBeat) next.found.clues.push(clone(siteBeat));
+        appendObservation(next, { eventId: siteTruth.id, beatId: siteBeat && siteBeat.id, slot: Math.max(0, next.cursor), kind: "evidence", location: next.player.location, actors: [], clarity: "clear", reliability: "direct", text: siteText, weather: next.weather });
+        finishIfNeeded(next);
+        return next;
+      }
       if (!owner || !ownerSchedule) return invalid(next, action, "Nothing inside identifies an owner.");
       var inspectionText = inspectedClueText(next, presentingBeat, owner, ownerSchedule);
       var inspectionTruth = appendTruth(next, {
@@ -2365,8 +2430,10 @@
       if (leaveClosed) { leaveClosed = clone(leaveClosed); leaveClosed.dismissClue = true; }
       var leaveClosedHome = all.find(function (item) { return item.type === "GO_HOME"; });
       if (leaveClosedHome) { leaveClosedHome = clone(leaveClosedHome); leaveClosedHome.dismissClue = true; }
-      add(leaveClosed, guide.kind === "search" ? "Leave it closed. Continue your search" : "Leave it closed. Keep watching");
-      add(leaveClosedHome, "Leave it closed. Head for home");
+      add(leaveClosed, beat.meta.siteObject
+        ? (guide.kind === "search" ? "Leave it where it is. Continue your search" : "Leave it where it is. Keep watching")
+        : (guide.kind === "search" ? "Leave it closed. Continue your search" : "Leave it closed. Keep watching"));
+      add(leaveClosedHome, beat.meta.siteObject ? "Leave it where it is. Head for home" : "Leave it closed. Head for home");
       return result.slice(0, 3);
     }
     if (beat && beat.type === "clue" && beat.meta && beat.meta.inspected) {
@@ -2551,6 +2618,10 @@
         relationships.push({ eventId: event.id, actorId: event.victimId, kind: "abandoned", action: event.action, slot: event.slot, location: event.location });
       } else if (event.kind === "threshold_confrontation") {
         relationships.push({ eventId: event.id, actorId: event.actorId, kind: "caught_watching", slot: event.slot, location: event.location });
+      } else if (event.kind === "intrusion_witnessed") {
+        relationships.push({ eventId: event.id, actorId: event.actorId, kind: "intrusion", slot: event.slot, location: event.location });
+      } else if (event.kind === "restraint_witnessed") {
+        relationships.push({ eventId: event.id, actorId: event.actorId, kind: "restraint", slot: event.slot, location: event.location });
       }
     });
 

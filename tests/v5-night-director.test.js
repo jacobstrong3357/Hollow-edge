@@ -1384,6 +1384,43 @@ function take(state, wanted) {
   assert(!choices.some(function (choice) { return choice.type === "HAIL" || choice.type === "FOLLOW"; }), "identifying an absent owner does not make them available to hail or follow");
 })();
 
+(function siteObjectsRequireAChoiceAndCanChangeTrust() {
+  var sawIntrusion = false;
+  var sawRestraint = false;
+  for (var i = 0; i < 240 && (!sawIntrusion || !sawRestraint); i += 1) {
+    var config = baseConfig("site-object:" + i);
+    config.slots = 3;
+    config.villagers = [{
+      id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Graveyard",
+      motive: { id: "mourning", family: "grief", destination: "Graveyard", reason: "leave flowers", object: "a flower", depart: 0, duration: 3 }
+    }];
+    config.monster.active = false;
+    config.currentFacts = { weather: "frost", active: false, outMap: { rosa: "Graveyard" } };
+    config.forcedBeats = [{
+      id: "grave-object", type: "clue", slot: 1, location: "Graveyard",
+      text: "An object sits outside one grave.",
+      meta: { siteObject: true, siteSearch: true, sitePayoff: "Fresh kneeling prints mark the grave. A dead flower lies beside a newly cut sprig. The coffin soil is untouched.", inspectLabel: "Investigate the object" }
+    }];
+    var state = Director.createNight(config);
+    state = take(state, { type: "LEAVE", to: "Graveyard" });
+    state = take(state, { type: "SEARCH" });
+    assert(/An object sits outside one grave/.test(state.currentBeat.text), "the initial card describes only what can be seen without touching it");
+    assert(!/kneeling prints/.test(state.currentBeat.text), "interpretation waits for the player's choice");
+    var actions = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: false, interacted: {} });
+    assert.deepStrictEqual(actions.map(function (choice) { return choice.label; }), ["Investigate the object", "Leave it where it is. Continue your search", "Leave it where it is. Head for home"]);
+
+    var inspected = Director.reduce(JSON.parse(JSON.stringify(state)), actions[0]);
+    assert(/kneeling prints/.test(inspected.currentBeat.text), "investigation reveals the concrete grave discovery");
+    assert(inspected.ledgers.truth.some(function (event) { return event.kind === "site_clue_inspected"; }), "the decision is recorded");
+    if (Director.consequenceProjection(inspected).relationships.some(function (rel) { return rel.kind === "intrusion" && rel.actorId === "rosa"; })) sawIntrusion = true;
+
+    var untouched = Director.reduce(JSON.parse(JSON.stringify(state)), actions[1]);
+    if (Director.consequenceProjection(untouched).relationships.some(function (rel) { return rel.kind === "restraint" && rel.actorId === "rosa"; })) sawRestraint = true;
+  }
+  assert(sawIntrusion, "a neighbour can disapprove when the player disturbs a private offering");
+  assert(sawRestraint, "a neighbour can remember the player respecting a private offering");
+})();
+
 (function semanticsPenaliseRepetition() {
   var sig = Director.semanticSignature({ family: "grief", actorId: "rosa", location: "Graveyard", interaction: "errand", outcome: "unresolved" });
   assert(Director.noveltyScore(sig, [sig]) < Director.noveltyScore(sig, []), "exact semantic repetition is heavily penalised");
@@ -1731,6 +1768,11 @@ function take(state, wanted) {
   assert(recordedFindingContext.wasRecorded(oldSave, "new presentation text", oldAgenda), "older saves recognise a previously shown errand from their journal text even without Director signature history");
   assert(html.includes("There is no name on the outside."), "an unopened human errand clue does not reveal ownership or motive");
   assert(html.includes('action.type === "INSPECT_CLUE"') && html.includes('Snd.cue("cloth")'), "opening a found parcel is wired into the night UI and soundscape");
+  assert(html.includes('"Graveyard": "An object sits outside one grave."'), "a grave object is presented before its meaning is interpreted");
+  assert(html.includes('rel.kind === "intrusion"') && html.includes('rel.kind === "restraint"'), "nighttime intrusion and restraint both feed the disposition system");
+  assert(html.includes('THE VILLAGE HAS TURNED AGAINST YOU') && html.includes("hostileMajority"), "village-wide hostility is visible and changes cooperation");
+  assert(html.includes('askQ("apologise")') && html.includes('askQ("help")'), "the player has deliberate ways to repair disposition");
+  assert(html.includes('standing.hostileMajority ? 0.08'), "a hostile village makes calming a mob nearly impossible");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");

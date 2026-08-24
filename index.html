@@ -3019,6 +3019,21 @@ const TALK_LINES = {
     `She shows you her needlework, the fine private pieces she sews for no one: birds, mostly. "Where I am from, you embroider what you want and cannot have." Every bird is in flight. She watches you understand, and does not stitch another word onto it.`,
   ],
 };
+const HELP_LINES = {
+  marta: `She gives you flour sacks to stack. "Do that properly and we can speak without shouting over the work."`,
+  tobias: `He hands you a spade. "Clear the frozen soil from that marker. Mind the name."`,
+  ansel: `He gives you candles to trim. "Useful hands are welcome here."`,
+  greta: `She sets empty jars before you. "Wash those. Do not mix the labels."`,
+  wilhelm: `He points to a coal barrow. "Fill it, then sit before your back gives out."`,
+  liesel: `She passes you a cloth. "Tables first. Questions after."`,
+  falk: `He gives you bandages to roll. "Tight and clean. That will help."`,
+  rosa: `She sets mending in your lap. "Sort the torn pieces. I will do the needlework."`,
+};
+const APOLOGY_LINES = [
+  `"I heard you," they say. "It does not mend everything. It is a start."`,
+  `They study you for a moment. "Then do better. I will give you that chance."`,
+  `"Good," they say. "I wanted an apology, not another explanation."`,
+];
 /* Kept short (trimmed ~25%): interview quotes read best inside two lines. */
 const TALK_MONSTER = [
   `They are good company. That is what you remember afterward, lying awake: how easy the hour was, how well they listened. Polished. Practiced. As if the whole evening had been rehearsed in front of a mirror that no longer works.`,
@@ -3086,6 +3101,17 @@ function dispChance(p, disp) {
   const adj = d >= 1 ? p * 1.25 : d <= -1 ? p * 0.6 : p;
   return Math.random() < Math.min(0.92, adj);
 }
+function villageStanding(s) {
+  const living = (s.npcs || []).filter((npc) => npc.alive && !npc.fled);
+  const hostile = living.filter((npc) => (npc.disp || 0) <= -2);
+  const total = living.reduce((sum, npc) => sum + (npc.disp || 0), 0);
+  return {
+    living: living.length,
+    hostile: hostile.length,
+    average: living.length ? total / living.length : 0,
+    hostileMajority: living.length >= 3 && hostile.length >= Math.ceil(living.length / 2),
+  };
+}
 /* ---------- when they cannot stand you ----------
    Disposition has quietly moved the odds of a volunteered extra since the
    start, but it never came out of anyone's mouth: a neighbour who loathed you
@@ -3097,8 +3123,8 @@ function dispChance(p, disp) {
    Keyed on DISPOSITION ALONE, monster included: the thing wearing a hated
    face is exactly as rude as the face would be, so a mouthful is never a
    tell. Never fired on the first question of a visit, so no visit is wholly
-   wasted, and never on `talk` - sitting a while is the one move that is
-   SUPPOSED to work on someone who hates you. */
+   wasted. Goodwill questions still work because they are the player's route
+   back from a village that has shut them out. */
 const HOSTILE_BARB = [
   `"No. Not that, not the next one, not to you. Try the well - they'll tell you anything there, and half of it might even be true."`,
   `"I'm not answering that. Not because it's a hard question. Because of who's stood in front of me asking it."`,
@@ -3817,12 +3843,20 @@ const DIRECTOR_MONSTER_REVEALS = {
   hollowed: (nm, b) => `The body stretches and rotted skin opens. ${nm}'s features and ${directorHostBuild(b)} remain beneath it. ${nm} is the monster.`,
 };
 const DIRECTOR_SEARCH_PAYOFF = {
-  "Village Square": "Behind the well bucket you find a heel of bread wrapped in a child's arithmetic page. Someone came to feed a household too proud to ask, and left in a hurry.",
-  "Old Church": "The vestry latch is warm. Beneath it, fresh candle wax holds the print of a thumb and one dark thread from a coat. Somebody met here after the bell.",
-  "Graveyard": "Fresh kneeling prints mark one grave. A dead flower lies beside a newly cut sprig. The soil over the coffin is undisturbed.",
-  "Dark Forest": "A strip of clean linen marks the safe path between two trees. Farther in, another strip has been torn down and tied deliberately toward the marsh.",
-  "Old Mill": "Fresh filings glitter beneath the dead wheel beside a cup still warm at the rim. Somebody worked here tonight, then left without finishing.",
-  "Tavern": "A chair has been dragged beneath the back window. On its seat: a list of names, each crossed off only after their owner reached home.",
+  "Village Square": "It is bread wrapped in a child's arithmetic page. Someone left food for a household too proud to ask.",
+  "Old Church": "Fresh candle wax beneath the vestry latch holds a thumbprint and one dark coat thread. Somebody met here after the bell.",
+  "Graveyard": "Fresh kneeling prints mark the grave. A dead flower lies beside a newly cut sprig. The coffin soil is untouched.",
+  "Dark Forest": "It is clean linen marking a safe path. A second strip points away from the path and toward the marsh.",
+  "Old Mill": "Fresh filings and a warm cup lie beneath the dead wheel. Somebody stopped work and left in a hurry.",
+  "Tavern": "It is a list of villagers. Each name was crossed off after its owner reached home.",
+};
+const DIRECTOR_SITE_OBJECT = {
+  "Village Square": "A small object lies behind the well bucket.",
+  "Old Church": "Something has been left beneath the vestry window.",
+  "Graveyard": "An object sits outside one grave.",
+  "Dark Forest": "Something pale is tied to a low branch.",
+  "Old Mill": "A small object lies beneath the dead wheel.",
+  "Tavern": "Something has been left beneath the back window.",
 };
 /* Empty searches should still feel like actions taken in a real place. These
    describe the circuit without naming the evidence category the hidden search
@@ -4345,15 +4379,16 @@ function compileDirectorNight(s, facts, openingIntent) {
     }));
     const clueMode = signSearchMode === "ground" ? "edges" : "ground";
     const clueChance = facts.wx === "storm" ? 0.34 : facts.wx === "fog" ? 0.46 : facts.wx === "frost" ? 0.66 : 0.54;
-    const routeClueText = clueAgenda
+    const routeCluePayoff = clueAgenda
       ? `You find ${clueAgenda.motive.object}. There is no name on the outside.`
       : (DIRECTOR_SEARCH_PAYOFF[target] || "You find an unfinished human errand, but nothing that identifies who left it.");
-    const routeClueSeen = directorFindingAlreadyRecorded(s, routeClueText, clueAgenda);
+    const routeClueText = clueAgenda ? routeCluePayoff : (DIRECTOR_SITE_OBJECT[target] || "An object has been left here.");
+    const routeClueSeen = directorFindingAlreadyRecorded(s, routeCluePayoff, clueAgenda);
     if (rng.next() < clueChance && !routeClueSeen) siteSearchSlots.forEach((slot) => directorConfig.forcedBeats.push({
         id: `n${n}:route-payoff:${target}:${slot}`, type: "clue", slot,
         location: target, actorId: clueAgenda && clueAgenda.actorId,
         text: routeClueText,
-        meta: { searchMode: clueMode, siteSearch: true },
+        meta: { searchMode: clueMode, siteSearch: true, siteObject: !clueAgenda, sitePayoff: routeCluePayoff, inspectLabel: !clueAgenda ? "Investigate the object" : undefined },
       }));
     if (facts.secretLeadId && facts.secretLeadLoc === target) {
       const leadRow = directorConfig.villagers.find((row) => row.id === facts.secretLeadId);
@@ -4659,6 +4694,8 @@ function resolveNight(prev, planIn, preEvents) {
       text: rel.kind === "rescued" ? "They remember the player drawing the danger away."
         : rel.kind === "attempted_rescue" ? "They remember the player trying to reach them."
           : rel.kind === "caught_watching" ? "They found what the player dropped and confronted them at their door."
+            : rel.kind === "intrusion" ? "They saw the player disturb a private offering."
+              : rel.kind === "restraint" ? "They saw the player leave a private offering untouched."
             : "They remember the player choosing the road home.",
     }));
     const bodyInvestigations = (projection.investigations || []).map((entry) => ({ ...entry, night: n, kind: "director_body_investigation" }));
@@ -4697,6 +4734,10 @@ function resolveNight(prev, planIn, preEvents) {
         s.clues.push(`Night ${n}: you left ${target.name} to what was moving in the ${rel.location}. Nobody has accused you of it. You know.`);
       } else if (rel.kind === "caught_watching") {
         s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) - 1) } : npc);
+      } else if (rel.kind === "intrusion") {
+        s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) - 1) } : npc);
+      } else if (rel.kind === "restraint") {
+        s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
       }
     }
     for (const inquiry of bodyInvestigations) {
@@ -6831,6 +6872,8 @@ function answerFor(s, id, night, q, targetId) {
   const m = monsterOf(s);
   const npc = npcById(s, id);
   const per = PERSONA[id];
+  const standing = villageStanding(s);
+  const goodwillQuestion = ["talk", "apologise", "help"].includes(q);
   if (npc.turned && npc.known && TURNED_INTERVIEW_QS.includes(q)) return turnedInterviewAnswer(s, npc, q);
   /* A villager known to be changed no longer keeps up the pretence: their
      ordinary interview is inaccessible in the UI. Keep this fallback for an
@@ -6854,6 +6897,8 @@ function answerFor(s, id, night, q, targetId) {
     : q === "craft" ? `${s.dayNum}:craft`
     : q === "past" ? "past"
     : q === "talk" ? `${s.dayNum}:talk`
+    : q === "apologise" ? `${s.dayNum}:apologise`
+    : q === "help" ? `${s.dayNum}:help`
     : q === "gossip" ? `${s.dayNum}:gossip`
     : q === "share" ? `${s.dayNum}:share:${targetId || ""}`
     : q === "report" ? `${s.dayNum}:report`
@@ -6888,7 +6933,7 @@ function answerFor(s, id, night, q, targetId) {
     return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps };
   }
 
-  if ((s.patience[id] || 0) <= 0 && !isMonster && q !== "talk") {
+  if ((s.patience[id] || 0) <= 0 && !isMonster && !goodwillQuestion) {
     return { quote: pickFreshIdx(`refusal:${id}`, per.refusal), mentions, claim, flag: null, foundSign, clue, refused: true, followUps: [] };
   }
 
@@ -6896,8 +6941,9 @@ function answerFor(s, id, night, q, targetId) {
      this is keyed on disposition and nothing else. */
   const hostileTier = dispTier(npc.disp);
   const opened = (s.askedLog[id] || []).length > 1;
-  if (q !== "talk" && opened) {
-    if (hostileTier === "hate" && chance(0.4)) {
+  if (!goodwillQuestion && opened) {
+    const refusalChance = hostileTier === "hate" ? (standing.hostileMajority ? 0.88 : 0.62) : standing.hostileMajority ? 0.45 : 0;
+    if (refusalChance && chance(refusalChance)) {
       return { quote: chance(0.35) ? pickFreshIdx(`hostileTurn:${id}`, HOSTILE_TURN) : pickFreshIdx(`hostileBarb:${id}`, HOSTILE_BARB),
         mentions, claim: null, flag: null, foundSign, clue, refused: true, followUps: [] };
     }
@@ -7387,7 +7433,8 @@ function answerFor(s, id, night, q, targetId) {
 
   if (q === "craft") {
     const gateTargets = s.npcs.filter((x) => x.alive && !x.fled && x.id !== id);
-    if (!isMonster && !npc.turned && (npc.disp || 0) <= -1 && !s.sideQuest && gateTargets.length && chance(0.75)) {
+    const distrustGate = (npc.disp || 0) <= -1 || standing.hostileMajority;
+    if (!isMonster && !npc.turned && distrustGate && !s.sideQuest && gateTargets.length && chance(standing.hostileMajority || hostileTier === "hate" ? 1 : 0.75)) {
       /* trust runs one way with this one: the big clue is quest-gated */
       const gt = pick(gateTargets);
       s.sideQuest = { giver: id, target: gt.id, night: s.nightNum, done: false, reported: false, gated: true };
@@ -7440,6 +7487,20 @@ function answerFor(s, id, night, q, targetId) {
         s.warnedLoc = { loc: lastActive.huntLoc, until: s.nightNum + 3, by: id };
       }
     }
+  }
+
+  if (q === "apologise") {
+    if ((npc.disp || 0) < 0) {
+      s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+      s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
+      quote = pickFreshIdx(`apology:${id}`, APOLOGY_LINES);
+    } else quote = `"You owe me no apology," they say. "Help me find what is doing this."`;
+  }
+
+  if (q === "help") {
+    s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+    s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
+    quote = HELP_LINES[id] || `They find you a small necessary task. You finish it before asking anything more.`;
   }
 
   if (q === "howare") {
@@ -7509,7 +7570,7 @@ function answerFor(s, id, night, q, targetId) {
       quote = `"No." Pleasant, and final. "The village wants a name, and I have given it one. Would you rather it went on looking?" The reasoning is sound. That is the part that stays with you afterward: how sound it is, and how little saying it seems to cost them.`;
     } else if (npc.turned) {
       quote = `"The rope is decided," they say, in the flat cadence of a lesson being repeated. "Let it be ${mt ? mt.name : "anyone"}. Let it be anyone at all." The second sentence is the honest one.`;
-    } else if (chance(Math.min(0.85, 0.35 + 0.2 * Math.max(0, npc.disp || 0)))) {
+    } else if (chance(standing.hostileMajority ? 0.08 : Math.min(0.85, 0.35 + 0.2 * Math.max(0, npc.disp || 0)))) {
       s.mob = null;
       if (mt) s.npcs = s.npcs.map((x) => (x.id === mt.id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
       quote = `They listen. To you, they actually listen; you watch the rage bank down like a fire being damped for the night. "If it were anyone else asking…" The coil of rope goes into the corner. "One more dawn, then. Find it. Because if I'm wrong about ${mt ? mt.name : "them"}, I want it to be your doing I stopped, and not my own weakness."`;
@@ -7540,14 +7601,18 @@ function answerFor(s, id, night, q, targetId) {
 
   if (q === "gossip") {
     const turnedNow = npc.turned && tn !== null;
-    const misdirect = (isMonster || turnedNow) && chance(0.6);
-    if (misdirect) {
+    const villageShutOut = standing.hostileMajority && !isMonster && !turnedNow && (npc.disp || 0) < 1;
+    if (villageShutOut) {
+      quote = `"You want the village's talk? They stopped having it in front of you. Earn a place at a table again."`;
+    } else {
+      const misdirect = (isMonster || turnedNow) && chance(0.6);
+      if (misdirect) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
       if (t) {
         mentions.push({ id: t.id, kind: "gossip" });
         quote = `"Only that folk are whispering about ${t.name}. ${pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name).slice(1)}`;
       } else quote = `"Nothing worth repeating. This village gossips about everything and knows nothing true."`;
-    } else {
+      } else {
       /* a secret the player let slip is, for a few days, the single juiciest
          thing this village has to talk about - takes priority over grudges
          and event tittle-tattle while it's still fresh. */
@@ -7597,8 +7662,9 @@ function answerFor(s, id, night, q, targetId) {
           quote = pickFreshIdx("gossipRumor", RUMOR_STRANGE)(t.name);
         } else quote = `"Nothing worth repeating today."`;
       }
+      }
     }
-    if (id === GOSSIP_LOVER_ID) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+    if (!villageShutOut && id === GOSSIP_LOVER_ID) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
   }
 
   if (q === "share" && targetId) {
@@ -7729,6 +7795,8 @@ const Q_LABELS = {
   share: "Share what you know about someone",
   report: "Tell them what you saw",
   talk: "Sit a while. Talk of nothing.",
+  apologise: "Apologise for how you treated them.",
+  help: "Ask what work needs doing.",
   howare: "How are you holding up?",
   past: "Tell me about before.",
   mobcalm: "Talk them out of the rope",
@@ -9550,6 +9618,7 @@ function PersonReadings({ s, n, mood, only }) {
 
 function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpen, askQ, askFollowUp, showNote, endInterview, beginInterview, openNotes, free }) {
   const n = npcById(s, iv.id);
+  const standing = villageStanding(s);
   const contextQuestions = contextualQuestionsFor(s, iv.id);
   /* Every night this neighbour was in the village for is fair to ask about,
      not merely the last three: on Day 7 the interesting night is often Night
@@ -9561,6 +9630,8 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const suspectUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:suspect:`);
   const gossipUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:gossip`);
   const talkUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:talk`);
+  const apologyUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:apologise`);
+  const helpUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:help`);
   const howareUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:howare:`);
   const pastUsed = (s.askedLog[iv.id] || []).includes("past");
   const turnedQuestionUsed = (q) => (s.askedLog[iv.id] || []).includes(`${s.dayNum}:${q}`);
@@ -9693,6 +9764,11 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               <div style={{ marginTop: 12 }}>
                 <PersonReadings s={s} n={n} mood={mood} />
               </div>
+              {standing.hostileMajority && (
+                <div style={{ marginTop: 10, padding: "8px 10px", borderLeft: `3px solid ${C.red}`, background: "rgba(158,48,57,0.08)", color: C.ink, fontSize: 13.5, lineHeight: 1.4 }}>
+                  Most of the village distrusts you. Neighbours may answer once, then shut you out. Apologies and useful work can rebuild trust.
+                </div>
+              )}
             </>
           )}
         </div>
@@ -9864,6 +9940,8 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               {subHead("THE PERSON")}
               <div className="grid grid-cols-1 gap-2">
                 <Btn small disabled={talkUsed} onClick={() => askQ("talk")}>Sit a while. Talk of nothing.</Btn>
+                {n.disp < 0 && <Btn small disabled={apologyUsed} onClick={() => askQ("apologise")}>Apologise. Ask to start again.</Btn>}
+                {n.disp < 2 && <Btn small disabled={helpUsed} onClick={() => askQ("help")}>Ask what work needs doing.</Btn>}
                 <Btn small disabled={howareUsed} onClick={() => askQ("howare")}>How are you holding up?</Btn>
                 <Btn small disabled={pastUsed} onClick={() => askQ("past")}>Tell me about before.</Btn>
               </div>
@@ -14513,6 +14591,8 @@ function MonsterVillage() {
       if (nightConsequence.kind === "rescued") opener.push(`They do not make you ask about the ${nightConsequence.location}. "I heard you call. I took the road because it was your voice. I am here because you did not stay quiet."`);
       else if (nightConsequence.kind === "attempted_rescue") opener.push(`They look at you for a long moment. "You tried to reach me in the ${nightConsequence.location}. Trying is not nothing. It is not the same as getting there."`);
       else if (nightConsequence.kind === "abandoned") opener.push(`They leave you standing. "I saw you choose. Do not tell me about fear; I was there too. You had a road home. You took it."`);
+      else if (nightConsequence.kind === "intrusion") opener.push(`They stop you at the door. "I saw you disturb what was left at the ${nightConsequence.location}. Some things are private."`);
+      else if (nightConsequence.kind === "restraint") opener.push(`They let you in at once. "I saw you leave that offering alone at the ${nightConsequence.location}. Thank you."`);
       s2.relationshipEvents = (s2.relationshipEvents || []).map((rel) => rel.eventId === nightConsequence.eventId ? { ...rel, acknowledged: true } : rel);
     }
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
@@ -15750,6 +15830,13 @@ function MonsterVillage() {
             );
           })}
         </div>
+
+        {villageStanding(s).hostileMajority && (
+          <div style={{ marginTop: 12, padding: "9px 11px", border: `1px solid ${C.red}`, borderLeftWidth: 4, background: "rgba(158,48,57,0.08)", color: C.ink }}>
+            <span className="mv-display" style={{ display: "block", color: C.red, fontSize: 10.5, letterSpacing: 2.2 }}>THE VILLAGE HAS TURNED AGAINST YOU</span>
+            <span style={{ display: "block", marginTop: 3, fontSize: 13.5, lineHeight: 1.4 }}>Most neighbours will give little away. Sit with them, apologise, or offer help to rebuild trust.</span>
+          </div>
+        )}
 
         <div className="mt-3">
           {/* the errands, under a ruled heading that carries the day's hours */}
