@@ -2879,22 +2879,22 @@ const SUSPECT_REASONS = [
 ];
 
 const FOLK_HINTS = [
-  { m: ["vampire", "ghoul", "revenant"], t: `"Old grave-earth turning up fresh where nobody's been burying - that is a thing that sleeps in ground it has no right to, or eats there, or crawled up out of it. The churchyard kinds. Look to them."` },
-  { m: ["witch", "banshee"], t: `"If the dead have no wound on them, look to what kills from a distance. Grief, or a hex. Nothing with teeth."` },
-  { m: ["werewolf", "banshee"], t: `"My grandmother said the ritual-bound ones cannot help their nights. Count the gaps between the dead and you have half your answer."` },
-  { m: ["ghoul", "wraith"], t: `"Some things hunger every single night. If the bell tolls daily, strike out everything patient."` },
-  { m: ["vampire", "demon"], t: `"The worst ones don't leave bodies. They leave neighbours. Watch for the living who have gone quiet inside."` },
-  { m: ["shifter"], t: `"A face-thief kills the pattern along with the person. If nothing about the nights makes sense, that is itself the answer."` },
-  { m: ["lich", "vampire", "doppel"], t: `"Not everything that leaves neighbours leaves them living. Some things empty a house slowly: the touched go grey and cold and are gone in a night or three, no wound on them at all. Others leave a neighbour that walks and lies for years. Mind hard which one has come to Hollow's Edge."` },
-  { m: ["shifter"], t: `"A face-thief leaves claw marks like the moon-cursed does, but no honest track to go with them. Whatever it becomes to kill, it never quite touches the ground like a beast should."` },
-  { m: ["revenant", "ghoul"], t: `"Grave dirt where no one's been burying can mean hunger or homecoming. The hungry one bites what it takes. The one that came home leaves its dead cold as the stone it slept under."` },
-  { m: ["hag", "banshee", "succubus"], t: `"Three things cry in the night, girl, and you'd best learn which is which. The grieving one wails the night BEFORE it takes you. The hag wails while she rides. And if what you hear is nearer a song, and you catch your own hand on your own bolt, wedge the door and stop your ears."` },
-  { m: ["necromancer", "revenant", "ghoul"], t: `"Old earth thrown up fresh is three different stories. The hungry one digs DOWN, for meat. The homesick one digs up, once, and walks. And if the ground is opening in twos and threes, from below, then somebody is calling them up, and you should be counting your buried."` },
-  { m: ["mimic"], t: `"My grandmother knew a village where the signs never matched twice: claw one night, frost the next, hexes on a third. They hunted six different devils and hanged four neighbours. It was one thing. It wears murders the way you'd wear coats."` },
-  { m: ["succubus", "vampire", "necromancer"], t: `"When the dead are found away from their own beds and the door shows no forcing, stop asking what got IN. Ask what they got up and opened the door FOR."` },
+  { m: ["vampire", "ghoul", "revenant"], t: `“Fresh grave-earth means something sleeps there, feeds there, or climbed out. Look among the churchyard kinds.”` },
+  { m: ["witch", "banshee"], t: `“No wound means no teeth. Suspect grief, a hex, or anything that kills from a distance.”` },
+  { m: ["werewolf", "banshee"], t: `“Ritual-bound creatures cannot choose their nights. Count the quiet gaps between deaths.”` },
+  { m: ["ghoul", "wraith"], t: `“Some things feed every night. If deaths come daily, rule out anything patient.”` },
+  { m: ["vampire", "demon"], t: `“The worst leave neighbours breathing but changed. Watch the living who have gone cold inside.”` },
+  { m: ["shifter"], t: `“A face-thief ruins every pattern. If the signs never agree, that may be the answer.”` },
+  { m: ["lich", "vampire", "doppel"], t: `“Some victims fade and die within days. Others walk for years, changed. Learn which is happening here.”` },
+  { m: ["shifter"], t: `“Face-thieves can leave claws without animal tracks. Check whether the prints belong to the wounds.”` },
+  { m: ["revenant", "ghoul"], t: `“Grave dirt can mean hunger or homecoming. Bites suggest hunger. A corpse-cold victim suggests something returned.”` },
+  { m: ["hag", "banshee", "succubus"], t: `“A banshee warns before death. A hag cries during it. If the sound draws you to the bolt, resist.”` },
+  { m: ["necromancer", "revenant", "ghoul"], t: `“A hungry thing digs down. A revenant climbs up once. Several opening graves mean somebody is calling the dead.”` },
+  { m: ["mimic"], t: `“Claws, frost, then hexes may be one mimic changing its method. Do not assume several monsters.”` },
+  { m: ["succubus", "vampire", "necromancer"], t: `“If the door was intact, ask what the victim willingly opened it for.”` },
 ];
 
-const COLLECTOR_HINT = { m: ["vampire", "doppel"], t: `"The collecting kinds kill once, girl, the first night, to open the account. If the dying stops after one body, stop watching for bodies. Start counting the living."` };
+const COLLECTOR_HINT = { m: ["vampire", "doppel"], t: `“Collectors kill once, then keep victims walking. If the bodies stop, start counting who has changed.”` };
 
 const FLED_OPENERS = [
   (nm) => `They cannot keep still. "${nm}. I broke bread with ${nm}. I let it hold my child at the christening. Do not ask me to be calm."`,
@@ -6783,7 +6783,7 @@ function reportFavour(s, id) {
         quote = s.sideQuest.gated ? `"${summary}" A slow nod, mostly to themselves. "So your word is worth something after all. Fair is fair, then. Ask me what you came to ask."` : `"${summary}"`;
         s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + (useful ? 2 : 1)) } : x));
         const recip = craftAnswer(s, id);
-        if (recip.quote) quote += ` They study you a long moment, then offer something back for the favour: ${recip.quote}`;
+        if (recip.quote) quote += `\n\nIn return: ${recip.quote}`;
         if (recip.foundSign) foundSign = recip.foundSign || foundSign;
         if (recip.clue) clue = recip.clue;
         recip.mentions.forEach((mm) => mentions.push(mm));

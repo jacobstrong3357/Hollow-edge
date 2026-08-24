@@ -1762,6 +1762,16 @@ function take(state, wanted) {
     assert(words <= 25, "changed-neighbour gossip stays concise and conversational: " + text);
     assert(/Liesel/.test(text), "changed-neighbour gossip names its subject as reported testimony");
   });
+  var favourLoreSource = html.slice(html.indexOf("const FOLK_HINTS"), html.indexOf("const FLED_OPENERS"));
+  var favourLoreContext = {};
+  vm.createContext(favourLoreContext);
+  vm.runInContext(favourLoreSource + "; this.favourLore = FOLK_HINTS.concat([COLLECTOR_HINT]);", favourLoreContext);
+  favourLoreContext.favourLore.forEach(function (hint) {
+    var words = (hint.t.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words <= 25, "a favour lore reward stays within 25 words: " + hint.t);
+  });
+  assert(!html.includes("They study you a long moment, then offer something back for the favour"), "a favour report does not bury its reward under transition narration");
+  assert(html.includes("In return: ${recip.quote}"), "a favour report separates the observation and reward into clear beats");
   assert(html.includes('followLocation: revealChoice.location || director.player.location'), "a Director death recap receives the lived encounter location");
   assert(html.includes('const fDest = mods.followLocation || outMap[fw.id] || plan.loc;'), "a planned villager destination cannot overwrite the player's death location");
   assert(!html.includes('crosses the ${where} before you can rise'), "death prose does not describe crossing an entire named location to reach the player");
