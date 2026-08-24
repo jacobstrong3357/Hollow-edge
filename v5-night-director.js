@@ -742,6 +742,9 @@
       roll: keyedNumber(seed, "threshold:appears"),
       visitorRoll: keyedNumber(seed, "threshold:visitor"),
       dialogueRoll: keyedNumber(seed, "threshold:dialogue"),
+      purposeRoll: keyedNumber(seed, "threshold:purpose"),
+      targetRoll: keyedNumber(seed, "threshold:target"),
+      requestRoll: keyedNumber(seed, "threshold:request"),
       resolved: false
     }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]));
     state.discoverySchedule = makeDiscoverySchedule(seed, state, config, rng);
@@ -1313,14 +1316,79 @@
 
   function prepareThresholdVisitor(state, neighbour) {
     var threshold = state.thresholdEvent;
-    if (threshold.visitorKind && (threshold.actorId || threshold.visitorKind === "monster")) return threshold;
-    var monsterAvailable = !!(state.player.monsterSawYou && state.monsterSchedule);
-    var chooseMonster = monsterAvailable && (!neighbour || threshold.visitorRoll < 0.64);
-    threshold.visitorKind = chooseMonster ? "monster" : "neighbour";
-    threshold.actorId = chooseMonster ? state.monsterSchedule.hostId : neighbour && neighbour.id;
+    var monsterAvailable = !!(state.monsterSchedule && state.monsterSchedule.active);
+    var chooseMonster = threshold.visitorKind === "monster" || (!threshold.visitorKind && monsterAvailable && (!neighbour || threshold.visitorRoll < (state.player.monsterSawYou ? 0.68 : 0.42)));
+    threshold.visitorKind = threshold.visitorKind || (chooseMonster ? "monster" : "neighbour");
+    threshold.actorId = threshold.actorId || (chooseMonster ? state.monsterSchedule.hostId : neighbour && neighbour.id);
     threshold.canEnter = chooseMonster && state.monsterSchedule.reach === "home";
-    threshold.item = THRESHOLD_ITEMS[Math.floor(threshold.dialogueRoll * THRESHOLD_ITEMS.length) % THRESHOLD_ITEMS.length];
+    threshold.item = threshold.item || THRESHOLD_ITEMS[Math.floor(threshold.dialogueRoll * THRESHOLD_ITEMS.length) % THRESHOLD_ITEMS.length];
+    if (chooseMonster) {
+      threshold.purpose = "lure";
+      threshold.requestMode = state.monsterSchedule.id === "vampire" ? "inside" : "outside";
+    } else {
+      var purposes = ["return_item", "concern", "question", "sign", "rumour", "refuge"];
+      threshold.purpose = threshold.purpose || purposes[Math.floor(threshold.purposeRoll * purposes.length) % purposes.length];
+      threshold.requestMode = threshold.purpose === "refuge" ? "inside" : "outside";
+      var possibleTargets = (state.cast || []).filter(function (candidate) {
+        return candidate.alive && !candidate.changed && candidate.id !== threshold.actorId;
+      });
+      var host = thresholdActor(state, state.monsterSchedule && state.monsterSchedule.hostId);
+      if (possibleTargets.length) {
+        threshold.concernId = threshold.concernId || ((host && host.id !== threshold.actorId && threshold.targetRoll < 0.28)
+          ? host.id
+          : possibleTargets[Math.floor(threshold.targetRoll * possibleTargets.length) % possibleTargets.length].id);
+      }
+      var realSigns = (state.monsterSchedule.signs || []).filter(function (sign) { return sign !== "wail"; });
+      threshold.sign = threshold.sign || (realSigns.length ? realSigns[Math.floor(threshold.targetRoll * realSigns.length) % realSigns.length] : null);
+      threshold.clueLocation = threshold.clueLocation || state.monsterSchedule.huntLoc || (state.openingIntent && state.openingIntent.loc) || "Village Square";
+    }
     return threshold;
+  }
+
+  function thresholdTarget(state) {
+    return thresholdActor(state, state.thresholdEvent && state.thresholdEvent.concernId);
+  }
+
+  function thresholdRequestText(state, revealed) {
+    var threshold = state.thresholdEvent;
+    var actor = thresholdActor(state, threshold.actorId);
+    var target = thresholdTarget(state);
+    var name = revealed && actor ? actor.name : "A neighbour";
+    var place = threshold.clueLocation || "Village Square";
+    function choose(lines) {
+      return lines[Math.floor(threshold.requestRoll * lines.length) % lines.length];
+    }
+    if (threshold.visitorKind === "monster") {
+      if (state.monsterSchedule.id === "vampire") {
+        return (revealed ? name : "A familiar voice") + " says, " + choose([
+          "‘Please. May I come in? I am frightened.’",
+          "‘It is me. Invite me in before it comes back.’",
+          "‘Open the door. Say I may enter.’"
+        ]);
+      }
+      var mode = state.monsterSchedule.voice && state.monsterSchedule.voice.mode;
+      if (mode === "beast") return choose([
+        "A neighbour's voice says, ‘Come outside. Someone is hurt.’ A growl catches beneath the last word.",
+        "A neighbour calls, ‘Quickly. Help me lift them.’ Something sniffs along the sill.",
+        "A frightened voice says, ‘I cannot carry them alone.’ Claws scrape once against the step."
+      ]);
+      if (mode === "speaker") return choose([
+        "A familiar voice says, ‘Come outside. I found something for you.’ A small laugh follows.",
+        "A neighbour calls, ‘Come see what followed you home.’ They giggle, then catch themself.",
+        "A soft voice says, ‘Just one step outside.’ It sounds amused by the request."
+      ]);
+      return choose([
+        "A familiar voice says, ‘Come outside. I need your help.’",
+        "A neighbour whispers, ‘Bring your lantern. Do not make me wait here.’",
+        "Someone you know says, ‘There is something in the lane you must see.’"
+      ]);
+    }
+    if (threshold.purpose === "return_item") return name + " says, " + choose(["‘I found something of yours. Come outside and take it.’", "‘You dropped this tonight. Open the door and I will return it.’"]);
+    if (threshold.purpose === "concern") return name + " says, ‘" + (target ? target.name : "Someone") + choose([" has not come home. Please help me look.’", " is missing. Will you come and help?’"]);
+    if (threshold.purpose === "question") return name + " says, " + choose(["‘Were you near the " + place + " tonight? I need to ask you something.’", "‘What did you see at the " + place + "? Come outside and tell me.’"]);
+    if (threshold.purpose === "sign") return name + " says, " + choose(["‘I found something at the " + place + ". Bring your lantern outside.’", "‘There is a mark at the " + place + ". You need to see it.’"]);
+    if (threshold.purpose === "rumour") return name + " says, ‘I saw " + (target ? target.name : "someone") + choose([" near the " + place + ". Come outside. Keep quiet.’", " leaving the " + place + ". I do not want the street to hear.’"]);
+    return name + " says, " + choose(["‘Please let me in. Something followed me.’", "‘May I come in? I heard steps behind me.’", "‘Open the door. I do not want to stand out here alone.’"]);
   }
 
   function thresholdNeighbourAnswer(state, neighbour) {
@@ -1330,6 +1398,7 @@
     var intent = state.openingIntent || {};
     var watched = intent.kind === "watch" ? thresholdActor(state, intent.id) : null;
     var lines;
+    if (threshold.purpose && threshold.purpose !== "return_item") return thresholdRequestText(state, true);
     if (watched && neighbour && watched.id === neighbour.id) {
       lines = [
         "“You left " + item + " outside my door,” " + name + " says. “You were watching me.”",
@@ -1373,8 +1442,13 @@
       : state.weather === "fog" ? "Fog parts enough to show " + name + " on the step. "
         : state.weather === "frost" ? name + "'s breath hangs white above the step. " : "";
     if (threshold.visitorKind === "neighbour") {
-      return weatherLead + (weatherLead ? "They hold " : name + " stands there holding ") + (threshold.item || "your glove") + ". They came alone.";
+      var neighbourDetail = threshold.purpose === "return_item" ? "They hold " + (threshold.item || "your glove") + "."
+        : threshold.purpose === "sign" ? "They carry a covered lantern and keep pointing down the lane."
+          : threshold.purpose === "refuge" ? "They keep looking over one shoulder."
+            : "They are alone.";
+      return weatherLead + neighbourDetail + " " + thresholdRequestText(state, true);
     }
+    if (state.monsterSchedule.id === "vampire") return weatherLead + name + " waits beyond the lintel. No breath clouds the air. It asks again to be invited in.";
     if (threshold.canEnter) return weatherLead + (weatherLead ? "Their" : name + " stands on the step. Their") + " shadow already lies inside your hall. The monster followed you home.";
     return weatherLead + (weatherLead ? "Their" : name + " stands on the step. Their") + " face is still, but claws rest against the shutter. The monster followed you home.";
   }
@@ -1383,7 +1457,7 @@
     var threshold = state.thresholdEvent;
     var neighbour = threshold && thresholdNeighbour(state);
     var preselected = threshold && !!threshold.visitorKind;
-    var monsterVisit = state.player.monsterSawYou && threshold && threshold.roll < 0.48;
+    var monsterVisit = state.monsterSchedule && state.monsterSchedule.active && threshold && threshold.roll < (state.player.monsterSawYou ? 0.62 : 0.28);
     var neighbourVisit = neighbour && threshold && threshold.roll < 0.16;
     var eligible = state.player.alive && threshold && !threshold.resolved && (preselected ? threshold.roll < 0.48 : monsterVisit || neighbourVisit);
     if (!eligible) return completeNight(state);
@@ -1391,9 +1465,10 @@
     state.phase = "threshold";
     state.player.location = HOME;
     appendTruth(state, { id: "threshold-arrival:" + state.cursor, slot: state.cursor, kind: "threshold_arrival", location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null });
-    var thresholdOpening = state.weather === "storm" ? "Rain rattles the door and thunder rolls away over the houses. " + threshold.text
-      : state.weather === "fog" ? "Fog has reached the step and pressed its wet breath against every crack. " + threshold.text
-        : state.weather === "frost" ? "The cold has tightened the door in its frame. " + threshold.text : threshold.text;
+    var thresholdOpening = state.weather === "storm" ? "Rain rattles the door. "
+      : state.weather === "fog" ? "Fog presses against every crack. "
+        : state.weather === "frost" ? "Cold grips the door in its frame. " : "";
+    thresholdOpening += thresholdRequestText(state, false);
     var shown = appendBeat(state, makeBeat("threshold:" + state.cursor + ":" + threshold.kind, "doorstep", state.cursor, HOME, thresholdOpening, {
       signature: semanticSignature({ family: "threshold", location: HOME, interaction: threshold.kind, outcome: "unanswered" })
     }));
@@ -1495,11 +1570,17 @@
         roll: keyedNumber(state.seed, "threshold:appears"),
         visitorRoll: keyedNumber(state.seed, "threshold:visitor"),
         dialogueRoll: keyedNumber(state.seed, "threshold:dialogue"),
+        purposeRoll: keyedNumber(state.seed, "threshold:purpose"),
+        targetRoll: keyedNumber(state.seed, "threshold:target"),
+        requestRoll: keyedNumber(state.seed, "threshold:request"),
         resolved: false
       }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(state.seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]));
     }
     if (state.thresholdEvent.visitorRoll == null) state.thresholdEvent.visitorRoll = keyedNumber(state.seed, "threshold:visitor");
     if (state.thresholdEvent.dialogueRoll == null) state.thresholdEvent.dialogueRoll = keyedNumber(state.seed, "threshold:dialogue");
+    if (state.thresholdEvent.purposeRoll == null) state.thresholdEvent.purposeRoll = keyedNumber(state.seed, "threshold:purpose");
+    if (state.thresholdEvent.targetRoll == null) state.thresholdEvent.targetRoll = keyedNumber(state.seed, "threshold:target");
+    if (state.thresholdEvent.requestRoll == null) state.thresholdEvent.requestRoll = keyedNumber(state.seed, "threshold:request");
     state.version = VERSION;
     return state;
   }
@@ -1631,42 +1712,81 @@
       appendObservation(state, { eventId: "threshold-look:" + state.cursor, beatId: lookBeat && lookBeat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: threshold.actorId ? [threshold.actorId] : [], clarity: "clear", reliability: "direct", text: lookText });
       return state;
     }
+    if (action.type === "ANSWER_DOOR") {
+      if (threshold.spoken) return invalid(state, action, "The visitor is waiting for your decision.");
+      var spokenText = threshold.visitorKind === "neighbour"
+        ? thresholdNeighbourAnswer(state, actor)
+        : thresholdRequestText(state, !!threshold.looked);
+      threshold.spoken = true;
+      threshold.answer = spokenText;
+      appendTruth(state, { id: "threshold-spoken:" + state.cursor, slot: state.cursor, kind: "threshold_spoken", action: action.type, location: HOME, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, purpose: threshold.purpose, requestMode: threshold.requestMode, looked: !!threshold.looked, text: spokenText });
+      if (threshold.visitorKind === "neighbour" && threshold.purpose === "return_item" && actor) {
+        appendTruth(state, { id: "threshold-confrontation:" + state.cursor + ":" + actor.id, slot: state.cursor, kind: "threshold_confrontation", location: HOME, actorId: actor.id, actors: ["player", actor.id], acknowledged: true });
+        state.ledgers.memories[actor.id] = state.ledgers.memories[actor.id] || [];
+        state.ledgers.memories[actor.id].push({ eventId: "threshold-confrontation:" + state.cursor + ":" + actor.id, slot: state.cursor, subject: "player", kind: "threshold_confrontation", location: HOME, clarity: "clear", acknowledged: true, interpretation: "They confronted the player about what was left behind during the night's watch." });
+      }
+      var spokenBeat = appendBeat(state, makeBeat("threshold-spoken-beat:" + state.cursor, threshold.visitorKind === "monster" ? "threat" : "doorstep", state.cursor, HOME, spokenText, {
+        actorId: threshold.looked || threshold.visitorKind === "neighbour" ? threshold.actorId || null : null,
+        signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: "answer", outcome: threshold.requestMode }),
+        meta: { thresholdAnswer: true, visitorKind: threshold.visitorKind, requestMode: threshold.requestMode, critical: true }
+      }));
+      appendObservation(state, { eventId: "threshold-spoken:" + state.cursor, beatId: spokenBeat && spokenBeat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: threshold.visitorKind === "neighbour" && threshold.actorId ? [threshold.actorId] : [], clarity: threshold.looked || threshold.visitorKind === "neighbour" ? "clear" : "heard", reliability: "sensory", text: spokenText });
+      return state;
+    }
     var text;
     var killed = false;
     if (action.type === "KEEP_BARRED") {
-      text = threshold.visitorKind === "neighbour"
-        ? "You keep silent. The visitor waits, then leaves. At dawn, " + (threshold.item || "your glove") + " rests on the step."
-        : "You keep silent with one hand on the bolt. Whatever waits outside leaves before dawn.";
-    } else if (action.type === "ANSWER_DOOR") {
-      if (threshold.visitorKind === "neighbour") text = thresholdNeighbourAnswer(state, actor);
-      else if (threshold.canEnter) {
-        text = threshold.looked
-          ? "You speak through the door. " + (actor ? actor.name : "The figure") + " smiles on the step. The same smile opens in the dark behind you."
-          : "You answer. " + (actor ? actor.name + "'s" : "The familiar") + " voice comes from the room behind you. The bolt never moved.";
-        killed = true;
+      if (threshold.visitorKind === "neighbour") {
+        text = threshold.spoken
+          ? "You refuse. " + (actor ? actor.name : "Your neighbour") + " waits, then leaves before dawn."
+          : "You keep silent. The visitor waits, then leaves before dawn.";
+        if (threshold.purpose === "return_item") text += " " + (threshold.item || "Your glove") + " rests on the step.";
+      } else if (state.monsterSchedule.id === "vampire") {
+        text = "You give no invitation. The voice asks once more, then stops. At dawn, the step is empty.";
       } else {
-        text = threshold.looked
-          ? "You answer through the door. Claws test the shutter once, but cannot cross the bolt. The monster leaves."
-          : "You answer. A laugh sounds outside. Claws drag across the shutter, but the bolt holds.";
+        text = "You keep one hand on the bolt. The voice tries anger, fear and tears. You do not open the door.";
+      }
+    } else if (action.type === "STEP_OUTSIDE" || action.type === "INVITE_IN") {
+      if (threshold.visitorKind === "monster") {
+        killed = !!state.monsterSchedule.active;
+        if (!killed) {
+          text = "You open the door. The familiar face smiles, steps back into the dark and leaves you alive. It did not hunt tonight.";
+        } else if (action.type === "INVITE_IN") {
+          text = "You name " + (actor ? actor.name : "the visitor") + " and give permission. They cross the threshold smiling. No bolt can help you now.";
+        } else {
+          text = "You open the door and step out. The neighbour's face changes before you can call for help. The thing was waiting for this.";
+        }
+      } else if (threshold.purpose === "sign" && threshold.sign) {
+        text = (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " You stamp the mark into your Journal.";
+        if (!state.found.stamps.some(function (stamp) { return stamp.sign === threshold.sign; })) {
+          state.found.stamps.push({ sign: threshold.sign, slot: state.cursor, location: threshold.clueLocation, beatId: "threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), source: "threshold_neighbour" });
+        }
+      } else if (threshold.purpose === "concern") {
+        text = "You step outside. " + (actor ? actor.name : "Your neighbour") + " says " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " missed an expected return from the " + threshold.clueLocation + ". It may be fear, or it may be useful.";
+        state.found.clues.push({ id: "threshold-concern:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
+      } else if (threshold.purpose === "rumour") {
+        text = (actor ? actor.name : "Your neighbour") + " saw " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " near the " + threshold.clueLocation + " after dark. They cannot say why. You write down the lead, not a conclusion.";
+        state.found.clues.push({ id: "threshold-rumour:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
+      } else if (threshold.purpose === "refuge") {
+        text = "You let " + (actor ? actor.name : "your neighbour") + " inside. They heard footsteps behind them, but saw no face. You bar the door together until dawn.";
+        state.found.clues.push({ id: "threshold-refuge:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
+      } else if (threshold.purpose === "question") {
+        text = "You step outside. " + (actor ? actor.name : "Your neighbour") + " asks what you saw near the " + threshold.clueLocation + ". They listen, thank you, and leave.";
+      } else {
+        text = "You step outside. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + " and leaves you with an uncomfortable question about the night's watch.";
       }
     } else return invalid(state, action, "The door remains between you and it.");
     threshold.resolved = true;
     threshold.choice = action.type;
-    threshold.answer = action.type === "ANSWER_DOOR" ? text : threshold.answer;
     appendTruth(state, { id: "threshold-choice:" + state.cursor, slot: state.cursor, kind: "threshold_choice", action: action.type, location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, looked: !!threshold.looked, killed: killed, text: text });
-    if (threshold.visitorKind === "neighbour" && action.type === "ANSWER_DOOR" && actor) {
-      appendTruth(state, { id: "threshold-confrontation:" + state.cursor + ":" + actor.id, slot: state.cursor, kind: "threshold_confrontation", location: HOME, actorId: actor.id, actors: ["player", actor.id], acknowledged: true });
-      state.ledgers.memories[actor.id] = state.ledgers.memories[actor.id] || [];
-      state.ledgers.memories[actor.id].push({ eventId: "threshold-confrontation:" + state.cursor + ":" + actor.id, slot: state.cursor, subject: "player", kind: "threshold_confrontation", location: HOME, clarity: "clear", acknowledged: true, interpretation: "They returned something the player dropped and confronted them about the night's surveillance." });
-    }
-    var beatType = killed ? "flee" : threshold.visitorKind === "monster" && action.type === "ANSWER_DOOR" ? "threat" : "doorstep";
+    var beatType = killed ? "flee" : "doorstep";
     var beat = appendBeat(state, makeBeat("threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), beatType, state.cursor, HOME, text, {
       actorId: action.type === "KEEP_BARRED" ? null : threshold.actorId || null,
       outcome: killed ? "caught" : "safe",
       signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: threshold.kind, outcome: action.type.toLowerCase() }),
-      meta: { thresholdAnswer: action.type === "ANSWER_DOOR", visitorKind: threshold.visitorKind, killed: killed, critical: true }
+      meta: { thresholdDecision: true, visitorKind: threshold.visitorKind, killed: killed, critical: true }
     }));
-    appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: action.type !== "KEEP_BARRED" && threshold.actorId ? [threshold.actorId] : [], clarity: action.type === "KEEP_BARRED" ? "partial" : threshold.looked || threshold.visitorKind === "neighbour" ? "clear" : "heard", reliability: "sensory", text: text });
+    appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: action.type !== "KEEP_BARRED" && threshold.actorId ? [threshold.actorId] : [], clarity: action.type === "KEEP_BARRED" ? "partial" : "clear", reliability: "sensory", text: text });
     if (killed) {
       state.player.alive = false;
       state.phase = "dead";
@@ -2018,13 +2138,19 @@
       return chaseActions;
     }
     if (state.phase === "threshold") {
-      var thresholdActions = [action("KEEP_BARRED", "Keep the shutter closed", "quiet")];
+      var thresholdActions = [action("KEEP_BARRED", state.thresholdEvent.spoken ? "Refuse. Keep the door barred" : "Keep silent. Keep the door barred", "quiet")];
       if (!state.thresholdEvent.looked) thresholdActions.push(action("LOOK_THROUGH", "Look through the shutter", "quiet"));
       var thresholdVisitor = thresholdActor(state, state.thresholdEvent.actorId);
-      var answerLabel = !state.thresholdEvent.looked ? "Answer without looking"
-        : state.thresholdEvent.visitorKind === "monster" ? "Answer the monster through the closed door"
-          : "Answer " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " through the closed door";
-      thresholdActions.push(action("ANSWER_DOOR", answerLabel, state.thresholdEvent.looked && state.thresholdEvent.visitorKind === "neighbour" ? "bone" : "danger"));
+      if (!state.thresholdEvent.spoken) {
+        var answerLabel = !state.thresholdEvent.looked ? "Answer without looking"
+          : state.thresholdEvent.visitorKind === "monster" ? "Answer the monster through the closed door"
+            : "Answer " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " through the closed door";
+        thresholdActions.push(action("ANSWER_DOOR", answerLabel, state.thresholdEvent.looked && state.thresholdEvent.visitorKind === "neighbour" ? "bone" : "danger"));
+      } else if (state.thresholdEvent.requestMode === "inside") {
+        thresholdActions.push(action("INVITE_IN", "Unbar the door. Invite " + (thresholdVisitor ? thresholdVisitor.name : "them") + " inside", "danger"));
+      } else {
+        thresholdActions.push(action("STEP_OUTSIDE", "Unbar the door. Step outside", "danger"));
+      }
       return thresholdActions;
     }
     if (state.phase === "returning") return [action("REACH_HOME", "Reach your door and throw the bolt", "amber")];

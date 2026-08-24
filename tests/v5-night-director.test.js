@@ -1023,6 +1023,7 @@ function take(state, wanted) {
   state.thresholdEvent.roll = 0;
   state.thresholdEvent.visitorRoll = 0.9;
   state.thresholdEvent.dialogueRoll = 0;
+  state.thresholdEvent.purpose = "return_item";
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
   assert.strictEqual(state.phase, "returning", "the forest does not turn directly into the player's threshold");
@@ -1034,9 +1035,12 @@ function take(state, wanted) {
   assert.deepStrictEqual(Director.availableActions(state).map(function (a) { return a.type; }), ["KEEP_BARRED", "LOOK_THROUGH", "ANSWER_DOOR"]);
   assert.strictEqual(Director.availableActions(state)[2].label, "Answer without looking");
   state = take(state, { type: "ANSWER_DOOR" });
-  assert.strictEqual(state.phase, "complete");
+  assert.strictEqual(state.phase, "threshold", "speaking through the closed door does not commit the player to opening it");
   assert(state.player.alive, "answering a real neighbour through the closed door is safe");
   assert(/outside my door/.test(state.currentBeat.text) && /watching me/.test(state.currentBeat.text), "the watched neighbour confronts the player about that specific watch");
+  assert.deepStrictEqual(Director.availableActions(state).map(function (a) { return a.type; }), ["KEEP_BARRED", "LOOK_THROUGH", "STEP_OUTSIDE"]);
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert.strictEqual(state.phase, "complete");
   assert.strictEqual(state.found.whispers.length, 0, "a neighbour's threshold conversation is not filed as supernatural evidence");
   assert.strictEqual(state.found.stamps.length, 0);
   assert(state.ledgers.truth.some(function (e) { return e.kind === "threshold_choice"; }));
@@ -1083,32 +1087,41 @@ function take(state, wanted) {
   state.thresholdEvent.actorId = "rosa";
   state.thresholdEvent.item = "your scarf pin";
   state.thresholdEvent.dialogueRoll = 0;
+  state.thresholdEvent.purpose = "return_item";
   state = take(state, { type: "LEAVE", to: "Old Church" });
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
   state = take(state, { type: "ANSWER_DOOR" });
   assert(/scarf pin at the Old Church/.test(state.currentBeat.text) && /searching for/.test(state.currentBeat.text), "the neighbour returns the dropped item and names the place the player searched");
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert.strictEqual(state.phase, "complete");
 })();
 
-(function answeringAnIndoorMonsterCanBeFatal() {
+(function aFalseNeighbourMustLureThePlayerPastTheBolt() {
   var config = baseConfig("indoor-threshold-kill");
   config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
   config.player = { monsterSawYou: true };
   config.monster.hostId = "rosa";
+  config.monster.active = true;
   config.monster.reach = "home";
-  config.currentFacts = { weather: "fog", active: false, outMap: { rosa: "home" } };
+  config.currentFacts = { weather: "fog", active: true, huntLoc: "Village Square", attackSlot: 3, outMap: { rosa: "home" } };
   var state = Director.createNight(config);
   state.thresholdEvent.roll = 0;
   state.thresholdEvent.visitorKind = "monster";
   state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.requestRoll = 0;
   state.thresholdEvent.canEnter = true;
   state = take(state, { type: "LEAVE", to: "Village Square" });
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
   state = take(state, { type: "ANSWER_DOOR" });
-  assert.strictEqual(state.phase, "dead", "answering blindly lets an indoor-reaching monster kill inside the cottage");
+  assert.strictEqual(state.phase, "threshold", "answering through the door is not the same as opening it");
+  assert(state.player.alive);
+  assert(Director.availableActions(state).some(function (action) { return action.type === "STEP_OUTSIDE"; }), "the false neighbour asks the player to cross the safe threshold");
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert.strictEqual(state.phase, "dead", "stepping outside lets the waiting monster attack");
   assert.strictEqual(state.player.alive, false);
-  assert(/room behind you|bolt never moved/i.test(state.currentBeat.text), "the death text makes the indoor breach explicit");
+  assert(/open the door|waiting for this/i.test(state.currentBeat.text), "the death text names the choice that exposed the player");
   assert(state.ledgers.truth.some(function (event) { return event.kind === "player_slain" && event.source === "threshold"; }));
 })();
 
@@ -1117,8 +1130,9 @@ function take(state, wanted) {
   config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
   config.player = { monsterSawYou: true };
   config.monster.hostId = "rosa";
+  config.monster.active = true;
   config.monster.reach = "out";
-  config.currentFacts = { weather: "frost", active: false, outMap: { rosa: "home" } };
+  config.currentFacts = { weather: "frost", active: true, huntLoc: "Village Square", attackSlot: 3, outMap: { rosa: "home" } };
   var state = Director.createNight(config);
   state.thresholdEvent.roll = 0;
   state.thresholdEvent.visitorKind = "monster";
@@ -1128,8 +1142,107 @@ function take(state, wanted) {
   state = take(state, { type: "GO_HOME" });
   state = take(state, { type: "REACH_HOME" });
   state = take(state, { type: "ANSWER_DOOR" });
+  assert.strictEqual(state.phase, "threshold", "the outdoor monster keeps trying after the player answers");
+  state = take(state, { type: "KEEP_BARRED" });
   assert.strictEqual(state.phase, "complete");
-  assert(state.player.alive && /bolt holds/.test(state.currentBeat.text), "an outdoor-only monster can threaten the threshold but not cross it");
+  assert(state.player.alive && /bolt/.test(state.currentBeat.text), "an outdoor-only monster can threaten the threshold but not cross it");
+})();
+
+(function aVampireNeedsAnExplicitInvitation() {
+  var config = baseConfig("vampire-threshold-invitation");
+  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.id = "vampire";
+  config.monster.hostId = "rosa";
+  config.monster.reach = "invite";
+  config.monster.voice = { mode: "speaker" };
+  config.currentFacts = { weather: "frost", active: true, huntLoc: "Village Square", attackSlot: 3, outMap: { rosa: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "monster";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.requestRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert(/May I come in/i.test(state.currentBeat.text), "the vampire asks for the permission it needs");
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(state.player.alive && state.phase === "threshold", "conversation alone is not an invitation");
+  assert(Director.availableActions(state).some(function (action) { return action.type === "INVITE_IN"; }));
+  state = take(state, { type: "INVITE_IN" });
+  assert.strictEqual(state.phase, "dead");
+  assert(/give permission|cross the threshold/i.test(state.currentBeat.text));
+})();
+
+(function aQuietNightDoesNotAddASecretMonsterAttackAtHome() {
+  var config = baseConfig("quiet-threshold-is-not-a-hunt");
+  config.villagers = [
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true },
+    { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true }
+  ];
+  config.player = { monsterSawYou: true };
+  config.monster.hostId = "rosa";
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home", falk: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert.strictEqual(state.phase, "threshold");
+  assert.strictEqual(state.thresholdEvent.visitorKind, "neighbour", "a non-hunt night cannot smuggle in a lethal monster visit");
+})();
+
+(function aRealNeighbourCanBringAStampedSign() {
+  var config = baseConfig("neighbour-threshold-sign");
+  config.villagers = [
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true },
+    { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true }
+  ];
+  config.monster.active = false;
+  config.currentFacts = { weather: "fog", active: false, huntLoc: "Graveyard", outMap: { rosa: "home", falk: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.purpose = "sign";
+  state.thresholdEvent.sign = "bite";
+  state.thresholdEvent.clueLocation = "Graveyard";
+  state.thresholdEvent.requestRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(/found something at the Graveyard/i.test(state.currentBeat.text));
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert(state.player.alive && state.phase === "complete");
+  assert(state.found.stamps.some(function (stamp) { return stamp.sign === "bite" && stamp.source === "threshold_neighbour"; }), "following a real neighbour to physical evidence creates a Journal stamp");
+})();
+
+(function aRealNeighbourCanBringAnUncertainLead() {
+  var config = baseConfig("neighbour-threshold-concern");
+  config.villagers = [
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true },
+    { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true }
+  ];
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, huntLoc: "Old Mill", outMap: { rosa: "home", falk: "home" } };
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.purpose = "concern";
+  state.thresholdEvent.concernId = "falk";
+  state.thresholdEvent.clueLocation = "Old Mill";
+  state.thresholdEvent.requestRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert(/Doctor Falk has not come home/i.test(state.currentBeat.text));
+  state = take(state, { type: "ANSWER_DOOR" });
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert(state.found.clues.some(function (clue) { return /Doctor Falk/.test(clue.text) && /fear, or it may be useful/.test(clue.text); }), "a worried neighbour creates a lead without declaring it true");
 })();
 
 (function goingHomeDoesNotStopTheVillageClock() {

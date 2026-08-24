@@ -508,7 +508,7 @@ const METHOD_KILL_LINES = {
 
 const MONSTERS = [
   { id: "werewolf", name: "Werewolf", signs: ["claw", "bite", "tracks"], rhythm: { kind: "strict", n: 3 }, attack: "kill", reach: "out", method: "silver", hunts: ["Dark Forest", "Old Mill"], lore: "Moon-bound, it hunts every third night and only outdoors. A silver blade ends it." },
-  { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "home", method: "stake", hunts: ["Village Square", "Tavern"], dayHidden: true, lore: "Its first feeding kills; later victims change and hide it. It never hunts twice running, and barred doors cannot stop it. Drive in the stake." },
+  { id: "vampire", name: "Vampire", signs: ["bite", "claw", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "turn", reach: "invite", method: "stake", hunts: ["Village Square", "Tavern"], dayHidden: true, lore: "Its first feeding kills; later victims change and hide it. It never hunts twice running, and it cannot cross a threshold without invitation. Drive in the stake." },
   { id: "wraith", name: "Wraith", signs: ["cold", "tracks", "wail"], rhythm: { kind: "loose", p: 0.75, gap: 0 }, attack: "kill", reach: "outOnly", method: "salt", hunts: ["Old Church", "Graveyard"], dayHidden: true, lore: "It stalks most nights but takes only wanderers; a barred door is enough. Unmake it within a ring of salt." },
   { id: "ghoul", name: "Ghoul", signs: ["tracks", "graves", "bite"], rhythm: { kind: "loose", p: 0.65, gap: 0 }, attack: "kill", reach: "out", method: "fire", hunts: ["Graveyard", "Dark Forest"], lore: "A near-nightly hunger from the graves. It takes whoever it finds outdoors but will not enter a home. Consecrated fire ends it." },
   { id: "witch", name: "Witch", signs: ["flora", "hex", "graves"], rhythm: { kind: "loose", p: 0.5, gap: 1 }, attack: "both", reach: "home", method: "grimoire", hunts: ["Dark Forest", "Old Church"], lore: "It rests between curses, but no door stops them. Some victims die; others return as servants. Burn the grimoire, and the witch burns with it." },
@@ -12948,6 +12948,7 @@ function MonsterVillage() {
       else if (action.type === "HAIL") Snd.cue("bustle");
       else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
       else if (action.type === "ANSWER_DOOR") { if (next.phase === "dead") Snd.danger(); else Snd.cue(next.thresholdEvent && next.thresholdEvent.visitorKind === "neighbour" ? "bustle" : "whisper"); }
+      else if (["STEP_OUTSIDE", "INVITE_IN"].includes(action.type)) { if (next.phase === "dead") Snd.danger(); else Snd.cue(action.type === "INVITE_IN" ? "latch" : "bustle"); }
       else if (action.type === "REACH_HOME") Snd.cue("latch");
     } catch (e) { console.warn("Night sound cue could not play", e); }
   };
@@ -13039,7 +13040,7 @@ function MonsterVillage() {
               {focusedActions.map((a, i) => (
                 <NightChoice key={`${a.type}:${a.to || a.actorId || i}`} quiet={a.tone === "quiet"} danger={a.tone === "danger"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
-                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : a.type === "WATCH_MONSTER" ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : a.type === "ANSWER_DOOR" ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
+                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN", "STEP_OUTSIDE"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : a.type === "WATCH_MONSTER" ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : ["ANSWER_DOOR", "INVITE_IN"].includes(a.type) ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
                     <span>{a.label}</span>
                   </span>
                 </NightChoice>
