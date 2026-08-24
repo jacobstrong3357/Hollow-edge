@@ -2874,7 +2874,7 @@
       return result.slice(0, 3);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.markedStalk) {
-      add(all.find(function (item) { return item.type === "LISTEN"; }), "Turn and face what is following");
+      add(all.find(function (item) { return item.type === "LISTEN"; }), "Turn. Keep the lantern on the footsteps");
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
     }

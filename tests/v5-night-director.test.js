@@ -2324,7 +2324,7 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=10'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=11'), "the local page cache-busts the current Director runtime");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
     HOME_LOC: { rosa: "Village Square" },
@@ -2344,8 +2344,21 @@ function take(state, wanted) {
   assert.strictEqual(markedFacts.outMap.greta, "Old Mill");
   assert(html.includes("markedOutNights: 0") && html.includes("active && f.targetingPlayer ? 0"), "new saves count exposed nights and reset the drought only when the stalk happens");
   assert(html.includes("primeMarkedPlayerHunt(s, sampledFacts, livedIntent, comingNight)"), "the marked-hunt pass runs before every Director night, including a disaster route");
-  assert(!html.includes("It knows your face now. The dark is more dangerous for you than for anyone."), "the vague warning is retired");
-  assert(html.includes("After two nights unchallenged, the next hunt takes your route."), "the replacement warning states the actual mechanic");
+  var dangerWarningSource = html.slice(html.indexOf("function monsterDangerWarning"), html.indexOf("/* After five nights", html.indexOf("function monsterDangerWarning")));
+  var dangerWarningContext = { Number: Number };
+  vm.createContext(dangerWarningContext);
+  vm.runInContext(dangerWarningSource + "; this.monsterDangerWarning = monsterDangerWarning;", dangerWarningContext);
+  var firstWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: true, enraged: false, markedOutNights: 0 });
+  var secondWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: true, enraged: true, markedOutNights: 1 });
+  var guaranteedWarning = dangerWarningContext.monsterDangerWarning({ monsterSawYou: false, enraged: true, markedOutNights: 2 });
+  assert(/may hunt at the place you choose/i.test(firstWarning) && /survive two nights out/i.test(firstWarning), "the first warning explains both the immediate risk and the two-night escalation");
+  assert(/survive one more night out/i.test(secondWarning), "the warning states when only one exposed night remains");
+  assert(/next night it hunts/i.test(guaranteedWarning) && /You will be its target/i.test(guaranteedWarning), "the guaranteed stalk states exactly when and whom the monster will hunt");
+  ["draws its next hunt closer", "two nights unchallenged", "takes your route", "paying that off for a while", "Hunt it too openly"].forEach(function (phrase) {
+    assert(!html.includes(phrase), "retired abstract danger language cannot return: " + phrase);
+  });
+  assert(html.includes("The monster has followed you here.") && html.includes("IT FOLLOWED YOU HERE"), "a live marked stalk says plainly that the monster followed the player");
+  assert(directorSource.includes("Turn. Keep the lantern on the footsteps"), "the marked-stalk response describes the player's immediate action instead of promising a confrontation");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [

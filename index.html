@@ -94,7 +94,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=10"></script>
+<script src="v5-night-director.js?v=11"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -4044,10 +4044,15 @@ function primeMarkedPlayerHunt(s, facts, openingIntent, n) {
 }
 
 function monsterDangerWarning(s) {
-  if (s.enraged && s.monsterSawYou) return "It knows your face, and you have angered it. Each night out draws its next hunt closer. After two nights unchallenged, the next hunt takes your route.";
-  if (s.enraged) return "You have angered it. Each night out draws its next hunt closer. After two nights unchallenged, the next hunt takes your route.";
-  if (s.monsterSawYou) return "It knows your face. Each night out draws its next hunt closer. After two nights unchallenged, the next hunt takes your route.";
-  return null;
+  if (!(s.enraged || s.monsterSawYou)) return null;
+  const opening = s.enraged && s.monsterSawYou
+    ? "It has seen your face. It now treats you as prey."
+    : s.enraged ? "It now treats you as prey."
+      : "It has seen your face and can recognise you in the dark.";
+  const nightsOut = Number.isFinite(s.markedOutNights) ? s.markedOutNights : 0;
+  if (nightsOut >= 2) return `${opening} The next night it hunts, it will come to the place you choose to search or watch. You will be its target.`;
+  if (nightsOut === 1) return `${opening} When you go out, it may hunt at the place you choose. If you survive one more night out, its next hunting night will come to the place you choose.`;
+  return `${opening} When you go out, it may hunt at the place you choose. If you survive two nights out, its next hunting night will come to the place you choose.`;
 }
 
 /* After five nights without learning one, put a still-unknown human secret
@@ -4797,12 +4802,12 @@ function compileDirectorNight(s, facts, openingIntent) {
   if (facts.active) forcedBeats.push({
     id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(1, attackSlot - 1), location: "*",
     text: facts.targetingPlayer
-      ? facts.wx === "storm" ? "Between thunderclaps, a second tread matches yours. It stops when you stop. Something has taken your route."
-        : facts.wx === "fog" ? "A second set of steps keeps pace inside the fog. When you stop, it stops. Something has taken your route."
-          : facts.wx === "frost" ? "A second breath follows yours through the frost. The steps behind you stop when you stop."
-            : "A second tread matches yours. It stops when you stop. Something has taken your route."
+      ? facts.wx === "storm" ? "Between thunderclaps, footsteps match yours. They stop when you stop. The monster has followed you here."
+        : facts.wx === "fog" ? "Footsteps keep pace inside the fog. When you stop, they stop. The monster has followed you here."
+          : facts.wx === "frost" ? "A second breath follows yours through the frost. The steps stop when you stop. The monster has followed you here."
+            : "Footsteps match yours. They stop when you stop. The monster has followed you here."
       : directorWeatherMonsterSound(facts.wx, temperament.sound),
-    meta: { soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, markedStalk: !!facts.targetingPlayer, weather: facts.wx || "still" },
+    meta: { soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, markedStalk: !!facts.targetingPlayer, responseText: facts.targetingPlayer ? "You turn. The footsteps stop beyond the lantern, then begin circling toward the road behind you." : null, weather: facts.wx || "still" },
   });
   else {
     const quietPool = DIRECTOR_TEMPERAMENT_QUIET[temperament.mode] || DIRECTOR_TEMPERAMENT_QUIET.silent;
@@ -5410,8 +5415,8 @@ function resolveNight(prev, planIn, preEvents) {
     s.wasSpared = true;
     shiftMonsterBond(s, 1);
     if (mods.obeyedSpare) shiftMonsterBond(s, 1);
-    s.clues.push(`Night ${n}: hidden in the dark, you were found and let go, addressed in a voice warped past knowing. Whatever it is, it has seen your face now and chose not to use it.`);
-    dawn.push(ev(`Something found you in the dark last night, close enough to end it, and chose not to. It knows your face now, whatever wears it.`, undefined, 2));
+    s.clues.push(`Night ${n}: hidden in the dark, you were found and let go. It saw your face clearly. On later nights out, it may abandon another victim to hunt you instead.`);
+    dawn.push(ev(`Something found you in the dark and let you live. It saw your face clearly. On later nights out, it may come to the place you choose.`, undefined, 2));
   }
 
   /* Decide who the night takes BEFORE the gathering's incidents are drawn, so
@@ -6686,7 +6691,7 @@ function resolveNight(prev, planIn, preEvents) {
       s.clues.push(`Night ${n}: you watched it take ${wname} at the ${plan.loc}. Twenty feet, and not one thing about the shape of it that you could swear to in daylight.`);
       dawn.push(ev(`You were there when it took ${wname}, and you have nothing to give the village but that: that you saw it happen, and that you cannot describe a single thing about what did it.`, wk.id, 2));
     }
-    if (wk.shouted && !wk.saved) dawn.push(ev(`You shouted. It did not save ${wname}, and it did tell the dark exactly where you were lying. You will be paying that off for a while.`, undefined, 1));
+    if (wk.shouted && !wk.saved) dawn.push(ev(`You shouted. It did not save ${wname}, and the monster saw exactly where you were hiding. On later nights out, it may hunt you instead.`, undefined, 1));
   }
 
   /* --- the close pass, and what it cost ---
@@ -12377,7 +12382,7 @@ const EMPTY_META = { games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, fas
    player can read it in one breath instead of being handed a manual. */
 const HOW_TO_PLAY = [
   { h: "THE GOAL", b: "One of your eight neighbours is not what they seem. Learn who it is, and what horror wears their face, then accuse them so the rite can end it." },
-  { h: "THE RHYTHM", b: "Two actions by day: hold an interview, search a place, investigate a fresh death, or have someone examined for the change. By night, bar your door, watch someone's, or walk the dark yourself. Hunt it too openly and it hunts you back." },
+  { h: "THE RHYTHM", b: "Two actions by day: hold an interview, search a place, investigate a fresh death, or have someone examined for the change. By night, bar your door, watch someone's, or walk the dark yourself. If it sees you or you attempt to free a changed villager, later nights outside may make you its target." },
   { h: "WINNING AND LOSING", b: "Name the right person AND the right creature together and it ends. Get either wrong and an innocent may hang, or you might. Let too many nights pass and the village runs out of people." },
   { h: "IF YOU GET STUCK", b: "The Journal, at the bottom of the screen, keeps your signs, your struck-off suspects, and a full Help tab with the fine print." },
 ];
@@ -14272,7 +14277,7 @@ function MonsterVillage() {
         interacted: walk.interacted || {},
       });
       const recognition = d.phase === "threat" && d.pendingThreat && d.pendingThreat.kind === "recognition";
-      const labels = { atmosphere: afflictionScene ? afflictionScene.label : beat && beat.meta && beat.meta.hiddenFigureResolution === "missed" ? "THEY TURN AWAY" : beat && beat.meta && beat.meta.hiddenFigure ? "A FIGURE IN THE LANE" : beat && beat.meta && beat.meta.quietPresence ? "A SOUND CLOSE BY" : beat && beat.meta && beat.meta.quietPresenceResolution ? "IT MOVES ON" : beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: recognition || (beat && beat.meta && beat.meta.recognition) ? "IT STOPS PRETENDING" : "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : beat && beat.meta && (beat.meta.learnedIdentity || beat.meta.learnedBuild || beat.meta.learnedSign) ? "WHAT YOU SAW" : "RUN", doorstep: beat && beat.meta && beat.meta.thresholdAnswer ? "YOUR ANSWER" : beat && beat.meta && beat.meta.thresholdLook ? "THROUGH THE SHUTTER" : beat && beat.meta && beat.meta.thresholdDecision ? "BEFORE DAWN" : "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: beat && beat.meta && beat.meta.hiddenFigureResolution === "identified" ? "WHO IT WAS" : "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "YOU FOLLOW", linger: "YOU STAY A WHILE" };
+      const labels = { atmosphere: afflictionScene ? afflictionScene.label : beat && beat.meta && beat.meta.hiddenFigureResolution === "missed" ? "THEY TURN AWAY" : beat && beat.meta && beat.meta.hiddenFigure ? "A FIGURE IN THE LANE" : beat && beat.meta && beat.meta.markedStalk ? "IT FOLLOWED YOU HERE" : beat && beat.meta && beat.meta.quietPresence ? "A SOUND CLOSE BY" : beat && beat.meta && beat.meta.quietPresenceResolution ? "IT MOVES ON" : beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: recognition || (beat && beat.meta && beat.meta.recognition) ? "IT STOPS PRETENDING" : "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : beat && beat.meta && (beat.meta.learnedIdentity || beat.meta.learnedBuild || beat.meta.learnedSign) ? "WHAT YOU SAW" : "RUN", doorstep: beat && beat.meta && beat.meta.thresholdAnswer ? "YOUR ANSWER" : beat && beat.meta && beat.meta.thresholdLook ? "THROUGH THE SHUTTER" : beat && beat.meta && beat.meta.thresholdDecision ? "BEFORE DAWN" : "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: beat && beat.meta && beat.meta.hiddenFigureResolution === "identified" ? "WHO IT WAS" : "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "YOU FOLLOW", linger: "YOU STAY A WHILE" };
       const nightRatio = d.cursor < 0 ? -1 : d.cursor / Math.max(1, d.slots - 1);
       const slotLabel = nightRatio < 0 ? "BEFORE THE LAST LIGHT" : nightRatio < .28 ? "AFTER THE BELL" : nightRatio < .7 ? "THE SMALL HOURS" : "BEFORE DAWN";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
