@@ -6414,6 +6414,8 @@ function answerFor(s, id, night, q, targetId) {
   const actual = log ? log.outMap[id] : undefined;
   const actualPlace = actual && actual !== "home" ? placeNoun(actual, (log && log.exposureMap && log.exposureMap[id]) || "outdoor") : actual;
   const isMonster = id === s.monster.vid;
+  const monsterFaceKnown = isMonster && s.faceKnown === id;
+  const mutualMonsterRecognition = monsterFaceKnown && s.monsterSawYou;
   const tn = turnNightOf(s, id);
   const lying = (isMonster && log && log.active) || (npc.turned && tn !== null && night >= tn);
   const evn = log ? log.event : null;
@@ -6501,7 +6503,12 @@ function answerFor(s, id, night, q, targetId) {
     if (isMonster) {
       const mc = monsterClaim();
       claim = mc.loc;
-      if (playerWitnessed) {
+      if (playerWitnessed && mutualMonsterRecognition) {
+        claim = playerWitnessed.loc;
+        s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
+        quote = `"You saw what I am at the ${witnessedPlace}. I saw you run. Do not call this an interview."`;
+        witnessedHandled = true;
+      } else if (playerWitnessed && !monsterFaceKnown) {
         claim = playerWitnessed.loc;
         s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
         quote = `"The ${witnessedPlace}. You saw me yourself. Sleep and I have parted ways, that is all."`;
@@ -7216,7 +7223,7 @@ function answerFor(s, id, night, q, targetId) {
   /* -- follow-up chains: at most one free follow-up per answered main
      question, never chained off a follow-up's own answer -- */
   const followUps = [];
-  if (q === "where" && claim && claim !== "home") {
+  if (q === "where" && claim && claim !== "home" && !mutualMonsterRecognition) {
     const fkey = `${night}:sawAt:${claim}`;
     if (!(s.askedLog[id] || []).includes(fkey)) followUps.push({ q: "sawAt", label: `Did you see anyone at the ${claim}?`, targetId: claim });
   } else if (q === "suspect") {

@@ -1145,6 +1145,10 @@ function take(state, wanted) {
   assert(!html.includes('quote += ` “I stayed only long enough to ${event.reason}.”`'), "a witness-list answer cannot append an unrelated errand explanation");
   assert(html.includes('reason: "keep a private appointment before dawn"'), "third-person secret summaries cannot be inserted after an infinitive in interviews");
   assert(html.includes('You saw me passing the ${thread.location} on my way to the ${destination}.'), "the main interview answer still explains a route waypoint separately from the villager's destination");
+  assert(html.includes("const mutualMonsterRecognition = monsterFaceKnown && s.monsterSawYou;"), "daylight distinguishes secret host knowledge from mutual recognition");
+  assert(html.includes("playerWitnessed && mutualMonsterRecognition"), "a monster that saw the player flee answers as an exposed enemy");
+  assert(html.includes("playerWitnessed && !monsterFaceKnown"), "a monster cannot claim the player saw them when the player's host knowledge remains secret");
+  assert(html.includes('claim !== "home" && !mutualMonsterRecognition'), "an exposed monster cannot offer an ordinary witness follow-up");
   assert(html.includes("WEATHER_WALK_CONTINUED") && html.includes("WEATHER_DAWN_CONTINUED"), "consecutive weather has authored second-night openings and dawn consequences");
   assert(html.includes("QUIET_NIGHT_WEATHER") && html.includes('quietNight:${wx || "still"}'), "quiet Director recaps are selected from the sampled weather instead of the generic frost-capable pool");
   assert(html.includes('soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null'), "storm keeps the monster voice cue instead of replacing it with thunder");
