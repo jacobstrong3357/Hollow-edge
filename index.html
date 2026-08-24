@@ -11684,9 +11684,6 @@ function MonsterVillage() {
 
   /* -- the dawn carousel starts over on a new day -- */
   useEffect(() => { setDawnDone(false); }, [s && s.nightNum]);
-  /* -- the give-them-up confirm step resets whenever the profile changes or closes -- */
-  useEffect(() => { setGiveUpConfirm(false); }, [profile]);
-
   /* -- night beats re-hide themselves each time a fresh night arrives -- */
   useEffect(() => { setBeatsRevealed(false); }, [s && s.phase === "night" && s.nightNum]);
   useEffect(() => { setDeathShown(false); }, [s && s.nightNum]);

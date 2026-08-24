@@ -1386,6 +1386,7 @@ function take(state, wanted) {
 
 (function soundCannotBlockTheWalkTransition() {
   var html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert(!/\bsetGiveUpConfirm\s*\(/.test(html), "the retired daylight surrender setter cannot crash the app during its first effect pass");
   var start = html.slice(html.indexOf("const startDirectorNight"), html.indexOf("/* ---------- The night walk", html.indexOf("const startDirectorNight")));
   assert(start.indexOf("setWalk({") < start.indexOf("Snd.scene("), "the Director walk state must be queued before optional ambience runs");
   assert(html.includes('catch (e) { console.warn("Night sound cue could not play", e); }'), "a failed Director sound effect cannot unmount the night screen");
