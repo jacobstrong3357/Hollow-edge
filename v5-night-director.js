@@ -748,6 +748,7 @@
       priorities[slot] = { player: keyedNumber(seed, "attack:" + slot + ":player") };
       cast.forEach(function (v) { priorities[slot][v.id] = keyedNumber(seed, "attack:" + slot + ":" + v.id); });
     }
+    if (config.player && config.player.targeted && monsterSchedule.active) priorities[monsterSchedule.attackSlot].player = -1;
     var state = {
       version: VERSION,
       seed: String(seed),
@@ -770,6 +771,7 @@
         afflicted: !!(config.player && config.player.afflicted),
         affliction: config.player && config.player.affliction || null,
         monsterSawYou: !!(config.player && config.player.monsterSawYou),
+        targeted: !!(config.player && config.player.targeted),
         armedGuess: clone(config.player && config.player.armedGuess || null),
         route: [{ slot: -1, location: HOME }]
       },
@@ -1767,6 +1769,7 @@
     if (!state) return state;
     state.player = state.player || { location: HOME, alive: true, route: [] };
     if (!Object.prototype.hasOwnProperty.call(state.player, "armedGuess")) state.player.armedGuess = null;
+    if (!Object.prototype.hasOwnProperty.call(state.player, "targeted")) state.player.targeted = false;
     if (state.monsterSchedule && state.monsterSchedule.relentless == null) state.monsterSchedule.relentless = state.monsterSchedule.id === "werewolf";
     if (!Object.prototype.hasOwnProperty.call(state, "gathering")) state.gathering = null;
     state.presentedActorIds = state.presentedActorIds || [];
@@ -2758,6 +2761,11 @@
       add(letPass, guide.kind === "search" ? "Let them pass. Continue your search" : "Let them pass. Take up the watch");
       if (beat.meta.hiddenFigureResolution === "missed") add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave it. Head for home");
       return result.slice(0, 3);
+    }
+    if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.markedStalk) {
+      add(all.find(function (item) { return item.type === "LISTEN"; }), "Turn and face what is following");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
+      return result.slice(0, 2);
     }
     if (beat && beat.type === "atmosphere" && beat.meta && beat.meta.requiresResponse) {
       add(all.find(function (item) { return item.type === "LISTEN"; }), state.weather === "storm" ? "Hold still. Listen for the voice again" : "Turn toward the sound and listen");

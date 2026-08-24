@@ -1094,6 +1094,30 @@ function take(state, wanted) {
   assert(state.player.alive && state.ledgers.truth.some(function (event) { return event.kind === "slain" && event.victimId === "rosa"; }), "even a successful intervention changes the route of the kill, not the werewolf's rhythm");
 })();
 
+(function aMarkedPlayerIsTheHuntsFirstQuarry() {
+  var config = {
+    seed: "marked-player-hunt",
+    night: 8,
+    slots: 5,
+    villagers: [{
+      id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
+      motive: { id: "mill-errand", family: "work", destination: "Old Mill", reason: "leave a parcel", object: "a parcel", depart: 0, duration: 5 }
+    }],
+    player: { monsterSawYou: true, targeted: true },
+    monster: { id: "ghoul", hostId: "greta", active: true, signs: ["bite", "graves"], hunts: ["Old Mill"], attack: "kill", reach: "out", huntSlot: 2 },
+    currentFacts: { weather: "still", active: true, huntLoc: "Old Mill", attackSlot: 2, targetingPlayer: true, outMap: { rosa: "Old Mill" } },
+    forcedBeats: []
+  };
+  var state = Director.createNight(config);
+  assert.strictEqual(state.player.targeted, true);
+  assert.strictEqual(state.attackPriorities[2].player, -1, "a marked hunt ranks the player ahead of neighbours sharing the ground");
+  state = take(state, { type: "LEAVE", to: "Old Mill" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.phase, "threat");
+  assert.strictEqual(state.pendingThreat.victimId, "player", "the warning becomes a lived survival encounter rather than another neighbour dying nearby");
+})();
+
 (function aNeighbourAtTheThresholdNamesThePlayersNightAction() {
   var config = baseConfig("door-2");
   config.openingIntent = { kind: "watch", id: "rosa" };
@@ -1920,7 +1944,28 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=6'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=7'), "the local page cache-busts the current Director runtime");
+  var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
+  var markedHuntContext = {
+    HOME_LOC: { rosa: "Village Square" },
+    LOCS: ["Village Square", "Old Church", "Graveyard", "Dark Forest", "Old Mill", "Tavern"],
+    stableIdx: function () { return 999; },
+    Number: Number
+  };
+  vm.createContext(markedHuntContext);
+  vm.runInContext(markedHuntSource + "; this.primeMarkedPlayerHunt = primeMarkedPlayerHunt;", markedHuntContext);
+  var markedState = { gameId: "old-save", monster: { vid: "greta" }, monsterSawYou: false, enraged: true };
+  var inactiveFacts = { active: false, huntLoc: null, outMap: { greta: "home" }, exposureMap: { greta: "indoor" } };
+  assert.strictEqual(markedHuntContext.primeMarkedPlayerHunt(markedState, inactiveFacts, { kind: "search", loc: "Old Mill" }, 11), inactiveFacts, "recognition cannot break a strict monster's inactive night");
+  var activeFacts = { active: true, huntLoc: "Graveyard", outMap: { greta: "Graveyard" }, exposureMap: { greta: "outdoor" } };
+  var markedFacts = markedHuntContext.primeMarkedPlayerHunt(markedState, activeFacts, { kind: "search", loc: "Old Mill" }, 12);
+  assert.strictEqual(markedFacts.targetingPlayer, true, "an older enraged save with an unfulfilled warning receives its overdue stalk on the next active night");
+  assert.strictEqual(markedFacts.huntLoc, "Old Mill");
+  assert.strictEqual(markedFacts.outMap.greta, "Old Mill");
+  assert(html.includes("markedOutNights: 0") && html.includes("active && f.targetingPlayer ? 0"), "new saves count exposed nights and reset the drought only when the stalk happens");
+  assert(html.includes("primeMarkedPlayerHunt(s, sampledFacts, openingIntent, comingNight)"), "the marked-hunt pass runs before every Director night");
+  assert(!html.includes("It knows your face now. The dark is more dangerous for you than for anyone."), "the vague warning is retired");
+  assert(html.includes("After two nights unchallenged, the next hunt takes your route."), "the replacement warning states the actual mechanic");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [

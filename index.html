@@ -94,7 +94,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=6"></script>
+<script src="v5-night-director.js?v=7"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -3461,7 +3461,7 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, mob: null, embolden: 0, quarry: null, doorVisits: 0,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, markedOutNights: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -3638,6 +3638,36 @@ function sampleNight(s, m, n) {
   const secretCatchChance = secretDrought >= 3 ? 0.82 : secretDrought >= 2 ? 0.68 : 0.55;
   for (const id of Object.keys(secretOut)) secretCatch[id] = chance(secretCatchChance);
   return { active, wx, evn, eventLoc, huntsCrowd, outMap, exposureMap, secretOut, secretCatch, griefOut, huntLoc, guaranteedVictimId, relentlessVictimId, affliction };
+}
+
+/* Recognition must change play, not merely add a warning. On an active night
+   the monster may abandon its sampled ground for the route the player chose.
+   After two exposed nights without a stalk, the next active night guarantees
+   one. Strict monsters still keep their authored rhythm: this changes their
+   quarry, never whether their count permits a hunt tonight. */
+function primeMarkedPlayerHunt(s, facts, openingIntent, n) {
+  if (!facts || !facts.active || !(s.monsterSawYou || s.enraged) || !openingIntent) return facts;
+  const target = openingIntent.kind === "watch" ? (HOME_LOC[openingIntent.id] || "Village Square") : openingIntent.loc;
+  if (!target || !LOCS.includes(target)) return facts;
+  const exposedNights = Number.isFinite(s.markedOutNights) ? s.markedOutNights : 2;
+  const chanceNow = Math.min(0.9, (s.enraged ? 0.62 : 0.38) + exposedNights * 0.12);
+  const roll = stableIdx(`${s.gameId}:marked-hunt:${n}:${target}`, 1000) / 1000;
+  if (exposedNights < 2 && roll >= chanceNow) return facts;
+  return {
+    ...facts,
+    huntLoc: target,
+    targetingPlayer: true,
+    markedExposureNights: exposedNights,
+    outMap: { ...(facts.outMap || {}), [s.monster.vid]: target },
+    exposureMap: { ...(facts.exposureMap || {}), [s.monster.vid]: "outdoor" },
+  };
+}
+
+function monsterDangerWarning(s) {
+  if (s.enraged && s.monsterSawYou) return "It knows your face, and you have angered it. Each night out draws its next hunt closer. After two nights unchallenged, the next hunt takes your route.";
+  if (s.enraged) return "You have angered it. Each night out draws its next hunt closer. After two nights unchallenged, the next hunt takes your route.";
+  if (s.monsterSawYou) return "It knows your face. Each night out draws its next hunt closer. After two nights unchallenged, the next hunt takes your route.";
+  return null;
 }
 
 /* After two nights without learning one, put a still-unknown human secret
@@ -4265,7 +4295,13 @@ function compileDirectorNight(s, facts, openingIntent) {
   });
   if (facts.active) forcedBeats.push({
     id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(1, attackSlot - 1), location: "*",
-    text: directorWeatherMonsterSound(facts.wx, temperament.sound), meta: { soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, weather: facts.wx || "still" },
+    text: facts.targetingPlayer
+      ? facts.wx === "storm" ? "Between thunderclaps, a second tread matches yours. It stops when you stop. Something has taken your route."
+        : facts.wx === "fog" ? "A second set of steps keeps pace inside the fog. When you stop, it stops. Something has taken your route."
+          : facts.wx === "frost" ? "A second breath follows yours through the frost. The steps behind you stop when you stop."
+            : "A second tread matches yours. It stops when you stop. Something has taken your route."
+      : directorWeatherMonsterSound(facts.wx, temperament.sound),
+    meta: { soundCue: temperament.cue, weatherSoundCue: facts.wx === "storm" ? "thunder" : null, voiceMode: temperament.mode, requiresResponse: true, markedStalk: !!facts.targetingPlayer, weather: facts.wx || "still" },
   });
   else {
     const quietPool = DIRECTOR_TEMPERAMENT_QUIET[temperament.mode] || DIRECTOR_TEMPERAMENT_QUIET.silent;
@@ -4322,7 +4358,7 @@ function compileDirectorNight(s, facts, openingIntent) {
       relentless: monsterTruth.id === "werewolf",
       voice: temperament, revealText,
     },
-    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, armedGuess },
+    player: { afflicted: strained, affliction: strained ? "strain" : null, monsterSawYou: !!s.monsterSawYou, targeted: !!facts.targetingPlayer, armedGuess },
     gathering: facts.evn && facts.eventLoc ? {
       id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
       text: facts.evn.intro,
@@ -4331,7 +4367,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     recentSignatures: directorRecentSignatures(s), forcedBeats,
   };
   const currentFacts = {
-    weather: facts.wx || "still", active: facts.active, huntLoc: facts.huntLoc,
+    weather: facts.wx || "still", active: facts.active, huntLoc: facts.huntLoc, targetingPlayer: !!facts.targetingPlayer,
     outMap: facts.outMap, griefOut: facts.griefOut, secretOut: facts.secretOut,
     eventLoc: facts.eventLoc, attackSlot, guaranteedVictimId: facts.guaranteedVictimId, relentlessVictimId: facts.relentlessVictimId,
     secretLeadId: facts.secretLeadId, secretLeadLoc: facts.secretLeadLoc, secretLeadSlot: facts.secretLeadSlot,
@@ -4986,7 +5022,10 @@ function resolveNight(prev, planIn, preEvents) {
     const playerLog = watching
       ? { kind: "watch", id: watching, followedTo: watchedFollow && (watchedFollow.to || outMap[watching]) || null }
       : out ? { kind: "out", loc: plan.loc } : { kind: "home" };
-    s.nightLogs.push({ night: n, active, huntLoc, outMap, exposureMap, secretOut, griefOut, you: playerLog, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, exposure: evn.exposure || "outdoor", odd: evOdd, fight: evFight, pair: evPair } : null });
+    if (exposed && (s.monsterSawYou || s.enraged)) {
+      s.markedOutNights = active && f.targetingPlayer ? 0 : Math.min(3, (Number.isFinite(s.markedOutNights) ? s.markedOutNights : 2) + 1);
+    }
+    s.nightLogs.push({ night: n, active, huntLoc, targetingPlayer: !!f.targetingPlayer, outMap, exposureMap, secretOut, griefOut, you: playerLog, wail: wailTonight, weather: wx, event: evn ? { id: evn.id, name: evn.name, loc: eventLoc, exposure: evn.exposure || "outdoor", odd: evOdd, fight: evFight, pair: evPair } : null });
     /* Cap the morning at five cards, keeping the most important: rank by pri
        (deaths, a villager marked, the note first), stable within a tier so the
        night still reads in order, and drop trailing atmosphere. */
@@ -6555,6 +6594,7 @@ function actUnbind(prev, id) {
        the odds of a caught/killed night out (outDeathChance) and of it salting
        your trail with decoys (see resolveNight's plant branch). Attempting the
        rite and failing angers it just the same (the else branch below). */
+    if (!s.enraged) s.markedOutNights = 0;
     s.enraged = true;
     s.bond = 0;
     s.embolden = s.nightNum + 1;
@@ -6582,6 +6622,7 @@ function actUnbind(prev, id) {
     beats.push(`UNBOUND. ${npc.name} is alive and entirely themselves again.`);
     s.dayEvents.push(...beats.map((b, i) => ev(b, i === 0 ? npc.id : undefined)));
   } else {
+    if (!s.enraged) s.markedOutNights = 0;
     s.enraged = true;
     s.bond = 0;
     if (chance(0.4)) {
@@ -12956,7 +12997,9 @@ function MonsterVillage() {
   const startDirectorNight = (openingIntent) => {
     if (!HE_DIRECTOR) return false;
     const comingNight = s.nightNum + 1;
-    const facts = primeDirectorSecret(s, sampleNight(s, monsterOf(s), comingNight), openingIntent, comingNight);
+    const sampledFacts = sampleNight(s, monsterOf(s), comingNight);
+    const markedFacts = primeMarkedPlayerHunt(s, sampledFacts, openingIntent, comingNight);
+    const facts = primeDirectorSecret(s, markedFacts, openingIntent, comingNight);
     if (openingIntent.kind === "watch" && facts.outMap[openingIntent.id] === "home") {
       facts.homeWatch = rollHomeWatch(s, openingIntent.id, facts.outMap, comingNight);
     }
@@ -15628,9 +15671,9 @@ function MonsterVillage() {
             {/* every morning is the same deck, whether it carries a body or
                 only what the night turned up: one is not bigger news */}
             <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={acknowledgeDawn} />
-            {(s.enraged || s.wrongGuesses === 1) && (
+            {(monsterDangerWarning(s) || s.wrongGuesses === 1) && (
               <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 9 }}>
-                {s.enraged && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.redBright, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+                {monsterDangerWarning(s) && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.redBright, fontWeight: 700 }}>{monsterDangerWarning(s)}</p>}
                 {s.wrongGuesses === 1 && <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.45, color: C.redBright }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
               </div>
             )}
@@ -15775,9 +15818,9 @@ function MonsterVillage() {
         {/* The night's recap belongs to the dawn reveal (once) and the journal's
             Nights log (summarised, in the Journal). The day homepage keeps only
             the active-danger warnings, never the full recap. */}
-        {s.enraged && (
+        {monsterDangerWarning(s) && (
           <div className="mt-3">
-            {s.enraged && <p style={{ color: C.redBright, fontSize: 14.5, fontWeight: 700 }}>It knows your face now. The dark is more dangerous for you than for anyone.</p>}
+            <p style={{ color: C.redBright, fontSize: 14.5, fontWeight: 700 }}>{monsterDangerWarning(s)}</p>
           </div>
         )}
 
