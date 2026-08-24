@@ -3095,6 +3095,33 @@ const DEMEANOR = {
   ],
 };
 
+/* Delivery changes without creating another decision for the player. These
+   are deliberately shared between guilty and innocent mouths. A rehearsed
+   answer can belong to the monster, a frightened neighbour, or somebody
+   protecting a private human errand. It is a reason to check the story, not
+   proof by itself. */
+const INTERVIEW_DELIVERY = {
+  guarded: [
+    "The answer comes too quickly. Their eyes move to the door after they say it.",
+    "They laugh once, though nothing was funny, then repeat the answer.",
+    "The last words run together. They will not say them twice.",
+    "They answer firmly, then worry the same loose thread between two fingers.",
+  ],
+  practised: [
+    "The answer is smooth and complete, as if practised before you arrived.",
+    "They wait one careful beat, then give you every word in the same measured tone.",
+    "Their smile arrives only after the answer is finished.",
+    "Not one word catches. It sounds less remembered than recited.",
+  ],
+  afraid: [
+    "They speak too fast, stop, and begin again.",
+    "A small laugh escapes them. They look ashamed of it.",
+    "Their eyes keep moving to the window while they answer.",
+    "They grip the chair until their knuckles pale.",
+    "Their voice cracks on an ordinary word. They carry on.",
+  ],
+};
+
 /* ---------- disposition: how a villager privately feels about you ----------
    Random per game, independent of role. Tiers run hate / cool / neutral /
    warm / fond across the -2..+2 spread newGame() assigns, though play can
@@ -7293,11 +7320,28 @@ function craftAnswer(s, id) {
 function computeAnswer(s, id, night, q, targetId) {
   const r = answerFor(s, id, night, q, targetId);
   const who = npcById(s, id);
+  let out = r;
   if (r && !r.refused && !r.repeat && q !== "talk" && who && dispTier(who.disp) === "cool"
       && typeof r.quote === "string" && r.quote.trim().startsWith('"') && chance(0.2)) {
-    return { ...r, quote: pickFreshIdx(`coolPrefix:${id}`, COOL_PREFIX) + " " + r.quote };
+    out = { ...r, quote: pickFreshIdx(`coolPrefix:${id}`, COOL_PREFIX) + " " + r.quote };
   }
-  return r;
+  const investigative = ["where", "saw", "sawAt", "about", "person", "suspect", "craft", "gossip", "context", "press"].includes(q);
+  if (out && !out.refused && !out.repeat && investigative && typeof out.quote === "string") {
+    const roll = stableIdx(`${s.gameId}:delivery:${s.dayNum}:${night}:${id}:${q}:${targetId || ""}`, 100);
+    const monsterish = id === s.monster.vid || (who && who.turned);
+    const fearLimit = Math.min(30, 12 + Math.min(12, (s.deaths || []).length * 3) + ((who && who.disp < 0) ? 4 : 0));
+    let pool = null;
+    if (out.guardedLie && roll < 72) pool = INTERVIEW_DELIVERY.guarded;
+    else if (monsterish && roll < 32) pool = INTERVIEW_DELIVERY.practised;
+    else if (monsterish && roll < 32 + Math.floor(fearLimit / 2)) pool = INTERVIEW_DELIVERY.afraid;
+    else if (!monsterish && roll < 8) pool = INTERVIEW_DELIVERY.practised;
+    else if (!monsterish && roll < 8 + fearLimit) pool = INTERVIEW_DELIVERY.afraid;
+    if (pool) {
+      const delivery = pool[stableIdx(`${s.gameId}:delivery-line:${id}:${q}:${targetId || ""}`, pool.length)];
+      out = { ...out, quote: `${out.quote} ${delivery}`, deliveryTell: true };
+    }
+  }
+  return out;
 }
 
 function answerFor(s, id, night, q, targetId) {
@@ -7323,7 +7367,7 @@ function answerFor(s, id, night, q, targetId) {
   const lying = (isMonster && log && log.active) || (npc.turned && tn !== null && night >= tn);
   const evn = log ? log.event : null;
   const mentions = [];
-  let quote = "", claim = null, foundSign = null, clue = null;
+  let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false;
 
   const key = ["person", "opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
     : q === "craft" ? `${s.dayNum}:craft`
@@ -7484,6 +7528,7 @@ function answerFor(s, id, night, q, targetId) {
         witnessedHandled = true;
       } else {
         claim = "home";
+        guardedLie = true;
         quote = pickFreshIdx(`secretHomeLie:${id}`, [
           `"Home. Abed early." They do not meet your eye when they say it.`,
           `"Home, of course. Where else?" The answer arrives half a beat too fast, rehearsed on the way over.`,
@@ -7640,12 +7685,19 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "about" && targetId) {
     const t = npcById(s, targetId);
     const tLoc = log ? log.outMap[targetId] : undefined;
+    const protectsTargetSecret = t && log && log.secretOut && log.secretOut[targetId] && !t.secretKnown
+      && tieIn(BONDS, id, targetId) && !isMonster && !lying
+      && stableIdx(`${s.gameId}:protect-night:${night}:${id}:${targetId}`, 100) < 48;
     if (targetId === id) {
       /* no one gossips about themselves in the third person - the UI already
          excludes self-targets, this is the belt-and-suspenders */
       quote = `"You're asking me about myself? I was where I said I was. Ask about someone who isn't standing in front of you."`;
     } else if (!t.alive && !tLoc) {
       quote = `"${t.name}? ${t.name} was already in the ground by then. Have some respect."`;
+    } else if (protectsTargetSecret) {
+      guardedLie = true;
+      mentions.push({ id: targetId, loc: "home", kind: "vouch", night });
+      quote = `“${t.name} was home that night. I am certain. Leave them out of this.”`;
     } else if (lying || (isMonster && log && log.active)) {
       if (targetId === s.monster.vid && lying && !isMonster) {
         mentions.push({ id: targetId, loc: "home", kind: "vouch" });
@@ -7692,8 +7744,15 @@ function answerFor(s, id, night, q, targetId) {
       });
       const missing = t.fled || (s.faceKnown === t.id && s.monsterSawYou);
       const sec = secretOf(s, targetId);
+      const secretLog = [...(s.nightLogs || [])].reverse().find((entry) => entry.secretOut && entry.secretOut[targetId]);
+      const protectsSecret = t.alive && !missing && bond && secretLog && !t.secretKnown && !isMonster && !lying
+        && stableIdx(`${s.gameId}:protect:${id}:${targetId}:${secretLog.night}`, 100) < 45;
       if (!trusts) mentions.push({ id: t.id, kind: "suspects" });
-      if (!t.alive && bond && sec && !t.secretKnown && !isMonster && !lying) {
+      if (protectsSecret) {
+        guardedLie = true;
+        mentions.push({ id: t.id, loc: "home", kind: "vouch", night: secretLog.night });
+        quote = `“I trust ${t.name}. They were home on Night ${secretLog.night}. Leave them out of this.”`;
+      } else if (!t.alive && bond && sec && !t.secretKnown && !isMonster && !lying) {
         s.npcs = s.npcs.map((x) => x.id === targetId ? { ...x, secretKnown: true } : x);
         quote = `“${tense} ${t.name}. ${reason} I knew that ${sec.short}.”`;
       } else if (!t.alive && shared) {
@@ -8283,7 +8342,7 @@ function answerFor(s, id, night, q, targetId) {
     if (contra) flag = `You saw them out that night, near the ${contra.loc}. This is a lie.`;
   }
   if (q === "about" && targetId) {
-    const placed = mentions.find((mn) => mn.kind === "placed");
+    const placed = mentions.find((mn) => mn.kind === "placed" || mn.kind === "vouch");
     if (placed) {
       const truth = s.playerSaw.find((f) => f.night === night && f.id === targetId && f.loc !== placed.loc);
       if (truth) flag = `You know where ${npcById(s, targetId).name} truly was that night. This is a lie.`;
@@ -8311,7 +8370,7 @@ function answerFor(s, id, night, q, targetId) {
     }
   }
 
-  return { quote, mentions, claim, flag, foundSign, clue, followUps };
+  return { quote, mentions, claim, flag, foundSign, clue, followUps, guardedLie };
 }
 
 /* The questions that are about a NIGHT rather than about the day you are
