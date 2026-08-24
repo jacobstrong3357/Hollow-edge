@@ -1877,6 +1877,31 @@ function take(state, wanted) {
   var aboutAnswer = html.slice(html.indexOf('if (q === "about"'), html.indexOf('if (q === "person"', html.indexOf('if (q === "about"')));
   assert(aboutAnswer.includes("protectsTargetSecret") && aboutAnswer.includes("tieIn(BONDS, id, targetId)") && aboutAnswer.includes("guardedLie = true"), "a night-specific sighting question can also draw a protective lie from someone close to the secret keeper");
   var answerCore = html.slice(html.indexOf("function answerFor"), html.indexOf("const NIGHT_QS", html.indexOf("function answerFor")));
+  var suspectVoiceSource = html.slice(html.indexOf("const SUSPECT_VOICES"), html.indexOf("const FOLK_HINTS"));
+  var suspectVoiceContext = { pickFreshIdx: function (key, rows) { return rows[0]; } };
+  vm.createContext(suspectVoiceContext);
+  vm.runInContext(suspectVoiceSource + "; this.voices = SUSPECT_VOICES; this.suspectVoiceLine = suspectVoiceLine;", suspectVoiceContext);
+  assert.deepStrictEqual(Object.keys(suspectVoiceContext.voices).sort(), ["ansel", "falk", "greta", "liesel", "marta", "rosa", "tobias", "wilhelm"], "every neighbour owns a distinct suspicion voice");
+  ["accuse", "caution", "evidence"].forEach(function (mode) {
+    var firstLines = Object.keys(suspectVoiceContext.voices).map(function (id) {
+      return suspectVoiceContext.suspectVoiceLine(id, "Rosa", mode, "Old Church", "Hazel");
+    });
+    assert.strictEqual(new Set(firstLines).size, 8, "the " + mode + " reply is recognisably different for every speaker");
+  });
+  Object.keys(suspectVoiceContext.voices).forEach(function (id) {
+    var voice = suspectVoiceContext.voices[id];
+    ["accuse", "caution", "evidence"].concat(id === "ansel" ? ["withhold"] : []).forEach(function (mode) {
+      voice[mode].forEach(function (line) {
+        var text = line("Rosa", "Old Church", "Hazel");
+        var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+        assert(words <= 25, "a speaker-owned suspicion reply stays concise: " + text);
+      });
+    });
+  });
+  var suspectAnswer = answerCore.slice(answerCore.indexOf('if (q === "suspect")'), answerCore.indexOf('if (q === "strange")'));
+  assert(suspectAnswer.includes('id === "ansel" && (npc.disp || 0) < 1') && suspectAnswer.indexOf('id === "ansel" && (npc.disp || 0) < 1') < suspectAnswer.indexOf("if (evidenced)"), "Ansel names nobody, including an evidenced suspect, until he trusts the player");
+  assert(suspectAnswer.includes('suspectVoiceLine(id, "", "withhold")') && suspectAnswer.includes('suspectVoiceLine(id, t.name, "accuse")'), "Ansel can withhold while trusted villagers use their own accusation voices");
+  assert(!html.includes("Feelings have hanged better people than us") && !html.includes("eats alone now. Always alone"), "the shared stock accusation cannot return");
   assert(answerCore.includes("const priorNightClaim") && answerCore.includes('st.q === "where" || st.q === "saw"'), "whereabouts and witness answers recover the speaker's established account for that night");
   assert(answerCore.includes('q === "where" && !quote && priorNightClaim') && answerCore.includes('Home. I have already told you that.'), "a later whereabouts question repeats the established cover story instead of resampling the truth");
   var sawAnswer = answerCore.slice(answerCore.indexOf('if (q === "saw")'), answerCore.indexOf('if (q === "read"'));

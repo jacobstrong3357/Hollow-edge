@@ -3021,15 +3021,109 @@ const SECRET_POOL = {
 };
 const secretOf = (s, id) => { const pool = SECRET_POOL[id]; if (!pool) return null; const i = (s.secretPick && s.secretPick[id] != null) ? s.secretPick[id] : 0; return pool[i % pool.length]; };
 
-const SUSPECT_REASONS = [
-  (t) => `"${t}. No one arrives from nowhere, and no one stays a stranger this long by accident."`,
-  (t) => `"${t} was dry as bone the morning after the storm night. Dry. Think on that."`,
-  (t) => `"${t}'s own dog howls at them now. Their own dog."`,
-  (t) => `"I've seen ${t}'s candle burning at hours no christian keeps."`,
-  (t) => `"${t} hasn't wept once. Not at a single burying. I've watched."`,
-  (t) => `"${t} eats alone now. Always alone. Watch who never breaks bread and you'll have it."`,
-  (t) => `"When the bell tolls, ${t} is always the last to come out of doors, and the first to go back in."`,
-];
+/* Suspicion belongs to the speaker, not to one village-wide dialogue pool.
+   These are red herrings unless the evidence branch says otherwise, but each
+   one grows from the neighbour's work and habits. Ansel's `withhold` lines
+   are used until he is warm toward the player. He protects his flock first. */
+const SUSPECT_VOICES = {
+  marta: {
+    accuse: [
+      (t) => `"${t} has changed their hours. The ovens teach you people's habits. I notice when one goes wrong."`,
+      (t) => `"I saw ${t}'s light after midnight twice. That may mean fear. It may mean worse."`,
+    ],
+    caution: [
+      (t) => `"${t} has eaten my bread for years. I know their habits, not their soul."`,
+      (t) => `"I watch who is awake before dawn. ${t} worries me, but worry is not proof."`,
+    ],
+    evidence: [(t, loc, dead) => `"I saw ${t} at the ${loc} the night ${dead} died. I wish I had not."`],
+  },
+  tobias: {
+    accuse: [
+      (t) => `"${t}'s prints keep turning up where no burial calls for them. Ground remembers when people lie."`,
+      (t) => `"${t} walks the graves without greeting me. Living folk usually greet the gravedigger."`,
+    ],
+    caution: [
+      (t) => `"Known ${t} a long while. Long enough to know fear makes fools of us all."`,
+      (t) => `"The ground tells me facts. It has given me none against ${t} yet."`,
+    ],
+    evidence: [(t, loc, dead) => `"${t} was at the ${loc} that night. I saw them. Then ${dead} died."`],
+  },
+  ansel: {
+    accuse: [
+      (t) => `"You have earned my confidence. Watch ${t} quietly. I have doubts, not proof."`,
+      (t) => `"I pray I am wrong about ${t}. Observe them, but do not feed their name to the square."`,
+    ],
+    caution: [
+      (t) => `"${t} is frightened and imperfect. So are we all. I will not make guilt from that."`,
+      (t) => `"I know ${t}'s failings. I also know their kindnesses. Neither answers your question."`,
+    ],
+    withhold: [
+      () => `"No. They are frightened neighbours, not names for your rope. Bring me evidence and I will help you read it."`,
+      () => `"I hear my neighbours confess their worst and still call them neighbours. I will not turn private fear into an accusation."`,
+    ],
+    evidence: [(t, loc, dead) => `"I saw ${t} at the ${loc} the night ${dead} died. I have prayed for another explanation."`],
+  },
+  greta: {
+    accuse: [
+      (t) => `"The animals go quiet before ${t} passes. Not proof, but I trust animals more than rumours."`,
+      (t) => `"${t} carries the wrong smell after dark. Earth, old blood, something sour. Watch before you accuse."`,
+    ],
+    caution: [
+      (t) => `"People call anything strange a witch. I will not do the same to ${t}."`,
+      (t) => `"${t} may be hiding something human. Most people are. Watch first."`,
+    ],
+    evidence: [(t, loc, dead) => `"${t} was at the ${loc} before ${dead} died. Even the hedge went quiet when they passed."`],
+  },
+  wilhelm: {
+    accuse: [
+      (t) => `"${t}. No proof. Just my gut. I keep the hammer close and my mouth shut."`,
+      (t) => `"Watch ${t}. If I am wrong, no rope. If I am right, I will make the iron ready."`,
+    ],
+    caution: [
+      (t) => `"${t} has never crossed me. That is what I know. Ask for more when I have it."`,
+      (t) => `"I do not forge answers from bad metal. Nothing solid against ${t}."`,
+    ],
+    evidence: [(t, loc, dead) => `"${t}. The ${loc}. The night ${dead} died. I saw them. That is all I will swear."`],
+  },
+  liesel: {
+    accuse: [
+      (t) => `"${t}'s story changes depending who is buying the drink. I keep count, love."`,
+      (t) => `"${t}. Three different stories across my bar. One may even be true."`,
+    ],
+    caution: [
+      (t) => `"I hear plenty about ${t}, love. Hearing is not knowing, whatever my customers think."`,
+      (t) => `"Half my bar suspects ${t}. The other half owes them money. Make of that what you like."`,
+    ],
+    evidence: [(t, loc, dead) => `"I saw ${t} at the ${loc} before ${dead} died. I have heard enough lies to remember that clearly."`],
+  },
+  falk: {
+    accuse: [
+      (t) => `"${t}. Pulse too calm after the last death. That can be shock. It can also be practice."`,
+      (t) => `"${t}. Changes in sleep, appetite, temperature. Symptoms, not a diagnosis. Yet."`,
+    ],
+    caution: [
+      (t) => `"I have no diagnosis for ${t}, only village nerves dressed as evidence."`,
+      (t) => `"${t} is frightened. Fear produces symptoms. So does guilt. I cannot separate them yet."`,
+    ],
+    evidence: [(t, loc, dead) => `"I saw ${t} at the ${loc} before ${dead} died. The timing is enough to warrant observation."`],
+  },
+  rosa: {
+    accuse: [
+      (t) => `"${t}'s cuffs were clean after a road that marked everyone else's. I notice cloth."`,
+      (t) => `"${t} watches doors, then pretends not to know who passed. I recognise the habit."`,
+    ],
+    caution: [
+      (t) => `"This village mistook privacy for guilt when I arrived. I will not do that to ${t}."`,
+      (t) => `"I watch ${t}. I watch everyone. So far I have a pattern, not an answer."`,
+    ],
+    evidence: [(t, loc, dead) => `"${t} was at the ${loc} that night. I remember where they stood. Then ${dead} died."`],
+  },
+};
+function suspectVoiceLine(id, targetName, mode = "accuse", loc = "road", dead = "someone") {
+  const voice = SUSPECT_VOICES[id] || SUSPECT_VOICES.rosa;
+  const rows = voice[mode] || voice.caution || voice.accuse;
+  return pickFreshIdx(`suspectVoice:${id}:${mode}`, rows)(targetName, loc, dead);
+}
 
 const FOLK_HINTS = [
   { m: ["vampire", "ghoul", "revenant"], t: `“Fresh grave-earth means something sleeps there, feeds there, or climbed out. Look among the churchyard kinds.”` },
@@ -7937,7 +8031,7 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "opinion" && targetId) {
     const t = npcById(s, targetId);
     const g = s.grudges[id];
-    if (g && g.other === targetId && s.dayNum <= g.until && !isMonster) {
+    if (g && g.other === targetId && s.dayNum <= g.until && !isMonster && !(id === "ansel" && (npc.disp || 0) < 1)) {
       mentions.push({ id: targetId, kind: "suspects" });
       quote = pickFreshIdx(`grudgeOpinion:${id}`, [
         `"${t.name}? We had words, and I meant every one of mine. I'd tie the knot in the rope myself."`,
@@ -7946,7 +8040,7 @@ function answerFor(s, id, night, q, targetId) {
     } else if (isMonster) {
       if (targetId !== s.monster.vid && chance(0.6)) {
         mentions.push({ id: targetId, kind: "suspects" });
-        quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name);
+        quote = suspectVoiceLine(id, t.name, "accuse");
       } else quote = `"${t.name}? Solid as church stone. You are wasting your daylight."`;
     } else if (lying) {
       if (targetId === s.monster.vid) {
@@ -7954,7 +8048,7 @@ function answerFor(s, id, night, q, targetId) {
         quote = `"It is certainly not ${t.name}. Put it out of your mind entirely."`;
       } else {
         mentions.push({ id: targetId, kind: "suspects" });
-        quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name);
+        quote = suspectVoiceLine(id, t.name, "accuse");
       }
     } else {
       let vouched = false;
@@ -7972,13 +8066,14 @@ function answerFor(s, id, night, q, targetId) {
         break;
       }
       if (!vouched) {
-        quote = chance(0.4) ? pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name) : pickFreshIdx("opinionNoVouch", [
-          `"I've known ${t.name} for years. But then, I would have said that of anyone, a month ago."`,
-          `"${t.name}? I could not say. I trust nobody past their own doorstep now."`,
-          `"They keep to themselves. That used to be a virtue."`,
-          `"A good neighbour, as far as daylight goes. It is nobody's daylight I doubt."`,
-        ]);
-        if (quote.includes("dog") || quote.includes("candle") || quote.includes("bone") || quote.includes("nowhere") || quote.includes("wept") || quote.includes("bread") || quote.includes("bell")) mentions.push({ id: targetId, kind: "suspects" });
+        if (id === "ansel" && (npc.disp || 0) < 1) {
+          quote = suspectVoiceLine(id, "", "withhold");
+        } else if (chance(0.4)) {
+          mentions.push({ id: targetId, kind: "suspects" });
+          quote = suspectVoiceLine(id, t.name, "accuse");
+        } else {
+          quote = suspectVoiceLine(id, t.name, "caution");
+        }
       }
     }
   }
@@ -7990,10 +8085,10 @@ function answerFor(s, id, night, q, targetId) {
     } else if (isMonster) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id));
       mentions.push({ id: t.id, kind: "suspects" });
-      quote = `"You want a name. Fine. ${pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name).slice(1)}`;
+      quote = suspectVoiceLine(id, t.name, "accuse");
     } else if (lying) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
-      if (t) { mentions.push({ id: t.id, kind: "suspects" }); quote = `"${t.name}. I feel it when they pass. Do not ask me to explain a feeling."`; }
+      if (t) { mentions.push({ id: t.id, kind: "suspects" }); quote = suspectVoiceLine(id, t.name, "accuse"); }
       else quote = `"I no longer trust myself to say."`;
     } else {
       let evidenced = null;
@@ -8004,21 +8099,23 @@ function answerFor(s, id, night, q, targetId) {
         const myLoc = lg.outMap[id];
         if (myLoc && myLoc !== "home" && myLoc === lg.outMap[s.monster.vid] && chance(0.4)) { evidenced = { night: lg.night, loc: myLoc, dead: d.name }; break; }
       }
-      if (evidenced) {
+      if (id === "ansel" && (npc.disp || 0) < 1) {
+        quote = suspectVoiceLine(id, "", "withhold");
+      } else if (evidenced) {
         const mn = npcById(s, s.monster.vid);
         mentions.push({ id: mn.id, kind: "suspects", evidenced: true });
-        quote = `They lower their voice to almost nothing. "${mn.name}. I saw ${mn.name} at the ${evidenced.loc} the night ${evidenced.dead} died, and I have told no one, and I have not slept since. God forgive me if I am wrong."`;
-      } else if (id === "ansel" && chance(0.5)) {
-        quote = `"No. I will not put a rope around a neighbour's neck on a feeling. Bring me proof and I will swing it myself."`;
+        quote = suspectVoiceLine(id, mn.name, "evidence", evidenced.loc, evidenced.dead);
+      } else if (id === "ansel" && chance(0.35)) {
+        quote = suspectVoiceLine(id, "", "withhold");
       } else if (s.mob && chance(0.5)) {
         const t = npcById(s, s.mob.target);
         if (t && t.alive && t.id !== id) {
           mentions.push({ id: t.id, kind: "suspects" });
-          quote = `"The square has already chosen ${t.name}, hasn't it. I don't know if the square is right. I know I want it to be, so it can be over. God forgive us all."`;
+          quote = suspectVoiceLine(id, t.name, "accuse");
         } else {
           const t2 = pick(s.npcs.filter((x) => x.alive && x.id !== id));
           mentions.push({ id: t2.id, kind: "suspects" });
-          quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t2.name) + ` "But it is a feeling, mind. Feelings have hanged better people than us."`;
+          quote = suspectVoiceLine(id, t2.name, "accuse");
         }
       } else if (s.ropeStain && s.ropeStain !== id && npcById(s, s.ropeStain) && npcById(s, s.ropeStain).alive && chance(0.4)) {
         const rs = npcById(s, s.ropeStain);
@@ -8027,7 +8124,7 @@ function answerFor(s, id, night, q, targetId) {
       } else {
         const t = pick(s.npcs.filter((x) => x.alive && x.id !== id));
         mentions.push({ id: t.id, kind: "suspects" });
-        quote = pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name) + ` "But it is a feeling, mind. Feelings have hanged better people than us."`;
+        quote = suspectVoiceLine(id, t.name, "accuse");
       }
     }
   }
@@ -8300,7 +8397,7 @@ function answerFor(s, id, night, q, targetId) {
       const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
       if (t) {
         mentions.push({ id: t.id, kind: "gossip" });
-        quote = `"Only that folk are whispering about ${t.name}. ${pickFreshIdx("suspectReasons", SUSPECT_REASONS)(t.name).slice(1)}`;
+        quote = suspectVoiceLine(id, t.name, "accuse");
       } else quote = `"Nothing worth repeating. This village gossips about everything and knows nothing true."`;
       } else {
       /* a secret the player let slip is, for a few days, the single juiciest
