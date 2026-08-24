@@ -137,6 +137,8 @@ const Snd = {
       this.howl = new Tone.Synth({ oscillator: { type: "sine" }, portamento: 0.4, envelope: { attack: 0.4, decay: 0.8, sustain: 0.3, release: 1.8 } }).connect(this.howlVol);
       this.woodVol = new Tone.Volume(-18).toDestination();
       this.wood = new Tone.MembraneSynth({ pitchDecay: 0.08, octaves: 1.3, envelope: { attack: 0.004, decay: 0.38, sustain: 0, release: 0.22 } }).connect(this.woodVol);
+      this.doorVol = new Tone.Volume(-8).toDestination();
+      this.door = new Tone.MembraneSynth({ pitchDecay: 0.13, octaves: 1.8, envelope: { attack: 0.002, decay: 0.52, sustain: 0, release: 0.3 } }).connect(this.doorVol);
       this.foleyVol = new Tone.Volume(-23).toDestination();
       this.foleyFilter = new Tone.Filter(1500, "lowpass").connect(this.foleyVol);
       this.foleyNoise = new Tone.NoiseSynth({ noise: { type: "brown" }, envelope: { attack: 0.01, decay: 0.48, sustain: 0, release: 0.18 } }).connect(this.foleyFilter);
@@ -242,8 +244,9 @@ const Snd = {
   knock() {
     if (!this.built || !this.enabled) return;
     const t = Tone.now() + 0.04;
-    this.wood.triggerAttackRelease("C1", "16n", t, 0.86);
-    this.wood.triggerAttackRelease("B0", "16n", t + 0.42, 0.66);
+    this.door.triggerAttackRelease("C1", "8n", t, 1);
+    this.door.triggerAttackRelease("B0", "8n", t + 0.38, 0.9);
+    this.door.triggerAttackRelease("C1", "8n", t + 0.78, 0.82);
   },
   thunderStrike() {
     if (!this.built || !this.enabled) return;
@@ -11849,7 +11852,11 @@ function MonsterVillage() {
           else Snd.cue(directorBeat.meta.soundCue);
         }
         else if (directorBeat && directorBeat.type === "threat") { Snd.silence(true); Snd.danger(); }
-        else if (directorBeat && directorBeat.type === "doorstep") { Snd.silence(true); Snd.knock(); }
+        else if (directorBeat && directorBeat.type === "doorstep") {
+          Snd.silence(false);
+          Snd.scene({ location: "Home", weather: walk.facts.wx, proximity: 0.2 });
+          Snd.knock();
+        }
         else if (directorBeat && directorBeat.type === "whisper") Snd.cue("whisper");
         else if (directorBeat && directorBeat.type === "stamp") Snd.cue("earth");
         else if (directorBeat && directorBeat.type === "delusion" && directorBeat.meta && directorBeat.meta.requiresResponse) {
