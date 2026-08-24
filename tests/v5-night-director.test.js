@@ -1762,6 +1762,47 @@ function take(state, wanted) {
     assert(words <= 25, "changed-neighbour gossip stays concise and conversational: " + text);
     assert(/Liesel/.test(text), "changed-neighbour gossip names its subject as reported testimony");
   });
+  var publicBlameSource = html.slice(html.indexOf("const PUBLIC_BLAME_WHERE"), html.indexOf("const GATE_LINES"));
+  var publicBlameContext = {};
+  vm.createContext(publicBlameContext);
+  vm.runInContext(publicBlameSource + "; this.publicBlamePools = [PUBLIC_BLAME_WHERE, PUBLIC_BLAME_GOSSIP, PUBLIC_BLAME_WITNESS];", publicBlameContext);
+  publicBlameContext.publicBlamePools.forEach(function (pool) {
+    pool.forEach(function (line) {
+      ["changed", "slain"].forEach(function (kind) {
+        var text = line("Father Ansel", kind);
+        var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+        assert(words <= 25, "public suspicion responses stay concise: " + text);
+      });
+    });
+  });
+  var repairBlameSource = html.slice(html.indexOf("function repairPublicBlame"), html.indexOf("/* One short-lived build", html.indexOf("function repairPublicBlame")));
+  var repairBlameContext = {
+    npcById: function (state, id) { return state.npcs.find(function (npc) { return npc.id === id; }); },
+    bondedTo: function () { return ["greta"]; },
+    clampDisp: function (value) { return Math.max(-2, Math.min(2, value)); }
+  };
+  vm.createContext(repairBlameContext);
+  vm.runInContext(repairBlameSource + "; this.repairPublicBlame = repairPublicBlame;", repairBlameContext);
+  var blameState = {
+    nightNum: 4,
+    npcs: [
+      { id: "ansel", name: "Father Ansel", alive: true, fled: false, disp: 0 },
+      { id: "falk", name: "Doctor Falk", alive: true, fled: false, disp: -1 },
+      { id: "greta", name: "Greta", alive: true, fled: false, disp: 0 },
+      { id: "rosa", name: "Rosa", alive: true, fled: false, disp: 1 }
+    ],
+    worldEvents: [{ eventId: "investigated:ansel", kind: "director_body_investigation", night: 4, victimId: "ansel", location: "Old Church", recognizedChanged: true, suspicious: true, witnessIds: ["falk"] }]
+  };
+  repairBlameContext.repairPublicBlame(blameState);
+  assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "falk"; }).disp, -2, "the direct witness keeps their initial distrust and loses wider village trust too");
+  assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "greta"; }).disp, -2, "someone close to the victim reacts more strongly");
+  assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "rosa"; }).disp, 0, "the accusation lowers the wider village's disposition");
+  assert.strictEqual(blameState.publicBlame.kind, "changed", "the lasting accusation distinguishes a changed victim from a death");
+  assert.deepStrictEqual(Array.from(blameState.worldEvents[0].actorIds), ["falk"], "an older save repairs the witness list needed by its interview response");
+  assert(html.includes("const offeredLabels = new Set()") && html.includes("offeredLabels.has(visible)"), "context questions deduplicate identical visible wording across ledger events");
+  assert(html.includes('event.kind === "director_body_investigation"') && html.includes("PUBLIC_BLAME_WITNESS"), "a body witness gives a concrete response instead of a generic denial");
+  assert(html.includes('q === "where" && publicBlame') && html.includes("PUBLIC_BLAME_GOSSIP"), "where and village-talk questions surface the lasting accusation");
+  assert(html.includes("THE VILLAGE SUSPECTS YOU") && html.includes("repairPublicBlame(run)"), "the accusation is visible in interviews and repaired into existing saves");
   var favourLoreSource = html.slice(html.indexOf("const FOLK_HINTS"), html.indexOf("const FLED_OPENERS"));
   var favourLoreContext = {};
   vm.createContext(favourLoreContext);

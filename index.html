@@ -2524,19 +2524,42 @@ function contextualQuestionsFor(s, npcId) {
     .map((obs) => obs.eventId));
   const offeredEvents = new Set();
   const offeredShapes = new Set();
+  const offeredLabels = new Set();
+  /* Seed visible labels from every already-spent context key before building
+     the tray. Otherwise an older duplicate can reappear simply because its
+     unasked ledger row was visited before the asked one. */
+  for (const obs of (s.observations || [])) {
+    if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) continue;
+    const event = events.find((entry) => entry.eventId === obs.eventId);
+    const id = `${obs.eventId}:${obs.kind}`;
+    if (event && event.question && asked.has(`${obs.night}:context:${id}`)) offeredLabels.add(`${obs.night}|${event.question}`);
+  }
+  for (const mem of (s.memories || [])) {
+    if (mem.actorId !== npcId || mem.target !== "player") continue;
+    const event = events.find((entry) => entry.eventId === mem.eventId);
+    if (!event || !asked.has(`${mem.night}:context:${event.eventId}:memory`)) continue;
+    const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
+    const label = victim
+      ? `You found me beside ${victim.name} after the scream. What do you think happened?`
+      : `You saw me at the ${event.location}. What did you think I was doing?`;
+    offeredLabels.add(`${mem.night}|${label}`);
+  }
   for (const obs of (s.observations || [])) {
     if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) continue;
     const event = events.find((e) => e.eventId === obs.eventId);
     if (!event || !event.question) continue;
     const id = `${event.eventId}:${obs.kind}`;
     const shape = `${obs.night}|${obs.kind === "evidence" ? "evidence" : "where"}|${event.location}|${event.question}`;
+    const visible = `${obs.night}|${event.question}`;
     if (asked.has(`${obs.night}:context:${id}`)) {
       offeredEvents.add(event.eventId);
       offeredShapes.add(shape);
-    } else if (!offeredShapes.has(shape)) {
+      offeredLabels.add(visible);
+    } else if (!offeredShapes.has(shape) && !offeredLabels.has(visible)) {
       out.push({ id, night: obs.night, kind: obs.kind, label: event.question, event });
       offeredEvents.add(event.eventId);
       offeredShapes.add(shape);
+      offeredLabels.add(visible);
     }
   }
   for (const mem of (s.memories || [])) {
@@ -2547,15 +2570,21 @@ function contextualQuestionsFor(s, npcId) {
        them. One encounter therefore never becomes two versions of itself. */
     if (!event || directEvents.has(event.eventId) || offeredEvents.has(event.eventId)) continue;
     const id = `${event.eventId}:memory`;
-    const label = `You saw me at the ${event.location}. What did you think I was doing?`;
+    const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
+    const label = victim
+      ? `You found me beside ${victim.name} after the scream. What do you think happened?`
+      : `You saw me at the ${event.location}. What did you think I was doing?`;
     const shape = `${mem.night}|memory|${event.location}`;
+    const visible = `${mem.night}|${label}`;
     if (asked.has(`${mem.night}:context:${id}`)) {
       offeredEvents.add(event.eventId);
       offeredShapes.add(shape);
-    } else if (!offeredShapes.has(shape)) {
+      offeredLabels.add(visible);
+    } else if (!offeredShapes.has(shape) && !offeredLabels.has(visible)) {
       out.push({ id, night: mem.night, kind: "memory", label, event });
       offeredEvents.add(event.eventId);
       offeredShapes.add(shape);
+      offeredLabels.add(visible);
     }
   }
   return out.sort((a, b) => b.night - a.night).slice(0, 6);
@@ -3153,6 +3182,45 @@ const DISCREET_ID = "ansel";
 /* the one secret whose exposure is genuinely life-or-death for its keeper */
 const FLEE_ON_SECRET_ID = "wilhelm";
 
+/* If neighbours find the player alone beside a fresh victim, the fact does
+   not stay with the two people who arrived first. It becomes the village's
+   explanation, and every interview remembers why trust was lost. */
+const PUBLIC_BLAME_WHERE = [
+  (v, kind) => kind === "changed"
+    ? `“Where was I?” They laugh once. “Says the one found over ${v} after they came back hollow. Answer for yourself first.”`
+    : `“Where was I?” They laugh once. “Says the one found beside ${v}'s body. Answer for yourself first.”`,
+  (v, kind) => kind === "changed"
+    ? `“You were the last one beside ${v} while they were still themselves. I owe you no account of my night.”`
+    : `“They found you alone with ${v}'s body. I owe you no account of my night.”`,
+  (v, kind) => kind === "changed"
+    ? `“They found you standing over ${v} after the scream. Tell me why before you ask where I was.”`
+    : `“They found you standing over ${v} after the scream. Tell me why before you question me.”`,
+  (v, kind) => kind === "changed"
+    ? `“${v} came back hollow, and you were beside them. You do not have the right to question me.”`
+    : `“${v} died, and you were beside the body. You do not have the right to question me.”`,
+];
+const PUBLIC_BLAME_GOSSIP = [
+  (v, kind) => kind === "changed"
+    ? `“You are. ${v} was whole before you found them and hollow afterward. That is the story at every table.”`
+    : `“You are. ${v} was alive before you found them and dead afterward. That is the story at every table.”`,
+  (v, kind) => kind === "changed"
+    ? `“Your name. They found you beside ${v} after the scream. Most think you brought the thing to them.”`
+    : `“Your name. They found you beside ${v}'s body. Most think you brought the thing there.”`,
+  (v) => `“Everyone is asking what happened between you and ${v}. Nobody believes you simply arrived too late.”`,
+  (v, kind) => kind === "changed"
+    ? `“The village says ${v} stopped being themselves while you stood beside them. You asked what people are saying. That is it.”`
+    : `“The village says ${v} died while you stood beside them. You asked what people are saying. That is it.”`,
+];
+const PUBLIC_BLAME_WITNESS = [
+  (v, kind) => kind === "changed"
+    ? `“${v} no longer knew their own name. You were standing over them. What would you have me think?”`
+    : `“${v} was dead. You were beside the body. I remember exactly what I saw.”`,
+  (v) => `“I found you alone beside ${v}. Whatever happened, you were there before the rest of us.”`,
+  (v, kind) => kind === "changed"
+    ? `“I saw ${v} emptied of themselves, and you at their side. I have not decided what that means.”`
+    : `“I saw ${v}'s body and you at their side. I have not decided what that means.”`,
+];
+
 /* A villager who thinks little of you does not hand over their best clue for
    free: they set a price first. The price is a night's watching, and paying
    it (report back tomorrow) unlocks the whole ledger. */
@@ -3462,6 +3530,7 @@ function newGame(veteran, hollowedUnlocked) {
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
     knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, markedOutNights: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
+    publicBlame: null,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -4790,7 +4859,13 @@ function resolveNight(prev, planIn, preEvents) {
               : rel.kind === "restraint" ? "They saw the player leave a private offering untouched."
             : "They remember the player choosing the road home.",
     }));
-    const bodyInvestigations = (projection.investigations || []).map((entry) => ({ ...entry, night: n, kind: "director_body_investigation" }));
+    const bodyInvestigations = (projection.investigations || []).map((entry) => ({
+      ...entry,
+      night: n,
+      kind: "director_body_investigation",
+      actorIds: (entry.witnessIds || []).slice(),
+      subjectId: entry.victimId,
+    }));
     s.worldEvents = [...(s.worldEvents || []), ...directorEvents, ...findingEvents, ...bodyInvestigations];
     s.observations = [...(s.observations || []), ...directorObservations, ...findingObservations];
     s.memories = [...(s.memories || []), ...directorMemories, ...relationshipMemories];
@@ -4849,7 +4924,10 @@ function resolveNight(prev, planIn, preEvents) {
           location: inquiry.location, confidence: "certain", acknowledged: false,
           text: `They arrived to find you alone beside ${victimName}, before anyone else could account for the scene.`,
         }))];
-        dawn.push(ev(`${witnessNames.length ? witnessNames.join(" and ") : "The first searchers"} found you beside ${victimName} at the ${inquiry.location}. By breakfast, concern has already sharpened into suspicion.`, undefined, 2));
+        repairPublicBlame(s, inquiry);
+        dawn.push(ev(inquiry.recognizedChanged
+          ? `${victimName} is alive, but changed. ${witnessNames.length ? witnessNames.join(" and ") : "The first searchers"} found you beside them. By breakfast, most believe you caused it.`
+          : `${witnessNames.length ? witnessNames.join(" and ") : "The first searchers"} found you beside ${victimName}'s body. By breakfast, most believe you caused the death.`, undefined, 2));
       } else if (inquiry.heardLastWords || inquiry.clueFound) {
         dawn.push(ev(`You reached ${victimName} first at the ${inquiry.location}. Whatever else the village makes of that, the night gave you something daylight would have lost.`, undefined, 1));
       }
@@ -6711,6 +6789,42 @@ function settleGiveUpInPlace(s, id, night) {
   return npc;
 }
 
+/* A witnessed aftermath spreads beyond the first people through the door.
+   Direct witnesses have already lost one disposition point when this runs.
+   Everyone else loses one as the story spreads; close ties lose a second.
+   The event id makes this safe to run again while repairing an older save. */
+function repairPublicBlame(s, inquiry) {
+  const event = inquiry || [...(s.worldEvents || [])].reverse().find((entry) => entry && entry.kind === "director_body_investigation" && entry.suspicious);
+  if (!event || !event.victimId || (s.publicBlame && s.publicBlame.eventId === event.eventId)) return s;
+  const victim = npcById(s, event.victimId);
+  if (!victim) return s;
+  const witnesses = new Set(event.witnessIds || event.actorIds || []);
+  if (!event.actorIds || !event.actorIds.length) event.actorIds = [...witnesses];
+  const closeTies = new Set(bondedTo(event.victimId));
+  s.npcs = s.npcs.map((npc) => {
+    if (!npc.alive || npc.fled || npc.id === event.victimId) return npc;
+    const extra = closeTies.has(npc.id) && !witnesses.has(npc.id) ? 1 : 0;
+    return { ...npc, disp: clampDisp((npc.disp || 0) - 1 - extra) };
+  });
+  s.publicBlame = {
+    eventId: event.eventId,
+    victimId: event.victimId,
+    victimName: victim.name,
+    night: event.night || s.nightNum,
+    location: event.location,
+    kind: event.recognizedChanged ? "changed" : "slain",
+    witnessIds: [...witnesses],
+  };
+  s.lastWith = {
+    id: victim.id,
+    name: victim.name,
+    night: event.night || s.nightNum,
+    teller: [...witnesses][0] || null,
+    kind: event.recognizedChanged ? "changed" : "slain",
+  };
+  return s;
+}
+
 /* One short-lived build allowed the profile page to execute the note during
    daylight. Repair only that exact saved event, then put the choice back at
    nightfall where it belongs. */
@@ -7011,6 +7125,13 @@ function answerFor(s, id, night, q, targetId) {
     const eventId = String(targetId || "").replace(/:(seen|not_seen|evidence|memory)$/, "");
     const event = (s.worldEvents || []).find((e) => e.eventId === eventId && e.actorIds && e.actorIds.includes(id));
     if (!event) return { quote: `“I do not know what you think you saw.”`, mentions, claim, flag: null, foundSign, clue, followUps: [] };
+    if (event.kind === "director_body_investigation") {
+      const victim = npcById(s, event.victimId);
+      const victimName = victim ? victim.name : "them";
+      const blameKind = event.recognizedChanged ? "changed" : "slain";
+      quote = pickFreshIdx(`publicBlameWitness:${id}`, PUBLIC_BLAME_WITNESS)(victimName, blameKind);
+      return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps: [] };
+    }
     const remembered = String(targetId || "").endsWith(":memory");
     const evasive = isMonster || dispTier(npc.disp) === "hate" || (lying && chance(0.55));
     /* A mutual conversation is settled testimony. They may have lied in the
@@ -7060,7 +7181,12 @@ function answerFor(s, id, night, q, targetId) {
     return s.monsterClaims[night];
   };
 
-  if (q === "where") {
+  const publicBlame = s.publicBlame && s.publicBlame.victimId !== id ? s.publicBlame : null;
+  if (q === "where" && publicBlame) {
+    quote = pickFreshIdx(`publicBlameWhere:${id}`, PUBLIC_BLAME_WHERE)(publicBlame.victimName, publicBlame.kind);
+  }
+
+  if (q === "where" && !quote) {
     if (!log || (actual === undefined && !isMonster)) {
       return { quote: `"That night we were all barricaded in the church together. You know exactly where I was. Beside you, praying."`, mentions, claim: null, flag: null, foundSign, clue, followUps: [] };
     }
@@ -7699,7 +7825,9 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "gossip") {
     const turnedNow = npc.turned && tn !== null;
     const villageShutOut = standing.hostileMajority && !isMonster && !turnedNow && (npc.disp || 0) < 1;
-    if (villageShutOut) {
+    if (publicBlame) {
+      quote = pickFreshIdx(`publicBlameGossip:${id}`, PUBLIC_BLAME_GOSSIP)(publicBlame.victimName, publicBlame.kind);
+    } else if (villageShutOut) {
       quote = `"You want the village's talk? They stopped having it in front of you. Earn a place at a table again."`;
     } else {
       const misdirect = (isMonster || turnedNow) && chance(0.6);
@@ -9748,6 +9876,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
      Death red never appears here - what is in front of you is changed, not
      dead. Your own actions stay amber, because amber means it costs you. */
   const changed = n.turned && n.known;
+  const interviewBlame = s.publicBlame && s.publicBlame.victimId !== n.id ? s.publicBlame : null;
   const chrome = changed ? { rule: C.turn, ink: "#C0A6E0", fill: "rgba(122,95,160,0.16)" } : { rule: C.line, ink: C.amber, fill: "transparent" };
   /* arrival first, questions second: the room and the reception get the
      screen to themselves until the player chooses to begin */
@@ -9864,6 +9993,12 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               {standing.hostileMajority && (
                 <div style={{ marginTop: 10, padding: "8px 10px", borderLeft: `3px solid ${C.red}`, background: "rgba(158,48,57,0.08)", color: C.ink, fontSize: 13.5, lineHeight: 1.4 }}>
                   Most of the village distrusts you. Neighbours may answer once, then shut you out. Apologies and useful work can rebuild trust.
+                </div>
+              )}
+              {interviewBlame && (
+                <div style={{ marginTop: 10, padding: "8px 10px", borderLeft: `3px solid ${C.red}`, background: "rgba(158,48,57,0.12)", color: C.ink, fontSize: 13.5, lineHeight: 1.4 }}>
+                  <span className="mv-display" style={{ display: "block", marginBottom: 3, fontSize: 10.5, letterSpacing: 1.8, color: C.red }}>THE VILLAGE SUSPECTS YOU</span>
+                  {interviewBlame.victimName} is {interviewBlame.kind === "changed" ? "alive, but changed" : "dead"}. You were found beside them after the scream. Most believe you caused it.
                 </div>
               )}
             </>
@@ -11972,6 +12107,7 @@ function MonsterVillage() {
             run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
             run.nightRemains = (run.nightRemains || []).filter((entry) => entry && LOCS.includes(entry.location) && (!entry.sign || valid.includes(entry.sign)));
             repairDaylightGiveUp(run);
+            repairPublicBlame(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
                it has already sampled the night and recorded player choices.
