@@ -7104,7 +7104,7 @@ function answerFor(s, id, night, q, targetId) {
   const mentions = [];
   let quote = "", claim = null, foundSign = null, clue = null;
 
-  const key = ["opinion", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
+  const key = ["opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
     : q === "craft" ? `${s.dayNum}:craft`
     : q === "past" ? "past"
     : q === "talk" ? `${s.dayNum}:talk`
@@ -7469,6 +7469,62 @@ function answerFor(s, id, night, q, targetId) {
         `“Gone. ${t.name} took no cart and told no one. People do strange things when they are afraid.”`,
         `“${t.name} has left Hollow's Edge. Whether from fear or guilt, I could not tell you.”`,
       ]);
+    }
+  }
+
+  if (q === "worried" && targetId) {
+    const t = npcById(s, targetId);
+    const bond = t && tieIn(BONDS, id, targetId);
+    const friction = t && tieIn(FRICTIONS, id, targetId);
+    if (!t) quote = `“I do not know who you mean.”`;
+    else if (t.turned && t.known) {
+      mentions.push({ id: t.id, kind: "odd" });
+      quote = bond
+        ? `“Yes. ${t.name} is still breathing, but the person I knew is not answering. Of course I am worried.”`
+        : `“${t.name} is changed. Worry is too small a word for what is left.”`;
+    } else if (!t.alive) {
+      quote = bond ? `“I was. I should have gone to them sooner. Worry is useless now.”` : `“Too late for worry. ${t.name} is dead.”`;
+    } else if (t.fled) {
+      quote = `“${t.name} has gone, and nobody knows which road they took. Yes, I am worried.”`;
+    } else if (isMonster || lying) {
+      if (targetId !== s.monster.vid) mentions.push({ id: t.id, kind: "suspects" });
+      quote = `“Worried enough to watch ${t.name}. You should do the same.”`;
+    } else if (bond) {
+      quote = `“Yes. ${t.name} has been part of my life too long for me not to notice when something is wrong.”`;
+    } else if (friction) {
+      quote = `“We do not agree on much. That does not mean I want ${t.name} harmed.”`;
+    } else {
+      quote = `“Worried as I am for everyone. I have seen nothing that singles ${t.name} out.”`;
+    }
+  }
+
+  if (q === "mentioned" && targetId) {
+    const pair = String(targetId).split("|");
+    const source = npcById(s, pair[0]);
+    const subject = npcById(s, pair[1]);
+    if (!source || !subject) quote = `“I do not know who you mean.”`;
+    else if (source.id === id) quote = `“You are asking what I said. Ask me what you actually want to know.”`;
+    else {
+      const shared = [...s.nightLogs].reverse().find((entry) => {
+        const mine = entry.outMap[id], theirs = entry.outMap[source.id];
+        return mine && mine !== "home" && mine === theirs;
+      });
+      const bond = tieIn(BONDS, source.id, subject.id);
+      const friction = tieIn(FRICTIONS, source.id, subject.id);
+      if ((isMonster || lying) && subject.id !== s.monster.vid) {
+        mentions.push({ id: subject.id, kind: "suspects" });
+        quote = `“Yes. ${source.name} warned me about ${subject.name}. Said they had stopped seeming like themselves.”`;
+      } else if (shared && bond) {
+        mentions.push({ id: source.id, loc: shared.outMap[source.id], kind: "with", night: shared.night });
+        quote = `“Yes. ${source.name} asked whether ${subject.name} was safe. They sounded worried.”`;
+      } else if (shared && friction) {
+        mentions.push({ id: source.id, loc: shared.outMap[source.id], kind: "with", night: shared.night });
+        quote = `“Once. ${source.name} complained about ${subject.name}, then asked whether they had come home.”`;
+      } else if (shared) {
+        quote = `“Only once. ${source.name} asked whether anyone had seen ${subject.name} after dark.”`;
+      } else {
+        quote = `“No. ${source.name} has never mentioned ${subject.name} to me.”`;
+      }
     }
   }
 
@@ -8009,6 +8065,8 @@ const Q_LABELS = {
   about: "Did you see someone in particular?",
   opinion: "What do you make of someone?",
   whereNow: "Where is someone now?",
+  worried: "Were you worried about someone?",
+  mentioned: "Did someone mention someone else?",
   suspect: "Who do you think is doing this?",
   strange: "Noticed anything strange lately?",
   press: "You lied to me. Why?",
@@ -8019,7 +8077,7 @@ const Q_LABELS = {
   gossip: "What's the talk of the village?",
   share: "Share what you know about someone",
   report: "Tell them what you saw",
-  talk: "Sit a while. Talk of nothing.",
+  talk: "Sit with them awhile.",
   apologise: "Apologise for how you treated them.",
   help: "Ask what work needs doing.",
   howare: "How are you holding up?",
@@ -8038,7 +8096,7 @@ function applyAnswer(prev, id, night, q, targetId) {
   const npc = npcById(s, id);
   if (ans.foundSign && !s.foundSigns.includes(ans.foundSign)) s.foundSigns.push(ans.foundSign);
   if (ans.clue) s.clues.push(ans.clue);
-  if (!ans.repeat && !ans.refused) s.statements.push({ day: s.dayNum, night, id, name: npc.name, q, claim: ans.claim, mentions: ans.mentions, quote: ans.quote, flag: ans.flag });
+  if (!ans.repeat && !ans.refused) s.statements.push({ day: s.dayNum, night: NIGHT_QS.includes(q) ? night : null, id, name: npc.name, q, claim: ans.claim, mentions: ans.mentions, quote: ans.quote, flag: ans.flag });
   return { s, ans };
 }
 
@@ -9772,17 +9830,18 @@ const IV_MOOD = {
 };
 
 const IV_CATS = [
-  { key: "catN", label: "The Nights", hint: "Where they were, who they saw" },
-  { key: "catP", label: "Press Them", hint: "Suspicion, and their craft" },
-  { key: "catV", label: "The Village", hint: "Gossip, favours, secrets" },
-  { key: "catH", label: "The Person", hint: "Sit with them a while" },
+  { key: "catN", label: "Ask about a night", hint: "Where they were and who they saw" },
+  { key: "catS", label: "Ask about someone", hint: "Opinions, whereabouts and concern" },
+  { key: "catK", label: "Ask what they know", hint: "Their craft, suspicions and village talk" },
+  { key: "catH", label: "Talk personally", hint: "Build or repair the relationship" },
 ];
 
 function IvIcon({ k }) {
   const body = {
+    catF: <g><path d="M5,3.5 h10 l4,4 V20.5 H5 Z" /><path d="M15,3.5 v4 h4 M8,12 h8 M8,16 h6" /></g>,
     catN: <path d="M14,3.4 A8.6,8.6 0 1 0 20.6,13.8 7,7 0 0 1 14,3.4 Z" fill="currentColor" stroke="none" />,
-    catP: <g><path d="M12,3.6 L12,13.4" strokeWidth="2.4" /><circle cx="12" cy="19" r="1.8" fill="currentColor" stroke="none" /></g>,
-    catV: <g><path d="M3,20 V12.2 L7.4,8.2 L11.8,12.2 V20 Z" /><path d="M12.6,20 V11.2 L16.6,7.6 L20.9,11.2 V20 Z" /></g>,
+    catS: <g><circle cx="9" cy="8" r="3.4" /><path d="M3.5,19 C3.5,14 14.5,14 14.5,19" /><path d="M16,7 h5 M18.5,4.5 v5" /></g>,
+    catK: <g><path d="M3,20 V12.2 L7.4,8.2 L11.8,12.2 V20 Z" /><path d="M12.6,20 V11.2 L16.6,7.6 L20.9,11.2 V20 Z" /></g>,
     catH: <g><circle cx="12" cy="8.2" r="3.8" /><path d="M4.6,20.4 C4.6,14.6 19.4,14.6 19.4,20.4" /></g>,
   }[k];
   return (
@@ -9861,9 +9920,10 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const pastUsed = (s.askedLog[iv.id] || []).includes("past");
   const turnedQuestionUsed = (q) => (s.askedLog[iv.id] || []).includes(`${s.dayNum}:${q}`);
   const pickTargets = s.npcs.filter((x) => x.id !== iv.id);
-  const goneTargets = pickTargets.filter((x) => x.fled || (s.faceKnown === x.id && s.monsterSawYou));
   const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && secretOf(s, x.id));
   const canReport = s.sideQuest && s.sideQuest.giver === iv.id && s.sideQuest.done && !s.sideQuest.reported;
+  const hasFoundLeads = contextQuestions.length > 0 || canReport || (s.coerceNote && !s.coerceNote.shown)
+    || iv.transcript.some((t) => t.flag) || s.statements.some((st) => st.id === iv.id && st.flag);
   const last = iv.transcript.length - 1;
   const lastFollowUps = last >= 0 ? (iv.transcript[last].followUps || []) : [];
   const asked = iv.transcript.some((t) => t.q);
@@ -10092,6 +10152,16 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               </div>
             ) : (
             <>
+              {hasFoundLeads && (
+                <button onClick={() => setIvSub("catF")} className="mv-btn mvIvChip rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left mb-2 w-full"
+                  style={{ background: "rgba(217,164,65,0.12)", border: `1px solid ${C.amber}`, cursor: "pointer" }}>
+                  <span style={{ color: C.amber, flexShrink: 0 }}><IvIcon k="catF" /></span>
+                  <span style={{ minWidth: 0 }}>
+                    <span className="mv-display block" style={{ fontSize: 15, color: C.parch, lineHeight: 1.15 }}>What you found</span>
+                    <span className="block" style={{ fontSize: 12.5, color: C.parchLine, lineHeight: 1.3 }}>Evidence and events connected to this person</span>
+                  </span>
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 {IV_CATS.map((c) => (
                   <button key={c.key} onClick={() => setIvSub(c.key)} className="mv-btn mvIvChip rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left"
@@ -10104,102 +10174,121 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                   </button>
                 ))}
               </div>
-              {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && (iv.id === s.mob.accuser || iv.id === s.mob.target) && (
-                <div className="grid grid-cols-1 gap-2 mt-2">
-                  {iv.id === s.mob.accuser && <Btn small kind="amber" onClick={() => askQ("mobwhy")}>Why {npcById(s, s.mob.target).name}? Why the rope?</Btn>}
-                  {iv.id === s.mob.accuser && <Btn small onClick={() => askQ("mobcalm")}>Talk them out of the rope</Btn>}
-                  {iv.id === s.mob.accuser && <Btn small onClick={() => askQ("mobagree")}>Tell them you think they're right</Btn>}
-                  {iv.id === s.mob.target && <Btn small kind="red" onClick={() => askQ("mobplea")}>The rope is coming for you. Talk to me</Btn>}
-                </div>
-              )}
-              {(iv.transcript.some((t) => t.flag) || s.statements.some((st) => st.id === iv.id && st.flag)) && (
-                <div className="grid grid-cols-1 gap-2 mt-2">
-                  <Btn small kind="red" onClick={() => askQ("press")}>You lied to me. Why?</Btn>
-                </div>
-              )}
             </>
             )
           )}
+          {begun && !done && !changed && ivSub === "catF" && (
+            <div>
+              {subHead("WHAT YOU FOUND")}
+              <div className="grid grid-cols-1 gap-2">
+                {contextQuestions.map((cq) => (
+                  <Btn key={cq.id} small kind="amber" onClick={() => askQ("context", cq.id)}>{cq.label}</Btn>
+                ))}
+                {(iv.transcript.some((t) => t.flag) || s.statements.some((st) => st.id === iv.id && st.flag)) && (
+                  <Btn small kind="red" onClick={() => askQ("press")}>You lied to me. Why?</Btn>
+                )}
+                {canReport && <Btn small kind="amber" onClick={() => askQ("report")}>Tell them what you saw</Btn>}
+                {s.coerceNote && !s.coerceNote.shown && <Btn small kind="red" onClick={showNote}>Show them the note</Btn>}
+              </div>
+            </div>
+          )}
           {begun && !done && !changed && ivSub === "catN" && (
             <div>
-              {subHead("THE NIGHTS")}
-              {contextQuestions.length > 0 && (
-                <div style={{ marginBottom: 11, paddingBottom: 11, borderBottom: `1px solid ${C.line}` }}>
-                  <p className="mv-display" style={{ margin: "0 0 7px", fontSize: 10.5, letterSpacing: 2, color: C.amber }}>WHAT YOU CAN ASK ABOUT</p>
-                  <div className="grid grid-cols-1 gap-2">
-                    {contextQuestions.map((cq) => (
-                      <Btn key={cq.id} small kind="amber" onClick={() => askQ("context", cq.id)}>{cq.label}</Btn>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {subHead("ASK ABOUT A NIGHT")}
               {nightRow}
               <div className="grid grid-cols-2 gap-2">
                 <Btn small onClick={() => askQ("where")}>Where were you?</Btn>
                 <Btn small onClick={() => askQ("saw")}>Who did you see?</Btn>
               </div>
               <div className="grid grid-cols-1 gap-2 mt-2">
-                <Btn small onClick={() => setIvSub("person")}>Ask about someone…</Btn>
+                <Btn small onClick={() => setIvSub("nightPerson")}>Did you see someone in particular?</Btn>
               </div>
             </div>
           )}
-          {begun && !done && !changed && ivSub === "catP" && (
+          {begun && !done && !changed && ivSub === "catS" && (
             <div>
-              {subHead("PRESS THEM")}
+              {subHead("ASK ABOUT SOMEONE")}
+              <p style={{ margin: "0 0 7px", fontSize: 13.5, color: C.parchLine }}>Choose a neighbour.</p>
+              {faceGrid(pickTargets, (x) => setIvSub({ personId: x.id }))}
+            </div>
+          )}
+          {begun && !done && !changed && ivSub === "catK" && (
+            <div>
+              {subHead("ASK WHAT THEY KNOW")}
               <div className="grid grid-cols-1 gap-2">
-                <Btn small disabled={suspectUsed} onClick={() => askQ("suspect", "")}>Who do you suspect?</Btn>
                 <Btn small disabled={craftUsed} onClick={() => askQ("craft")}>{PERSONA[iv.id].craftLabel}</Btn>
+                <Btn small disabled={gossipUsed} onClick={() => askQ("gossip")}>What's the talk of the village?</Btn>
+                <Btn small disabled={suspectUsed} onClick={() => askQ("suspect", "")}>Who do you suspect?</Btn>
                 {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && iv.id !== s.mob.accuser && iv.id !== s.mob.target && (
                   <Btn small onClick={() => askQ("mobview")}>What do you make of the accusation?</Btn>
                 )}
-              </div>
-            </div>
-          )}
-          {begun && !done && !changed && ivSub === "catV" && (
-            <div>
-              {subHead("THE VILLAGE")}
-              <div className="grid grid-cols-1 gap-2">
-                <Btn small disabled={gossipUsed} onClick={() => askQ("gossip")}>What's the talk of the village?</Btn>
-                {goneTargets.map((x) => <Btn key={`gone:${x.id}`} small onClick={() => askQ("whereNow", x.id)}>Where is {x.name}?</Btn>)}
-                {shareCandidates.length > 0 && <Btn small onClick={() => setIvSub("share")}>Share what you know…</Btn>}
-                {canReport && <Btn small kind="amber" onClick={() => askQ("report")}>Tell them what you saw</Btn>}
-                {s.coerceNote && !s.coerceNote.shown && <Btn small kind="red" onClick={showNote}>Show them the note</Btn>}
+                {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && iv.id === s.mob.accuser && (
+                  <Btn small kind="amber" onClick={() => askQ("mobwhy")}>Why {npcById(s, s.mob.target).name}? Why the rope?</Btn>
+                )}
+                {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && iv.id === s.mob.accuser && <Btn small onClick={() => askQ("mobcalm")}>Talk them out of the rope</Btn>}
+                {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && iv.id === s.mob.accuser && <Btn small onClick={() => askQ("mobagree")}>Tell them you think they're right</Btn>}
+                {s.mob && npcById(s, s.mob.target) && npcById(s, s.mob.target).alive && iv.id === s.mob.target && <Btn small kind="red" onClick={() => askQ("mobplea")}>The rope is coming for you. Talk to me</Btn>}
+                {shareCandidates.length > 0 && <Btn small onClick={() => setIvSub("share")}>Share what you know</Btn>}
               </div>
             </div>
           )}
           {begun && !done && !changed && ivSub === "catH" && (
             <div>
-              {subHead("THE PERSON")}
+              {subHead("TALK PERSONALLY")}
+              <p style={{ margin: "0 0 8px", fontSize: 13.5, color: C.parchLine }}>These questions can improve how they receive you.</p>
               <div className="grid grid-cols-1 gap-2">
-                <Btn small disabled={talkUsed} onClick={() => askQ("talk")}>Sit a while. Talk of nothing.</Btn>
-                {n.disp < 0 && <Btn small disabled={apologyUsed} onClick={() => askQ("apologise")}>Apologise. Ask to start again.</Btn>}
-                {n.disp < 2 && <Btn small disabled={helpUsed} onClick={() => askQ("help")}>Ask what work needs doing.</Btn>}
                 <Btn small disabled={howareUsed} onClick={() => askQ("howare")}>How are you holding up?</Btn>
                 <Btn small disabled={pastUsed} onClick={() => askQ("past")}>Tell me about before.</Btn>
+                <Btn small disabled={talkUsed} onClick={() => askQ("talk")}>Sit with them awhile.</Btn>
+                {n.disp < 0 && <Btn small disabled={apologyUsed} onClick={() => askQ("apologise")}>Apologise. Ask to start again.</Btn>}
+                {n.disp < 2 && <Btn small disabled={helpUsed} onClick={() => askQ("help")}>Ask what work needs doing.</Btn>}
               </div>
             </div>
           )}
-          {begun && !done && !changed && ivSub === "person" && (
+          {begun && !done && !changed && ivSub === "nightPerson" && (
             <div>
-              {subHead("ABOUT WHOM?", "catN")}
-              {faceGrid(pickTargets, (x) => setIvSub({ pid: x.id }))}
+              {subHead("WHO DID THEY SEE?", "catN")}
+              {faceGrid(pickTargets, (x) => setIvSub({ nightPid: x.id }))}
             </div>
           )}
           {begun && !done && !changed && ivSub === "share" && (
             <div>
-              {subHead("TELL THEM ABOUT WHOM?", "catV")}
+              {subHead("TELL THEM ABOUT WHOM?", "catK")}
               {faceGrid(shareCandidates, (x) => askQ("share", x.id))}
             </div>
           )}
-          {begun && !done && !changed && ivSub && ivSub.pid && (() => {
-            const t = npcById(s, ivSub.pid);
+          {begun && !done && !changed && ivSub && ivSub.nightPid && (() => {
+            const t = npcById(s, ivSub.nightPid);
             return (
               <div>
-                {subHead(t.name.toUpperCase(), "person")}
+                {subHead(t.name.toUpperCase(), "nightPerson")}
                 <div className="grid grid-cols-1 gap-2">
                   <Btn small onClick={() => askQ("about", t.id)}>Did you see {t.name} that night?</Btn>
-                  {t.alive && !t.fled && <Btn small onClick={() => askQ("opinion", t.id)}>What do you make of {t.name}?</Btn>}
                 </div>
+              </div>
+            );
+          })()}
+          {begun && !done && !changed && ivSub && ivSub.personId && (() => {
+            const t = npcById(s, ivSub.personId);
+            return (
+              <div>
+                {subHead(t.name.toUpperCase(), "catS")}
+                <div className="grid grid-cols-1 gap-2">
+                  <Btn small onClick={() => askQ("opinion", t.id)}>What do you make of {t.name}?</Btn>
+                  <Btn small onClick={() => askQ("whereNow", t.id)}>Where is {t.name}?</Btn>
+                  <Btn small onClick={() => askQ("worried", t.id)}>Were you worried about {t.name}?</Btn>
+                  <Btn small onClick={() => setIvSub({ mentionedBy: t.id })}>Did {t.name} mention anyone?</Btn>
+                </div>
+              </div>
+            );
+          })()}
+          {begun && !done && !changed && ivSub && ivSub.mentionedBy && (() => {
+            const source = npcById(s, ivSub.mentionedBy);
+            const possibleSubjects = s.npcs.filter((x) => x.id !== iv.id && x.id !== source.id);
+            return (
+              <div>
+                {subHead(`WHO DID ${source.name.toUpperCase()} MENTION?`, { personId: source.id })}
+                {faceGrid(possibleSubjects, (x) => askQ("mentioned", `${source.id}|${x.id}`))}
               </div>
             );
           })()}
@@ -14895,8 +14984,17 @@ function MonsterVillage() {
        side effect off a before/after read, no change to applyAnswer itself. -- */
     if (((npcById(ns, iv.id) || {}).disp || 0) > prevDisp) Snd.warm();
     setS(ns); setIvSub(null);
-    const qLabel = q === "context" && contextQuestion ? contextQuestion.label : q === "craft" ? PERSONA[iv.id].craftLabel : targetId ? Q_LABELS[q].replace("someone", npcById(s, targetId).name) : Q_LABELS[q];
-    setIv({ ...iv, night: questionNight, contextEventId: contextQuestion ? contextQuestion.event.eventId : iv.contextEventId, left: iv.left - 1, transcript: [...iv.transcript, { q: qLabel, night: questionNight, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
+    const mentionedPair = q === "mentioned" ? String(targetId).split("|") : null;
+    const qLabel = q === "context" && contextQuestion
+      ? contextQuestion.label
+      : q === "craft"
+        ? PERSONA[iv.id].craftLabel
+        : mentionedPair
+          ? `Did ${npcById(s, mentionedPair[0]).name} mention ${npcById(s, mentionedPair[1]).name}?`
+          : targetId
+            ? Q_LABELS[q].replace("someone", npcById(s, targetId).name)
+            : Q_LABELS[q];
+    setIv({ ...iv, night: questionNight, contextEventId: contextQuestion ? contextQuestion.event.eventId : iv.contextEventId, left: iv.left - 1, transcript: [...iv.transcript, { q: qLabel, night: NIGHT_QS.includes(effectiveQ) ? questionNight : null, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
   };
   /* free follow-up: does not touch iv.left, at most one per answered main question */
   const askFollowUp = (fu) => {
@@ -14904,7 +15002,7 @@ function MonsterVillage() {
     const { s: ns, ans } = applyAnswer(s, iv.id, iv.night, fu.q, fu.targetId);
     if (((npcById(ns, iv.id) || {}).disp || 0) > prevDisp) Snd.warm();
     setS(ns); setIvSub(null);
-    setIv({ ...iv, transcript: [...iv.transcript, { q: fu.label, night: iv.night, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
+    setIv({ ...iv, transcript: [...iv.transcript, { q: fu.label, night: NIGHT_QS.includes(fu.q) ? iv.night : null, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
   };
   /* -- Pass G2: expose the coercion note to a villager, once, in any
      interview. Trades the grim bargain for a real investigative payoff, and
@@ -14922,7 +15020,7 @@ function MonsterVillage() {
       : `Day ${s2.dayNum}: showing ${npc.name} the note loosened something. What came out today: ${bc.pair[0]} of build, or ${bc.pair[1]}; still not certain which.`);
     s2.noteExposedPending = true;
     setS(s2); setIvSub(null);
-    setIv({ ...iv, transcript: [...iv.transcript, { q: "Show them the note", night: iv.night, a: `${npc.name} reads it twice and goes pale at "${namedTarget.name}." They look directly at you. "Show the others," ${npc.name} says. "Show everyone."`, followUps: [] }] });
+    setIv({ ...iv, transcript: [...iv.transcript, { q: "Show them the note", night: null, a: `${npc.name} reads it twice and goes pale at "${namedTarget.name}." They look directly at you. "Show the others," ${npc.name} says. "Show everyone."`, followUps: [] }] });
   };
   const endInterview = () => {
     const npc = npcById(s, iv.id);

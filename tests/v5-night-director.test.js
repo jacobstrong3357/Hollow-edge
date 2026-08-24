@@ -1690,7 +1690,17 @@ function take(state, wanted) {
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
   assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");
   assert(html.includes('changed ? (\n              <div>') && html.includes('onClick={() => askQ("turnedWho")}') && html.includes('onClick={() => askQ("turnedMemory")}') && html.includes('onClick={() => askQ("turnedMark")}'), "a known changed villager receives three dedicated questions instead of the ordinary interview categories");
-  assert(html.includes('!changed && ivSub === "catN"') && html.includes('!changed && ivSub === "catP"') && html.includes('!changed && ivSub === "catV"') && html.includes('!changed && ivSub === "catH"'), "ordinary night, pressure, village and personal questions stay hidden in a known-turned interview");
+  assert(html.includes('!changed && ivSub === "catF"') && html.includes('!changed && ivSub === "catN"') && html.includes('!changed && ivSub === "catS"') && html.includes('!changed && ivSub === "catK"') && html.includes('!changed && ivSub === "catH"'), "ordinary evidence, night, person, knowledge and personal questions stay hidden in a known-turned interview");
+  var interviewIa = html.slice(html.indexOf("const IV_CATS"), html.indexOf("/* ================= UI ================= */", html.indexOf("const IV_CATS")));
+  assert(interviewIa.includes('label: "Ask about a night"') && interviewIa.includes('label: "Ask about someone"') && interviewIa.includes('label: "Ask what they know"') && interviewIa.includes('label: "Talk personally"'), "the interview tray uses the four plain-language question groups");
+  assert(interviewIa.includes('hasFoundLeads &&') && interviewIa.includes('setIvSub("catF")') && interviewIa.includes('WHAT YOU FOUND'), "relevant evidence receives a conditional, promoted group above generic conversation");
+  var evidencePanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catF"'), interviewIa.indexOf('ivSub === "catN"'));
+  assert(evidencePanel.includes("contextQuestions.map") && evidencePanel.includes('askQ("press")') && evidencePanel.includes('askQ("report")') && evidencePanel.includes("showNote"), "the evidence group gathers witnessed events, contradictions, reports and the coercion note");
+  var nightPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catN"'), interviewIa.indexOf('ivSub === "catS"'));
+  assert(nightPanel.includes("nightRow") && nightPanel.includes('askQ("where")') && nightPanel.includes('askQ("saw")') && nightPanel.includes('setIvSub("nightPerson")') && !nightPanel.includes("contextQuestions.map"), "the night group contains only the selected night's whereabouts and sightings");
+  assert(interviewIa.includes('askQ("opinion", t.id)') && interviewIa.includes('askQ("whereNow", t.id)') && interviewIa.includes('askQ("worried", t.id)') && interviewIa.includes('askQ("mentioned", `${source.id}|${x.id}`)'), "a portrait now opens opinion, whereabouts, concern and cross-mention questions");
+  assert(interviewIa.includes("These questions can improve how they receive you.") && interviewIa.includes("Sit with them awhile."), "personal conversation clearly advertises its relationship purpose");
+  assert(html.includes('night: NIGHT_QS.includes(effectiveQ) ? questionNight : null') && html.includes('night: NIGHT_QS.includes(fu.q) ? iv.night : null'), "present-day interview questions no longer display a misleading night label");
   assert(html.includes('npc.alive && !npc.fled && !npc.turned && npc.disp >= 1'), "a known changed villager cannot end the interview by assigning an ordinary watch favour");
   var turnedInterviewSource = html.slice(html.indexOf('const TURNED_INTERVIEW_QS'), html.indexOf('/* The moment the examination lands'));
   function turnedInterviewContext(stableValue) {
@@ -1993,8 +2003,8 @@ function take(state, wanted) {
   assert.strictEqual(brokenDaySave.dayEvents.length, 0);
   assert.strictEqual(brokenDaySave.monsterProtects, false);
   assert.strictEqual(brokenDaySave.bond, 0);
-  assert(html.includes('x.fled || (s.faceKnown === x.id && s.monsterSawYou)'), "a revealed monster who went to ground remains available as an interview subject");
-  assert(html.includes('askQ("whereNow", x.id)') && html.includes("Where is {x.name}?"), "the village interview offers a direct whereabouts question for Greta or anyone else who fled");
+  assert(html.includes('const pickTargets = s.npcs.filter((x) => x.id !== iv.id)'), "every other neighbour, including anyone who fled, remains available as an interview subject");
+  assert(html.includes('askQ("whereNow", t.id)') && html.includes("Where is {t.name}?"), "the person interview offers a direct whereabouts question for Greta or anyone else who fled");
   var goneReplySource = html.slice(html.indexOf('if (q === "whereNow"'), html.indexOf('if (q === "opinion"', html.indexOf('if (q === "whereNow"')));
   assert.strictEqual((goneReplySource.match(/whereNowGone:/g) || []).length, 1, "fled-villager replies use one stable keyed pool");
   assert((goneReplySource.match(/^\s+`“/gm) || []).length >= 6, "villagers have several concise explanations for someone leaving the village");
