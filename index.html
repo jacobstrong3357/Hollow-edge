@@ -7366,6 +7366,8 @@ function answerFor(s, id, night, q, targetId) {
   const tn = turnNightOf(s, id);
   const lying = (isMonster && log && log.active) || (npc.turned && tn !== null && night >= tn);
   const evn = log ? log.event : null;
+  const priorNightClaim = [...(s.statements || [])].reverse().find((st) => st.id === id && st.night === night
+    && (st.q === "where" || st.q === "saw") && st.claim);
   const mentions = [];
   let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false;
 
@@ -7449,6 +7451,16 @@ function answerFor(s, id, night, q, targetId) {
   const publicBlame = s.publicBlame && s.publicBlame.victimId !== id ? s.publicBlame : null;
   if (q === "where" && publicBlame) {
     quote = pickFreshIdx(`publicBlameWhere:${id}`, PUBLIC_BLAME_WHERE)(publicBlame.victimName, publicBlame.kind);
+  }
+
+  /* Once an answer has established this villager's version of a night, every
+     later night question follows that version. Truth and cover story remain
+     separate until firsthand evidence or a direct challenge exposes the gap. */
+  if (q === "where" && !quote && priorNightClaim) {
+    claim = priorNightClaim.claim;
+    quote = claim === "home"
+      ? `“Home. I have already told you that.”`
+      : `“The ${placeNoun(claim, "outdoor")}. That is where I was.”`;
   }
 
   if (q === "where" && !quote) {
@@ -7607,16 +7619,34 @@ function answerFor(s, id, night, q, targetId) {
        the same witness list; acknowledge it, then add only what was seen
        beyond that first answer (an absence, odd behaviour, or someone met
        on the road). */
-    const alreadyNamedHere = actual && (s.askedLog[id] || []).includes(`${night}:sawAt:${actual}`);
-    if (lying || (isMonster && log && log.active)) {
+    const playerWitnessed = (s.playerSaw || []).find((f) => f.night === night && f.id === id && f.loc && f.loc !== "home");
+    const selfSecretCover = log && log.secretOut && log.secretOut[id] && !npc.secretKnown && !playerWitnessed;
+    const narrativeClaim = priorNightClaim
+      ? priorNightClaim.claim
+      : isMonster
+        ? monsterClaim().loc
+        : (lying || selfSecretCover)
+          ? (playerWitnessed ? playerWitnessed.loc : "home")
+          : (actual || "home");
+    claim = narrativeClaim;
+    const coveringRealLocation = narrativeClaim !== actual;
+    const alreadyNamedHere = narrativeClaim && (s.askedLog[id] || []).includes(`${night}:sawAt:${narrativeClaim}`);
+    if (coveringRealLocation) {
+      if (selfSecretCover) guardedLie = true;
+      quote = alreadyNamedHere
+        ? `“I have already told you who was there.”`
+        : narrativeClaim === "home"
+          ? `“No one. I was home, as I told you.”`
+          : `“No one. I was alone at the ${placeNoun(narrativeClaim, "outdoor")}.”`;
+    } else if (narrativeClaim === "home" || !actual) {
+      quote = `“From behind a barred door? Nothing but my own reflection in the window glass.”`;
+    } else if (lying || (isMonster && log && log.active)) {
       quote = chance(0.7) ? `"No one. It was a night for seeing no one."` : (() => {
         const t = pick(s.npcs.filter((x) => x.alive && x.id !== id && x.id !== s.monster.vid));
         if (!t) return `"No one at all."`;
         mentions.push({ id: t.id, loc: "home", kind: "vouch" });
         return `"Only ${t.name}, through their window, safe at home where good folk belong."`;
       })();
-    } else if (actual === "home" || !actual) {
-      quote = `"From behind a barred door? Nothing but my own reflection in the window glass."`;
     } else if (evn && actual === evn.loc && log) {
       const there = s.npcs.filter((x) => x.alive && x.id !== id && log.outMap[x.id] === evn.loc);
       const absent = s.npcs.filter((x) => x.alive && x.id !== id && log.outMap[x.id] !== evn.loc);
@@ -7694,6 +7724,12 @@ function answerFor(s, id, night, q, targetId) {
       quote = `"You're asking me about myself? I was where I said I was. Ask about someone who isn't standing in front of you."`;
     } else if (!t.alive && !tLoc) {
       quote = `"${t.name}? ${t.name} was already in the ground by then. Have some respect."`;
+    } else if (priorNightClaim && priorNightClaim.claim !== actual) {
+      claim = priorNightClaim.claim;
+      if (claim !== "home" && tLoc === claim) {
+        mentions.push({ id: targetId, loc: claim, kind: "placed", night });
+        quote = `“Yes. ${t.name} was at the ${placeNoun(claim, "outdoor")} with me.”`;
+      } else quote = `“No. I saw nothing of ${t.name} that night.”`;
     } else if (protectsTargetSecret) {
       guardedLie = true;
       mentions.push({ id: targetId, loc: "home", kind: "vouch", night });
@@ -8340,6 +8376,10 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "where" && claim) {
     const contra = s.playerSaw.find((f) => f.night === night && f.id === id && f.loc !== claim);
     if (contra) flag = `You saw them out that night, near the ${contra.loc}. This is a lie.`;
+  }
+  if (q === "saw" && claim) {
+    const contra = s.playerSaw.find((f) => f.night === night && f.id === id && f.loc !== claim);
+    if (contra) flag = `Their witness account depends on being ${claim === "home" ? "at home" : `at the ${claim}`}. You saw them near the ${contra.loc}. This is a lie.`;
   }
   if (q === "about" && targetId) {
     const placed = mentions.find((mn) => mn.kind === "placed" || mn.kind === "vouch");
