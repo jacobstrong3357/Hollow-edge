@@ -1712,21 +1712,21 @@ const WEATHER_DIRECTOR = {
     move: (place) => `The fog closes behind you on the road to the ${place}. Houses become silhouettes; lanterns become people only when they are close enough to speak.`,
     searchEmpty: (place) => `You search the ${place} one lantern-width at a time. The fog gives you wet stone, blank ground, and no edge you can trust.`,
     listenEmpty: "You lower the lantern. Fog muffles the village until your own breathing seems like company. A distant bell sounds once; nothing nearer answers.",
-    follow: (name) => `You follow ${name} as a pale lantern-stain in the fog, losing them at each turn and finding them again by the scrape of a boot.`,
+    follow: (name, place) => `You follow ${name}'s lantern through the fog to the ${place}.`,
     monster: "The fog moves against the wind. A large silhouette forms inside it, and the breathing is closer than the shape.",
   },
   storm: {
     move: (place) => `Rain drives across the road to the ${place}. Thunder blanks the village between flashes, and every gate sounds like a footstep gaining on you.`,
     searchEmpty: (place) => `You search the ${place} under driving rain. Water has filled the prints, stripped the loose earth, and carried every unprotected trace downhill.`,
     listenEmpty: "You lower the lantern and listen. Rain owns the roofs, thunder owns the hills, and any smaller sound reaches you broken beyond use.",
-    follow: (name) => `You follow ${name} by lightning: a coat at one turning, an empty lane at the next, every footfall drowned.`,
+    follow: (name, place) => `By lightning, you follow ${name} to the ${place}.`,
     monster: "Thunder breaks overhead. In the flash something stands between you and home; the rain has hidden every sound of its approach.",
   },
   frost: {
     move: (place) => `The frozen road to the ${place} creaks under every step. Your breath goes ahead of you, and your bootprints write the way back in hard blue ground.`,
     searchEmpty: (place) => `You search the ${place} slowly. Frost preserves every ordinary crossing—boot, paw, wheel—and none of them breaks into the wrong shape you feared.`,
     listenEmpty: "You lower the lantern. In the sparse, brittle silence the ground creaks, your breath rasps, and nothing else moves close enough to mark the frost.",
-    follow: (name) => `You follow ${name} by the fresh prints and small clouds of breath left hanging in the blue dark.`,
+    follow: (name, place) => `You follow ${name}'s fresh tracks to the ${place}.`,
     monster: "The frozen road creaks under weight that is not yours. A second breath clouds behind you, then stops.",
   },
 };
@@ -2568,7 +2568,7 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} stops at a gate that is not his and works the latch open with great care, then stands a moment looking into the dark beyond it, as if willing something out of the night to notice the way in. It is the gate of the man he has blamed forty years for the fever that took his first wife. If the horror wants a door on this lane, he has left it this one. He walks on without looking back.`,
       hail: (nm) => `${nm} lets the latch fall shut again, slow about it, caught and not much caring. "Gate was open. I closed it. Or opened it. Old hands, boy. Go home."`,
       confess: `"There's a man in this village I've hated longer than you've been alive. When the killing started I found myself leaving his gate open, on the nights. Telling myself the thing would choose, and if it chose him, well. I'm old and I'll answer for it soon enough. But I'll not stand here and pretend I didn't."` },
-    { loc: "Graveyard", outP: 0.3, short: "he opens fresh graves by night to take back the keepsakes the grieving buried with their dead",
+    { loc: "Graveyard", outP: 0.3, short: "he steals keepsakes from fresh graves",
       walk: (nm) => `${nm} is waist-deep in a grave filled only last week, working by feel, and what he lifts out and pockets is small and bright: a ring, a coin, whatever the grieving could not bear to keep. He fills the grave back so neat that no one will ever know it was opened.`,
       hail: (nm) => `${nm} lays his spade across the open grave, unbothered. "Ground settles wrong, needs turning." His pockets clink, very faintly, and he does not explain that.`,
       confess: `"Forty years burying this village, and it pays in thanks, and thanks don't feed a man. So I take back what the grieving throw in after them. Rings. Coin. They don't need it and I do, and the dead have never once complained. Hang me by the grave-robbers, then. At least I'll know the ground I'm put in."` },
@@ -2634,7 +2634,7 @@ const SECRET_POOL = {
       walk: (nm) => `${nm}, alone on the mill floor, taking something from a small brown bottle with the practiced speed of shame. Then he walks it. Around, and around the idle stones, cane ticking, until his hands are still enough to belong to a physician again.`,
       hail: (nm) => `${nm} slides something into his coat before turning. "Insomnia. Professionally speaking." His pupils are wrong, and his hands, for once, are perfectly steady.`,
       confess: `He sets the little brown bottle on the table between you, defiantly. "Laudanum. For a spine that is forty years older than the rest of me. I dose after dark and walk it off where no one goes anymore, because a physician whose hands shake is a physician no one sends for. You'd have found the bottle eventually. You have that kind of face."` },
-    { loc: "Old Church", outP: 0.3, short: "he signs false causes of death so the shamed and the self-killed can lie in holy ground",
+    { loc: "Old Church", outP: 0.3, short: "he falsifies deaths so the shamed can lie in holy ground",
       walk: (nm) => `${nm} comes away from a house of grief having written, in his careful hand, a lie: fever, where it was a rope; a failing heart, where it was a bottle taken on purpose. So the dead can lie in the churchyard and the living can grieve without the extra shame. He has filled a page of the ledger with such mercies.`,
       hail: (nm) => `${nm} caps his pen. "A death to certify. They come at all hours, the dead. One does not keep them waiting." He does not offer to show you what he wrote, and you know better than to ask.`,
       confess: `"The church will not bury a suicide in hallowed ground, nor an unshriven shame. So I lie on the certificate. Fever. Failure of the heart. A hundred small lies in my own hand, so a mother can bury her boy by the wall and not at the crossroads. Report me to the bishop. I'll sign my own the same merciful way when it comes."` },
@@ -2648,7 +2648,7 @@ const SECRET_POOL = {
       walk: (nm) => `${nm} stands at the mouth of the north road, perfectly still, watching the way a sentry watches. Not waiting for someone. Watching FOR someone. Whatever life she left behind, part of her stands guard against it every night.`,
       hail: (nm) => `${nm} does not startle either, which is its own answer. "Where I am from, you learn to watch the roads." She looks past you as she says it, north. "Go inside. You make noise."`,
       confess: `A long silence, and then, quietly: "I left a husband. The kind you leave at night, without a note, with the bruises still counting themselves. Two springs I have watched the north road in case he learned the way here. That is my history no one can confirm. Now one person can."` },
-    { loc: "Village Square", outP: 0.3, short: "she writes under a man's name and sends the pages to a city press by the night coach",
+    { loc: "Village Square", outP: 0.3, short: "she writes under a man's name for a city press",
       walk: (nm) => `${nm} seals a thick packet of close-written pages, addresses it in a hand not quite her own, and leaves it for the night coach. Whatever she writes, she signs a man's name to it, because a woman's would never see print, and she has decided the world will read her either way.`,
       hail: (nm) => `${nm} turns the packet face-down against her skirt. "Letters. To no one you know, in a city you will never see." She watches you the way she watches everything, deciding how much of it you understood.`,
       confess: `"I write. Stories, and worse than stories: the kind that ask why the men who own us get to own us. No press in the country prints a woman, so I sign a man's name and send them off in the dark, and half this county has read me without one soul knowing it was the seamstress. That is my secret. It's the only thing I brought out of my old life worth the keeping."` },
@@ -3750,6 +3750,20 @@ function directorSightingFor(seed, npc, motive, ctx, wx) {
   if (wx === "frost") return `${base} Their breath hangs briefly behind them.`;
   return base;
 }
+function directorFollowLead(wx, name, dest) {
+  const place = dest === "Home" ? "door" : dest;
+  const weather = directorWeather(wx);
+  return weather ? weather.follow(name, place) : `You follow ${name} to the ${place}.`;
+}
+function directorFollowAction(wx, npc, dest, reason) {
+  const cleanReason = String(reason || "finish a private errand").replace(/[.]+$/, "");
+  return `${directorFollowLead(wx, npc.name, dest)} There, you watch ${npc.name} ${cleanReason}.`;
+}
+function directorFollowSecret(wx, npc, dest, summary) {
+  const clearAction = String(summary || "they conceal a private errand").split(",")[0].replace(/[.]+$/, "");
+  const seen = /^(?:he|she|they)\b/i.test(clearAction) ? `you see that ${clearAction}` : `you see ${clearAction}`;
+  return `${directorFollowLead(wx, npc.name, dest)} There, ${seen}.`;
+}
 function directorDialogueFor(s, facts, npc, motive, seed) {
   const dest = (motive && motive.destination) || facts.outMap[npc.id] || "Village Square";
   const wx = facts.wx || null;
@@ -3761,6 +3775,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   const dead = griefId && npcById(s, griefId);
   const activeHost = facts.active && npc.id === s.monster.vid;
   const temperament = DIRECTOR_MONSTER_TEMPERAMENT[monsterOf(s).id] || { mode: "silent" };
+  const travel = directorFollowLead(wx, npc.name, dest);
   let hail, follow, honest, evasive, question, reaffirm, secretSummary = null;
   if (activeHost) {
     hail = temperament.mode === "beast"
@@ -3768,13 +3783,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
       : temperament.mode === "silent"
         ? `${npc.name} turns. Their mouth opens, but the lane loses every sound before an answer can form. They walk on while the silence holds.`
         : directorStableLine(seed + npc.id + ":hail-monster", HAIL_MONSTER_LINES, npc.name, dest);
-    const reveal = temperament.mode === "beast"
-      ? `You follow ${npc.name} toward the ${dest}. The human stride shortens, breaks, then lands on too many points at once. Breath becomes panting; panting becomes a growl. You stop before it turns.`
-      : temperament.mode === "silent"
-        ? `You follow ${npc.name} toward the ${dest}. Frost takes each print after they lift their foot. They make no breath and no sound, and the night goes still around their passing.`
-        : directorStableLine(seed + npc.id + ":follow-monster", FOLLOW_MONSTER_SCENES, npc.name, dest);
-    const activity = (DIRECTOR_MONSTER_ACTIVITY[monsterOf(s).id] || ((where) => `It bends to deliberate work at the ${where}, intent upon somebody who is not yet here.`))(dest);
-    follow = `${reveal} ${activity}`;
+    follow = `${travel} There, ${npc.name}'s human gait breaks. They begin hunting.`;
     honest = temperament.mode === "beast"
       ? `A growl starts in ${npc.name}'s chest. “You followed me,” they manage, the words damaged by whatever the night did to their throat.`
       : `“You followed me to the ${dest}. You should be more careful about what you ask to notice.”`;
@@ -3785,7 +3794,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
     reaffirm = evasive;
   } else if (npc.turned) {
     hail = directorStableLine(seed + npc.id + ":hail-turned", HAIL_TURNED_LINES, npc.name);
-    follow = directorStableLine(seed + npc.id + ":follow-turned", FOLLOW_TURNED_SCENES, npc.name, dest);
+    follow = `${travel} There, ${npc.name} stands motionless, listening to something you cannot hear.`;
     honest = `“I went where I was needed.” The words arrive flat and complete. Nothing follows them.`;
     evasive = honest;
     question = `I followed you to the ${dest}. What called you there?`;
@@ -3793,8 +3802,8 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   } else if (secret) {
     hail = directorHailFor(seed, npc, "secret", ctx);
     follow = secretCaught
-      ? secret.walk(npc.name)
-      : `You keep ${npc.name}'s lantern ahead of you for three turns. At the ${dest}, it goes dark. A door closes softly somewhere you cannot place. You learned that the errand mattered enough to hide—and nothing you can fairly name beyond that.`;
+      ? directorFollowSecret(wx, npc, dest, secret.short)
+      : `${travel} ${npc.name} slips through a door before you can see what they came to do.`;
     honest = secretCaught ? secret.confess : `“You followed me and lost me. That does not entitle you to the part I kept.”`;
     evasive = `“You saw that I wanted privacy. You did not see a crime. Do not improve the night for the sake of your Journal.”`;
     question = secretCaught ? `I followed you to the ${dest}. Tell me what I saw.` : `I followed you toward the ${dest}. Why did you lose me?`;
@@ -3803,14 +3812,14 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   } else if (griefId) {
     const deadName = dead ? dead.name : "the dead";
     hail = directorHailFor(seed, npc, "mourning", ctx, deadName);
-    follow = directorStableLine(seed + npc.id + ":follow-grief", GRIEF_WALK, npc.name, deadName);
+    follow = `${travel} ${directorStableLine(seed + npc.id + ":follow-grief", GRIEF_WALK, npc.name, deadName)}`;
     honest = `“I went to ${deadName}. Grief keeps poor hours and it does not ask your permission.”`;
     evasive = `“You watched somebody mourn. If you need that to be suspicious, the ugliness is yours.”`;
     question = `I followed you to ${deadName}'s grave. Why did you go alone?`;
     reaffirm = honest;
   } else {
     hail = directorHailFor(seed, npc, family, ctx);
-    follow = `${npc.name} works at the ${dest}: ${ctx.reason}. ${ctx.object === "nothing" ? "They finish quickly and go home." : `They set down ${ctx.object} and work by the smallest possible light.`}`;
+    follow = directorFollowAction(wx, npc, dest, ctx.reason);
     honest = `“I went out to ${ctx.reason}. You saw the work, so ask me what still troubles you.”`;
     evasive = `“You followed me far enough to see a human errand. If you require guilt as well, bring your own.”`;
     question = `I followed you to the ${dest}. Was ${ctx.reason} the whole reason?`;
@@ -3818,7 +3827,6 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
   }
   const weather = directorWeather(wx);
   if (weather) {
-    follow = `${weather.follow(npc.name)} ${follow}`;
     const interviewWeather = directorStableLine(`${seed}:${npc.id}:${wx}:interview-weather`, DIRECTOR_INTERVIEW_WEATHER[wx], npc.name);
     honest = `${honest} ${interviewWeather}`;
     evasive = `${evasive} ${interviewWeather}`;

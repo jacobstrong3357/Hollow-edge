@@ -486,7 +486,7 @@ function take(state, wanted) {
 (function followingRevealsARealSceneAndInterviewThread() {
   var config = baseConfig("follow-payoff");
   config.monster.active = false;
-  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "Graveyard", falk: "home", ansel: "home" } };
+  config.currentFacts = { weather: "storm", active: false, outMap: { rosa: "Graveyard", falk: "home", ansel: "home" } };
   config.villagers = [{
     id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square",
     motive: { id: "hidden-pages", family: "secret", destination: "Graveyard", reason: "hide a packet of pages", object: "a packet of pages", depart: 1, duration: 5, secret: true },
@@ -498,6 +498,7 @@ function take(state, wanted) {
   state = take(state, { type: "FOLLOW", actorId: "rosa" });
   assert.strictEqual(state.currentBeat.type, "follow");
   assert(/packet of pages/.test(state.currentBeat.text), "following shows what the villager actually does");
+  assert.strictEqual(state.currentBeat.text, "Rosa buries a packet of pages beneath the wall.", "the Director does not stack a second weather preamble onto authored follow copy");
   assert(state.ledgers.truth.some(function (event) { return event.kind === "followed" && event.actorId === "rosa"; }));
   var projection = Director.consequenceProjection(state);
   assert(projection.encounters.some(function (event) { return event.actorId === "rosa" && event.followed; }), "the follow becomes a daylight interview thread");
@@ -952,6 +953,34 @@ function take(state, wanted) {
     var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
     assert(words >= 10 && words <= 25, entry.family + " hail must remain within 10–25 words: " + text);
   });
+  var followWeatherSource = html.slice(html.indexOf("const WEATHER_DIRECTOR ="), html.indexOf("/* ---------- Zork", html.indexOf("const WEATHER_DIRECTOR =")));
+  var followHelperSource = html.slice(html.indexOf("function directorFollowLead"), html.indexOf("function directorDialogueFor", html.indexOf("function directorFollowLead")));
+  var followContext = {};
+  vm.createContext(followContext);
+  vm.runInContext(followWeatherSource + followHelperSource + "; this.followSamples = ['fog', 'storm', 'frost'].map(function (wx) { return directorFollowAction(wx, { name: 'Greta' }, 'Tavern', 'collect a message left with Liesel and answer none of her questions'); });", followContext);
+  assert.strictEqual(followContext.followSamples[1], "By lightning, you follow Greta to the Tavern. There, you watch Greta collect a message left with Liesel and answer none of her questions.");
+  followContext.followSamples.forEach(function (text) {
+    var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words <= 30, "a weather-aware follow result stays concise: " + text);
+    assert(/to the Tavern/.test(text) && /watch Greta collect a message/.test(text), "a follow result states the destination and observed action plainly: " + text);
+  });
+  var directorSource = fs.readFileSync(path.join(__dirname, "..", "v5-night-director.js"), "utf8");
+  var motiveRows = Array.from(directorSource.matchAll(/motive\("[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*"([^"]+)"/g));
+  motiveRows.forEach(function (row) {
+    ["fog", "storm", "frost"].forEach(function (wx) {
+      var text = followContext.directorFollowAction(wx, { name: "Doctor Falk" }, row[1], row[2]);
+      var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+      assert(words <= 30, "every ordinary follow result stays at 30 words or fewer: " + text);
+    });
+  });
+  var secretRows = Array.from(html.matchAll(/short:\s*"([^"]+)"/g)).map(function (match) { return match[1]; });
+  secretRows.forEach(function (summary) {
+    var text = followContext.directorFollowSecret("storm", { name: "Doctor Falk" }, "Old Church", summary);
+    var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words <= 30, "every discovered-secret follow result stays at 30 words or fewer: " + text);
+  });
+  assert(!html.includes("works at the ${dest}") && !html.includes("They set down ${ctx.object}"), "follow results do not stack vague work language and decorative props");
+  assert(!html.includes("a coat at one turning, an empty lane at the next"), "the retired long storm-follow preamble cannot return");
   assert(!html.includes("crosses the edge of your lantern with"), "the retired repeating sighting line cannot leak through a fallback");
   assert(html.includes('q: "sawContext"'), "a Director encounter offers a location-specific witness follow-up");
   assert(html.includes("I was only passing through, taking the back lane toward"), "interviews explain a route waypoint separately from the villager's destination");

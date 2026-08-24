@@ -1081,15 +1081,14 @@
       revealedSecret: !!dialogue.revealsSecret,
       secretSummary: dialogue.secretSummary || null
     });
-    appendObservation(state, { eventId: event.id, slot: slot, kind: dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: state.weather === "storm" ? "weathered" : "clear", reliability: "direct", text: dialogue.follow || null, weather: state.weather });
+    var routePlace = destination === HOME ? "door" : destination;
+    var fallbackLead = state.weather === "fog" ? "You follow " + villager.name + "'s lantern through the fog to the " + routePlace + "."
+      : state.weather === "storm" ? "By lightning, you follow " + villager.name + " to the " + routePlace + "."
+        : state.weather === "frost" ? "You follow " + villager.name + "'s fresh tracks to the " + routePlace + "."
+          : "You follow " + villager.name + " to the " + routePlace + ".";
+    var followText = dialogue.follow || (fallbackLead + " There, " + villager.name + " finishes an ordinary errand and leaves.");
+    appendObservation(state, { eventId: event.id, slot: slot, kind: dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: state.weather === "storm" ? "weathered" : "clear", reliability: "direct", text: followText, weather: state.weather });
     state.ledgers.memories[actorId].push({ eventId: event.id, slot: slot, subject: "player", kind: "followed", location: destination, clarity: "uncertain", acknowledged: false, interpretation: "They may not know whether the lantern behind them was yours." });
-    var followText = dialogue.follow || (villager.name + " reaches the " + destination + " and completes a small, human errand before turning home.");
-    if (state.openingIntent && state.openingIntent.kind === "watch" && state.openingIntent.id === actorId) {
-      followText = "You abandon the watch outside " + villager.name + "'s door and follow them. " + followText;
-    }
-    if (state.weather === "fog") followText = "You keep their lantern as a pale stain in the fog, losing it at every corner and finding it again by the scrape of a boot. " + followText;
-    else if (state.weather === "storm") followText = "You follow by lightning: a coat at one turning, an empty lane at the next, every footfall drowned. " + followText;
-    else if (state.weather === "frost") followText = "You follow the fresh prints and the small clouds of breath they leave in the blue dark. " + followText;
     appendBeat(state, makeBeat("follow-beat:" + slot + ":" + actorId, "follow", slot, destination,
       followText, {
         actorId: actorId,
