@@ -4252,7 +4252,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     const clueMode = signSearchMode === "ground" ? "edges" : "ground";
     const clueChance = facts.wx === "storm" ? 0.34 : facts.wx === "fog" ? 0.46 : facts.wx === "frost" ? 0.66 : 0.54;
     const routeClueText = clueAgenda
-      ? `You find ${clueAgenda.motive.object}. Someone came here to ${clueAgenda.motive.reason}.`
+      ? `You find ${clueAgenda.motive.object}. There is no name on the outside.`
       : (DIRECTOR_SEARCH_PAYOFF[target] || "You find an unfinished human errand, but nothing that identifies who left it.");
     const routeClueSeen = directorFindingAlreadyRecorded(s, routeClueText, clueAgenda);
     if (rng.next() < clueChance && !routeClueSeen) siteSearchSlots.forEach((slot) => directorConfig.forcedBeats.push({
@@ -13157,6 +13157,7 @@ function MonsterVillage() {
       else if (action.type === "WATCH_MONSTER") { Snd.silence(true); Snd.cue("breath_close"); }
       else if (action.type === "CONFRONT_MONSTER") Snd.danger();
       else if (["SEARCH", "SEARCH_ON"].includes(action.type)) Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : "earth");
+      else if (action.type === "INSPECT_CLUE") Snd.cue("cloth");
       else if (action.type === "HAIL") Snd.cue("bustle");
       else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
       else if (action.type === "ANSWER_DOOR") { if (next.phase === "dead") Snd.danger(); else Snd.cue(next.thresholdEvent && next.thresholdEvent.visitorKind === "neighbour" ? "bustle" : "whisper"); }
@@ -13249,7 +13250,7 @@ function MonsterVillage() {
               {focusedActions.map((a, i) => (
                 <NightChoice key={`${a.type}:${a.to || a.actorId || i}`} quiet={a.tone === "quiet"} danger={a.tone === "danger"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
-                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN", "STEP_OUTSIDE"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : a.type === "WATCH_MONSTER" ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : ["ANSWER_DOOR", "INVITE_IN"].includes(a.type) ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
+                    <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN", "STEP_OUTSIDE"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON", "INSPECT_CLUE"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : a.type === "WATCH_MONSTER" ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : ["ANSWER_DOOR", "INVITE_IN"].includes(a.type) ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
                     <span>{a.label}</span>
                   </span>
                 </NightChoice>

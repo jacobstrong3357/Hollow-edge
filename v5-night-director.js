@@ -592,12 +592,43 @@
 
   function roleClue(villager, schedule, slot, location) {
     return makeBeat("clue:" + slot + ":" + location + ":" + villager.id, "clue", slot, location,
-      "You find " + schedule.motive.object + ". It suggests why someone came here, not what they are.", {
+      "You find " + schedule.motive.object + ". There is no name on the outside.", {
         actorId: villager.id,
         tone: "bone",
-        meta: { motiveFamily: schedule.motive.family },
+        meta: { motiveFamily: schedule.motive.family, inspectable: true, ownerId: villager.id },
         signature: semanticSignature({ family: schedule.motive.family, actorId: villager.id, location: location, interaction: "find", outcome: "object" })
       });
+  }
+
+  function clueInspectionLabel(object) {
+    var item = String(object || "").toLowerCase();
+    if (item.indexOf("parcel") >= 0) return "Open the parcel";
+    if (item.indexOf("packet") >= 0) return "Open the packet";
+    if (item.indexOf("bundle") >= 0 || item.indexOf("wrapped") >= 0) return "Undo the wrapping";
+    if (item.indexOf("note") >= 0 || item.indexOf("letter") >= 0 || item.indexOf("message") >= 0) return "Read it closely";
+    return "Examine it closely";
+  }
+
+  function inspectedClueText(state, beat, owner, schedule) {
+    var motive = schedule && schedule.motive || {};
+    var object = motive.object || beat.meta && beat.meta.object || "a small parcel";
+    var definite = String(object).replace(/^an?\s+/i, "the ");
+    var roleContents = {
+      gravedigger: "grave twine, two iron pegs and a whetstone",
+      herbalist: "dried feverfew, two stoppered vials and a measuring spoon",
+      physician: "clean bandage, a brown vial and a bone needle",
+      priest: "candle stubs, sealing wax and a folded prayer",
+      innkeeper: "a cellar key, a tally slip and two wax seals",
+      seamstress: "black thread, three needles and a strip of folded cloth",
+      blacksmith: "three rivets, a hinge pin and a small file",
+      baker: "a flour chit, a wrapped loaf and a measure of salt"
+    };
+    var contents = roleContents[roleKey(owner || {})] || "a key, two small tools and a folded receipt";
+    var canOpen = /parcel|packet|bundle|wrapped|satchel/i.test(object);
+    var lead = canOpen ? "You open " + definite + ". Inside are " + contents + "." : "You examine " + definite + ". With it are " + contents + ".";
+    var name = owner && owner.name || "a villager";
+    var reason = motive.reason || "finish a private errand before dawn";
+    return lead + " A folded note bears " + name + "'s name and asks " + name + " to " + reason + ". This belongs to " + name + ".";
   }
 
   function makeDiscoverySchedule(seed, stateLike, config, rng) {
@@ -852,6 +883,19 @@
       if (beat.type === "stamp" && state.found.stamps.length) return;
       var presented = clone(beat);
       if (presented.location === "*") presented.location = state.player.location;
+      if (presented.type === "clue" && presented.actorId) {
+        var clueSchedule = state.schedules[presented.actorId];
+        presented.meta = Object.assign({}, presented.meta || {}, {
+          inspectable: true,
+          inspected: false,
+          requiresResponse: true,
+          ownerId: presented.actorId,
+          object: clueSchedule && clueSchedule.motive && clueSchedule.motive.object || null,
+          inspectLabel: clueInspectionLabel(clueSchedule && clueSchedule.motive && clueSchedule.motive.object)
+        });
+        presented.actorId = null;
+        presented.text = "You find " + (presented.meta.object || "something wrapped and left behind") + ". There is no name on the outside.";
+      }
       presented.text = weatherDiscoveryText(state, presented);
       var shown = appendBeat(state, presented);
       if (!shown) return;
@@ -859,7 +903,7 @@
       if (beat.type === "clue") state.found.clues.push(clone(presented));
       if (beat.type === "whisper") state.found.whispers.push(clone(presented));
       if (beat.type === "delusion" && !(beat.meta && beat.meta.requiresResponse)) state.found.delusions.push(clone(presented));
-      appendObservation(state, { eventId: beat.truthEventId || null, beatId: beat.id, slot: slot, kind: beat.type === "delusion" && beat.meta && beat.meta.requiresResponse ? "strange_sight" : beat.type, location: presented.location, actors: beat.actorId ? [beat.actorId] : [], clarity: beat.type === "delusion" ? "unstable" : state.weather === "storm" && beat.type === "whisper" ? "fragmentary" : "clear", reliability: beat.type === "delusion" && beat.meta && beat.meta.requiresResponse ? "unresolved" : beat.type === "delusion" ? "unreliable" : "direct", sign: beat.sign || null, text: presented.text, weather: state.weather });
+      appendObservation(state, { eventId: beat.truthEventId || null, beatId: beat.id, slot: slot, kind: beat.type === "delusion" && beat.meta && beat.meta.requiresResponse ? "strange_sight" : beat.type, location: presented.location, actors: presented.actorId ? [presented.actorId] : [], clarity: beat.type === "delusion" ? "unstable" : state.weather === "storm" && beat.type === "whisper" ? "fragmentary" : "clear", reliability: presented.type === "clue" && presented.meta && presented.meta.inspectable && !presented.meta.inspected ? "unresolved" : beat.type === "delusion" && beat.meta && beat.meta.requiresResponse ? "unresolved" : beat.type === "delusion" ? "unreliable" : "direct", sign: beat.sign || null, text: presented.text, weather: state.weather });
     });
   }
 
@@ -1999,8 +2043,17 @@
     if (next.phase === "threat") return resolveThreat(next, action);
     var forcedWatchFollow = presentingBeat && presentingBeat.type === "watch" && presentingBeat.meta && presentingBeat.meta.departure
       && action.type === "FOLLOW" && action.actorId === presentingBeat.actorId;
-    var legal = forcedWatchFollow || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var forcedClueInspect = presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected
+      && action.type === "INSPECT_CLUE";
+    var legal = forcedWatchFollow || forcedClueInspect || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
+    if (action.dismissClue && presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected) {
+      appendTruth(next, { id: "clue-left-closed:" + presentingBeat.id, slot: Math.max(0, next.cursor), kind: "clue_left_closed", location: next.player.location, sourceBeatId: presentingBeat.id });
+      if (next.cursor >= next.slots - 1 && action.type !== "GO_HOME") {
+        finishIfNeeded(next);
+        return next;
+      }
+    }
     if (action.type === "GO_HOME") {
       next.phase = "returning";
       next.player.route.push({ slot: next.cursor, location: next.player.location, action: "GO_HOME" });
@@ -2055,6 +2108,36 @@
           appendObservation(next, { eventId: falseTruth.id, beatId: falseBeat && falseBeat.id, slot: responseSlot, kind: "false_sight", location: next.player.location, actors: [], clarity: "clear", reliability: "direct", text: falseBeat && falseBeat.text, weather: next.weather });
         }
       }
+      finishIfNeeded(next);
+      return next;
+    }
+    if (action.type === "INSPECT_CLUE" && presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected) {
+      var ownerId = presentingBeat.meta.ownerId;
+      var owner = next.cast.find(function (villager) { return villager.id === ownerId; });
+      var ownerSchedule = next.schedules[ownerId];
+      if (!owner || !ownerSchedule) return invalid(next, action, "Nothing inside identifies an owner.");
+      var inspectionText = inspectedClueText(next, presentingBeat, owner, ownerSchedule);
+      var inspectionTruth = appendTruth(next, {
+        id: "clue-inspected:" + presentingBeat.id,
+        slot: Math.max(0, next.cursor),
+        kind: "clue_inspected",
+        location: next.player.location,
+        actorId: owner.id,
+        actors: ["player", owner.id],
+        sourceBeatId: presentingBeat.id
+      });
+      next.actionHistory.push({ slot: Math.max(0, next.cursor), type: "INSPECT_CLUE", to: null, actorId: owner.id });
+      var inspectedBeat = appendBeat(next, makeBeat(presentingBeat.id + ":inspected", "clue", Math.max(0, next.cursor), next.player.location,
+        inspectionText, {
+          actorId: owner.id,
+          truthEventId: inspectionTruth.id,
+          meta: Object.assign({}, presentingBeat.meta, { inspected: true, inspectable: false, requiresResponse: false, critical: true }),
+          signature: semanticSignature({ family: ownerSchedule.motive.family, actorId: owner.id, location: next.player.location, interaction: "inspect", outcome: "identified" })
+        }));
+      var foundIndex = next.found.clues.findIndex(function (clue) { return clue.id === presentingBeat.id; });
+      if (foundIndex >= 0 && inspectedBeat) next.found.clues[foundIndex] = clone(inspectedBeat);
+      else if (inspectedBeat) next.found.clues.push(clone(inspectedBeat));
+      appendObservation(next, { eventId: inspectionTruth.id, beatId: inspectedBeat && inspectedBeat.id, slot: Math.max(0, next.cursor), kind: "evidence", location: next.player.location, actors: [owner.id], clarity: "clear", reliability: "direct", text: inspectionText, weather: next.weather });
       finishIfNeeded(next);
       return next;
     }
@@ -2214,6 +2297,9 @@
     }
     if (state.phase === "returning") return [action("REACH_HOME", "Reach your door and throw the bolt", "amber")];
     var result = [];
+    if (state.currentBeat && state.currentBeat.type === "clue" && state.currentBeat.meta && state.currentBeat.meta.inspectable && !state.currentBeat.meta.inspected) {
+      result.push(action("INSPECT_CLUE", state.currentBeat.meta.inspectLabel || "Examine what you found", "amber"));
+    }
     (state.graph[state.player.location] || []).filter(function (to) { return to !== HOME; }).forEach(function (to) {
       result.push(action("MOVE", "Go to the " + to, "bone", { to: to }));
     });
@@ -2271,6 +2357,21 @@
     }
     if (beat && beat.type === "watch" && beat.meta && beat.meta.noDeparture) {
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "They do not leave. Head home at dawn");
+      return result.slice(0, 2);
+    }
+    if (beat && beat.type === "clue" && beat.meta && beat.meta.inspectable && !beat.meta.inspected) {
+      add(all.find(function (item) { return item.type === "INSPECT_CLUE"; }), beat.meta.inspectLabel || "Examine what you found");
+      var leaveClosed = all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); });
+      if (leaveClosed) { leaveClosed = clone(leaveClosed); leaveClosed.dismissClue = true; }
+      var leaveClosedHome = all.find(function (item) { return item.type === "GO_HOME"; });
+      if (leaveClosedHome) { leaveClosedHome = clone(leaveClosedHome); leaveClosedHome.dismissClue = true; }
+      add(leaveClosed, guide.kind === "search" ? "Leave it closed. Continue your search" : "Leave it closed. Keep watching");
+      add(leaveClosedHome, "Leave it closed. Head for home");
+      return result.slice(0, 3);
+    }
+    if (beat && beat.type === "clue" && beat.meta && beat.meta.inspected) {
+      add(all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); }), guide.kind === "search" ? "Continue your search" : "Continue your watch");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Head for home");
       return result.slice(0, 2);
     }
     if (beat && beat.type === "delusion" && beat.meta && beat.meta.requiresResponse) {

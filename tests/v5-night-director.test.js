@@ -1340,12 +1340,48 @@ function take(state, wanted) {
   state = take(state, { type: "WAIT" });
   state = take(state, { type: "HAIL", actorId: "falk" });
   state = take(state, { type: "SEARCH" });
+  assert.strictEqual(state.currentBeat.actorId, null, "finding an object does not identify its owner before inspection");
   var projection = Director.consequenceProjection(state);
   assert.strictEqual(projection.encounters.length, 1, "three adjacent clock ticks at one place become one interview thread");
   assert.strictEqual(projection.encounters[0].sourceEventIds.length, 4, "the compact thread retains every truth event for timing audits");
   assert(projection.encounters[0].acknowledged, "a hail upgrades the whole thread to a clear mutual memory");
+  assert.strictEqual(projection.findings.length, 0, "an unopened object cannot unlock a named evidence question");
+  state = take(state, { type: "INSPECT_CLUE" });
+  projection = Director.consequenceProjection(state);
   assert.strictEqual(projection.findings.length, 1, "an actor-linked physical clue becomes an evidence question candidate");
   assert.strictEqual(projection.findings[0].actorId, "falk");
+})();
+
+(function aParcelMustBeOpenedBeforeItNamesTobias() {
+  var config = baseConfig("open-tobias-parcel");
+  config.villagers = [{
+    id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true,
+    home: "Village Square", motive: { id: "grave-repair", family: "duty", destination: "Graveyard", reason: "repair a grave marker before dawn", object: "a small parcel", depart: 0, duration: 5 }
+  }];
+  config.slots = 3;
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { tobias: "Graveyard" } };
+  config.forcedBeats = [{ id: "tobias-parcel", type: "clue", slot: 2, location: "Graveyard", actorId: "tobias", text: "You find a small parcel." }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Graveyard" });
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "SEARCH" });
+  assert.strictEqual(state.phase, "active", "a parcel found in the last hour remains openable before the journey home");
+  assert.strictEqual(state.currentBeat.actorId, null);
+  assert(!/Tobias/.test(state.currentBeat.text), "the unopened parcel does not magically name its owner");
+  var choices = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} });
+  assert.deepStrictEqual(choices.map(function (choice) { return choice.label; }), ["Open the parcel", "Leave it closed. Continue your search", "Leave it closed. Head for home"]);
+  var leftClosed = Director.reduce(JSON.parse(JSON.stringify(state)), choices[1]);
+  assert.strictEqual(leftClosed.phase, "returning", "leaving a final-hour parcel closed cannot strand the night");
+  assert(leftClosed.ledgers.truth.some(function (event) { return event.kind === "clue_left_closed"; }));
+  state = take(state, choices[0]);
+  assert.strictEqual(state.phase, "returning", "opening the final-hour parcel resolves before the explicit journey home");
+  assert.strictEqual(state.currentBeat.actorId, "tobias");
+  assert(/grave twine/.test(state.currentBeat.text) && /This belongs to Old Tobias/.test(state.currentBeat.text), "opening the parcel provides visible ownership evidence");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "clue_inspected" && event.actorId === "tobias"; }));
+  assert.strictEqual(Director.consequenceProjection(state).findings[0].actorId, "tobias", "inspection unlocks the Tobias interview lead");
+  choices = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} });
+  assert(!choices.some(function (choice) { return choice.type === "HAIL" || choice.type === "FOLLOW"; }), "identifying an absent owner does not make them available to hail or follow");
 })();
 
 (function semanticsPenaliseRepetition() {
@@ -1615,7 +1651,8 @@ function take(state, wanted) {
   var oldSave = { clues: ["Night 2: You find a sealed note tucked into the prayer book. It belongs to a human errand: answer a confession requested through a third party. It explains the hour, not the person."] };
   var oldAgenda = { motive: { object: "a sealed note tucked into the prayer book", reason: "answer a confession requested through a third party" } };
   assert(recordedFindingContext.wasRecorded(oldSave, "new presentation text", oldAgenda), "older saves recognise a previously shown errand from their journal text even without Director signature history");
-  assert(html.includes("Someone came here to ${clueAgenda.motive.reason}."), "human errand clues state the observed explanation concisely");
+  assert(html.includes("There is no name on the outside."), "an unopened human errand clue does not reveal ownership or motive");
+  assert(html.includes('action.type === "INSPECT_CLUE"') && html.includes('Snd.cue("cloth")'), "opening a found parcel is wired into the night UI and soundscape");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
