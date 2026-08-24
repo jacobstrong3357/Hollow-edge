@@ -814,24 +814,15 @@ const BODY_FOUND = [
   (v, w) => `${v.name} is found ${w === "home" ? "at home" : `at the ${w}`}. A broad trail of blood leads twenty feet to the body; they were dragged while still bleeding.`,
   (v, w) => `${v.name} is found ${w === "home" ? "at home" : `at the ${w}`}, hands cut to the bone from fighting back. Falk studies them and says, "They fought for a long time."`,
 ];
-const NO_BODY = [
-  "No one is dead. Someone's dog is gone, though. The chain was bitten through, not broken, and its owner keeps calling for it in a smaller and smaller voice.",
-  "No body this morning. But the well bucket came up smelling wrong, and no one has drawn from that well since.",
-  "Everyone answers the morning count. Someone swears one of the answers came half a beat late, like it had to be remembered first. They will not say whose.",
-  "No dead. The church door stood open at dawn, though, and the font was bone dry. Whoever found it first has not been back inside since.",
-  "All alive at dawn. But there are marks on a windowsill in the lane, four parallel and one crossing, and the family whose sill it is has moved their beds to the back room.",
-  "No one was found dead this morning. The village breathes out. Perhaps too soon.",
-  "No body at dawn. Folk call it a mercy, and bar their doors again by noon anyway.",
-  "The night took no one, or so it seems. The dogs have not stopped whining since first light.",
-  "Dawn comes and everyone answers their name. The count is complete, but Tobias repeats it twice before anyone is willing to leave the square.",
-  "Nothing found and nobody missing. The baker's dough failed in the night; frightened neighbours argue over whether that matters. Nobody knows.",
-];
-/* Sharper variants for a no-body morning after a turning: the arithmetic
-   itself starts to look wrong, without anyone quite able to say why. */
-const NO_BODY_SHARP = [
-  "No one is dead. Old Tobias counts heads at the gate twice, out loud, and gets a different number the second time. He will not say which count he trusts.",
-  "Everyone answers the morning roll, and yet the square feels short by one soul. Nobody can say who, and nobody stops counting.",
-  "No body. But someone did the sums this morning: who's thinner than they were, who laughs a half-beat late now, who answers to their own name a little slower. No one liked the total.",
+/* An unwitnessed turning is hidden game state, not dawn knowledge. Morning
+   reports only the public fact that nobody died. The player must learn who
+   changed by speaking to people, asking for gossip or meeting them at night. */
+const OFFSCREEN_TURN_DAWN = [
+  "No death is reported at first light. The village counts that as mercy.",
+  "No passing bell rings this morning. Doors open, cautiously, and the usual work begins.",
+  "The morning count finds no dead. For a few hours, that is enough for everyone.",
+  "First light brings no body and no funeral bell. The village returns to its chores.",
+  "Nobody is reported dead by breakfast. People call it a quiet night and leave it there.",
 ];
 const SEARCH_NOTHING = [
   (l) => `You search the ${l} until the bell. You find no print, wound, disturbed earth or other mark worth recording.`,
@@ -3108,9 +3099,25 @@ const SEEN_OUT_HABIT = [
 ];
 
 const GOSSIP_TRUE_HINT = [
-  (t) => `They lean in, voice dropping. "Between us - ${t} has stopped humming while they work. People don't stop humming for no reason. I'd watch them, if I were the watching sort."`,
+  (t) => `They lean in, voice dropping. "Between us, ${t} has stopped humming while they work. People don't stop humming for no reason."`,
   (t) => `"I probably shouldn't say this," they say, and say it anyway. "${t} hasn't been right since the killings started. Not wrong exactly. Just not right."`,
   (t) => `They glance at the door before speaking. "${t}. Something's changed there, and it isn't grief. I've seen grief. This isn't grief."`,
+];
+
+/* These are reports from an actual neighbour, never an omniscient dawn card.
+   Each gives the player a reason to visit the named person without declaring
+   that person changed. Innocent fear and illness can explain every detail. */
+const GOSSIP_RECENT_CHANGE = [
+  (t) => `"${t} came to the well late. Drew a full bucket, then left it untouched."`,
+  (t) => `"I knocked at ${t}'s door this morning. They answered, but would not open it."`,
+  (t) => `"${t} missed the bread cart. That never happens. Someone should check on them."`,
+  (t) => `"I spoke to ${t} at dawn. They answered the question I had asked yesterday."`,
+  (t) => `"${t} stood outside before sunrise without a coat. Said they did not feel the cold."`,
+  (t) => `"The bell rang beside ${t}. They did not seem to hear it."`,
+  (t) => `"${t} came home before dawn. Mud to the knees, no lantern, no explanation."`,
+  (t) => `"I saw ${t} washing blood from a sleeve. They said it came from a rabbit."`,
+  (t) => `"${t}'s dog would not let them through their own gate this morning."`,
+  (t) => `"${t} asked me what day it was, then asked again before I left."`,
 ];
 
 /* ================= HELPERS ================= */
@@ -5647,10 +5654,13 @@ function resolveNight(prev, planIn, preEvents) {
         const directorSawChange = !!(director && (director.ledgers.truth || []).some((event) => event.kind === "investigated_attack" && event.victimId === victim.id && event.recognizedChanged));
         s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, turned: true, ...(directorSawChange ? { known: true } : {}), ...(decayNight ? { decay: decayNight } : {}) } : x));
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "turned" });
-        dawn.push(ev(directorSawChange
-          ? `${victim.name} does not come to the well. You found them alive at the ${victimWhere} after the scream, and saw that the attack had changed them.`
-          : director ? `${victim.name} does not come to the well. Their door is open, their bed is cold, and no body is found.`
-            : chance(0.3) ? pickFreshIdx("noBodySharp", NO_BODY_SHARP) : pickFreshIdx("noBody", NO_BODY)));
+        dawn.push(ev(
+          directorSawChange
+            ? `${victim.name} does not come to the well. You found them alive at the ${victimWhere} after the scream, and saw that the attack had changed them.`
+            : pickFreshIdx("offscreenTurnDawn", OFFSCREEN_TURN_DAWN),
+          directorSawChange ? victim.id : undefined,
+          2
+        ));
       }
     } else {
       beats.push(pickFreshIdx("circleLines", CIRCLE_LINES));
@@ -5805,16 +5815,6 @@ function resolveNight(prev, planIn, preEvents) {
       dawn.push(ev(`You spent part of the ${evn.name} in company, half-listening, half-watching. For an hour, it almost felt like a night from before.`));
       if (active && mods.mingledWith === s.monster.vid) shiftMonsterBond(s, 1);
     }
-  }
-
-  const hiddenTurned = s.npcs.filter((x) => x.alive && !x.fled && x.turned && !x.known && x.id !== s.lastRumor);
-  /* pointed rumors about a named neighbour hold off until the village has
-     had a few nights to fray: a day-one whisper reads as a handed-out clue
-     and invites a coin-flip accusation before any evidence exists */
-  if (n >= 3 && chance(hiddenTurned.length ? 0.4 : 0.3) && (hiddenTurned.length || chance(0.3))) {
-    const rPool = hiddenTurned.length && chance(0.7) ? hiddenTurned : s.npcs.filter((x) => x.alive && !x.fled && !x.turned && x.id !== s.lastRumor);
-    const target = rPool.length ? pick(rPool) : null;
-    if (target) { s.lastRumor = target.id; dawn.push(ev(pickFreshIdx("rumorStrange", RUMOR_STRANGE)(target.name), target.id)); }
   }
 
   if (watchStayedHome && (!victim || victim.id !== watchStayedHome)) {
@@ -7466,7 +7466,16 @@ function answerFor(s, id, night, q, targetId) {
       const grudgeEntries = Object.entries(s.grudges).filter(([gid, g]) => g && s.dayNum <= g.until && gid !== id && g.other !== id && npcById(s, gid) && npcById(s, gid).alive && npcById(s, g.other) && npcById(s, g.other).alive);
       const lastLog = s.nightLogs.length ? s.nightLogs[s.nightLogs.length - 1] : null;
       const hidden = s.npcs.filter((x) => x.alive && x.turned && !x.known && x.id !== id);
-      if (leakedEntry) {
+      const recentHidden = hidden.filter((x) => turnNightOf(s, x.id) === s.nightNum);
+      /* A fresh off-screen turning is not narrated at dawn. An innocent
+         neighbour can instead report one concrete thing they personally saw.
+         This creates a reason to visit, watch or examine the subject without
+         converting gossip into proof. */
+      if (recentHidden.length) {
+        const t = pick(recentHidden);
+        mentions.push({ id: t.id, kind: "odd" });
+        quote = pickFreshIdx(`gossipRecentChange:${t.id}`, GOSSIP_RECENT_CHANGE)(t.name);
+      } else if (leakedEntry) {
         const [oid] = leakedEntry;
         const owner = npcById(s, oid);
         const sec = secretOf(s, oid);

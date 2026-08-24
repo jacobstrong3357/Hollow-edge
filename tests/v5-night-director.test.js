@@ -1482,6 +1482,22 @@ function take(state, wanted) {
   assert(html.includes('if (beat.meta && beat.meta.changedAftermath) return beat.text;'), "changed survivors keep their aftermath dialogue instead of reverting to an ordinary errand");
   assert(html.includes('changedScene ? "CHANGED"'), "the night card visibly labels a witnessed turning");
   assert(html.includes('directorSawChange'), "a witnessed turning remains known at dawn");
+  assert(!html.includes("Their door is open, their bed is cold, and no body is found."), "an unwitnessed turning cannot identify its victim through omniscient dawn narration");
+  assert(html.includes('pickFreshIdx("offscreenTurnDawn", OFFSCREEN_TURN_DAWN)'), "an unwitnessed turning reports only the public fact that nobody died");
+  assert(!html.includes('dawn.push(ev(pickFreshIdx("rumorStrange"'), "hidden changed villagers are not named by an automatic dawn rumor");
+  assert(html.includes('turnNightOf(s, x.id) === s.nightNum') && html.includes('GOSSIP_RECENT_CHANGE)(t.name)'), "asking an innocent neighbour for gossip can surface a concrete observation about the newly changed villager");
+  var changedGossipSource = html.slice(html.indexOf("const GOSSIP_RECENT_CHANGE"), html.indexOf("/* ================= HELPERS", html.indexOf("const GOSSIP_RECENT_CHANGE")))
+    .replace("const GOSSIP_RECENT_CHANGE =", "GOSSIP_RECENT_CHANGE =");
+  var changedGossipContext = {};
+  vm.createContext(changedGossipContext);
+  vm.runInContext(changedGossipSource, changedGossipContext);
+  assert.strictEqual(changedGossipContext.GOSSIP_RECENT_CHANGE.length, 10, "recent changed-neighbour gossip has enough variants to avoid a repeated giveaway");
+  changedGossipContext.GOSSIP_RECENT_CHANGE.forEach(function (line) {
+    var text = line("Liesel");
+    var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
+    assert(words <= 25, "changed-neighbour gossip stays concise and conversational: " + text);
+    assert(/Liesel/.test(text), "changed-neighbour gossip names its subject as reported testimony");
+  });
   assert(html.includes('followLocation: revealChoice.location || director.player.location'), "a Director death recap receives the lived encounter location");
   assert(html.includes('const fDest = mods.followLocation || outMap[fw.id] || plan.loc;'), "a planned villager destination cannot overwrite the player's death location");
   assert(!html.includes('crosses the ${where} before you can rise'), "death prose does not describe crossing an entire named location to reach the player");
