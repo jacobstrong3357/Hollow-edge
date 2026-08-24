@@ -3510,32 +3510,32 @@ const DIRECTOR_TEMPERAMENT_QUIET = {
 };
 function directorHostBuild(build) {
   return ({
-    slight: "the slight frame",
-    stooped: "the familiar stoop of the shoulders",
-    tall: "the long, unmistakable frame",
-    stout: "the broad, stout build",
-  })[build] || "the familiar human shape";
+    slight: "the slight build",
+    stooped: "the stooped shoulders",
+    tall: "the tall frame",
+    stout: "the broad build",
+  })[build] || "the familiar build";
 }
 /* At close range the horror does not erase its host. Each reveal gives the
    player both truths at once: what the monster has made of the body, and the
    neighbour whose gait, build or face remains beneath it. */
 const DIRECTOR_MONSTER_REVEALS = {
-  werewolf: (nm, b) => `The shoulders wrench wider and the jaw pushes forward through a face no longer made for speech. Behind the muzzle, ${directorHostBuild(b)} and ${nm}'s eyes remain unmistakable.`,
-  vampire: (nm, b) => `The face is bloodless and sharpened, the mouth wet around teeth too long for it. Even so, ${directorHostBuild(b)} gives ${nm} away before the eyes do.`,
-  wraith: (nm, b) => `Most of the body is absence, a human outline cut into the night. The darkness still holds ${directorHostBuild(b)}; when it turns, the empty face is ${nm}'s.`,
-  ghoul: (nm, b) => `Grave-dirt cakes the mouth and something has worried the cheeks almost to bone. Beneath it, ${directorHostBuild(b)} is enough: the thing crouching there is ${nm}.`,
-  witch: (nm, b) => `Thorn and hair turn between blackened fingers while the shadow bends toward them against the lantern. The face is still plainly ${nm}'s; ${directorHostBuild(b)} has not changed at all.`,
-  demon: (nm, b) => `Rotted flesh divides into black, ember-lit seams, and a second expression moves beneath the first. Under that ruin, ${directorHostBuild(b)} is unmistakable. This is ${nm}.`,
-  shifter: (nm, b) => `The jaw widens, the fingers lengthen and the spine rises. Between changes, ${directorHostBuild(b)} returns. The fixed eyes belong to ${nm}.`,
-  banshee: (nm, b) => `Torn burial linen lifts around a body too thin to carry its own wail. Through the streaming face and ${directorHostBuild(b)}, you know ${nm}.`,
-  lich: (nm, b) => `The skin has drawn tight and old around a face that did not wear those years by daylight. The posture remains: ${directorHostBuild(b)}, and beneath it ${nm}.`,
-  revenant: (nm, b) => `Burial earth falls from clothes stiff with the grave. The hands are ruined, the face grey, but ${directorHostBuild(b)} belongs to ${nm} and nobody else.`,
-  doppel: (nm, b) => `Your own face moves across its features and slips. Beneath the borrowed expression, ${directorHostBuild(b)} returns for one breath, followed by ${nm}'s eyes.`,
-  hag: (nm, b) => `The joints fold in directions the human body never agreed to, bringing the grinning face too low and too close. Even folded wrong, ${directorHostBuild(b)} still belongs to ${nm}.`,
-  necromancer: (nm, b) => `Dead hands move at a gesture from fingers stained black to the knuckle. The commanding figure keeps ${directorHostBuild(b)}; the voice that answers is ${nm}'s.`,
-  mimic: (nm, b) => `Claws, frost and grave-mould pass over it in unfinished layers. Through every change, ${directorHostBuild(b)} and ${nm}'s eyes remain.`,
-  succubus: (nm, b) => `The beautiful face alters with every want you have tried not to name. The illusion cannot hide ${directorHostBuild(b)} or the fact that the eyes are ${nm}'s.`,
-  hollowed: (nm, b) => `The body unfolds far beyond its human height, rotted skin opening around a courteous blank where the face should be. Beneath the impossible height, ${directorHostBuild(b)} still belongs to ${nm}.`,
+  werewolf: (nm, b) => `The shoulders wrench wider and the jaw forces forward into a muzzle. The eyes and ${directorHostBuild(b)} are still ${nm}'s. ${nm} is the monster.`,
+  vampire: (nm, b) => `The face is bloodless, with fresh blood around its long teeth. You recognize ${directorHostBuild(b)} and ${nm}'s eyes. ${nm} is the monster.`,
+  wraith: (nm, b) => `Most of the body is a dark human outline. Its empty face turns, holding ${nm}'s features above ${directorHostBuild(b)}. ${nm} is the monster.`,
+  ghoul: (nm, b) => `Grave dirt cakes the mouth and the cheeks are torn to bone. The crouching body has ${nm}'s face and ${directorHostBuild(b)}. ${nm} is the monster.`,
+  witch: (nm, b) => `Thorns twist between blackened fingers and the shadow bends toward them. The face and ${directorHostBuild(b)} belong to ${nm}. ${nm} is the monster.`,
+  demon: (nm, b) => `Rotted flesh splits into black, ember-lit seams. Beneath it, you recognize ${nm}'s face and ${directorHostBuild(b)}. ${nm} is the monster.`,
+  shifter: (nm, b) => `The jaw widens, the fingers lengthen and the spine rises. Between changes, ${nm}'s face and ${directorHostBuild(b)} return. ${nm} is the monster.`,
+  banshee: (nm, b) => `Burial linen lifts around a body too thin to carry its wail. The streaming face is ${nm}'s above ${directorHostBuild(b)}. ${nm} is the monster.`,
+  lich: (nm, b) => `The skin has drawn tight and old around a familiar face. It is ${nm}'s face, held above ${directorHostBuild(b)}. ${nm} is the monster.`,
+  revenant: (nm, b) => `Burial earth falls from ruined hands and grey flesh. The face and ${directorHostBuild(b)} belong to ${nm}. ${nm} is the monster.`,
+  doppel: (nm, b) => `Your own face slides across its features and disappears. ${nm}'s eyes and ${directorHostBuild(b)} remain beneath it. ${nm} is the monster.`,
+  hag: (nm, b) => `The joints fold backward, bringing the grinning face low and close. Even twisted, it has ${nm}'s face and ${directorHostBuild(b)}. ${nm} is the monster.`,
+  necromancer: (nm, b) => `Dead hands obey fingers stained black to the knuckle. The speaker has ${nm}'s voice, face and ${directorHostBuild(b)}. ${nm} is the monster.`,
+  mimic: (nm, b) => `Claws, frost and grave mould slide across its body. Each change clears to show ${nm}'s face and ${directorHostBuild(b)}. ${nm} is the monster.`,
+  succubus: (nm, b) => `The beautiful face changes with every glance. The illusion slips, exposing ${nm}'s eyes, face and ${directorHostBuild(b)}. ${nm} is the monster.`,
+  hollowed: (nm, b) => `The body stretches beyond human height and rotted skin opens around a blank face. Beneath it are ${nm}'s features and ${directorHostBuild(b)}. ${nm} is the monster.`,
 };
 const DIRECTOR_SEARCH_PAYOFF = {
   "Village Square": "Behind the well bucket you find a heel of bread wrapped in a child's arithmetic page. Someone came to feed a household too proud to ask, and left in a hurry.",
@@ -3903,7 +3903,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   const monsterTruth = monsterOf(s);
   const monsterHost = npcById(s, s.monster.vid);
   const temperament = DIRECTOR_MONSTER_TEMPERAMENT[monsterTruth.id] || { mode: "silent", hallucination: 0, cue: "silence", sound: "The village sound cuts out, then returns without explanation." };
-  const revealWriter = DIRECTOR_MONSTER_REVEALS[monsterTruth.id] || ((nm, b) => `The thing turns close enough to read. Beneath the wrongness, ${directorHostBuild(b)} and the face both belong to ${nm}.`);
+  const revealWriter = DIRECTOR_MONSTER_REVEALS[monsterTruth.id] || ((nm, b) => `The thing turns close enough to see. It has ${nm}'s face and ${directorHostBuild(b)}. ${nm} is the monster.`);
   const revealText = revealWriter(monsterHost ? monsterHost.name : "someone you know", monsterHost && monsterHost.build);
   const armedCandidates = gameMonsters(s).filter((mm) => !s.struck.includes(mm.id) && (s.playerSigns || []).every((sg) => mm.signs.includes(sg)));
   const armedGuess = armedCandidates.length === 1 ? {

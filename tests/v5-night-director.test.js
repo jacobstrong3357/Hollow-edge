@@ -1096,6 +1096,11 @@ function take(state, wanted) {
   vm.runInContext(revealSource, revealContext);
   var demonReveal = revealContext.DIRECTOR_MONSTER_REVEALS.demon("Old Tobias", "stooped");
   assert(/rotted flesh/i.test(demonReveal) && /stoop/i.test(demonReveal) && /Old Tobias/.test(demonReveal), "a demon can be horrific while its ruined body still identifies Old Tobias");
+  Object.keys(revealContext.DIRECTOR_MONSTER_REVEALS).forEach(function (monsterId) {
+    var reveal = revealContext.DIRECTOR_MONSTER_REVEALS[monsterId]("Father Ansel", "tall");
+    assert(reveal.includes("Father Ansel is the monster."), monsterId + " reveal states the host identity as a direct conclusion");
+  });
+  assert(/claws, frost and grave mould/i.test(revealContext.DIRECTOR_MONSTER_REVEALS.mimic("Father Ansel", "tall")), "the mimic keeps its physical transformation while naming Father Ansel directly");
   assert(html.includes('(DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name'), "a Director death restores the monster-specific death scene with the actual host named");
   var temperamentSource = html.slice(html.indexOf("const DIRECTOR_TEMPERAMENT_QUIET"), html.indexOf("function directorHostBuild"))
     .replace("const DIRECTOR_TEMPERAMENT_QUIET =", "DIRECTOR_TEMPERAMENT_QUIET =");
