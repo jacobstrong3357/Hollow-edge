@@ -85,6 +85,7 @@ context.ev = function (text, pid, pri) { return { t: text, pid: pid, pri: pri ==
 context.evPlaque = function (event, rule, sign) { event.plaque = { rule: rule, sign: sign }; return event; };
 context.chance = function () { return false; };
 context.SIGNS = { bite: "Bite Marks" };
+vm.runInContext(between("function definiteFindingObject", "function findingReturnOutcome"), context);
 vm.runInContext(between("function actSearch(prev, loc)", "function actDefend(prev)"), context);
 
 (function daylightSearchConsumesAndStampsMonsterScene() {
@@ -115,7 +116,9 @@ vm.runInContext(between("function actSearch(prev, loc)", "function actDefend(pre
   assert.strictEqual(next.worldEvents.length, 1);
   assert.strictEqual(next.worldEvents[0].kind, "director_finding");
   assert.strictEqual(next.worldEvents[0].actorIds.join(","), "ansel");
-  assert(/Why was it there/.test(next.worldEvents[0].question));
+  assert.strictEqual(next.worldEvents[0].question, "Return the folded note");
+  assert.strictEqual(next.worldEvents[0].returnable, true);
+  assert.strictEqual(next.worldEvents[0].privateItem, true, "reading named mail before returning it is treated as snooping");
 })();
 
 console.log("night-remains: all tests passed");
