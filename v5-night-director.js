@@ -310,10 +310,36 @@
     claw: function (name) { return name + "'s blood covers the ground. Four deep claw marks have opened their side. No human hand made them."; },
     tracks: function (name) { return "Blood fills one heavy footprint beside " + name + ". The prints lead away, then stop in open ground."; },
     bite: function (name) { return "Two deep punctures mark " + name + "'s throat. The bite is wider than any human jaw."; },
-    cold: function (name) { return "The wound on " + name + " is frozen white. Their blood has turned to ice against the ground."; },
-    flora: function (name) { return "The flesh around " + name + "'s wound has gone grey. Black veins spread from it like blighted roots."; },
+    cold: function (name) { return "Frost has flowered through the grass beneath " + name + ", though the ground beyond their body is wet. Their blood has frozen where it touched the earth."; },
+    flora: function (name) { return "Every plant beneath " + name + " has greyed from the root. Black veins thread the leaves in the same branching pattern left across their skin."; },
     hex: function (name) { return "An angular mark has been cut into " + name + "'s skin. Dark wax fills the lines."; },
     graves: function (name) { return "Fresh grave soil is packed into " + name + "'s wound. More of it lies beneath their nails."; }
+  };
+
+  /* The sign says what touched the victim; this says what actually killed
+     them. A fresh body should never be reduced to a skull portrait and a
+     vague sentence about falling. */
+  var BODY_DEATH_TEXT = {
+    claw: function (name) { return "Blood has soaked the ground beneath " + name + ". The opened side and the speed of the loss made death quick."; },
+    tracks: function (name) { return name + "'s neck is broken. Death was instant; the body shows no struggle after the first blow."; },
+    bite: function (name) { return "Most of " + name + "'s blood is gone. The throat wound killed them before they reached the path."; },
+    cold: function (name) { return name + " is rigid and colder than the frost around them. The heart appears to have stopped at once."; },
+    flora: function (name) { return name + " has no pulse. The blight reached the heart and stopped it within moments."; },
+    hex: function (name) { return "No ordinary wound explains the death. Blackened vessels run from one deliberate cut toward " + name + "'s heart."; },
+    graves: function (name) { return "Earth packs " + name + "'s mouth and throat. They suffocated here, within reach of open air."; }
+  };
+
+  /* The death is lived before it is examined. These lines show the visible
+     collapse without spending the forensic sign that belongs to the later
+     body choice. */
+  var WITNESSED_DEATH_TEXT = {
+    claw: function (name) { return "Four wounds tear open across " + name + "'s side. Blood sheets down their clothes; their knees buckle and they hit the ground without another breath."; },
+    tracks: function (name) { return "Something strikes " + name + " hard enough to turn them in the air. Their neck breaks with the fall. They do not move again."; },
+    bite: function (name) { return "Two wounds open in " + name + "'s throat. The colour drains from their face as they clutch at them, stagger once and collapse."; },
+    cold: function (name) { return "Frost races over " + name + "'s face and into their open mouth. Their whole body locks rigid, then topples like felled wood."; },
+    flora: function (name) { return name + "'s skin turns grey. Black veins spread across their face, race down the throat and vanish beneath the collar. They reach for you, then fall as their heart stops."; },
+    hex: function (name) { return "An angular cut opens by itself across " + name + "'s chest. The vessels around it blacken; their body arches once and falls still."; },
+    graves: function (name) { return "Wet grave soil pours from " + name + "'s mouth. They claw at their throat, sink to their knees and suffocate within reach of open air."; }
   };
 
   /* Watching the revealed host earns a sign by showing the action that made
@@ -667,10 +693,14 @@
     };
     var contents = roleContents[roleKey(owner || {})] || "a key, two small tools and a folded receipt";
     var canOpen = /parcel|packet|bundle|wrapped|satchel/i.test(object);
-    var lead = canOpen ? "You open " + definite + ". Inside are " + contents + "." : "You examine " + definite + ". With it are " + contents + ".";
+    var privateItem = canOpen || /note|letter|message|mail/i.test(object);
     var name = owner && owner.name || "a villager";
-    var reason = motive.reason || "finish a private errand before dawn";
-    return lead + " A folded note bears " + name + "'s name and asks " + name + " to " + reason + ". This belongs to " + name + ".";
+    var reason = String(motive.reason || "finish a private errand before dawn").replace(/\bafter sunset\b/gi, "after dusk").replace(/[.]+$/, "");
+    return {
+      text: "Inside " + definite + ": " + contents + ". A note asks " + name + " to " + reason + ".",
+      object: object,
+      privateItem: privateItem
+    };
   }
 
   function siteClueWitness(state, beat) {
@@ -839,6 +869,7 @@
     state.chase = null;
     state.thresholdEvent = Object.assign({
       roll: keyedNumber(seed, "threshold:appears"),
+      tauntRoll: keyedNumber(seed, "threshold:contextual-taunt"),
       visitorRoll: keyedNumber(seed, "threshold:visitor"),
       dialogueRoll: keyedNumber(seed, "threshold:dialogue"),
       purposeRoll: keyedNumber(seed, "threshold:purpose"),
@@ -990,6 +1021,137 @@
     return signs[Math.floor((state.outcomes[slot].sign || 0) * signs.length) % signs.length];
   }
 
+  /* A villager can cross the player's route more than once in one night. If
+     the player already met or followed them, a later attack must reintroduce
+     them and bridge the change of place instead of presenting a familiar face
+     as though it appeared for the first time. */
+  function witnessedThreatText(state, victimId, slot, location) {
+    var victim = state.cast.find(function (entry) { return entry.id === victimId; });
+    var name = victim && victim.name || "your neighbour";
+    var prior = (state.ledgers.truth || []).filter(function (event) {
+      return event.slot < slot
+        && ["followed", "hailed", "crossed_paths"].indexOf(event.kind) >= 0
+        && (event.actorId === victimId || (event.actors || []).indexOf(victimId) >= 0)
+        && (event.actors || []).indexOf("player") >= 0;
+    }).sort(function (a, b) { return b.slot - a.slot; })[0] || null;
+    if (!prior) return "A shape closes the distance behind " + name + ". It has not seen your choice yet.";
+    var lastPlace = prior.location === HOME || prior.location === "home" ? "home" : "the " + prior.location;
+    var nowPlace = location === HOME || location === "home" ? "home" : "the " + location;
+    var bridge = prior.location && prior.location !== location
+      ? "It is " + name + " again. You last saw them at " + lastPlace + ". Now they are crossing " + nowPlace + " when a shape closes behind them."
+      : "It is " + name + " again. A shape closes the distance behind them.";
+    return bridge + " It has not seen your choice yet.";
+  }
+
+  /* A witnessed death needs a human scene before it becomes a danger scene.
+     The player is already committed to this part of the night, so the setup
+     may safely hold the attack for one short exchange. This keeps a victim
+     from materialising only to become a corpse and lets ordinary trust,
+     errands and suspicions occupy the foreground first. */
+  function attackSetupFor(state, victimId, slot, location) {
+    var victim = state.cast.find(function (row) { return row.id === victimId; });
+    if (!victim) return null;
+    var name = victim.name || "Your neighbour";
+    var agenda = state.schedules[victimId];
+    var motive = agenda && agenda.motive || {};
+    var affliction = state.currentFacts && state.currentFacts.afflictionLoc === location
+      ? state.currentFacts.affliction : null;
+    var crisisCrowd = state.currentFacts && state.currentFacts.afflictionCrowd || [];
+    var inCrisis = !!(affliction && crisisCrowd.indexOf(victimId) >= 0);
+    var priorMeeting = (state.ledgers.truth || []).filter(function (event) {
+      return event.slot <= slot && ["followed", "hailed", "crossed_paths"].indexOf(event.kind) >= 0
+        && (event.actorId === victimId || (event.actors || []).indexOf(victimId) >= 0)
+        && (event.actors || []).indexOf("player") >= 0;
+    }).sort(function (a, b) { return b.slot - a.slot; })[0] || null;
+    var priorPlace = priorMeeting && priorMeeting.location ? (priorMeeting.location === HOME || priorMeeting.location === "home" ? "home" : "the " + priorMeeting.location) : null;
+    var lead = priorMeeting
+      ? name + " catches your lantern again." + (priorPlace && priorMeeting.location !== location ? " You last spoke at " + priorPlace + "; now they have found you at the " + location + "." : "")
+      : name + " hails you before you can pass.";
+    var choices;
+    var responses;
+    var text;
+    var kind;
+
+    if (inCrisis) {
+      kind = "crisis_work";
+      var crisisLines = {
+        millFlood: name + " braces the rescue rope beside you, soaked to the skin. “Keep it tight,” they say. “If the grain goes, Hollow's Edge starves before spring.” Black water hammers the mill doors while the two of you take the strain together.",
+        wellFouled: name + " passes you a clean pail at the poisoned well. “Slowly,” they say. “If we spill this, somebody waits another hour.” For a moment the two of you work shoulder to shoulder.",
+        churchBurn: name + " meets you in the bucket line, face black with soot. “Do not look at the roof,” they say. “Just keep the water moving.” The next bucket passes between your hands.",
+        tavernShut: name + " holds the tavern door while frightened neighbours press close. “Once this bolt goes across, somebody stays outside,” they say. “Help me choose carefully.”",
+        breadRiot: name + " catches your arm at the edge of the crowd. “They are hungry, not wicked,” they say. “Help me keep them from becoming both.”"
+      };
+      text = crisisLines[affliction] || (name + " works beside you while the village struggles around you. “Stay close,” they say. “We finish this together.”");
+      choices = affliction === "millFlood" ? [
+        { mode: "reassure", label: "Tell " + name + ": We can still save the grain", tone: "amber" },
+        { mode: "ask", label: "Ask " + name + " who broke the millrace", tone: "quiet" }
+      ] : [
+        { mode: "reassure", label: "Tell " + name + ": Stay with me. We can finish this", tone: "amber" },
+        { mode: "ask", label: "Ask " + name + " how this started", tone: "quiet" }
+      ];
+      responses = affliction === "millFlood" ? {
+        reassure: "“We can still save enough,” you tell them. " + name + " gives one breathless nod. “Then pull.”",
+        ask: "“Did you see who opened the sluice?” you ask. “No,” " + name + " says. “But somebody wanted the water this high.”"
+      } : {
+        reassure: "“Stay with me. We can finish this,” you say. " + name + " steadies themselves and nods.",
+        ask: "You ask how it started. " + name + " glances toward the dark beyond the crowd. “Not by accident.”"
+      };
+    } else {
+      var candidates = state.cast.filter(function (row) {
+        return row.alive && !row.changed && row.id !== victimId;
+      });
+      var roll = keyedNumber(state.seed, "attack-setup-kind:" + slot + ":" + victimId);
+      if (roll < 0.28) {
+        kind = "returned_item";
+        var item = THRESHOLD_ITEMS[Math.floor(keyedNumber(state.seed, "attack-setup-item:" + slot + ":" + victimId) * THRESHOLD_ITEMS.length) % THRESHOLD_ITEMS.length];
+        text = lead + " They hold up " + item + ". “Yours? I found it near the " + location + ". I thought you would want it back before somebody began asking why it was there.”";
+        choices = [
+          { mode: "thank", label: "Take it. Thank " + name, tone: "amber" },
+          { mode: "ask", label: "Ask exactly where they found it", tone: "quiet" }
+        ];
+        responses = {
+          thank: "You take it and thank them. “Keep better hold of yourself tonight,” " + name + " says, but there is kindness beneath it.",
+          ask: name + " points back along the road. “At the edge of the lantern light. As if somebody placed it where I would notice.”"
+        };
+      } else if (roll < 0.56 && candidates.length) {
+        kind = "shared_suspicion";
+        var suspect = candidates[Math.floor(keyedNumber(state.seed, "attack-setup-suspect:" + slot + ":" + victimId) * candidates.length) % candidates.length];
+        text = lead + " “Keep your voice down,” they say. “I saw " + suspect.name + " on this road earlier. They stopped moving the moment they noticed me.”";
+        choices = [
+          { mode: "ask", label: "Ask what else they saw", tone: "amber" },
+          { mode: "caution", label: "Tell them suspicion is not proof", tone: "quiet" }
+        ];
+        responses = {
+          ask: "“Nothing I can swear to,” " + name + " admits. “Only somebody who did not want to be remembered.”",
+          caution: "“I know,” " + name + " says. “That is why I told you instead of the square.”"
+        };
+      } else if (roll < 0.80 && motive.reason) {
+        kind = "errand";
+        text = lead + " “I thought I was the only fool still out,” they say. “I came to " + motive.reason + ". I would rather somebody knew before the village invents a worse reason.”";
+        choices = [
+          { mode: "believe", label: "Tell " + name + " you believe them", tone: "amber" },
+          { mode: "ask", label: "Ask why the errand could not wait", tone: "quiet" }
+        ];
+        responses = {
+          believe: name + " studies your face, then exhales. “That makes one of you.”",
+          ask: "“Because morning would have been too late,” " + name + " says. “Some promises rot if you leave them overnight.”"
+        };
+      } else {
+        kind = "personal_concern";
+        text = lead + " “You have been out every night,” they say. “Are you hunting this thing, or waiting for it to find you?”";
+        choices = [
+          { mode: "honest", label: "Tell " + name + ": I am trying to stop it", tone: "amber" },
+          { mode: "deflect", label: "Ask why they are worried about you", tone: "quiet" }
+        ];
+        responses = {
+          honest: "“Then be more careful,” " + name + " says. “The village cannot afford another brave corpse.”",
+          deflect: name + " looks away. “Because somebody ought to be.”"
+        };
+      }
+    }
+    return { kind: kind, text: text, choices: choices, responses: responses };
+  }
+
   function killVillager(state, victimId, slot, witnessed, locationOverride) {
     var victim = state.cast.find(function (x) { return x.id === victimId; });
     if (!victim || !victim.alive) return;
@@ -999,11 +1161,30 @@
       victim.afflicted = true;
     } else victim.alive = false;
     var sign = actualSign(state, slot);
-    var event = appendTruth(state, { id: "attack:" + slot + ":" + victimId, slot: slot, kind: turned ? "changed" : "slain", location: locationOverride || state.monsterSchedule.huntLoc, actors: [state.monsterSchedule.hostId, victimId].filter(Boolean), victimId: victimId, sign: sign, witnessed: !!witnessed });
+    var attackLocation = locationOverride || state.monsterSchedule.huntLoc;
+    var crisisWitnesses = witnessed && state.currentFacts && state.currentFacts.afflictionLoc === attackLocation
+      ? state.cast.filter(function (row) {
+          return row.alive && !row.changed && row.id !== victimId && row.id !== state.monsterSchedule.hostId
+            && (state.currentFacts.afflictionCrowd || []).indexOf(row.id) >= 0
+            && actorLocation(state, row.id, slot) === attackLocation;
+        }).slice(0, 3)
+      : [];
+    var crisisWitnessIds = crisisWitnesses.map(function (row) { return row.id; });
+    var crisisWitnessTail = crisisWitnesses.length
+      ? " " + crisisWitnesses.map(function (row) { return row.name; }).join(" and ") + (crisisWitnesses.length === 1 ? " is" : " are") + " still on the rescue line only yards away. They turn in time to see the attacker leave. No one there could mistake you for it."
+      : "";
+    var contextualTaunt = state.currentFacts && state.currentFacts.monsterTaunt;
+    var promisedNote = contextualTaunt && contextualTaunt.targetId === victimId ? contextualTaunt.noteText || null : null;
+    var event = appendTruth(state, { id: "attack:" + slot + ":" + victimId, slot: slot, kind: turned ? "changed" : "slain", location: attackLocation, actors: [state.monsterSchedule.hostId, victimId].filter(Boolean), victimId: victimId, sign: sign, witnessed: !!witnessed, crisisWitnessIds: crisisWitnessIds, monsterNote: promisedNote, tauntKind: promisedNote ? contextualTaunt.kind : null });
     if (witnessed) {
       appendObservation(state, { eventId: event.id, slot: slot, kind: "attack_aftermath", location: event.location, actors: [victimId], clarity: "partial", reliability: "direct", sign: sign });
       appendBeat(state, makeBeat("aftermath:" + slot + ":" + victimId, "aftermath", slot, event.location,
-        victim.name + " falls beyond the lantern. The attacker is gone. One fresh mark remains on the ground.", { actorId: victimId, sign: sign, truthEventId: event.id }));
+        turned
+          ? victim.name + " is alive beyond the lantern, but no longer answers their name. The attacker is gone." + crisisWitnessTail
+          : (WITNESSED_DEATH_TEXT[sign] ? WITNESSED_DEATH_TEXT[sign](victim.name) : victim.name + " falls and does not breathe again.") + " The attacker is gone." + crisisWitnessTail + " The body and ground may still show what touched them.", {
+          actorId: victimId, sign: sign, truthEventId: event.id,
+          meta: { bodyAtScene: true, investigable: true, disturbanceLocation: event.location, victimId: victimId, attackEventId: event.id, critical: true }
+        }));
     } else if (state.player.location !== HOME) {
       /* An unwitnessed attack must still disturb the lived night. This is
          intentionally sensory rather than evidential: the player hears the
@@ -1104,11 +1285,21 @@
       }
       return;
     }
-    var victimAtHunt = victim === "player" || actorLocation(state, victim, slot) === location;
-    if (playerHere && victimAtHunt) {
+    var victimLocation = victim === "player" ? location : actorLocation(state, victim, slot);
+    var victimAtHunt = victim === "player" || victimLocation === location;
+    /* Home-reaching monsters may strike well away from the place they emerged.
+       If the player is standing with that victim, the attack belongs on screen
+       at the shared location instead of becoming an impossible dawn recap. */
+    var playerWitnessesVictim = victim !== "player"
+      && state.player.alive
+      && state.player.location !== HOME
+      && state.player.location === victimLocation;
+    if ((playerHere && victimAtHunt) || playerWitnessesVictim) {
       var fallback = monster.relentless ? exposedFallback(state, slot, [victim]) : null;
-      state.pendingThreat = { id: "threat:" + slot + ":" + victim, slot: slot, location: location, victimId: victim, kind: victim === "player" ? "player" : "witness", sign: actualSign(state, slot), fallbackVictimId: fallback && fallback.victimId, fallbackLocation: fallback && fallback.location };
-      state.phase = "threat";
+      var threatLocation = victim === "player" ? location : (victimLocation || location);
+      var attackSetup = victim === "player" ? null : attackSetupFor(state, victim, slot, threatLocation);
+      state.pendingThreat = { id: "threat:" + slot + ":" + victim, slot: slot, location: threatLocation, victimId: victim, kind: attackSetup ? "witness_setup" : victim === "player" ? "player" : "witness", sign: actualSign(state, slot), setup: attackSetup, fallbackVictimId: fallback && fallback.victimId, fallbackLocation: fallback && fallback.location };
+      state.phase = attackSetup ? "attack_setup" : "threat";
       var threatVoice = monster.voice && monster.voice.mode;
       var playerThreatText = threatVoice === "beast"
         ? "The village sound cuts out. Wet breath gathers behind you; a growl starts so low you feel it through the road. Something is between you and home."
@@ -1116,13 +1307,15 @@
           ? "The village sound cuts out. A soft giggle comes from the road behind you. Something is between you and home."
           : "The village sound cuts out. Something is between you and the road home. It makes no breath, no tread, nothing you can follow.";
       if (state.weather !== "still") playerThreatText = weatherMonsterText(state, threatVoice, "near");
-      appendBeat(state, makeBeat(state.pendingThreat.id, "threat", slot, location,
-        victim === "player" ? playerThreatText : "A shape closes the distance behind " + (state.cast.find(function (x) { return x.id === victim; }) || { name: "your neighbour" }).name + ". It has not seen your choice yet.",
-        { actorId: victim === "player" ? null : victim, sign: state.pendingThreat.sign }));
+      var witnessText = victim === "player" ? null : witnessedThreatText(state, victim, slot, threatLocation);
+      appendBeat(state, makeBeat(attackSetup ? "attack-setup:" + slot + ":" + victim : state.pendingThreat.id, attackSetup ? "encounter" : "threat", slot, threatLocation,
+        attackSetup ? attackSetup.text : victim === "player" ? playerThreatText : witnessText,
+        { actorId: victim === "player" ? null : victim, sign: attackSetup ? null : state.pendingThreat.sign, meta: attackSetup
+          ? { attackSetup: true, setupKind: attackSetup.kind, affliction: state.currentFacts && state.currentFacts.afflictionLoc === threatLocation ? state.currentFacts.affliction : null, critical: true }
+          : { reintroduced: !!(witnessText && witnessText.indexOf(" again.") >= 0) } }));
       return;
     }
     state.resolvedAttackSlots.push(slot);
-    var victimLocation = actorLocation(state, victim, slot);
     if (monster.reach === "home" && victimLocation === HOME) victimLocation = "home";
     killVillager(state, victim, slot, false, victimLocation || location);
   }
@@ -1176,7 +1369,10 @@
     var victimName = victim && victim.name || "Your neighbour";
     var wxClue = state.weather === "frost" ? 0.45 : state.weather === "fog" ? 0.25 : state.weather === "storm" ? 0.18 : 0.32;
     var alreadyStamped = (state.knownSigns || []).indexOf(event.sign) >= 0 || state.found.stamps.some(function (stamp) { return stamp.sign === event.sign; });
-    var clueFound = !!event.sign && !alreadyStamped && keyedNumber(state.seed, "investigate-clue:" + event.id) < wxClue;
+    /* A distant cry may lose its physical evidence before the player arrives.
+       A witnessed body is already at their feet, so examining it always shows
+       the real mark, even if that sign is already written in the Journal. */
+    var clueFound = !!event.sign && (action.examineWitnessedBody || (!alreadyStamped && keyedNumber(state.seed, "investigate-clue:" + event.id) < wxClue));
     var wordChance = state.weather === "storm" ? 0.08 : state.weather === "fog" ? 0.16 : state.weather === "frost" ? 0.24 : 0.2;
     var heardLastWords = event.kind === "slain" && keyedNumber(state.seed, "investigate-words:" + event.id) < wordChance;
     var lastWords = heardLastWords ? LAST_WORDS[Math.floor(keyedNumber(state.seed, "investigate-words-line:" + event.id) * LAST_WORDS.length) % LAST_WORDS.length] : null;
@@ -1185,15 +1381,25 @@
     }).sort(function (a, b) {
       return keyedNumber(state.seed, "body-witness:" + event.id + ":" + a.id) - keyedNumber(state.seed, "body-witness:" + event.id + ":" + b.id);
     });
-    var suspicious = possibleWitnesses.length > 0 && keyedNumber(state.seed, "body-suspicion:" + event.id) < 0.48;
+    var crisisWitnessIds = event.crisisWitnessIds && event.crisisWitnessIds.length
+      ? event.crisisWitnessIds
+      : state.currentFacts && state.currentFacts.afflictionLoc === event.location
+        ? (state.currentFacts.afflictionCrowd || []) : [];
+    var corroboratingWitnesses = possibleWitnesses.filter(function (row) {
+      return crisisWitnessIds.indexOf(row.id) >= 0 && actorLocation(state, row.id, event.slot) === event.location;
+    }).slice(0, 3);
+    var corroborated = corroboratingWitnesses.length > 0;
+    var corroboratingWitnessIds = corroboratingWitnesses.map(function (row) { return row.id; });
+    var suspicious = !corroborated && possibleWitnesses.length > 0 && keyedNumber(state.seed, "body-suspicion:" + event.id) < 0.48;
     var witnessIds = suspicious ? possibleWitnesses.slice(0, Math.min(2, possibleWitnesses.length)).map(function (row) { return row.id; }) : [];
     var text = event.kind === "changed"
-      ? "You reach the " + event.location + ". " + victimName + " is alive, but the attack has changed them. They do not answer their name or react when you touch their shoulder."
-      : "You reach the " + event.location + ". " + victimName + " lies where the cry ended.";
+      ? (action.examineWitnessedBody ? victimName + " is alive, but the attack has changed them. They do not answer their name or react when you touch their shoulder." : "You reach the " + event.location + ". " + victimName + " is alive, but the attack has changed them. They do not answer their name or react when you touch their shoulder.")
+      : (action.examineWitnessedBody ? victimName + " lies where they fell. " + (BODY_DEATH_TEXT[event.sign] ? BODY_DEATH_TEXT[event.sign](victimName) : "They are dead, and the body is still warm.") : "You reach the " + event.location + ". " + victimName + " lies where the cry ended.");
     if (lastWords) text += " " + victimName + " catches your sleeve. " + lastWords;
-    else if (event.kind === "slain") text += " You are too late.";
+    else if (event.kind === "slain" && !action.examineWitnessedBody) text += " You are too late.";
     if (clueFound) text += " " + (BODY_SIGN_TEXT[event.sign] ? BODY_SIGN_TEXT[event.sign](victimName) : STAMP_TEXT[event.sign]);
-    if (suspicious) text += event.kind === "changed"
+    if (corroborated) text += " " + corroboratingWitnesses.map(function (row) { return row.name; }).join(" and ") + (corroboratingWitnesses.length === 1 ? " was" : " were") + " already beside you in the crisis. They saw the attacker leave and saw you reach " + victimName + " afterward.";
+    else if (suspicious) text += event.kind === "changed"
       ? " Footsteps arrive behind you. What they see first is you beside " + victimName + "."
       : " Footsteps arrive behind you. What they see first is you beside the body.";
     var truth = appendTruth(state, {
@@ -1209,6 +1415,8 @@
       heardLastWords: heardLastWords,
       lastWords: lastWords,
       recognizedChanged: event.kind === "changed",
+      corroborated: corroborated,
+      corroboratingWitnessIds: corroboratingWitnessIds,
       suspicious: suspicious,
       witnessIds: witnessIds
     });
@@ -1219,11 +1427,18 @@
         clarity: "clear", acknowledged: false, interpretation: "They arrived to find the player alone beside the fresh body."
       });
     });
+    corroboratingWitnessIds.forEach(function (witnessId) {
+      state.ledgers.memories[witnessId] = state.ledgers.memories[witnessId] || [];
+      state.ledgers.memories[witnessId].push({
+        eventId: truth.id, slot: slot, subject: "player", kind: "corroborated_player", location: event.location,
+        clarity: "clear", acknowledged: false, interpretation: "They were present and saw the player reach the victim only after the attacker fled."
+      });
+    });
     var beat = appendBeat(state, makeBeat("body-investigation:" + slot + ":" + event.victimId, clueFound ? "stamp" : "aftermath", slot, event.location, text, {
       actorId: event.victimId,
       sign: clueFound ? event.sign : null,
       truthEventId: truth.id,
-      meta: { bodyInvestigation: true, recognizedChanged: event.kind === "changed", lastWords: lastWords, suspicious: suspicious, witnessIds: witnessIds, critical: true }
+      meta: { bodyInvestigation: true, recognizedChanged: event.kind === "changed", lastWords: lastWords, suspicious: suspicious, witnessIds: witnessIds, corroborated: corroborated, corroboratingWitnessIds: corroboratingWitnessIds, critical: true }
     }));
     if (clueFound && beat && !state.found.stamps.some(function (stamp) { return stamp.sign === event.sign; })) {
       state.found.stamps.push({ sign: event.sign, slot: slot, location: event.location, beatId: beat.id });
@@ -1444,21 +1659,26 @@
       return true;
     });
     var gatheringShown = false;
-    if (state.gathering && !state.gathering.shown && state.gathering.location === state.player.location) {
+    var atGathering = !!(state.gathering && state.gathering.location === state.player.location);
+    /* A public village event is known before the player chooses a road. If
+       they travel elsewhere, announce it once as public context instead of
+       silently adding it to tomorrow's testimony and night record. */
+    if (state.gathering && !state.gathering.shown && (atGathering || slot === 0)) {
       state.gathering.shown = true;
       gatheringShown = true;
       var gatheringTruth = appendTruth(state, {
         id: "gathering:" + slot + ":" + state.gathering.id,
         slot: slot,
-        kind: "gathering_seen",
-        location: state.player.location,
-        actors: present.map(function (villager) { return villager.id; }),
+        kind: atGathering ? "gathering_seen" : "gathering_announced",
+        location: state.gathering.location,
+        actors: atGathering ? present.map(function (villager) { return villager.id; }) : [],
         gatheringId: state.gathering.id
       });
-      appendObservation(state, { eventId: gatheringTruth.id, slot: slot, kind: "gathering", location: state.player.location, actors: [], clarity: "clear", reliability: "direct", text: state.gathering.text });
-      appendBeat(state, makeBeat("gathering-beat:" + slot + ":" + state.gathering.id, "atmosphere", slot, state.player.location, state.gathering.text, {
+      var gatheringText = atGathering ? state.gathering.text : (state.gathering.distantText || ("Tonight's " + state.gathering.name + " is underway at the " + state.gathering.location + "."));
+      appendObservation(state, { eventId: gatheringTruth.id, slot: slot, kind: atGathering ? "gathering" : "public_notice", location: state.gathering.location, actors: [], clarity: "clear", reliability: atGathering ? "direct" : "public", text: gatheringText });
+      appendBeat(state, makeBeat("gathering-beat:" + slot + ":" + state.gathering.id, "atmosphere", slot, state.player.location, gatheringText, {
         truthEventId: gatheringTruth.id,
-        meta: { gatheringId: state.gathering.id, gatheringName: state.gathering.name }
+        meta: { gatheringId: state.gathering.id, gatheringName: state.gathering.name, remoteGathering: !atGathering, critical: true }
       }));
     }
     var framedId = null;
@@ -1581,24 +1801,27 @@
     function choose(lines) {
       return thresholdLine(state, threshold.requestRoll, lines);
     }
+    if (threshold.visitorKind === "taunt") {
+      return "Three slow knocks sound against the door. A voice just beyond it says, “Are you awake? I only want to talk.”";
+    }
     if (threshold.visitorKind === "monster") {
       if (state.monsterSchedule.id === "vampire") {
         return (revealed ? name : "A familiar voice") + " says, " + choose([
           "“Please. May I come in? I am frightened.”",
-          "“It is me. Invite me in before it comes back.”",
-          "“Open the door. Say I may enter.”"
+          "“It is me. Please invite me in before whoever is outside comes back.”",
+          "“I cannot stay on the step. Please say I may enter.”"
         ]);
       }
       var mode = state.monsterSchedule.voice && state.monsterSchedule.voice.mode;
       if (mode === "beast") return choose([
-        "A neighbour's voice says, “Come outside. Someone is hurt.” A growl catches beneath the last word.",
-        "A neighbour calls, “Quickly. Help me lift them.” Something sniffs along the sill.",
-        "A frightened voice says, “I cannot carry them alone.” Claws scrape once against the step."
+        "A neighbour's voice says, “Come outside. Someone is hurt.” They sound short of breath.",
+        "A neighbour calls, “Quickly. Help me lift them.” Their fist strikes the door again.",
+        "A frightened voice says, “I cannot carry them alone.” They begin to cry."
       ]);
       if (mode === "speaker") return choose([
-        "A familiar voice says, “Come outside. I found something for you.” A small laugh follows.",
-        "A neighbour calls, “Come see what followed you home.” They giggle, then catch themself.",
-        "A soft voice says, “Just one step outside.” It sounds amused by the request."
+        "A familiar voice says, “Come outside. I found something you need to see.”",
+        "A neighbour calls, “Someone is in the lane. I think they are hurt.”",
+        "A soft voice says, “Just one step outside. I need your help.”"
       ]);
       return choose([
         "A familiar voice says, “Come outside. I need your help.”",
@@ -1617,7 +1840,11 @@
     if (threshold.purpose === "concern") return name + " says, “" + (target ? target.name : "Someone") + choose([" has not come home. Please help me look.”", " is missing. Will you come and help?”"]);
     if (threshold.purpose === "question") return name + " says, " + choose(["“Were you near the " + place + " tonight?”", "“Did you go to the " + place + " tonight?”"]);
     if (threshold.purpose === "sign") return name + " says, " + choose(["“I found something at the " + place + ". Bring your lantern outside.”", "“There is a mark at the " + place + ". You need to see it.”"]);
-    if (threshold.purpose === "rumour") return name + " says, “I saw " + (target ? target.name : "someone") + choose([" near the " + place + ". Come outside. Keep quiet.”", " leaving the " + place + ". I do not want the street to hear.”"]);
+    if (threshold.purpose === "rumour") return name + " says, " + choose([
+      "“I need to talk to you. Not through the door.”",
+      "“Please come outside. I need a private word.”",
+      "“There is something you should hear. I will tell you outside.”"
+    ]);
     return name + " says, " + choose(["“Please let me in. Something followed me.”", "“May I come in? I heard steps behind me.”", "“Open the door. I do not want to stand out here alone.”"]);
   }
 
@@ -1724,6 +1951,9 @@
     var weatherLead = state.weather === "storm" ? "Rain runs from " + name + "'s coat. "
       : state.weather === "fog" ? "Fog parts enough to show " + name + " on the step. "
         : state.weather === "frost" ? name + "'s breath hangs white above the step. " : "";
+    if (threshold.visitorKind === "taunt") {
+      return "The step is empty. The voice comes from the darkness beyond the reach of your shutter. Nothing moves where a face should be.";
+    }
     if (threshold.visitorKind === "neighbour") {
       var neighbourDetail = threshold.purpose === "return_item" ? "They hold " + (threshold.item || "your glove") + "."
         : threshold.purpose === "sign" ? "They carry a covered lantern and keep pointing down the lane."
@@ -1731,20 +1961,33 @@
             : "They are alone.";
       return weatherLead + neighbourDetail + (threshold.purpose === "question" ? " They wait for your answer." : " They wait at the step.");
     }
-    if (state.monsterSchedule.id === "vampire") return weatherLead + name + " waits beyond the lintel. No breath clouds the air. It asks again to be invited in.";
-    if (threshold.canEnter) return weatherLead + (weatherLead ? "Their" : name + " stands on the step. Their") + " shadow already lies inside your hall. The monster followed you home.";
-    return weatherLead + (weatherLead ? "Their" : name + " stands on the step. Their") + " face is still, but claws rest against the shutter. The monster followed you home.";
+    var strangeDetail = thresholdLine(state, threshold.dialogueRoll, [
+      "They stand empty-handed and say somebody is hurt near the " + (threshold.clueLocation || "Village Square") + ".",
+      "They have been crying. They ask you to come outside before whoever is in the lane stops breathing.",
+      "They point down the lane and insist there is no time to explain at the door.",
+      "They keep glancing over one shoulder. Their voice is steady, but their hands are not.",
+      "They smile when they see movement behind the shutter, then ask very softly for your help."
+    ]);
+    return weatherLead + (weatherLead ? strangeDetail : name + " stands on the step. " + strangeDetail) + " Nothing you can see proves why they came.";
   }
 
   function beginThresholdOrComplete(state) {
     var threshold = state.thresholdEvent;
     var neighbour = threshold && thresholdNeighbour(state);
     var preselected = threshold && !!threshold.visitorKind;
+    var contextualTaunt = state.currentFacts && state.currentFacts.monsterTaunt;
+    var tauntVisit = threshold && contextualTaunt && contextualTaunt.channel === "door";
     var monsterVisit = state.monsterSchedule && state.monsterSchedule.active && threshold && threshold.roll < (state.player.monsterSawYou ? 0.62 : 0.28);
     var neighbourVisit = neighbour && threshold && threshold.roll < 0.16;
-    var eligible = state.player.alive && threshold && !threshold.resolved && (preselected ? threshold.roll < 0.48 : monsterVisit || neighbourVisit);
+    var eligible = state.player.alive && threshold && !threshold.resolved && (tauntVisit || (preselected ? threshold.roll < 0.48 : monsterVisit || neighbourVisit));
     if (!eligible) return completeNight(state);
-    prepareThresholdVisitor(state, neighbour);
+    if (tauntVisit) {
+      threshold.visitorKind = "taunt";
+      threshold.actorId = null;
+      threshold.purpose = "taunt";
+      threshold.requestMode = "none";
+      threshold.contextualTaunt = clone(contextualTaunt);
+    } else prepareThresholdVisitor(state, neighbour);
     state.phase = "threshold";
     state.player.location = HOME;
     appendTruth(state, { id: "threshold-arrival:" + state.cursor, slot: state.cursor, kind: "threshold_arrival", location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null });
@@ -1753,7 +1996,8 @@
         : state.weather === "frost" ? "Cold grips the door in its frame. " : "";
     thresholdOpening += thresholdRequestText(state, false);
     var shown = appendBeat(state, makeBeat("threshold:" + state.cursor + ":" + threshold.kind, "doorstep", state.cursor, HOME, thresholdOpening, {
-      signature: semanticSignature({ family: "threshold", location: HOME, interaction: threshold.kind, outcome: "unanswered" })
+      signature: semanticSignature({ family: "threshold", location: HOME, interaction: threshold.kind, outcome: "unanswered" }),
+      meta: tauntVisit ? { contextualTaunt: true, tauntKind: contextualTaunt.kind, critical: true } : undefined
     }));
     if (!shown) {
       threshold.resolved = true;
@@ -1991,17 +2235,19 @@
       threshold.looked = true;
       threshold.look = lookText;
       appendTruth(state, { id: "threshold-look:" + state.cursor, slot: state.cursor, kind: "threshold_look", action: action.type, location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, actors: ["player", threshold.actorId].filter(Boolean) });
-      var lookBeat = appendBeat(state, makeBeat("threshold-look-beat:" + state.cursor, threshold.visitorKind === "monster" ? "threat" : "doorstep", state.cursor, HOME, lookText, {
+      var lookBeat = appendBeat(state, makeBeat("threshold-look-beat:" + state.cursor, "doorstep", state.cursor, HOME, lookText, {
         actorId: threshold.actorId || null,
         signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: "look", outcome: threshold.visitorKind }),
-        meta: { thresholdLook: true, recognition: threshold.visitorKind === "monster", critical: true }
+        meta: { thresholdLook: true, critical: true }
       }));
       appendObservation(state, { eventId: "threshold-look:" + state.cursor, beatId: lookBeat && lookBeat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: threshold.actorId ? [threshold.actorId] : [], clarity: "clear", reliability: "direct", text: lookText });
       return state;
     }
     if (action.type === "ANSWER_DOOR") {
       if (threshold.spoken) return invalid(state, action, "The visitor is waiting for your decision.");
-      var spokenText = threshold.visitorKind === "neighbour"
+      var spokenText = threshold.visitorKind === "taunt"
+        ? (threshold.contextualTaunt && threshold.contextualTaunt.line || "The voice laughs softly. “Soon.”")
+        : threshold.visitorKind === "neighbour"
         ? thresholdNeighbourAnswer(state, actor)
         : thresholdRequestText(state, !!threshold.looked);
       threshold.spoken = true;
@@ -2028,10 +2274,10 @@
           evasive: "“You watched my house and dropped it there. What else do you expect me to explain?”"
         });
       }
-      var spokenBeat = appendBeat(state, makeBeat("threshold-spoken-beat:" + state.cursor, threshold.visitorKind === "monster" ? "threat" : "doorstep", state.cursor, HOME, spokenText, {
+      var spokenBeat = appendBeat(state, makeBeat("threshold-spoken-beat:" + state.cursor, "doorstep", state.cursor, HOME, spokenText, {
         actorId: threshold.looked || threshold.visitorKind === "neighbour" ? threshold.actorId || null : null,
         signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: "answer", outcome: threshold.requestMode }),
-        meta: { thresholdAnswer: true, visitorKind: threshold.visitorKind, requestMode: threshold.requestMode, critical: true }
+        meta: { thresholdAnswer: true, visitorKind: threshold.visitorKind, requestMode: threshold.requestMode, soundCue: threshold.visitorKind === "taunt" ? "murmur" : null, critical: true }
       }));
       appendObservation(state, { eventId: "threshold-spoken:" + state.cursor, beatId: spokenBeat && spokenBeat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: threshold.visitorKind === "neighbour" && threshold.actorId ? [threshold.actorId] : [], clarity: threshold.looked || threshold.visitorKind === "neighbour" ? "clear" : "heard", reliability: "sensory", text: spokenText });
       return state;
@@ -2039,7 +2285,23 @@
     var text;
     var killed = false;
     if (action.type === "KEEP_BARRED") {
-      if (threshold.visitorKind === "neighbour") {
+      if (threshold.visitorKind === "taunt") {
+        var tauntLine = threshold.contextualTaunt && threshold.contextualTaunt.line || "The voice laughs softly. “Soon.”";
+        text = threshold.spoken
+          ? "You keep one hand on the bolt and let the silence answer. The voice gives a satisfied little laugh, then its footsteps recede."
+          : "You keep silent with one hand on the bolt. " + tauntLine + " The voice gives a satisfied little laugh, then its footsteps recede.";
+        appendTruth(state, {
+          id: "monster-taunt:" + state.cursor,
+          slot: state.cursor,
+          kind: "monster_taunt",
+          location: HOME,
+          contextKind: threshold.contextualTaunt && threshold.contextualTaunt.kind || "unknown",
+          targetId: threshold.contextualTaunt && threshold.contextualTaunt.targetId || null,
+          targetName: threshold.contextualTaunt && threshold.contextualTaunt.targetName || null,
+          noteText: threshold.contextualTaunt && threshold.contextualTaunt.noteText || null,
+          text: tauntLine
+        });
+      } else if (threshold.visitorKind === "neighbour") {
         if (threshold.spoken && threshold.purpose === "return_item") {
           text = "You ask " + (actor ? actor.name : "your neighbour") + " to leave " + (threshold.item || "what you dropped") + " on the step. They do, then head home.";
         } else {
@@ -2054,28 +2316,29 @@
         text = "You keep one hand on the bolt. The voice tries anger, fear and tears. You do not open the door.";
       }
     } else if (action.type === "STEP_OUTSIDE" || action.type === "INVITE_IN") {
+      threshold.opened = true;
       if (threshold.visitorKind === "monster") {
         killed = !!state.monsterSchedule.active;
         if (!killed) {
-          text = "You open the door. The familiar face smiles, steps back into the dark and leaves you alive. It did not hunt tonight.";
+          text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " stands on the step, familiar and uneasy. They smile, step back into the dark and leave. You cannot decide what they wanted.";
         } else if (action.type === "INVITE_IN") {
-          text = "You name " + (actor ? actor.name : "the visitor") + " and give permission. They cross the threshold smiling. No bolt can help you now.";
+          text = "You lift the bar and open the door. " + (actor ? actor.name : "The visitor") + " stands on the step, frightened and familiar. “Please. Let me in.” You name them and give permission. They cross the threshold smiling. Only then does the borrowed face change. No bolt can help you now.";
         } else {
-          text = "You open the door and step out. The neighbour's face changes before you can call for help. The thing was waiting for this.";
+          text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " stands on the step, frightened and familiar. “There is something you must see,” they say. You take the lantern and step into the lane. At the first turning, the borrowed face changes. The thing was waiting for this.";
         }
       } else if (threshold.purpose === "sign" && threshold.sign) {
-        text = (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " You stamp the mark into your Journal.";
+        text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " You stamp the mark into your Journal.";
         if (!state.found.stamps.some(function (stamp) { return stamp.sign === threshold.sign; })) {
           state.found.stamps.push({ sign: threshold.sign, slot: state.cursor, location: threshold.clueLocation, beatId: "threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), source: "threshold_neighbour" });
         }
       } else if (threshold.purpose === "concern") {
-        text = "You step outside. " + (actor ? actor.name : "Your neighbour") + " says " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " missed an expected return from the " + threshold.clueLocation + ". It may be fear, or it may be useful.";
+        text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " says " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " missed an expected return from the " + threshold.clueLocation + ". It may be fear, or it may be useful.";
         state.found.clues.push({ id: "threshold-concern:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
       } else if (threshold.purpose === "rumour") {
-        text = (actor ? actor.name : "Your neighbour") + " saw " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " near the " + threshold.clueLocation + " after dark. They cannot say why. You write down the lead, not a conclusion.";
+        text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " lowers their voice. “I saw " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " near the " + threshold.clueLocation + " after dark. I cannot say why.” You write down the lead, not a conclusion.";
         state.found.clues.push({ id: "threshold-rumour:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
       } else if (threshold.purpose === "refuge") {
-        text = "You let " + (actor ? actor.name : "your neighbour") + " inside. They heard footsteps behind them, but saw no face. You bar the door together until dawn.";
+        text = "You lift the bar and open the door. You let " + (actor ? actor.name : "your neighbour") + " inside. They heard footsteps behind them, but saw no face. You bar the door together until dawn.";
         state.found.clues.push({ id: "threshold-refuge:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
       } else if (threshold.purpose === "question") {
         var questionPlace = threshold.clueLocation || "Village Square";
@@ -2087,29 +2350,29 @@
           "Village Square": "A dark smear marks the stones beside the well.",
           "Tavern": "Fresh scratches score the tavern's back latch."
         }[questionPlace] || "Fresh marks cross the ground where the road narrows.";
-        text = "You follow " + (actor ? actor.name : "your neighbour") + " to the " + questionPlace + ". " + questionFinding;
+        text = "You lift the bar and open the door. You follow " + (actor ? actor.name : "your neighbour") + " to the " + questionPlace + ". " + questionFinding;
         state.found.clues.push({ id: "threshold-question:" + state.cursor, slot: state.cursor, location: questionPlace, text: text, source: "threshold_neighbour" });
       } else if (threshold.purpose === "return_item" && watchedActor && watchedActorReturnedItem) {
-        text = "You open the door. " + actor.name + " returns " + (threshold.item || "what you dropped") + ". They ask why you watched their house.";
+        text = "You lift the bar and open the door. " + actor.name + " returns " + (threshold.item || "what you dropped") + ". They ask why you watched their house.";
       } else if (threshold.purpose === "return_item" && watchedActor) {
-        text = "You open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it outside " + watchedActor.name + "'s door.";
+        text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it outside " + watchedActor.name + "'s door.";
       } else if (threshold.purpose === "return_item" && answeredIntent.kind === "search" && answeredIntent.loc) {
-        text = "You open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it at the " + answeredIntent.loc + ".";
+        text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it at the " + answeredIntent.loc + ".";
       } else if (threshold.purpose === "return_item") {
-        text = "You open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ".";
+        text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ".";
       } else {
-        text = "You step outside. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + " and leaves you with an uncomfortable question about the night's watch.";
+        text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + " and leaves you with an uncomfortable question about the night's watch.";
       }
     } else return invalid(state, action, "The door remains between you and it.");
     threshold.resolved = true;
     threshold.choice = action.type;
-    appendTruth(state, { id: "threshold-choice:" + state.cursor, slot: state.cursor, kind: "threshold_choice", action: action.type, location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, looked: !!threshold.looked, killed: killed, text: text });
+    appendTruth(state, { id: "threshold-choice:" + state.cursor, slot: state.cursor, kind: "threshold_choice", action: action.type, location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, looked: !!threshold.looked, opened: !!threshold.opened, killed: killed, text: text });
     var beatType = killed ? "flee" : "doorstep";
     var beat = appendBeat(state, makeBeat("threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), beatType, state.cursor, HOME, text, {
       actorId: action.type === "KEEP_BARRED" ? null : threshold.actorId || null,
       outcome: killed ? "caught" : "safe",
       signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: threshold.kind, outcome: action.type.toLowerCase() }),
-      meta: { thresholdDecision: true, visitorKind: threshold.visitorKind, killed: killed, critical: true }
+      meta: { thresholdDecision: true, visitorKind: threshold.visitorKind, opened: !!threshold.opened, killed: killed, soundCue: threshold.visitorKind === "taunt" ? "giggle" : null, critical: true }
     }));
     appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: action.type !== "KEEP_BARRED" && threshold.actorId ? [threshold.actorId] : [], clarity: action.type === "KEEP_BARRED" ? "partial" : "clear", reliability: "sensory", text: text });
     if (killed) {
@@ -2127,6 +2390,51 @@
     state.player.route.push({ slot: state.cursor, location: HOME, action: "REACH_HOME" });
     appendTruth(state, { id: "reached-home:" + state.cursor, slot: state.cursor, kind: "returned_home", location: HOME });
     return settleAfterReturn(state);
+  }
+
+  function resolveAttackSetup(state, action) {
+    var threat = state.pendingThreat;
+    var setup = threat && threat.setup;
+    if (!threat || threat.kind !== "witness_setup" || !setup) return invalid(state, action, "There is nobody here to answer.");
+    if (action.type !== "RESPOND_ATTACK_SETUP") return invalid(state, action, "Answer before the moment passes.");
+    var chosen = (setup.choices || []).find(function (entry) { return entry.mode === action.responseMode; });
+    if (!chosen) return invalid(state, action, "That answer is not available.");
+    var victim = state.cast.find(function (row) { return row.id === threat.victimId; });
+    var victimName = victim && victim.name || "Your neighbour";
+    var response = setup.responses && setup.responses[action.responseMode] || (victimName + " nods, listening.");
+    var exchange = appendTruth(state, {
+      id: "attack-setup-exchange:" + threat.slot + ":" + threat.victimId,
+      slot: threat.slot,
+      kind: "attack_setup_exchange",
+      setupKind: setup.kind,
+      response: action.responseMode,
+      location: threat.location,
+      actorId: threat.victimId,
+      actors: ["player", threat.victimId],
+      acknowledged: true,
+      playerSaw: true
+    });
+    state.actionHistory.push({ slot: threat.slot, type: action.type, actorId: threat.victimId, responseMode: action.responseMode });
+    state.ledgers.memories[threat.victimId] = state.ledgers.memories[threat.victimId] || [];
+    state.ledgers.memories[threat.victimId].push({
+      eventId: exchange.id, slot: threat.slot, subject: "player", kind: "last_exchange", location: threat.location,
+      clarity: "clear", acknowledged: true, interpretation: "They spoke directly with the player moments before the attack."
+    });
+    appendObservation(state, {
+      eventId: exchange.id, slot: threat.slot, kind: "meeting", location: threat.location,
+      actors: [threat.victimId], clarity: "clear", reliability: "direct", text: response, weather: state.weather
+    });
+    threat.kind = "witness";
+    threat.setupResolved = true;
+    state.phase = "threat";
+    appendBeat(state, makeBeat(threat.id, "threat", threat.slot, threat.location,
+      response + " For one more breath, " + victimName + " is only a neighbour beside you. Then they look past your shoulder. Their hands go still. A shape closes the distance behind them. It has not seen your choice yet.", {
+        actorId: threat.victimId,
+        sign: threat.sign,
+        truthEventId: exchange.id,
+        meta: { attackSetupResolved: true, setupKind: setup.kind, critical: true }
+      }));
+    return state;
   }
 
   function resolveThreat(state, action) {
@@ -2216,7 +2524,7 @@
         appendTruth(state, { id: "intervene:" + threat.slot, slot: threat.slot, kind: "intervention", location: threat.location, actors: ["player", threat.victimId], succeeded: saved });
         appendBeat(state, makeBeat("intervene-beat:" + threat.slot, "flee", threat.slot, threat.location,
           saved ? "You shout. Your neighbour runs for the wall. The figure turns toward you instead." : "You shout. Your neighbour runs, but the figure reaches them before the wall.", { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
-        if (!saved) killVillager(state, threat.victimId, threat.slot, true);
+        if (!saved) killVillager(state, threat.victimId, threat.slot, true, threat.location);
         else if (state.monsterSchedule.relentless) {
           /* The warning saves the neighbour from the first rush by making the
              player the new quarry. If the player then escapes, the original
@@ -2231,8 +2539,17 @@
         }
       } else if (action.type === "IGNORE" || action.type === "FLEE") {
         appendTruth(state, { id: "abandon:" + threat.slot + ":" + threat.victimId, slot: threat.slot, kind: "abandonment", action: action.type, location: threat.location, actors: ["player", threat.victimId], victimId: threat.victimId });
-        killVillager(state, threat.victimId, threat.slot, true);
-        appendBeat(state, makeBeat("flee-witness:" + threat.slot, "flee", threat.slot, threat.location, "You run while the sound behind you becomes an event the village must survive in the morning.", { actorId: threat.victimId, outcome: "abandoned" }));
+        killVillager(state, threat.victimId, threat.slot, true, threat.location);
+        var witnessedDeathBeat = state.currentBeat;
+        var abandonedVictim = state.cast.find(function (villager) { return villager.id === threat.victimId; });
+        var abandonmentText = action.type === "FLEE"
+          ? "You run while the sound behind you becomes an event the village must survive in the morning."
+          : "You stay hidden. " + (witnessedDeathBeat && witnessedDeathBeat.text || ("The shape reaches " + (abandonedVictim ? abandonedVictim.name : "your neighbour") + " before your eyes.")) + " You do not call out.";
+        appendBeat(state, makeBeat("flee-witness:" + threat.slot, action.type === "FLEE" ? "flee" : "aftermath", threat.slot, threat.location, abandonmentText, {
+          actorId: threat.victimId,
+          outcome: "abandoned",
+          meta: action.type === "IGNORE" ? { bodyAtScene: true, investigable: true, disturbanceLocation: threat.location, victimId: threat.victimId, attackEventId: "attack:" + threat.slot + ":" + threat.victimId, critical: true } : undefined
+        }));
       } else return invalid(state, action, "Choose whether to intervene or leave.");
       state.resolvedAttackSlots.push(threat.slot);
       state.pendingThreat = null;
@@ -2314,6 +2631,7 @@
     if (next.phase === "threshold") return resolveThreshold(next, action);
     if (next.phase === "returning") return resolveReturn(next, action);
     if (next.phase === "chase") return resolveChase(next, action);
+    if (next.phase === "attack_setup") return resolveAttackSetup(next, action);
     if (next.phase === "threat") return resolveThreat(next, action);
     var forcedWatchFollow = presentingBeat && presentingBeat.type === "watch" && presentingBeat.meta && presentingBeat.meta.departure
       && action.type === "FOLLOW" && action.actorId === presentingBeat.actorId;
@@ -2326,15 +2644,55 @@
     var forcedRemoteInvestigation = presentingBeat && presentingBeat.meta && presentingBeat.meta.investigable
       && presentingBeat.meta.disturbanceLocation !== next.player.location && action.type === "MOVE"
       && action.to === presentingBeat.meta.disturbanceLocation && !!action.investigateEventId;
-    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || forcedRemoteInvestigation || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var forcedBodyDefence = presentingBeat && presentingBeat.meta && presentingBeat.meta.bodyInvestigation && presentingBeat.meta.suspicious
+      && (action.type === "PLEAD_INNOCENCE" || (action.type === "SHOW_BODY_EVIDENCE" && !!presentingBeat.sign));
+    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || forcedRemoteInvestigation || forcedBodyDefence || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
+    if ((action.type === "PLEAD_INNOCENCE" || action.type === "SHOW_BODY_EVIDENCE") && presentingBeat && presentingBeat.meta && presentingBeat.meta.bodyInvestigation && presentingBeat.meta.suspicious) {
+      var investigatedEvent = (next.ledgers.truth || []).find(function (event) { return event.id === presentingBeat.truthEventId && event.kind === "investigated_attack"; });
+      if (!investigatedEvent) return invalid(next, action, "There is no accusation to answer here.");
+      var victimForDefence = next.cast.find(function (row) { return row.id === investigatedEvent.victimId; });
+      var victimDefenceName = victimForDefence && victimForDefence.name || "the victim";
+      var defenceWitnesses = (investigatedEvent.witnessIds || []).map(function (id) { return next.cast.find(function (row) { return row.id === id; }); }).filter(Boolean);
+      var showingMark = action.type === "SHOW_BODY_EVIDENCE" && investigatedEvent.clueFound;
+      var accepted = showingMark || keyedNumber(next.seed, "body-defence:" + investigatedEvent.id) < 0.58;
+      investigatedEvent.defenceMade = true;
+      investigatedEvent.defenceAccepted = accepted;
+      if (accepted) investigatedEvent.suspicious = false;
+      appendTruth(next, {
+        id: "body-defence:" + investigatedEvent.id,
+        slot: Math.max(0, next.cursor),
+        kind: "body_defence",
+        location: investigatedEvent.location,
+        victimId: investigatedEvent.victimId,
+        actors: ["player"].concat(investigatedEvent.witnessIds || []),
+        method: showingMark ? "physical_evidence" : "account",
+        accepted: accepted
+      });
+      next.actionHistory.push({ slot: Math.max(0, next.cursor), type: action.type, to: null, actorId: null });
+      var defenceNames = defenceWitnesses.map(function (row) { return row.name; }).join(" and ") || "The others";
+      var defenceText = showingMark
+        ? "You make them look at the mark on " + victimDefenceName + " and the matching damage around the body. " + defenceNames + " kneel to see it clearly. “Whatever did this was already gone when we reached you.”"
+        : accepted
+          ? "You tell them exactly what you saw, from the first movement to " + victimDefenceName + "'s fall. " + defenceNames + " compare your account with the cry and the fresh body. “You reached them after. We will say so.”"
+          : "You tell them exactly what you saw, from the first movement to " + victimDefenceName + "'s fall. Nobody calls you a liar. Nobody says they believe you either.";
+      appendBeat(next, makeBeat("body-defence-result:" + investigatedEvent.id, "aftermath", Math.max(0, next.cursor), investigatedEvent.location, defenceText, {
+        actorId: investigatedEvent.victimId,
+        truthEventId: "body-defence:" + investigatedEvent.id,
+        meta: { bodyDefenceResolution: true, accepted: accepted, critical: true }
+      }));
+      return next;
+    }
+    var crisisResponseText = null;
     if (action.crisisChoice && presentingBeat && presentingBeat.meta && presentingBeat.meta.crisis) {
+      crisisResponseText = presentingBeat.meta.crisisResponses && presentingBeat.meta.crisisResponses[action.crisisChoice] || null;
       appendTruth(next, {
         id: "crisis-response:" + presentingBeat.id + ":" + action.crisisChoice,
         slot: Math.max(0, next.cursor),
         kind: "crisis_response",
         location: next.player.location,
         affliction: presentingBeat.meta.affliction,
+        crisisStage: presentingBeat.meta.crisisStage || null,
         choice: action.crisisChoice,
         actorId: presentingBeat.meta.anchorId || null,
         actors: (presentingBeat.meta.attendees || []).slice(),
@@ -2408,7 +2766,10 @@
       next.actionHistory.push({ slot: investigationSlot, type: "INVESTIGATE_HERE", to: next.player.location, actorId: null, investigateEventId: action.investigateEventId });
       next.player.route.push({ slot: investigationSlot, location: next.player.location, action: "INVESTIGATE_HERE", investigateEventId: action.investigateEventId });
       appendTruth(next, { id: "player:" + investigationSlot + ":investigate-here", slot: investigationSlot, kind: "player_action", action: "INVESTIGATE_HERE", investigateEventId: action.investigateEventId, location: next.player.location });
-      resolveAttackInvestigation(next, action, investigationSlot);
+      var localInvestigationAction = presentingBeat.meta.bodyAtScene
+        ? Object.assign({}, action, { examineWitnessedBody: true })
+        : action;
+      resolveAttackInvestigation(next, localInvestigationAction, investigationSlot);
       finishIfNeeded(next);
       return next;
     }
@@ -2500,7 +2861,7 @@
         } else {
           var falseTruth = appendTruth(next, { id: "strange-sight-false:" + responseSlot, slot: responseSlot, kind: "strange_sight_false", location: next.player.location });
           var falseBeat = appendBeat(next, makeBeat("delusion-resolution:" + responseSlot, "delusion", responseSlot, next.player.location,
-            approachFragments.slice(1).join(" "), { truthEventId: falseTruth.id, meta: { fragments: approachFragments.slice(1), resolvedAsUnreal: true, requiresResponse: false, strangeSightResolution: "false", soundCue: "leaves", critical: true } }));
+            approachFragments.slice(1).join(" "), { truthEventId: falseTruth.id, meta: { fragments: approachFragments.slice(1), resolvedAsUnreal: true, requiresResponse: false, strangeSightResolution: "false", soundCue: "hallucination_drift", critical: true } }));
           if (falseBeat) next.found.delusions.push(clone(falseBeat));
           appendObservation(next, { eventId: falseTruth.id, beatId: falseBeat && falseBeat.id, slot: responseSlot, kind: "false_sight", location: next.player.location, actors: [], clarity: "clear", reliability: "direct", text: falseBeat && falseBeat.text, weather: next.weather });
         }
@@ -2548,7 +2909,8 @@
         return next;
       }
       if (!owner || !ownerSchedule) return invalid(next, action, "Nothing inside identifies an owner.");
-      var inspectionText = inspectedClueText(next, presentingBeat, owner, ownerSchedule);
+      var inspectedClue = inspectedClueText(next, presentingBeat, owner, ownerSchedule);
+      var inspectionText = inspectedClue.text;
       var inspectionTruth = appendTruth(next, {
         id: "clue-inspected:" + presentingBeat.id,
         slot: Math.max(0, next.cursor),
@@ -2563,7 +2925,10 @@
         inspectionText, {
           actorId: owner.id,
           truthEventId: inspectionTruth.id,
-          meta: Object.assign({}, presentingBeat.meta, { inspected: true, inspectable: false, requiresResponse: false, critical: true }),
+          meta: Object.assign({}, presentingBeat.meta, {
+            inspected: true, inspectable: false, requiresResponse: false, critical: true,
+            object: inspectedClue.object, privateItem: inspectedClue.privateItem
+          }),
           signature: semanticSignature({ family: ownerSchedule.motive.family, actorId: owner.id, location: next.player.location, interaction: "inspect", outcome: "identified" })
         }));
       var foundIndex = next.found.clues.findIndex(function (clue) { return clue.id === presentingBeat.id; });
@@ -2612,22 +2977,29 @@
     next.cursor = slot;
     next.actionHistory.push({ slot: slot, type: action.type, to: action.to || null, actorId: action.actorId || null, searchMode: action.searchMode || null, investigateEventId: action.investigateEventId || null });
     arrive(next, action, slot);
+    if (crisisResponseText && next.currentBeat && next.currentBeat.meta && next.currentBeat.meta.crisis) {
+      next.currentBeat.text = crisisResponseText + " " + next.currentBeat.text;
+    }
     if (action.investigateEventId && next.phase === "active") {
       resolveAttackInvestigation(next, action, slot);
     }
-    if (presentingBeat && presentingBeat.meta && presentingBeat.meta.quietPresence && action.type === "LISTEN" && next.phase === "active") {
+    if (presentingBeat && presentingBeat.meta && (presentingBeat.meta.quietPresence || presentingBeat.meta.contextualTaunt) && action.type === "LISTEN" && next.phase === "active") {
       var quietResponse = presentingBeat.meta.responseText || "You turn toward it. The movement stops and does not come closer.";
       var quietTruth = appendTruth(next, {
-        id: "quiet-presence-response:" + presentingBeat.id,
+        id: (presentingBeat.meta.contextualTaunt ? "monster-taunt-response:" : "quiet-presence-response:") + presentingBeat.id,
         slot: slot,
-        kind: "quiet_monster_presence",
+        kind: presentingBeat.meta.contextualTaunt ? "monster_taunt" : "quiet_monster_presence",
         location: next.player.location,
         actors: [],
         voiceMode: presentingBeat.meta.voiceMode || "silent",
-        activeHunt: false
+        activeHunt: false,
+        contextKind: presentingBeat.meta.tauntKind || null,
+        targetId: presentingBeat.meta.targetId || null,
+        targetName: presentingBeat.meta.targetName || null,
+        noteText: presentingBeat.meta.noteText || null
       });
       var quietBeat = appendBeat(next, makeBeat("quiet-presence-response-beat:" + presentingBeat.id, "atmosphere", slot, next.player.location,
-        quietResponse, { truthEventId: quietTruth.id, meta: { quietPresenceResolution: true, voiceMode: presentingBeat.meta.voiceMode || "silent", critical: true } }));
+        quietResponse, { truthEventId: quietTruth.id, meta: { quietPresenceResolution: true, voiceMode: presentingBeat.meta.voiceMode || "silent", soundCue: /laugh|giggl/i.test(quietResponse) ? "giggle" : presentingBeat.meta.contextualTaunt ? "murmur" : null, critical: true } }));
       appendObservation(next, { eventId: quietTruth.id, beatId: quietBeat && quietBeat.id, slot: slot, kind: "temperament", location: next.player.location, actors: [], clarity: "sensory", reliability: "direct", text: quietResponse, weather: next.weather });
     }
     if (action.type === "SEARCH" && action.searchMode && next.phase === "active" && !next.currentBeat && next.monsterSchedule.active) {
@@ -2671,6 +3043,12 @@
     if (state.phase === "planned") {
       return (state.graph[HOME] || ["Village Square"]).map(function (to) { return action("LEAVE", "Step into the night", "amber", { to: to }); });
     }
+    if (state.phase === "attack_setup") {
+      var setup = state.pendingThreat && state.pendingThreat.setup;
+      return setup ? (setup.choices || []).map(function (entry) {
+        return action("RESPOND_ATTACK_SETUP", entry.label, entry.tone || "amber", { responseMode: entry.mode, actorId: state.pendingThreat.victimId });
+      }) : [];
+    }
     if (state.phase === "threat") {
       if (state.pendingThreat.kind === "recognition") return [
         action("FLEE", "Flee, quietly, while it is busy", "danger"),
@@ -2712,21 +3090,24 @@
               : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "refuge"
                 ? "Wait there. I will open the door"
                 : !state.thresholdEvent.looked ? "Answer without looking"
-                  : state.thresholdEvent.visitorKind === "monster" ? "Answer the monster through the closed door"
-                    : "Answer " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " through the closed door";
-        thresholdActions.push(action("ANSWER_DOOR", answerLabel, state.thresholdEvent.visitorKind === "neighbour" ? "bone" : "danger"));
+                  : "Answer " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " through the closed door";
+        thresholdActions.push(action("ANSWER_DOOR", answerLabel, "bone"));
+      } else if (state.thresholdEvent.visitorKind === "taunt") {
+        thresholdActions[0].label = "Keep the door barred. Let the voice leave";
       } else if (state.thresholdEvent.requestMode === "inside") {
         var insideLabel = state.thresholdEvent.visitorKind === "neighbour"
           ? "Let " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " inside"
           : "Unbar the door. Invite " + (thresholdVisitor ? thresholdVisitor.name : "them") + " inside";
-        thresholdActions.push(action("INVITE_IN", insideLabel, state.thresholdEvent.visitorKind === "neighbour" ? "bone" : "danger"));
+        thresholdActions.push(action("INVITE_IN", insideLabel, "amber"));
       } else {
         var outsideLabel = state.thresholdEvent.visitorKind === "neighbour" && ["question", "sign", "concern"].indexOf(state.thresholdEvent.purpose) >= 0
           ? "Follow " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " to the " + (state.thresholdEvent.clueLocation || "Village Square")
+          : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "rumour"
+            ? "Step outside and hear " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " out"
           : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "return_item"
             ? "Open the door and take back " + (state.thresholdEvent.item || "what you dropped")
-            : "Unbar the door. Step outside";
-        thresholdActions.push(action("STEP_OUTSIDE", outsideLabel, state.thresholdEvent.visitorKind === "neighbour" ? "bone" : "danger"));
+            : "Open the door. Step outside";
+        thresholdActions.push(action("STEP_OUTSIDE", outsideLabel, "amber"));
       }
       return thresholdActions;
     }
@@ -2740,8 +3121,25 @@
       return pauseActions;
     }
     var result = [];
+    if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.bodyInvestigation && state.currentBeat.meta.suspicious) {
+      result.push(action("PLEAD_INNOCENCE", "Tell them exactly what you witnessed", "bone", {
+        investigationEventId: state.currentBeat.truthEventId
+      }));
+      if (state.currentBeat.sign) result.push(action("SHOW_BODY_EVIDENCE", "Show them the monster's mark on the body", "amber", {
+        investigationEventId: state.currentBeat.truthEventId,
+        sign: state.currentBeat.sign
+      }));
+    }
+    if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.bodyAtScene) {
+      var bodyVictim = state.cast.find(function (villager) { return villager.id === state.currentBeat.meta.victimId; });
+      result.push(action("INVESTIGATE_HERE", bodyVictim && bodyVictim.changed ? "Examine " + bodyVictim.name : "Examine " + (bodyVictim ? bodyVictim.name + "'s body" : "the body") + " and the fresh mark", "amber", {
+        investigateEventId: state.currentBeat.meta.attackEventId || state.currentBeat.truthEventId,
+        investigateVictimId: state.currentBeat.meta.victimId,
+        examineWitnessedBody: true
+      }));
+    }
     if (state.currentBeat && state.currentBeat.meta && state.currentBeat.meta.investigable && state.currentBeat.meta.disturbanceLocation === state.player.location) {
-      result.push(action("INVESTIGATE_HERE", "Run toward the scream", "danger", {
+      if (!state.currentBeat.meta.bodyAtScene) result.push(action("INVESTIGATE_HERE", "Run toward the scream", "danger", {
         investigateEventId: state.currentBeat.meta.attackEventId || state.currentBeat.truthEventId,
         investigateVictimId: state.currentBeat.meta.victimId
       }));
@@ -2779,7 +3177,7 @@
     guide = guide || {};
     var all = availableActions(state);
     if (!state || state.phase === "dead" || state.phase === "complete") return [];
-    if (["threat", "chase", "threshold", "returning"].indexOf(state.phase) >= 0) return all;
+    if (["attack_setup", "threat", "chase", "threshold", "returning"].indexOf(state.phase) >= 0) return all;
     if (state.followPause) return all;
     var target = guide.target;
     if (state.phase === "planned") {
@@ -2913,6 +3311,13 @@
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Run. Head for home");
       return result.slice(0, 2);
     }
+    if (beat && beat.meta && beat.meta.bodyAtScene) {
+      var body = state.cast.find(function (villager) { return villager.id === beat.meta.victimId; });
+      add(all.find(function (item) { return item.type === "INVESTIGATE_HERE"; }), body && body.changed ? "Examine " + body.name : "Examine " + (body ? body.name + "'s body" : "the body") + " and the fresh mark");
+      add(all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); }), guide.kind === "search" ? "Leave them. Continue your search" : "Leave them. Resume your watch");
+      add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave them. Head for home");
+      return result.slice(0, 3);
+    }
     if (beat && beat.type === "encounter" && beat.actorId && beat.meta && beat.meta.hiddenFigureResolution === "identified") {
       var knownFigure = state.cast.find(function (villager) { return villager.id === beat.actorId; });
       var knownName = knownFigure && knownFigure.name || "them";
@@ -2923,6 +3328,12 @@
       return result.slice(0, 3);
     }
     if (beat && beat.meta && beat.meta.bodyInvestigation && beat.actorId) {
+      if (beat.meta.suspicious) {
+        add(all.find(function (item) { return item.type === "PLEAD_INNOCENCE"; }), "Tell them exactly what you witnessed");
+        add(all.find(function (item) { return item.type === "SHOW_BODY_EVIDENCE"; }), "Show them the monster's mark on the body");
+        add(all.find(function (item) { return item.type === "GO_HOME"; }), "Say nothing. Leave before the crowd gathers");
+        return result.slice(0, 3);
+      }
       var changedVictim = state.cast.find(function (villager) { return villager.id === beat.actorId && villager.changed; });
       if (changedVictim) {
         add(all.find(function (item) { return item.type === "HAIL" && item.actorId === beat.actorId; }), "Speak to " + changedVictim.name);
@@ -2999,7 +3410,7 @@
      versions of the same question. */
   function consequenceProjection(state) {
     var groups = {};
-    var encounterKinds = ["hailed", "crossed_paths", "passed_unseen", "followed"];
+    var encounterKinds = ["hailed", "crossed_paths", "passed_unseen", "followed", "attack_setup_exchange"];
     (state.ledgers.truth || []).filter(function (event) { return encounterKinds.indexOf(event.kind) >= 0; }).forEach(function (event) {
       var actorId = (event.actors || []).find(function (id) { return id !== "player"; });
       if (!actorId) return;
@@ -3064,7 +3475,16 @@
     });
 
     var findings = (state.found.clues || []).filter(function (beat) { return !!beat.actorId; }).map(function (beat) {
-      return { eventId: "n" + state.night + ":finding:" + safeId(beat.id), actorId: beat.actorId, location: beat.location, slot: beat.slot, text: beat.text, beatId: beat.id };
+      return {
+        eventId: "n" + state.night + ":finding:" + safeId(beat.id),
+        actorId: beat.actorId,
+        location: beat.location,
+        slot: beat.slot,
+        text: beat.text,
+        beatId: beat.id,
+        object: beat.meta && beat.meta.object,
+        privateItem: !!(beat.meta && beat.meta.privateItem)
+      };
     });
     findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
       return event.kind === "threshold_watched_item_report";
@@ -3106,6 +3526,10 @@
         heardLastWords: !!event.heardLastWords,
         lastWords: event.lastWords || null,
         recognizedChanged: !!event.recognizedChanged,
+        corroborated: !!event.corroborated,
+        corroboratingWitnessIds: (event.corroboratingWitnessIds || []).slice(),
+        defenceMade: !!event.defenceMade,
+        defenceAccepted: !!event.defenceAccepted,
         suspicious: !!event.suspicious,
         witnessIds: (event.witnessIds || []).slice()
       };
