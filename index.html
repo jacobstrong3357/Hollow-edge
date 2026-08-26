@@ -90,7 +90,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=12"></script>
+<script src="v5-night-director.js?v=17"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
@@ -100,7 +100,8 @@ const { useState, useEffect, useRef } = React;
 /* All synthesized. Wind under everything, a bell that counts the nights,
    a heartbeat when the dark gets close, and one chord each for dawn and ruin. */
 const Snd = {
-  enabled: false, built: false, heartLoop: null, silenceHeld: false,
+  enabled: false, built: false, heartLoop: null, pianoLoop: null, pianoStep: 0,
+  homeWanted: true, pianoMenu: true, silenceHeld: false,
   async init() {
     if (this.built) return true;
     try {
@@ -140,6 +141,26 @@ const Snd = {
       this.foleyNoise = new Tone.NoiseSynth({ noise: { type: "brown" }, envelope: { attack: 0.01, decay: 0.48, sustain: 0, release: 0.18 } }).connect(this.foleyFilter);
       this.cricketVol = new Tone.Volume(-27).toDestination();
       this.cricket = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.002, decay: 0.045, sustain: 0, release: 0.02 } }).connect(this.cricketVol);
+      /* A small procedural "felt piano" for the safe screens. It is kept
+         low, dark and widely spaced so it reads as room music rather than a
+         reward theme, and needs no large audio file or network request. */
+      this.pianoVol = new Tone.Volume(-30).toDestination();
+      this.pianoFilter = new Tone.Filter(1900, "lowpass").connect(this.pianoVol);
+      this.piano = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.008, decay: 1.7, sustain: 0.035, release: 3.8 },
+      }).connect(this.pianoFilter);
+      /* Night voices are suggestions of speech, not samples with words the
+         player could mistake for narration. A narrow band of pink noise and
+         a very quiet tone can become a murmur, a breath or a distant laugh. */
+      this.voiceVol = new Tone.Volume(-24).toDestination();
+      this.voicePan = new Tone.Panner(0).connect(this.voiceVol);
+      this.voiceFilter = new Tone.Filter(880, "bandpass").connect(this.voicePan);
+      this.voiceNoise = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.05, decay: 0.42, sustain: 0, release: 0.25 } }).connect(this.voiceFilter);
+      this.voiceTone = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.025, decay: 0.3, sustain: 0.015, release: 0.55 } }).connect(this.voicePan);
+      this.hallucinationVol = new Tone.Volume(-28).toDestination();
+      this.hallucinationFilter = new Tone.Filter(1250, "lowpass").connect(this.hallucinationVol);
+      this.hallucinationTone = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.45, decay: 0.9, sustain: 0.04, release: 2.3 } }).connect(this.hallucinationFilter);
       this.sceneState = null;
       this.built = true;
       return true;
@@ -170,6 +191,35 @@ const Snd = {
       }
       this.heartLoop.start(0); Tone.Transport.start();
     } else if (this.heartLoop) { this.heartLoop.stop(); }
+  },
+  homeMusic(on, menu) {
+    this.homeWanted = !!on;
+    this.pianoMenu = !!menu;
+    if (!this.built) return;
+    if (!on || !this.enabled) {
+      if (this.pianoLoop) this.pianoLoop.stop();
+      try { this.piano.releaseAll(); } catch (e) {}
+      return;
+    }
+    if (!this.pianoLoop) {
+      const phrases = [
+        ["A3", "E4"], ["C4"], ["E4", "B4"], ["D4"],
+        ["A3", "C4"], ["G3", "D4"], ["E4"], ["B3", "F#4"],
+      ];
+      this.pianoLoop = new Tone.Loop((time) => {
+        const notes = phrases[this.pianoStep % phrases.length];
+        const velocity = this.pianoStep % 4 === 2 ? 0.16 : 0.21;
+        this.piano.triggerAttackRelease(notes, 1.9, time, velocity);
+        if (this.pianoMenu || (notes.length === 1 && this.pianoStep % 3 === 1)) {
+          const answer = ["A4", "E4", "G4", "C5"][this.pianoStep % 4];
+          this.piano.triggerAttackRelease(answer, 1.15, time + (this.pianoMenu ? 1.6 : 1.35), this.pianoMenu ? 0.12 : 0.09);
+        }
+        this.pianoStep += 1;
+      }, 7.8);
+    }
+    this.pianoVol.volume.rampTo(this.pianoMenu ? -28.5 : -30, 0.8);
+    this.pianoLoop.stop().start("+0.18");
+    Tone.Transport.start();
   },
   sting() { if (this.built && this.enabled) this.pad.triggerAttackRelease(["C2", "F#2", "C3"], 3.5); },
   dawn() { if (this.built && this.enabled) { const t = Tone.now(); ["A3", "C4", "E4", "A4"].forEach((nn, i) => this.pad.triggerAttackRelease(nn, 1.6, t + i * 0.35)); } },
@@ -274,6 +324,60 @@ const Snd = {
       else if (weather === "frost") this.cue("frost_step");
     }
   },
+  textCue(text, type) {
+    const line = String(text || "").toLowerCase();
+    if (type === "delusion") {
+      if (/footstep|footprint|tread|walking|pace/.test(line)) return "hallucination_steps";
+      if (/voice|whisper|name|speak|laugh|giggl/.test(line)) return "hallucination_whispers";
+      return "hallucination_drift";
+    }
+    if (/giggl|chuckl|laugh|laughter/.test(line)) return "giggle";
+    if (/murmur|voices? speak|talking|recit|count(?:s|ing|ed)? backward|words? beneath|several voices/.test(line)) return "murmur";
+    if (/whisper|voice (?:says|moves|asks|presses)|says your name/.test(line)) return "whisper";
+    if (/breath(?:es|ing)? (?:behind|close|follows|beside)|second breath/.test(line)) return "breath_close";
+    return null;
+  },
+  ambientCue(text, type, location, weather) {
+    const line = String(text || "").toLowerCase();
+    if (/footstep|footfall|tread|pace behind|walking behind/.test(line)) return "distant_steps";
+    if (/door|shutter|window|bolt|latch|gate/.test(line)) return "latch";
+    if (/crowd|neighbours gather|people gather|many voices/.test(line)) return "bustle";
+    if (/well|stream|bucket|water|millrace/.test(line)) return "water";
+    if (/branch|hedge|bracken|leaves|undergrowth/.test(line)) return "leaves";
+    if (/grave|soil|earth|digging|scrape beneath/.test(line)) return "earth";
+    if (/bell|chime/.test(line)) return "bell_distant";
+    if (/flame|fire|burn|embers|smoke/.test(line)) return "fire";
+    if (/hums?|singing|a song|tune/.test(line)) return "hum";
+    if (type === "encounter") return "bustle";
+    if (type === "follow" || type === "watch" || type === "linger") return "distant_steps";
+    if (weather === "storm" && /rain|storm|lightning/.test(line)) return "rain_step";
+    if (location === "Dark Forest") return "crickets";
+    if (location === "Graveyard") return "earth";
+    if (location === "Old Church") return "bell_distant";
+    if (location === "Old Mill") return "water";
+    if (location === "Tavern" || location === "Village Square") return "bustle";
+    return null;
+  },
+  hallucination(kind) {
+    if (!this.built || !this.enabled) return;
+    const t = Tone.now() + 0.05;
+    if (kind === "hallucination_steps") {
+      this.voicePan.pan.rampTo(-0.35, 0.08);
+      [0, 0.58, 1.28].forEach((off, i) => this.wood.triggerAttackRelease(i === 1 ? "Bb0" : "B0", "32n", t + off, 0.12 + i * 0.015));
+      this.hallucinationTone.triggerAttackRelease(["B2", "C3"], 1.8, t + 0.22, 0.13);
+      return;
+    }
+    if (kind === "hallucination_whispers") {
+      this.voicePan.pan.rampTo(0.55, 0.08);
+      this.voiceFilter.frequency.rampTo(720, 0.08);
+      [0, 0.34, 0.82].forEach((off, i) => this.voiceNoise.triggerAttackRelease(i === 1 ? 0.32 : 0.2, t + off, 0.18));
+      this.hallucinationTone.triggerAttackRelease(["E3", "F3"], 2.1, t + 0.18, 0.12);
+      return;
+    }
+    this.voicePan.pan.rampTo(-0.15, 0.1);
+    this.hallucinationTone.triggerAttackRelease(["A3", "Bb3"], 2.4, t, 0.13);
+    this.voiceNoise.triggerAttackRelease(0.7, t + 0.5, 0.14);
+  },
   cue(id) {
     if (!this.built || !this.enabled || !id) return;
     const spec = (V5_CONTENT.audioCues || {})[id] || {};
@@ -284,6 +388,33 @@ const Snd = {
     if (kind === "bell_distant") { this.bellVol.volume.rampTo(-23, 0.1); this.toll(1); this.bellVol.volume.rampTo(-16, 3.2); return; }
     if (kind === "thunder") { this.thunderStrike(); return; }
     if (kind === "howl") { this.wail(); return; }
+    if (kind === "hallucination_steps" || kind === "hallucination_whispers" || kind === "hallucination_drift") { this.hallucination(kind); return; }
+    if (kind === "giggle") {
+      this.voicePan.pan.rampTo(-0.62, 0.06);
+      this.voiceFilter.frequency.rampTo(1350, 0.06);
+      [["G5", 0], ["Bb5", 0.16], ["F5", 0.37]].forEach((row, i) => this.voiceTone.triggerAttackRelease(row[0], 0.13, t + row[1], i === 1 ? 0.2 : 0.16));
+      this.voiceNoise.triggerAttackRelease(0.38, t + 0.08, 0.12);
+      return;
+    }
+    if (kind === "murmur") {
+      this.voicePan.pan.rampTo(0.46, 0.08);
+      this.voiceFilter.frequency.rampTo(620, 0.08);
+      [0, 0.3, 0.72].forEach((off, i) => this.voiceNoise.triggerAttackRelease(i === 1 ? 0.42 : 0.28, t + off, 0.2));
+      this.voiceTone.triggerAttackRelease("C3", 0.5, t + 0.1, 0.12);
+      this.voiceTone.triggerAttackRelease("A2", 0.45, t + 0.68, 0.1);
+      return;
+    }
+    if (kind === "distant_steps") {
+      this.voicePan.pan.rampTo(0.58, 0.08);
+      [0, 0.46, 1.08].forEach((off, i) => this.wood.triggerAttackRelease(i === 1 ? "Bb0" : "B0", "32n", t + off, 0.16 - i * 0.02));
+      return;
+    }
+    if (kind === "hum") {
+      this.voicePan.pan.rampTo(-0.42, 0.08);
+      this.voiceTone.triggerAttackRelease("E4", 0.7, t, 0.11);
+      this.voiceTone.triggerAttackRelease("G4", 0.9, t + 0.72, 0.09);
+      return;
+    }
     if (kind === "rain_step") {
       this.foleyFilter.frequency.rampTo(1450, 0.05);
       this.foleyNoise.triggerAttackRelease(0.34, t, 0.42);
@@ -354,9 +485,9 @@ const Snd = {
     if (kind === "room") { this.wind_(-38); return; }
   },
   async setEnabled(on) {
-    if (on) { const ok = await this.init(); if (!ok) return false; this.enabled = true; this.silenceHeld = false; this.wind_(-30); return true; }
+    if (on) { const ok = await this.init(); if (!ok) return false; this.enabled = true; this.silenceHeld = false; this.wind_(-30); this.homeMusic(this.homeWanted, this.pianoMenu); return true; }
     this.enabled = false; this.sceneState = null;
-    if (this.built) { this.windVol.volume.value = -100; this.rainVol.volume.value = -100; this.beat(false); }
+    if (this.built) { this.windVol.volume.value = -100; this.rainVol.volume.value = -100; this.beat(false); if (this.pianoLoop) this.pianoLoop.stop(); try { this.piano.releaseAll(); } catch (e) {} }
     return false;
   },
 };
@@ -955,7 +1086,7 @@ const AFFLICTION_DAWN = {
   wellFouled: () => `The well comes up black, stinking of iron and rot. Nobody asks what is down there. They queue at the cold stream and watch each other's buckets.`,
   tavernShut: (nm) => `${nm} bolts the tavern for good. "I'm done pouring for a village that's eating itself." Hollow's Edge loses its last warm room.`,
   churchBurn: (nm) => `In the small hours someone put fire to the Old Church. The village formed a bucket line, but the roof fell before dawn.${nm ? ` ${nm} stayed beside the ruins until morning.` : ""}`,
-  millFlood: () => `The millrace breaks its bank in the night. By morning the wheel is splinters, the floor knee-deep in black water, and the season's grain is ruined.`,
+  millFlood: (outcome) => `The millrace floods the Old Mill in the night. By morning the wheel is splinters and the ground floor is drowned.${outcome && outcome.grain === "saved" ? " Enough grain was carried out to see the village through winter." : outcome && outcome.grain === "seed" ? " The seed grain was saved, but the flour and winter stores are gone." : " The season's grain is ruined."}${outcome && outcome.sabotage === "certain" ? " The broken sluice was deliberate." : ""}`,
 };
 /* What you witness of it if you are out in the lanes when it happens. */
 const AFFLICTION_WALK = {
@@ -963,14 +1094,14 @@ const AFFLICTION_WALK = {
   wellFouled: () => `Lanterns ring the well. The water has come up black and foul, and the crowd already has someone to blame. You go around.`,
   tavernShut: (nm) => `${nm || "The innkeeper"} drives the tavern's last bolt home while drinkers plead behind her. Hollow's Edge goes one lamp darker.`,
   churchBurn: (nm) => `The Old Church is burning. Neighbours run buckets through the churchyard while ${nm || "the priest"} calls names through the smoke.`,
-  millFlood: () => `The mill wheel tears off its axle with a crack like a shot. Black water takes the floor. You do not go closer.`,
+  millFlood: () => `The millrace has burst into the Old Mill. Black water is climbing the ground floor, lifting grain sacks and forcing people toward the upper windows. You do not go closer.`,
 };
 const DIRECTOR_AFFLICTION_SCENE = {
   breadRiot: { location: "Village Square", wound: "riot", label: "THE BREAD RIOT", soundCue: "bustle" },
   wellFouled: { location: "Village Square", wound: "fouled", label: "THE WELL IS POISONED", soundCue: "water" },
   tavernShut: { location: "Tavern", wound: "shut", label: "THE LAST BOLT", soundCue: "latch" },
   churchBurn: { location: "Old Church", wound: "burn", label: "THE CHURCH BURNS", soundCue: "fire" },
-  millFlood: { location: "Old Mill", wound: "flood", label: "THE MILLRACE BREAKS", soundCue: "water" },
+  millFlood: { location: "Old Mill", wound: "flood", label: "THE MILL IS FLOODING", soundCue: "water" },
 };
 /* Rare village disasters own their night. The named priority is not a cast
    list: it is the order in which surviving neighbours are pulled into the
@@ -985,15 +1116,57 @@ const AFFLICTION_CRISIS = {
     reaction: (name) => name ? `${name} stands beneath the burning porch, crying openly. “The parish books are still inside.”` : "Someone screams that the parish books are still inside. Nobody crosses the porch.",
     closure: () => "The roof falls into the nave. The bell stops in the middle of a stroke, and the bucket line goes still.",
     choices: ["Join the bucket line", "Go to Father Ansel", "Stand back. Watch who helps"],
+    stageChoices: {
+      struggle: ["Keep the bucket line moving through the smoke", "Pull Father Ansel away from the porch", "Watch who hangs back from the water"],
+      aftermath: ["Hold the crowd back from the failing roof", "Help Ansel reach the parish books", "Search the outer wall for how the fire began"],
+    },
+    stageResponses: {
+      arrival: {
+        help: "You take a bucket. The line closes around you, passing water faster.",
+        comfort: "You find Father Ansel beneath the porch, counting the people who made it out.",
+        witness: "You stand beyond the sparks and begin fixing every face in the crowd.",
+      },
+      struggle: {
+        help: "You keep the line from breaking when burning shingles fall across it.",
+        comfort: "You drag Father Ansel back as the porch beam comes down where he stood.",
+        witness: "Most hands are wet and black with soot. Two people never touch a bucket.",
+      },
+      aftermath: {
+        help: "You force the crowd beyond the churchyard wall before the roof gives way.",
+        comfort: "You and Ansel save one armful of scorched parish pages before the smoke drives you out.",
+        witness: "At the outer wall you find lamp oil where no church lamp was kept.",
+      },
+    },
   },
   wellFouled: {
     priority: ["greta", "falk", "marta", "ansel", "wilhelm", "liesel", "rosa", "tobias"], count: 5,
     reason: "keep neighbours from the poisoned well", object: "a covered water pail",
     arrival: () => "Lanterns ring the well. The first bucket comes up black, and somebody drops it in the square.",
     struggle: (names) => `${names} pull children back from the stones. Doctor Falk smells the water, then orders every bucket emptied.`,
-    reaction: (name) => name ? `${name} kneels beside a coughing child. “Fetch clean water from the stream. Run.”` : "A child begins coughing beside the well. Someone calls for clean water.",
+    reaction: (name) => name ? `${name} takes the first stream-water pail and wets a clean cloth. “Keep their mouth clear. Slowly.”` : "The first stream-water pail arrives. A clean cloth is passed to the coughing child.",
     closure: () => "A rope is drawn around the well. Before dawn, somebody paints a black cross across the stones.",
     choices: ["Carry clean water from the stream", "Help Doctor Falk with the sick", "Watch the crowd. Someone did this"],
+    stageChoices: {
+      struggle: ["Pass the stream water down the line", "Empty every household bucket", "Watch who tries to leave the square"],
+      aftermath: ["Clean the child's mouth with stream water", "Carry fresh pails to the sick", "Ask who drew the first black bucket"],
+    },
+    stageResponses: {
+      arrival: {
+        help: "You run for the stream and return with the first clean pail.",
+        comfort: "You kneel beside Doctor Falk and keep the coughing child upright.",
+        witness: "You stay clear of the panic and watch who knew the water was bad before the bucket rose.",
+      },
+      struggle: {
+        help: "Your pail passes from hand to hand. Nobody drinks from the well again tonight.",
+        comfort: "You overturn bucket after bucket, even as frightened households protest.",
+        witness: "One neighbour slips away as soon as Doctor Falk says the poisoning was deliberate.",
+      },
+      aftermath: {
+        help: "The child coughs up black water and finally draws a clean breath.",
+        comfort: "You carry fresh water until every sick household has one covered pail.",
+        witness: "The first bucket was drawn before the bell by someone who has not remained in the square.",
+      },
+    },
   },
   breadRiot: {
     priority: ["marta", "wilhelm", "liesel", "ansel", "rosa", "tobias", "falk", "greta"], count: 5,
@@ -1001,26 +1174,89 @@ const AFFLICTION_CRISIS = {
     arrival: () => "The bakery door gives way. Hungry neighbours surge through it while flour rolls into the square like smoke.",
     struggle: (names) => `${names} try to pull people back. Loaves pass hand to hand and vanish beneath coats.`,
     reaction: (name) => name ? `${name} stands beside the cold ovens, white with flour. “I would have fed them. They did not ask.”` : "The baker stands beside the cold ovens. “I would have fed them. They did not ask.”",
-    closure: () => "The crowd leaves with the last loaf. Marta closes the broken door on bare shelves and cold ovens.",
+    closure: () => "The crowd leaves with the last loaf. Hazel closes the broken door on bare shelves and cold ovens.",
     choices: ["Help Marta save the remaining bread", "Pull people out before someone is crushed", "Keep back. Remember who takes what"],
+    stageChoices: {
+      struggle: ["Brace the storeroom door", "Lift a fallen child out of the crush", "Watch who is directing the crowd"],
+      aftermath: ["Gather what flour has not been trampled", "Stay with Hazel beside the cold ovens", "Record who leaves carrying more than bread"],
+    },
+    stageResponses: {
+      arrival: {
+        help: "You reach the shelves before the crowd and push the last loaves into the storeroom.",
+        comfort: "You pull two people clear as the doorway jams and bodies begin to fall.",
+        witness: "You step onto a cart and count hands, faces and every coat hiding a loaf.",
+      },
+      struggle: {
+        help: "The storeroom latch holds. A few sacks of flour remain behind it.",
+        comfort: "You lift the child above the crush and pass them safely into the lane.",
+        witness: "One voice keeps turning hunger into anger, calling out which door to break next.",
+      },
+      aftermath: {
+        help: "You salvage one flour sack from the wet, trampled floor.",
+        comfort: "You remain when the crowd has gone. Hazel notices who did not leave with it.",
+        witness: "Several stole food. One person leaves with Hazel's locked cashbox under their coat.",
+      },
+    },
   },
   tavernShut: {
     priority: ["liesel", "rosa", "tobias", "wilhelm", "marta", "ansel", "falk", "greta"], count: 4,
     reason: "face the crowd outside the closing tavern", object: "the tavern's iron door bar",
-    arrival: () => "Liesel puts out the tavern lamps one by one. A crowd gathers before the final light dies.",
-    struggle: (names) => `${names} plead through the door while Liesel drags the iron bar into place. Nobody sounds angry yet.`,
-    reaction: (name) => name ? `${name} presses a palm to the barred door. “This was the last room where we still knew one another.”` : "Someone presses a palm to the barred door. “This was the last warm room.”",
-    closure: () => "The final lamp goes out behind the shutters. The crowd waits in darkness, then separates without a word.",
-    choices: ["Help Liesel bar the door", "Ask her to let the frightened inside", "Stay with the crowd until it disperses"],
+    arrival: () => "A drinker accused another of being the monster. The argument broke a window. Liesel throws everyone into the rain and announces the tavern will close for good.",
+    struggle: (names) => `${names} ask her to reconsider. This is the village's last shared fire, shelter and place to exchange news. Liesel sets the bar. “Every gathering becomes another accusation.”`,
+    reaction: (name) => name ? `${name} rests a hand on the bar. “I kept this room open through births and burials. I will not keep it open for the village to tear itself apart.”` : "A hand rests on the bar. The village's last public room is closing with it.",
+    closure: () => "The final lamp goes out behind the shutters. The tavern is closed for good. The crowd separates toward darker, lonelier houses.",
+    choices: ["Help Liesel clear the room without a crush", "Stay beside those thrown into the storm", "Find out who began the accusation"],
+    stageChoices: {
+      struggle: ["Help Liesel set the iron bar", "Ask her to keep one room open as a refuge", "Listen for who is still accusing whom"],
+      aftermath: ["Offer to carry news between the houses", "Promise to help keep order if she reopens", "Watch who seems pleased by the closure"],
+    },
+    stageResponses: {
+      arrival: {
+        help: "You guide the last drinkers through the doorway before panic becomes a crush.",
+        comfort: "You keep the soaked and frightened together beneath the eaves.",
+        witness: "You learn the spark was an accusation: one patron named another as the monster.",
+      },
+      struggle: {
+        help: "You lift the other end of the iron bar. Liesel does not thank you.",
+        comfort: "You ask her to keep one room open for shelter. She says a refuge where everyone suspects everyone is no refuge.",
+        witness: "You listen. Even now, people in the rain are accusing one another.",
+      },
+      aftermath: {
+        help: "You take down the names of the old and isolated, promising to carry news between their doors.",
+        comfort: "You promise Liesel you will help keep order if she reopens. She cannot promise anything in return.",
+        witness: "Two people leave smiling. You write down their names, though that proves nothing.",
+      },
+    },
   },
   millFlood: {
     priority: ["wilhelm", "marta", "tobias", "falk", "greta", "ansel", "liesel", "rosa"], count: 5,
     reason: "fight the flood at the Old Mill", object: "a length of wet rope",
-    arrival: () => "The millrace breaks its bank. Black water punches through the mill doors and carries grain into the lane.",
-    struggle: (names) => `${names} hold a rope across the current. The wheel tears free and turns once in the road.`,
-    reaction: (name) => name ? `${name} clings to the rope, soaked through. “The winter grain is inside. We lose it, we go hungry.”` : "Someone clings to the rope. “The winter grain is inside.”",
-    closure: () => "The current eases before dawn. The mill wheel lies broken in the lane, and grain clings to every fence downstream.",
-    choices: ["Take the rope and pull people clear", "Try to save the winter grain", "Stay on high ground. Watch the current"],
+    arrival: () => "The millrace has burst through the Old Mill. Black water is rising across the ground floor by the second, lifting grain sacks and driving people toward the stairs and upper windows.",
+    struggle: (names) => `${names} form a rope line between the flooded mill and high ground. A support beam shifts; then the wheel tears free and smashes into the lane.`,
+    reaction: (name) => name ? `${name} clings to the rope, soaked through. “One wall is giving way. There are people above it and winter grain below it. We cannot reach everything.”` : "Someone clings to the rope. “People above. Winter grain below. We cannot reach everything.”",
+    closure: () => "The current finally eases. The Old Mill stands open to the river, its ground floor drowned and its wheel broken in the lane.",
+    choices: ["Throw a rope to the people trapped inside", "Wade in for the floating grain sacks", "Climb the bank and inspect the breach"],
+    stageChoices: {
+      struggle: ["Shore the beam holding the rope line", "Form a chain to carry seed grain uphill", "Follow the flood back to the broken sluice"],
+      aftermath: ["Use the last rope to pull people from the upper floor", "Save the final dry sacks before the wall gives", "Recover the iron pin from the broken sluice"],
+    },
+    stageResponses: {
+      arrival: {
+        help: "You anchor the rope around an ash tree. Two people cross it as water reaches the stair above them.",
+        comfort: "You wade waist-deep into the mill and heave one grain sack onto the stairs. A dozen more are already afloat.",
+        witness: "Above the breach you find retaining stakes pulled clean from wet earth. The bank did not simply fail.",
+      },
+      struggle: {
+        help: "You wedge timber beneath the beam. It holds long enough for the rope line to cross once more.",
+        comfort: "A chain forms behind you. Sack by sack, the seed grain reaches high ground while the flour dissolves below.",
+        witness: "At the sluice, fresh hammer marks ring the housing. Someone drove out the pin that held the gate.",
+      },
+      aftermath: {
+        help: "The last trapped neighbours come down the rope. The wall collapses only after their feet reach the bank.",
+        comfort: "You carry the last dry seed sack uphill as the storeroom wall folds into the current.",
+        witness: "You wrench the iron pin from the mud. Its head is newly battered: proof that the flood was made, not weathered.",
+      },
+    },
   },
 };
 function afflictionCrisisRoster(s, affliction, activeHostId) {
@@ -1044,7 +1280,11 @@ const AFFLICTION_MOOD = {
   wellFouled: "Nobody has touched the well in days. The walk to the stream is long and cold, and the queues there are silent, and everybody counts everybody else in line.",
   tavernShut: "The tavern stays dark and bolted. There is nowhere left to be a person for an hour among other people, and the village feels the lack of it the way a mouth feels a pulled tooth.",
   churchBurned: "Where the church stood there is a black ruin now, and nowhere to carry a Sunday's fear. A few still pray in the lane by the ash. Most have given it up.",
-  millFlood: "The mill stands wheel-broken and flooded still, grain rotting where the water took it. Bread is dearer for it, and the walk to the next village's mill is a full day nobody can spare.",
+  millFlood: (outcome) => outcome && outcome.grain === "saved"
+    ? "The mill stands wheel-broken and flooded still, but salvaged grain is guarded in the church loft. It must be carried a full day to the next mill before it can become bread."
+    : outcome && outcome.grain === "seed"
+      ? "The mill stands wheel-broken and flooded still. The seed grain survived on high ground, but flour is scarce and every loaf is counted."
+      : "The mill stands wheel-broken and flooded still, grain rotting where the water took it. Bread is dearer for it, and the walk to the next village's mill is a full day nobody can spare.",
 };
 /* the affected villager's interview opener, once the wound is theirs */
 const AFFLICTION_OPENER = {
@@ -1164,6 +1404,8 @@ function playerDeathBeats(m, nm, where, ctx) {
   if (!ctx || !ctx.encounterBegun) return full;
   let opening;
   if (ctx.kind === "flee") opening = `You run from ${nm} at the ${where}. Behind you, the revealed thing gives chase at once. It catches you before you reach the next lane.`;
+  else if (ctx.kind === "thresholdInside") opening = `You draw the bolt and invite ${nm} inside. The familiar face crosses your cottage smiling; only after the door closes do you see what came in with it.`;
+  else if (ctx.kind === "thresholdOutside") opening = `You open the door to ${nm} and step beyond the bolt. The familiar face waits until the door is behind you before it changes.`;
   else if (ctx.kind === "watch") opening = `You stay hidden one breath too long at the ${where}. ${nm}, no longer human, looks straight at your hiding place and reaches you before you can rise.`;
   else if (ctx.kind === "confront") opening = `You step out and call ${nm} by name. The thing wearing that face turns fully toward you and closes the distance before you can retreat.`;
   else if (ctx.kind === "wrongRite") opening = `The wrong rite is still in your hands when you run. ${nm}'s revealed shape follows, laughing, and catches you at the ${where}.`;
@@ -2413,7 +2655,9 @@ const EVENT_KILL = [
 const EVENT_DAWN = [
   (evn) => `The morning after the ${evn}, heads ache and tongues wag about who came, who did not, and who left early.`,
   (evn) => `Talk at the well is all of last night's ${evn}: who sang, who drank nothing, who was missed.`,
-  (evn) => `The ${evn} is picked apart over breakfast the way a body is picked apart on a table: who stood where, who left with whom, who never should have come at all.`,
+  (evn) => evn === "boarding-up"
+    ? "Over breakfast, neighbours pick apart last evening's work boarding windows and repairing shutters: who worked beside whom, who left early and who never came to help."
+    : `Over breakfast, neighbours pick apart last night's ${evn}: who stood where, who left with whom and who never should have come at all.`,
   (evn) => `Nobody sleeps well after the ${evn}. Too much noise, too much nearness, too much practice, lately, at counting who is in a room and who is not.`,
 ];
 
@@ -2658,11 +2902,24 @@ function v5Observation(event, choice) {
 }
 function contextualQuestionsFor(s, npcId) {
   const events = s.worldEvents || [];
+  const relevantNight = s.nightNum;
   const asked = new Set((s.askedLog[npcId] || []).filter((k) => k.includes(":context:")));
   const out = [];
   const directKinds = ["seen", "not_seen", "evidence"];
+  /* Ordinary sightings belong to the preceding night only. A physical item
+     found by daylight is different: the player still has it. Keep its return
+     action available across later days until they actually give it back. */
+  const relevantDirectObservation = (obs) => {
+    if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) return false;
+    if (obs.night === relevantNight) return true;
+    const event = events.find((entry) => entry.eventId === obs.eventId);
+    const id = `${obs.eventId}:${obs.kind}`;
+    return !!(event && event.kind === "director_finding" && event.returnable
+      && event.actorIds && event.actorIds.includes(npcId)
+      && !asked.has(`${obs.night}:context:${id}`));
+  };
   const directEvents = new Set((s.observations || [])
-    .filter((obs) => obs.subjectId === npcId && directKinds.includes(obs.kind))
+    .filter(relevantDirectObservation)
     .map((obs) => obs.eventId));
   const offeredEvents = new Set();
   const offeredShapes = new Set();
@@ -2671,23 +2928,23 @@ function contextualQuestionsFor(s, npcId) {
      the tray. Otherwise an older duplicate can reappear simply because its
      unasked ledger row was visited before the asked one. */
   for (const obs of (s.observations || [])) {
-    if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) continue;
+    if (!relevantDirectObservation(obs)) continue;
     const event = events.find((entry) => entry.eventId === obs.eventId);
     const id = `${obs.eventId}:${obs.kind}`;
     if (event && event.question && asked.has(`${obs.night}:context:${id}`)) offeredLabels.add(`${obs.night}|${event.question}`);
   }
-  for (const mem of (s.memories || [])) {
-    if (mem.actorId !== npcId || mem.target !== "player") continue;
+  for (const mem of [...(s.memories || [])].reverse()) {
+    if (mem.night !== relevantNight || mem.actorId !== npcId || mem.target !== "player") continue;
     const event = events.find((entry) => entry.eventId === mem.eventId);
     if (!event || !asked.has(`${mem.night}:context:${event.eventId}:memory`)) continue;
     const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
     const label = victim
       ? `You found me beside ${victim.name} after the scream. What do you think happened?`
-      : `You saw me at the ${event.location}. What did you think I was doing?`;
+      : `You saw me at the ${event.location}. What did you make of that?`;
     offeredLabels.add(`${mem.night}|${label}`);
   }
   for (const obs of (s.observations || [])) {
-    if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) continue;
+    if (!relevantDirectObservation(obs)) continue;
     const event = events.find((e) => e.eventId === obs.eventId);
     if (!event || !event.question) continue;
     const id = `${event.eventId}:${obs.kind}`;
@@ -2704,8 +2961,11 @@ function contextualQuestionsFor(s, npcId) {
       offeredLabels.add(visible);
     }
   }
-  for (const mem of (s.memories || [])) {
-    if (mem.actorId !== npcId || mem.target !== "player") continue;
+  /* One reverse sighting is enough. Several locations from the same walk used
+     to produce several versions of the same social question and let one
+     attitude change disposition repeatedly. Prefer the latest lived beat. */
+  for (const mem of [...(s.memories || [])].reverse()) {
+    if (mem.night !== relevantNight || mem.actorId !== npcId || mem.target !== "player") continue;
     const event = events.find((e) => e.eventId === mem.eventId);
     /* If you identified them, ask what THEY were doing. The reverse-memory
        question exists only when they noticed you but you did not identify
@@ -2715,7 +2975,7 @@ function contextualQuestionsFor(s, npcId) {
     const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
     const label = victim
       ? `You found me beside ${victim.name} after the scream. What do you think happened?`
-      : `You saw me at the ${event.location}. What did you think I was doing?`;
+      : `You saw me at the ${event.location}. What did you make of that?`;
     const shape = `${mem.night}|memory|${event.location}`;
     const visible = `${mem.night}|${label}`;
     if (asked.has(`${mem.night}:context:${id}`)) {
@@ -2728,6 +2988,7 @@ function contextualQuestionsFor(s, npcId) {
       offeredShapes.add(shape);
       offeredLabels.add(visible);
     }
+    break;
   }
   return out.sort((a, b) => b.night - a.night).slice(0, 6);
 }
@@ -3386,6 +3647,101 @@ function dispTier(d) {
   return "fond";
 }
 const clampDisp = (v) => Math.max(-3, Math.min(3, v));
+/* Each run quietly reshuffles what every villager respects. For every kind
+   of behaviour the cast is split between approval, dislike and neutrality,
+   so outcomes vary by game without ever leaving a run internally random. */
+function socialPreference(s, id, behaviour) {
+  const gameId = (s && s.gameId) || "old-save";
+  const ranked = NPC_DEFS.map((npc) => npc.id).sort((a, b) => {
+    const ar = stableIdx(`${gameId}:social:${behaviour}:${a}`, 100000);
+    const br = stableIdx(`${gameId}:social:${behaviour}:${b}`, 100000);
+    return ar - br || a.localeCompare(b);
+  });
+  const rank = ranked.indexOf(id);
+  if (rank < 0) return 0;
+  const band = Math.max(1, Math.floor(ranked.length / 3));
+  return rank < band ? 1 : rank >= ranked.length - band ? -1 : 0;
+}
+
+/* Secret-sharing always lands somewhere. The broad social preference still
+   makes two neighbours habitual gossips and two habitual keepers of
+   confidences. The middle four judge this particular disclosure, stably for
+   the run, instead of falling through to a generic neutral answer. */
+function secretSharingPreference(s, listenerId, ownerId) {
+  const broad = socialPreference(s, listenerId, "shared_secrets");
+  if (broad) return broad;
+  const gameId = (s && s.gameId) || "old-save";
+  return stableIdx(`${gameId}:social:shared_secrets:${listenerId}:${ownerId}:judgement`, 2) ? 1 : -1;
+}
+
+const SECRET_SHARE_VOICES = {
+  marta: {
+    like: () => `Hazel brushes flour from her hands. “People hide things when the village gives them no safe place to be honest. I am glad you trusted me with this.”`,
+    dislike: () => `Hazel's mouth tightens. “They trusted you with that, and you brought it to my door? Do not expect me to mistake gossip for kindness.”`,
+  },
+  tobias: {
+    like: () => `Old Tobias weighs the news in silence. “Useful truth, that. Better in the hands of someone who knows what it may mean.”`,
+    dislike: () => `Old Tobias plants both hands on his spade. “A confidence is not kindling. Stop carrying sparks from door to door.”`,
+  },
+  ansel: {
+    like: () => `Father Ansel lowers his voice. “It was not yours to repeat, but now that I know, I may be able to keep someone safe. I will carry it carefully.”`,
+    dislike: () => `Father Ansel looks genuinely wounded. “That was entrusted to you, not given to spend. Confession and gossip are not the same thing.”`,
+  },
+  greta: {
+    like: () => `Greta repeats the important detail once, testing it. “Secrets are symptoms. Sometimes they tell you where the sickness began. This helps.”`,
+    dislike: () => `Greta folds her arms. “If you trade their secret today, why would I ever give you mine tomorrow?”`,
+  },
+  wilhelm: {
+    like: () => `Wilhelm gives one hard nod. “Good. Better spoken plainly than left hidden where it can hurt somebody.”`,
+    dislike: () => `Wilhelm's shoulders set. “That is another person's private business. Keep my forge out of your market in whispers.”`,
+  },
+  liesel: {
+    like: () => `Liesel leans closer across the bar. “Now that explains a few things, love. You did right bringing it somewhere it can be used.”`,
+    dislike: () => `Liesel sets down the glass she was polishing. “I run a tavern, love, not a market in other people's shame. Keep that sort of coin.”`,
+  },
+  falk: {
+    like: () => `Doctor Falk considers it like a symptom. “Specific, relevant, and potentially useful. Thank you. That was worth knowing.”`,
+    dislike: () => `Doctor Falk peers over his spectacles. “You have confused information with evidence, and gossip with duty. They are not interchangeable.”`,
+  },
+  rosa: {
+    like: () => `Rosa goes very still, then nods. “So that is what was hidden. Thank you. I know what it costs to tell one person the truth.”`,
+    dislike: () => `Rosa pulls the thread tight enough to make it sing. “You opened their life and passed it across the table. Do not ask me to call that help.”`,
+  },
+};
+
+function secretSharingReply(s, listenerId, owner, secret, reaction) {
+  const voice = SECRET_SHARE_VOICES[listenerId] || SECRET_SHARE_VOICES.rosa;
+  const detail = String((secret && secret.short) || "what they tried to keep private").replace(/[.\s]+$/, "");
+  return `You tell them exactly what you learned about ${owner.name}: ${detail}. ${voice[reaction > 0 ? "like" : "dislike"](owner.name)}`;
+}
+
+function reverseMemoryOutcome(s, id, event) {
+  const preference = socialPreference(s, id, "night_pursuit");
+  if (preference > 0) return {
+    delta: 1,
+    quote: `“I know what you are trying to do: catch whoever is doing this. But be careful. The village has eyes, and fear makes poor witnesses.”`
+  };
+  if (preference < 0) return {
+    delta: -1,
+    quote: `“For all I know, you were prowling for your next victim. Stay away from my door after dark.”`
+  };
+  return {
+    delta: 0,
+    quote: `“I thought you were watching the road, same as me. That proves neither innocence nor guilt.”`
+  };
+}
+
+function applyVillagePreference(s, behaviour, excludedIds) {
+  const excluded = new Set(excludedIds || []);
+  const reactions = {};
+  s.npcs = (s.npcs || []).map((npc) => {
+    if (!npc.alive || npc.fled || excluded.has(npc.id)) return npc;
+    const delta = socialPreference(s, npc.id, behaviour);
+    reactions[npc.id] = delta;
+    return delta ? { ...npc, disp: clampDisp((npc.disp || 0) + delta) } : npc;
+  });
+  return reactions;
+}
 /* Disposition nudges the odds of any bonus/volunteered information a
    villager offers: liked NPCs are more forthcoming, disliked ones less. */
 function dispChance(p, disp) {
@@ -3401,7 +3757,9 @@ function villageStanding(s) {
     living: living.length,
     hostile: hostile.length,
     average: living.length ? total / living.length : 0,
-    hostileMajority: living.length >= 3 && hostile.length >= Math.ceil(living.length / 2),
+    /* The first daylight is the player's first chance to affect trust. Even
+       an unusually cold opening cast cannot have "turned against" them yet. */
+    hostileMajority: s.dayNum > 1 && living.length >= 3 && hostile.length >= Math.ceil(living.length / 2),
   };
 }
 /* ---------- when they cannot stand you ----------
@@ -3441,7 +3799,6 @@ const COOL_PREFIX = [
   `"You have a nerve, but go on."`,
 ];
 const GOSSIP_LOVER_ID = "liesel";
-const DISCREET_ID = "ansel";
 /* the one secret whose exposure is genuinely life-or-death for its keeper */
 const FLEE_ON_SECRET_ID = "wilhelm";
 
@@ -3783,6 +4140,19 @@ const buildPhrase = (pair) => `${pair[0]} of build, or ${pair[1]}; the dark woul
 
 /* ================= GAME SETUP ================= */
 
+/* Opening attitudes vary by run, but the village begins balanced. Independent
+   random rolls could once put a hostile majority on the very first day before
+   the player had done anything. */
+const OPENING_DISPOSITIONS = [-2, -1, -1, 0, 0, 1, 1, 2];
+function openingDispositionMap(gameId) {
+  const ranked = [...NPC_DEFS].sort((a, b) => {
+    const ar = stableIdx(`${gameId}:opening-disposition:${a.id}`, 100000);
+    const br = stableIdx(`${gameId}:opening-disposition:${b.id}`, 100000);
+    return ar - br || a.id.localeCompare(b.id);
+  });
+  return Object.fromEntries(ranked.map((npc, index) => [npc.id, OPENING_DISPOSITIONS[index % OPENING_DISPOSITIONS.length]]));
+}
+
 function newGame(veteran, hollowedUnlocked) {
   /* The first game a player ever sees teaches the system; the mimic exists
      to break the system. Quietly keep it out of the very first draw - never
@@ -3792,11 +4162,13 @@ function newGame(veteran, hollowedUnlocked) {
   const type = pick(MONSTERS.filter((mm) => (veteran || mm.id !== "mimic") && (hollowedUnlocked || mm.id !== "hollowed")));
   const hollowedIn = !!hollowedUnlocked;
   const vid = pick(NPC_DEFS).id;
+  const gameId = Math.random().toString(36).slice(2);
+  const openingDisposition = openingDispositionMap(gameId);
   const s = {
-    nightNum: 0, dayNum: 0, lastActive: -9, gameId: Math.random().toString(36).slice(2),
+    nightNum: 0, dayNum: 0, lastActive: -9, gameId,
     planted: [], searchCount: {}, burned: [],
     monster: { type: type.id, vid }, hollowedIn,
-    npcs: NPC_DEFS.map((n) => ({ ...n, alive: true, turned: false, known: false, fled: false, sawYouWatching: null, offendedExam: null, secretKnown: false, disp: [-2, -1, 0, 1, 2][Math.floor(Math.random() * 5)] })),
+    npcs: NPC_DEFS.map((n) => ({ ...n, alive: true, turned: false, known: false, fled: false, sawYouWatching: null, offendedExam: null, secretKnown: false, disp: openingDisposition[n.id] })),
     patience: Object.fromEntries(NPC_DEFS.map((n) => [n.id, PERSONA[n.id].patience])),
     askedLog: {}, monsterClaims: {}, grudges: {},
     foundSigns: [], playerSigns: [], struckNpcs: [], locEvidence: Object.fromEntries(LOCS.map((l) => [l, []])), nightRemains: [],
@@ -3808,8 +4180,8 @@ function newGame(veteran, hollowedUnlocked) {
     sideQuest: null, secretSpread: {},
     /* one human secret chosen per villager per game, by index into SECRET_POOL */
     secretPick: Object.fromEntries(NPC_DEFS.map((n) => [n.id, Math.floor(Math.random() * (SECRET_POOL[n.id] ? SECRET_POOL[n.id].length : 1))])),
-    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterSawYou: false, monsterWarningSeen: false, markedOutNights: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
-    publicBlame: null,
+    knownBuild: null, buildClues: [], knownSex: null, faceKnown: null, monsterUncovered: false, monsterSawYou: false, monsterWarningSeen: false, markedOutNights: 0, mob: null, embolden: 0, quarry: null, doorVisits: 0,
+    publicBlame: null, publicVindication: null,
     dawn: [], dawnScene: null, dayEvents: [], dayLogs: [],
     ap: 2, questionedToday: [], investigatedNight: null, wrongExecutions: 0, defendedToday: false,
     enraged: false, fled: false, riteFails: 0, wrongGuesses: 0, over: null,
@@ -4588,6 +4960,11 @@ function directorFollowSecret(wx, npc, dest, summary) {
   const seen = /^(?:he|she|they)\b/i.test(clearAction) ? `you see that ${clearAction}` : `you see ${clearAction}`;
   return `${directorFollowLead(wx, npc.name, dest)} There, ${seen}.`;
 }
+function directorErrandQuestion(reason) {
+  return /^collect supplies\b/i.test(String(reason || ""))
+    ? "Was collecting supplies the whole reason?"
+    : "Was that the whole reason you went?";
+}
 function directorMaskedMonsterHail(seed, npc, dest, mode) {
   const lure = stableIdx(`${seed}:${npc.id}:masked-lure`, 5) === 0;
   const pool = lure
@@ -4657,7 +5034,7 @@ function directorDialogueFor(s, facts, npc, motive, seed) {
     follow = directorFollowAction(wx, npc, dest, ctx.reason);
     honest = `“I went out to ${ctx.reason}. You saw the work, so ask me what still troubles you.”`;
     evasive = `“You followed me far enough to see a human errand. If you require guilt as well, bring your own.”`;
-    question = `I followed you to the ${dest}. Was ${ctx.reason} the whole reason?`;
+    question = `I followed you to the ${dest}. ${directorErrandQuestion(ctx.reason)}`;
     reaffirm = honest;
   }
   const weather = directorWeather(wx);
@@ -4706,7 +5083,8 @@ function directorAfflictionBeats(s, facts, slots) {
   if (!def || !scene) return [];
   const attendees = (facts.afflictionCrowd || []).map((id) => npcById(s, id)).filter(Boolean);
   const anchor = facts.afflictionAnchorId ? npcById(s, facts.afflictionAnchorId) : null;
-  const names = attendees.slice(0, 3).map((npc) => npc.name).join(" and ") || "Neighbours";
+  const speakingAttendees = affliction === "tavernShut" ? attendees.filter((npc) => npc.id !== "liesel") : attendees;
+  const names = speakingAttendees.slice(0, 3).map((npc) => npc.name).join(" and ") || "Neighbours";
   const common = {
     affliction,
     afflictionLocation: scene.location,
@@ -4718,25 +5096,28 @@ function directorAfflictionBeats(s, facts, slots) {
     anchorId: anchor ? anchor.id : null,
     critical: true,
   };
-  const responseChoices = [
-    { choice: "help", label: def.choices[0] },
-    { choice: "comfort", label: def.choices[1] },
-    { choice: "witness", label: def.choices[2] },
-  ];
+  const responseChoices = (stage) => {
+    const labels = (def.stageChoices && def.stageChoices[stage]) || def.choices;
+    return [
+      { choice: "help", label: labels[0] },
+      { choice: "comfort", label: labels[1] },
+      { choice: "witness", label: labels[2] },
+    ];
+  };
   return [
     {
       id: `n${s.nightNum + 1}:affliction:${affliction}:arrival`, type: "atmosphere", slot: 0, location: scene.location,
-      text: def.arrival(), meta: { ...common, crisisStage: "arrival", crisisChoices: responseChoices },
+      text: def.arrival(), meta: { ...common, crisisStage: "arrival", crisisChoices: responseChoices("arrival"), crisisResponses: def.stageResponses && def.stageResponses.arrival },
     },
     {
       id: `n${s.nightNum + 1}:affliction:${affliction}:struggle`, type: "atmosphere", slot: Math.min(slots - 1, 1), location: scene.location,
-      text: def.struggle(names), meta: { ...common, crisisStage: "struggle", crisisChoices: responseChoices },
+      text: def.struggle(names), meta: { ...common, crisisStage: "struggle", crisisChoices: responseChoices("struggle"), crisisResponses: def.stageResponses && def.stageResponses.struggle },
     },
     {
       id: `n${s.nightNum + 1}:affliction:${affliction}:reaction`, type: "atmosphere", slot: Math.min(slots - 1, 2), location: scene.location,
       actorId: anchor ? anchor.id : null,
       text: def.reaction(anchor ? anchor.name : null),
-      meta: { ...common, crisisStage: "aftermath", crisisChoices: [{ choice: "stay", label: "Stay until the danger passes" }, { choice: "leave", label: "Leave before the crowd disperses" }] },
+      meta: { ...common, crisisStage: "aftermath", crisisChoices: responseChoices("aftermath"), crisisResponses: def.stageResponses && def.stageResponses.aftermath },
     },
     {
       id: `n${s.nightNum + 1}:affliction:${affliction}:closure`, type: "atmosphere", slot: Math.min(slots - 1, 3), location: scene.location,
@@ -4744,6 +5125,63 @@ function directorAfflictionBeats(s, facts, slots) {
     },
   ];
 }
+
+/* The monster occasionally answers something the player actually did. These
+   are not ambient fortune-cookie threats: every line is tied to a recent
+   rescue, a wrongful rope, or the choice to walk its ground on a quiet night.
+   One stable roll per night keeps them uncommon and prevents reloads from
+   fishing for (or escaping) a taunt. */
+function directorContextualTaunt(s, facts, openingIntent, n, seed) {
+  const roll = stableIdx(`${seed}:contextual-monster-taunt`, 1000) / 1000;
+  const recentRescue = [...(s.relationshipEvents || [])].reverse().find((event) => event.kind === "rescued" && event.night >= n - 2);
+  const wrongRope = [...(s.deaths || [])].reverse().find((death) => ["executed", "mobbed"].includes(death.kind) && death.id !== s.monster.vid && death.night >= n - 1);
+  const targetId = facts.guaranteedVictimId;
+  const target = targetId && npcById(s, targetId);
+  const rescued = recentRescue && npcById(s, recentRescue.actorId);
+  const chosenLocation = openingIntent && (openingIntent.kind === "watch" ? (HOME_LOC[openingIntent.id] || "Village Square") : openingIntent.loc);
+  const monsterGround = chosenLocation && (monsterOf(s).hunts || []).includes(chosenLocation);
+
+  if (roll < 0.18 && facts.active && rescued && target && target.alive && target.id !== rescued.id) {
+    return {
+      kind: "rescued_neighbour",
+      channel: "walk",
+      savedId: rescued.id,
+      savedName: rescued.name,
+      targetId: target.id,
+      targetName: target.name,
+      line: `A voice in the darkness sings, “${rescued.name}. ${rescued.name}. ${rescued.name}. ${rescued.name} got away because of you. But ${target.name} is out tonight. Perhaps I will play with ${target.name} instead.”`,
+      responseText: `A small laugh moves away from you, toward the ${facts.huntLoc || "darkest lane"}.`,
+      noteText: "YOU CHOSE.",
+    };
+  }
+  if (roll < 0.16 && wrongRope) {
+    return {
+      kind: "wrongful_hanging",
+      channel: "door",
+      accusedId: wrongRope.id,
+      accusedName: wrongRope.name,
+      line: `The voice laughs softly. “You thought it was ${wrongRope.name}? Do not make me laugh. ${wrongRope.name} could never do what I do.”`,
+    };
+  }
+  if (roll < 0.18 && !facts.active && monsterGround) {
+    return {
+      kind: "quiet_hunting_ground",
+      channel: "walk",
+      location: chosenLocation,
+      line: "A voice moves beside you in the darkness. “Oh, you do make it easy, little one. No feeding tonight, and still you walk my ground. Perhaps I will have some fun with you.”",
+      responseText: "The voice gives a pleased little laugh. By the time you turn, it is speaking from much farther away.",
+    };
+  }
+  if (roll < 0.08 && (s.monsterSawYou || s.enraged)) {
+    return {
+      kind: "appetite",
+      channel: "door",
+      line: "The voice presses close to the other side of the wood. “I wonder what you taste like. Perhaps just a nibble. Soon. Soon.”",
+    };
+  }
+  return null;
+}
+
 function compileDirectorNight(s, facts, openingIntent) {
   if (!HE_DIRECTOR) return null;
   const n = s.nightNum + 1;
@@ -4770,6 +5208,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   const firstNightTarget = n === 1 && facts.active ? s.npcs.find((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && facts.outMap[npc.id] === facts.huntLoc) : null;
   const guaranteedHuntTarget = facts.guaranteedVictimId ? npcById(s, facts.guaranteedVictimId)
     : facts.relentlessVictimId ? npcById(s, facts.relentlessVictimId) : firstNightTarget;
+  const contextualTaunt = directorContextualTaunt(s, facts, openingIntent, n, seed);
   const forcedBeats = [];
   /* Quiet is a valid outcome. A whisper is an authored possibility, not a
      nightly appointment, so a short uneventful walk can remain exactly that. */
@@ -4788,7 +5227,25 @@ function compileDirectorNight(s, facts, openingIntent) {
     text: distantEventText,
   });
   if (afflictionScene) forcedBeats.push(...directorAfflictionBeats(s, facts, slots));
-  if (facts.active) forcedBeats.push({
+  if (contextualTaunt && contextualTaunt.channel === "walk") forcedBeats.push({
+    id: `n${n}:contextual-monster-taunt`, type: "atmosphere",
+    slot: facts.active ? Math.max(0, attackSlot - 1) : Math.min(slots - 1, Math.max(1, Math.floor(slots * 0.55))),
+    location: "*", text: contextualTaunt.line,
+    meta: {
+      contextualTaunt: true,
+      tauntKind: contextualTaunt.kind,
+      targetId: contextualTaunt.targetId || null,
+      targetName: contextualTaunt.targetName || null,
+      noteText: contextualTaunt.noteText || null,
+      responseText: contextualTaunt.responseText,
+      requiresResponse: !facts.active,
+      quietPresence: !facts.active,
+      voiceMode: "speaker",
+      soundCue: /laugh|giggl/i.test(contextualTaunt.line) ? "giggle" : "murmur",
+      critical: true,
+    },
+  });
+  else if (facts.active) forcedBeats.push({
     id: `n${n}:monster-sound`, type: "atmosphere", slot: Math.max(1, attackSlot - 1), location: "*",
     text: facts.targetingPlayer
       ? facts.wx === "storm" ? "Between thunderclaps, footsteps match yours. They stop when you stop. The monster has followed you here."
@@ -4816,9 +5273,14 @@ function compileDirectorNight(s, facts, openingIntent) {
   const hallucinationChance = Math.min(0.72, temperament.hallucination + (strained ? 0.22 : 0));
   if (rng.next() < hallucinationChance) {
     const fragments = directorWeatherDelusion(facts.wx, DIRECTOR_DELUSIONS[Math.floor(rng.next() * DIRECTOR_DELUSIONS.length)]);
+    const delusionText = fragments.join(" ");
+    const hallucinationCue = /footstep|footprint|tread|walking|pace/i.test(delusionText)
+      ? "hallucination_steps"
+      : /voice|whisper|name|speak|laugh|giggl/i.test(delusionText)
+        ? "hallucination_whispers" : "hallucination_drift";
     forcedBeats.push({
     id: `n${n}:delusion`, type: "delusion", slot: Math.min(slots - 1, 1 + Math.floor(rng.next() * Math.max(1, slots - 1))), location: "*",
-    text: fragments.join(" "), meta: { fragments, unresolvedSight: true, requiresResponse: true, soundCue: facts.wx === "storm" ? "thunder" : facts.wx === "frost" ? "frost_step" : "leaves", weather: facts.wx || "still" },
+    text: delusionText, meta: { fragments, unresolvedSight: true, requiresResponse: true, soundCue: hallucinationCue, weather: facts.wx || "still" },
     });
   }
   const crisisAttendees = new Set(facts.afflictionCrowd || []);
@@ -4862,6 +5324,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     gathering: facts.evn && facts.eventLoc ? {
       id: facts.evn.id, name: facts.evn.name, location: facts.eventLoc,
       text: facts.evn.intro,
+      distantText: `Before you choose a road, you know the ${facts.evn.name} is underway at the ${facts.eventLoc}. Lanterns and neighbours have gathered there tonight.`,
     } : null,
     encounterBudget: 2,
     knownSigns: s.foundSigns || [],
@@ -4873,6 +5336,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     eventLoc: facts.eventLoc, attackSlot, guaranteedVictimId: facts.guaranteedVictimId, relentlessVictimId: facts.relentlessVictimId,
     affliction: facts.affliction, afflictionLoc: facts.afflictionLoc, afflictionCrowd: facts.afflictionCrowd, afflictionAnchorId: facts.afflictionAnchorId,
     secretLeadId: facts.secretLeadId, secretLeadLoc: facts.secretLeadLoc, secretLeadSlot: facts.secretLeadSlot,
+    monsterTaunt: contextualTaunt,
   };
   /* Compile a private preview only to place one mundane object on a route
      that really exists. Recompiling with the same seed is byte-stable; the
@@ -5062,6 +5526,8 @@ function resolveNight(prev, planIn, preEvents) {
         beats.push(`It comes out of the dark straight for the circle, certain of its welcome, and understands too late that the rite laid out for it is its own undoing.`);
         beats.push(METHOD_KILL_LINES[declared.method]);
         beats.push(`What dies in the square wore ${monsterNpc.name}'s face for years. It will not wear anyone's again.`);
+        const vindication = uncoverMonster(s, monsterNpc.name);
+        if (vindication) beats.push(vindication);
         s.over = { win: true, reason: "won", text: `You named it truly at the last: a ${m.name}. Its own rite ended it in the square, in front of everyone it fed on.` };
         s.nightBeats = beats; s.beatTitle = "THE LAST RITE"; s.phase = "night"; s.dawn = dawn;
         s.nightLogs.push({ night: n, active: true, huntLoc: "Village Square", outMap: {}, wail: false, weather: null, event: null });
@@ -5215,15 +5681,20 @@ function resolveNight(prev, planIn, preEvents) {
     const findingEvents = (projection.findings || []).map((finding) => {
       const agenda = director.schedules && director.schedules[finding.actorId];
       const motive = agenda && agenda.motive;
-      const object = motive && motive.object && motive.object !== "nothing" ? motive.object : "something tied to your errand";
+      const object = finding.object || (motive && motive.object && motive.object !== "nothing" ? motive.object : "something tied to your errand");
       const reason = motive && motive.reason ? motive.reason : "finish a private errand";
+      const returnable = finding.source !== "threshold_report";
+      const privateItem = finding.privateItem != null
+        ? !!finding.privateItem
+        : /parcel|packet|bundle|wrapped|satchel|note|letter|message|mail/i.test(object);
       return {
         eventId: finding.eventId, night: n, location: finding.location, kind: "director_finding",
         actorIds: [finding.actorId], subjectId: finding.actorId,
-        question: finding.question || `I found ${object} at the ${finding.location}. Why was it there?`,
-        honest: finding.honest || `“It is mine. I carried it because I went out to ${reason}. I must have dropped it.”`,
-        evasive: finding.evasive || `“You found a thing in the road and brought it to my door. That does not make it mine.”`,
+        question: finding.question || (returnable ? `Return ${definiteFindingObject(object)}` : `Ask about ${definiteFindingObject(object)}`),
+        honest: finding.honest || `“It is mine. I carried it because I went out to ${reason}.”`,
+        evasive: finding.evasive || `“It is not mine.”`,
         findingText: finding.text, weather: director.weather,
+        object, privateItem, returnable,
       };
     });
     const findingObservations = (projection.findings || []).map((finding) => ({
@@ -5245,7 +5716,7 @@ function resolveNight(prev, planIn, preEvents) {
       ...entry,
       night: n,
       kind: "director_body_investigation",
-      actorIds: (entry.witnessIds || []).slice(),
+      actorIds: [...new Set([...(entry.witnessIds || []), ...(entry.corroboratingWitnessIds || [])])],
       subjectId: entry.victimId,
     }));
     s.worldEvents = [...(s.worldEvents || []), ...directorEvents, ...findingEvents, ...bodyInvestigations];
@@ -5297,16 +5768,33 @@ function resolveNight(prev, planIn, preEvents) {
         s.clues.push(`Night ${n}: you reached ${victimName} after the scream at the ${inquiry.location}. The attack had changed them, and you saw it yourself.`);
       }
       if (inquiry.heardLastWords && inquiry.lastWords) s.clues.push(`Night ${n}: ${victimName}'s last words at the ${inquiry.location}: ${inquiry.lastWords}`);
-      if (inquiry.suspicious) {
+      if (inquiry.corroborated) {
+        const corroborators = (inquiry.corroboratingWitnessIds || []).map((id) => npcById(s, id)).filter(Boolean);
+        const corroboratorNames = corroborators.map((npc) => npc.name).join(" and ") || "The neighbours already there";
+        const corroboratorVerb = corroborators.length === 1 ? "was" : "were";
+        s.clues.push(`Night ${n}: ${corroboratorNames} ${corroboratorVerb} present at the ${inquiry.location}. They saw the attacker leave and saw you reach ${victimName} afterward; they can account for your innocence.`);
+        s.memories = [...(s.memories || []), ...corroborators.map((npc) => ({
+          eventId: inquiry.eventId, night: n, actorId: npc.id, target: "player", kind: "corroborated_player",
+          location: inquiry.location, confidence: "certain", acknowledged: false,
+          text: `They were already at the ${inquiry.location} and saw you reach ${victimName} only after the attacker fled.`,
+        }))];
+        dawn.push(ev(`${corroboratorNames} ${corroboratorVerb} already at the ${inquiry.location}. They saw what happened and tell anyone who asks: you did not attack ${victimName}.`, corroborators[0] ? corroborators[0].id : undefined, 2));
+      } else if (inquiry.defenceAccepted) {
+        const defenders = (inquiry.witnessIds || []).map((id) => npcById(s, id)).filter(Boolean);
+        const defenderNames = defenders.map((npc) => npc.name).join(" and ") || "The people who found you";
+        s.clues.push(`Night ${n}: you answered the accusation at the ${inquiry.location}. ${defenderNames} accepted that you reached ${victimName} after the attack and agreed to say so.`);
+        dawn.push(ev(`${defenderNames} repeat the account you gave beside ${victimName}: the attacker had gone before you touched the body. The accusation does not take hold.`, defenders[0] ? defenders[0].id : undefined, 2));
+      } else if (inquiry.suspicious && !s.monsterUncovered) {
         const witnessNames = (inquiry.witnessIds || []).map((id) => npcById(s, id)).filter(Boolean).map((npc) => npc.name);
         const suspiciousIds = new Set(inquiry.witnessIds || []);
+        const dispositionBeforeBlame = Object.fromEntries(s.npcs.map((npc) => [npc.id, npc.disp || 0]));
         s.npcs = s.npcs.map((npc) => suspiciousIds.has(npc.id) ? { ...npc, disp: clampDisp((npc.disp || 0) - 1) } : npc);
         s.memories = [...(s.memories || []), ...(inquiry.witnessIds || []).map((actorId) => ({
           eventId: inquiry.eventId, night: n, actorId, target: "player", kind: "found_near_body",
           location: inquiry.location, confidence: "certain", acknowledged: false,
           text: `They arrived to find you alone beside ${victimName}, before anyone else could account for the scene.`,
         }))];
-        repairPublicBlame(s, inquiry);
+        repairPublicBlame(s, inquiry, dispositionBeforeBlame);
         dawn.push(ev(inquiry.recognizedChanged
           ? `${victimName} is alive, but changed. ${witnessNames.length ? witnessNames.join(" and ") : "The first searchers"} found you beside them. By breakfast, most believe you caused it.`
           : `${witnessNames.length ? witnessNames.join(" and ") : "The first searchers"} found you beside ${victimName}'s body. By breakfast, most believe you caused the death.`, undefined, 2));
@@ -5344,8 +5832,6 @@ function resolveNight(prev, planIn, preEvents) {
     if (thresholdChoice) {
       s.doorVisits = (s.doorVisits || 0) + 1;
     }
-    const thresholdLook = (director.ledgers.truth || []).find((e) => e.kind === "threshold_look" && e.visitorKind === "monster" && e.actorId);
-    if (thresholdLook) s.faceKnown = thresholdLook.actorId;
     /* sawYouOut remains a compatibility projection only. The Director's
        memory ledger is the source; disposition will decide later whether a
        living witness actually speaks for the player. */
@@ -5355,10 +5841,32 @@ function resolveNight(prev, planIn, preEvents) {
     });
     if (!director.player.alive) {
       const thresholdDeath = (director.ledgers.truth || []).some((event) => event.kind === "player_slain" && event.source === "threshold");
-      s.over = { win: false, reason: "lost", text: thresholdDeath ? "You answered the voice at your door. By morning, the bolt was still drawn from inside." : "The village heard you running. It did not hear you reach your door." };
+      const lastChoice = [...(director.ledgers.truth || [])].reverse().find((event) => ["threshold_choice", "monster_reveal_choice", "monster_close_choice", "chase_choice"].includes(event.kind));
+      const invitedInside = thresholdDeath && (lastChoice || {}).action === "INVITE_IN";
+      s.over = { win: false, reason: "lost", text: thresholdDeath
+        ? invitedInside
+          ? "You invited the voice through your door. By morning, the bolt was still drawn from inside."
+          : "You stepped beyond the bolt. By morning, your door stood open to the lane."
+        : "The village heard you running. It did not hear you reach your door." };
       const host = npcById(s, s.monster.vid);
-      const deathPlace = director.player.location === "Home" ? "your cottage" : (director.player.location || "lanes");
-      s.deathBeats = (DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name : "someone you knew", deathPlace);
+      const deathPlace = director.player.location === "Home" ? "cottage" : (director.player.location || "lanes");
+      const deathKind = thresholdDeath
+        ? (invitedInside ? "thresholdInside" : "thresholdOutside")
+        : (lastChoice || {}).action === "WATCH_MONSTER" ? "watch"
+          : (lastChoice || {}).action === "CONFRONT_MONSTER" ? "confront"
+            : (lastChoice || {}).action === "HIDE" ? "hide" : "flee";
+      const livedDeath = playerDeathBeats(monsterOf(s), host ? host.name : "someone you knew", deathPlace, { encounterBegun: true, kind: deathKind });
+      const guiltNames = (s.deaths || []).filter((death) => ["executed", "mobbed"].includes(death.kind)).map((death) => death.name);
+      const guiltLead = guiltNames.length > 1
+        ? thresholdDeath
+          ? `You walk home from the hangings of ${guiltNames.slice(-2).join(" and ")}, wracked with guilt. Something is already waiting at your door.`
+          : `You go into the night carrying the hangings of ${guiltNames.slice(-2).join(" and ")}. The road home gives you no room to set that guilt down.`
+        : guiltNames.length === 1
+          ? thresholdDeath
+            ? `You walk home from ${guiltNames[0]}'s hanging, wracked with guilt. Someone is already waiting at your door.`
+            : `You go into the night carrying ${guiltNames[0]}'s hanging. The road home gives you no room to set that guilt down.`
+          : null;
+      s.deathBeats = guiltLead ? [guiltLead, ...livedDeath] : livedDeath;
       s.deathAfterBeats = false;
     }
     recordDirectorHumanRemains(s, director, f, n);
@@ -5480,6 +5988,13 @@ function resolveNight(prev, planIn, preEvents) {
     if (plan.kind === "home") {
       beats.push(pickFreshIdx("homeLines", HOME_LINES));
       if (n > 1 && chance(0.35)) beats.push(pickFreshIdx("homeMoments", HOME_NIGHT_MOMENTS));
+      const barredTauntRoll = stableIdx(`${s.gameId}:barred-home-taunt:${n}`, 1000) / 1000;
+      if (n > 1 && (s.monsterSawYou || s.enraged || s.wrongExecutions > 0) && barredTauntRoll < 0.12) {
+        beats.push("Near dawn, paper whispers beneath your barred door. No hand remains on the other side when you lift the lantern.");
+        const barredNote = "IF THE LITTLE PIG WILL NOT COME OUT, THE BIG BAD WOLF MAY HAVE TO COME IN.";
+        s.clues.push(`Night ${n}: after you stayed behind the bar, something pushed a note beneath your door: “${barredNote}” A threat, not evidence of what it is.`);
+        dawn.push(ev(`A narrow strip of paper lies inside your threshold at first light. In a careful hand: “${barredNote}”`, undefined, 2));
+      }
     }
     else if (out) beats.push(pickFreshIdx("outLines", OUT_LINES)(plan.loc));
     else if (watching) beats.push(pickFreshIdx("watchLines", WATCH_LINES)(npcById(s, watching).name));
@@ -5605,6 +6120,8 @@ function resolveNight(prev, planIn, preEvents) {
             }
             beats.push(METHOD_KILL_LINES[guess.method]);
             beats.push(`What dies at the ${fPlace} wore ${fw.name}'s face for years. No torches. No square. No rope. Just you, and the dark, and the end of it, one full night before it would have fed again.`);
+            const vindication = uncoverMonster(s, fw.name);
+            if (vindication) beats.push(`At first light, the body is proof. ${vindication}`);
             s.wonInDark = true;
             s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fPlace}: a ${guess.name}. Its own rite ended it in the dark, before it could take one more soul.` };
             return true;
@@ -5623,6 +6140,8 @@ function resolveNight(prev, planIn, preEvents) {
           s.fled = true;
           s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, fled: true } : x));
           beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised, and it does not even flinch. It smiles with far too much of its face, drops the pretence like a coat, and is over the churchyard wall before your heart restarts. Wrong name. Right face. It has nothing left to hide now, and nothing left to lose.`);
+          const vindication = uncoverMonster(s, fw.name);
+          if (vindication) dawn.push(ev(vindication, undefined, 3));
           dawn.push(ev(`The village knows the face now: ${fw.name}. And you know one thing more than they do: it is no ${guess.name}. Only its own rite ends this, and you will not get more than two tries.`, fw.id));
           return false;
         }
@@ -5658,6 +6177,8 @@ function resolveNight(prev, planIn, preEvents) {
         s.fled = true;
         s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, fled: true } : x));
         beats.push(`You step out and say the name aloud. It goes very still. Then it smiles with far too much of its face, drops the last of the pretence like a coat, and is over the churchyard wall before your heart restarts. The mask is off. It has nothing left to hide, and nothing left to lose.`);
+        const vindication = uncoverMonster(s, fw.name);
+        if (vindication) dawn.push(ev(vindication, undefined, 3));
         dawn.push(ev(`The village knows the face now: ${fw.name}. It does not know the name of the thing, and only the cure it answers to will end it. Study the signs. You will not get more than two tries.`, fw.id, 2));
       } else if (act === "watch") {
         if (!s.knownBuild) { s.knownBuild = fw.build; s.buildClues = [...(s.buildClues || []), [fw.build, fw.build]]; }
@@ -6238,7 +6759,7 @@ function resolveNight(prev, planIn, preEvents) {
             ? `Night ${n}: you watched ${victim.name}'s door most of the night. It never opened, and they were dead behind it by dawn. Whatever took them passes barred doors, or was already inside.`
             : `Night ${n}: ${victim.name}'s door stayed barred the whole time you watched it, and they were found at the ${victimPlace}. They rose and walked out AFTER you left, of their own accord. Nothing forced that door. Something called them through it.`);
           dawn.push(ev(`You watched ${victim.name}'s door that same night, and the night waited you out. What you know that the village does not: the door was never forced.`, victim.id, 2));
-        } else if (crossedPaths && n > 1) {
+        } else if (crossedPaths && n > 1 && !(directorAttack && directorAttack.witnessed)) {
           beats.push(`${victim.name}. You were with ${victim.name} in the dark not an hour ago, and left them living. Whatever found them found them almost the moment your back was turned.`);
           s.clues.push(`Night ${n}: ${victim.name} was alive when you left them at ${victimWhere === "home" ? "their own door" : "the " + victimPlace}. It was close behind you both. It chose them.`);
           /* -- and whether the VILLAGE knows it, which is a different fact.
@@ -6274,6 +6795,11 @@ function resolveNight(prev, planIn, preEvents) {
             : wx === "storm" ? "Rain has washed the approach clean; no print and no small sound survived it."
               : wx === "frost" ? "The frost preserved the last approach in hard-edged prints around the place, stronger ground evidence than the village usually gets." : "It is exactly where the night's last sound came from.";
           dawn.push(ev(`${victim.name} is missing from the well. They are found at the ${victimWhere}. ${weatherFinding}`, victim.id, 2));
+          if (directorAttack && directorAttack.monsterNote) {
+            const noteLine = `Pinned to ${victim.name}'s coat is a scrap in a small, deliberate hand: “${directorAttack.monsterNote}”`;
+            dawn.push(ev(noteLine, victim.id, 3));
+            s.clues.push(`Night ${n}: after the voice named ${victim.name} as its replacement, ${victim.name} was found with a note: “${directorAttack.monsterNote}” The monster meant the choice to be yours.`);
+          }
         } else if (n === 1) {
           /* who and where share one card: the first morning should not deal
              a whole hand over a single body. The flourish is occasional and
@@ -6468,6 +6994,8 @@ function resolveNight(prev, planIn, preEvents) {
         dawn.push(ev(`The whole village saw what stood up under the beam wearing ${tgt.name}'s face. Only the cure it answers to ends it now, and it comes back tonight.`, tgt.id, 2));
         s.fled = true;
         s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, fled: true } : x));
+        const vindication = uncoverMonster(s, tgt.name);
+        if (vindication) firstLight.push(vindication);
         s.mob = null;
       } else {
         s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
@@ -6606,32 +7134,62 @@ function resolveNight(prev, planIn, preEvents) {
   if (affliction && !s.over) {
     s.lastAfflictionNight = n;
     const marta = npcById(s, "marta"), liesel = npcById(s, "liesel"), ansel = npcById(s, "ansel");
+    const relevantCrisisResponses = crisisResponses.filter((event) => !event.affliction || event.affliction === affliction);
+    const choiceCount = (choice) => relevantCrisisResponses.filter((event) => event.choice === choice).length;
+    const helped = choiceCount("help") > 0;
+    const comforted = choiceCount("comfort") > 0;
+    const watched = choiceCount("witness") > 0;
+    const crowdIds = new Set(f.afflictionCrowd || []);
+    const anchorId = f.afflictionAnchorId;
     if (affliction === "breadRiot") { s.breadRiot = { night: n }; dawn.push(ev(AFFLICTION_DAWN.breadRiot(marta ? marta.name : "the baker"), "marta", 2)); }
     else if (affliction === "wellFouled") { s.wellFouled = { night: n }; dawn.push(ev(AFFLICTION_DAWN.wellFouled(), undefined, 2)); }
     else if (affliction === "tavernShut") { s.tavernShut = { night: n }; dawn.push(ev(AFFLICTION_DAWN.tavernShut(liesel ? liesel.name : "the innkeeper"), "liesel", 2)); }
     else if (affliction === "churchBurn") { if (!s.burned.includes("Old Church")) s.burned.push("Old Church"); dawn.push(ev(AFFLICTION_DAWN.churchBurn(ansel && ansel.alive ? ansel.name : null), "ansel", 2)); }
-    else if (affliction === "millFlood") { if (!s.burned.includes("Old Mill")) s.burned.push("Old Mill"); dawn.push(ev(AFFLICTION_DAWN.millFlood(), undefined, 2)); }
-    const helped = crisisResponses.some((event) => event.choice === "help");
-    const comforted = crisisResponses.some((event) => event.choice === "comfort");
-    const watched = crisisResponses.some((event) => event.choice === "witness");
-    const crowdIds = new Set(f.afflictionCrowd || []);
-    const anchorId = f.afflictionAnchorId;
-    if (helped) {
-      s.npcs = s.npcs.map((npc) => crowdIds.has(npc.id) && npc.alive && !npc.turned ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
-      const names = [...crowdIds].map((id) => npcById(s, id)).filter((npc) => npc && npc.alive && !npc.turned).map((npc) => npc.name).slice(0, 3).join(" and ");
-      dawn.push(ev(`${names || "The neighbours at the crisis"} remember you working beside them until the danger passed.`, anchorId || undefined, 1));
-    }
-    if (comforted && anchorId) {
-      const anchor = npcById(s, anchorId);
-      if (anchor && anchor.alive && !anchor.turned) {
-        s.npcs = s.npcs.map((npc) => npc.id === anchorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
-        dawn.push(ev(`${anchor.name} remembers that you came to them when the night was at its worst.`, anchor.id, 1));
+    else if (affliction === "millFlood") {
+      if (!s.burned.includes("Old Mill")) s.burned.push("Old Mill");
+      const helpCount = choiceCount("help"), grainCount = choiceCount("comfort"), witnessCount = choiceCount("witness");
+      const anchor = anchorId && npcById(s, anchorId);
+      const outcome = {
+        night: n,
+        grain: grainCount >= 2 ? "saved" : grainCount === 1 ? "seed" : "lost",
+        people: helpCount >= 2 ? "safe" : helpCount === 1 ? "hurt" : "badly_hurt",
+        sabotage: witnessCount >= 2 ? "certain" : witnessCount === 1 ? "suspected" : "unknown",
+        injuryId: helpCount >= 2 ? null : anchorId || null,
+        choices: relevantCrisisResponses.map((event) => ({ stage: event.crisisStage || null, choice: event.choice })),
+      };
+      s.millFloodOutcome = outcome;
+      dawn.push(ev(AFFLICTION_DAWN.millFlood(outcome), anchorId || undefined, 2));
+      if (helpCount >= 2) dawn.push(ev("The rope line held. Every neighbour trapped inside the mill reached high ground before the wall collapsed.", anchorId || undefined, 1));
+      else if (helpCount === 1) dawn.push(ev(`${anchor ? anchor.name : "One neighbour"} was carried home with a broken wrist, but everyone is accounted for. More hands on the rope would have ended it differently.`, anchorId || undefined, 1));
+      else dawn.push(ev(`${anchor ? anchor.name : "One neighbour"} was dragged from the flood with a badly crushed leg while the rope line fought on without you.`, anchorId || undefined, 1));
+      if (witnessCount) {
+        const sabotageClue = witnessCount >= 2
+          ? `Night ${n}: at the flooded Old Mill, you recovered the sluice pin and saw fresh hammer marks. The millrace was deliberately opened; this was sabotage, though it does not identify who did it.`
+          : `Night ${n}: at the flooded Old Mill, you saw pulled retaining stakes and possible tool marks at the sluice. The breach may have been deliberate, but you left without enough to prove it.`;
+        s.clues.push(sabotageClue);
+        dawn.push(ev(witnessCount >= 2 ? "The iron sluice pin is now in your Journal bundle: battered out by a hammer, proof that somebody flooded the mill." : "You remember the pulled stakes above the breach. The flood may not have been an accident.", undefined, 1));
       }
+      if (helpCount) s.npcs = s.npcs.map((npc) => crowdIds.has(npc.id) && npc.alive && !npc.turned ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
+      if (grainCount && anchor && anchor.alive && !anchor.turned) s.npcs = s.npcs.map((npc) => npc.id === anchorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
     }
-    if (watched && crowdIds.size) {
-      const names = [...crowdIds].map((id) => (npcById(s, id) || {}).name).filter(Boolean);
-      s.clues.push(`Night ${n}: during the disaster at the ${f.afflictionLoc}, you clearly saw ${names.join(" and ")} in the crowd. Their presence there is certain, but it does not clear any of them.`);
-      dawn.push(ev(`You kept out of the crush and watched. Your Journal now holds the names of everyone you could place at the ${f.afflictionLoc}.`, undefined, 1));
+    if (affliction !== "millFlood") {
+      if (helped) {
+        s.npcs = s.npcs.map((npc) => crowdIds.has(npc.id) && npc.alive && !npc.turned ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
+        const names = [...crowdIds].map((id) => npcById(s, id)).filter((npc) => npc && npc.alive && !npc.turned).map((npc) => npc.name).slice(0, 3).join(" and ");
+        dawn.push(ev(`${names || "The neighbours at the crisis"} remember the work you chose when the disaster struck.`, anchorId || undefined, 1));
+      }
+      if (comforted && anchorId) {
+        const anchor = npcById(s, anchorId);
+        if (anchor && anchor.alive && !anchor.turned) {
+          s.npcs = s.npcs.map((npc) => npc.id === anchorId ? { ...npc, disp: clampDisp((npc.disp || 0) + 1) } : npc);
+          dawn.push(ev(`${anchor.name} remembers that you came to them when the night was at its worst.`, anchor.id, 1));
+        }
+      }
+      if (watched && crowdIds.size) {
+        const names = [...crowdIds].map((id) => (npcById(s, id) || {}).name).filter(Boolean);
+        s.clues.push(`Night ${n}: during the disaster at the ${f.afflictionLoc}, you clearly saw ${names.join(" and ")} in the crowd. Their presence there is certain, but it does not clear any of them.`);
+        dawn.push(ev(`Your Journal holds what you noticed while others worked at the ${f.afflictionLoc}.`, undefined, 1));
+      }
     }
     /* a stay-home night did not live it in the lanes: give it a muffled beat */
     if (!plan.facts) beats.push(AFFLICTION_HOME_BEAT[affliction]);
@@ -6659,7 +7217,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (s.wellFouled) moods.push(AFFLICTION_MOOD.wellFouled);
     if (s.tavernShut) moods.push(AFFLICTION_MOOD.tavernShut);
     if ((s.burned || []).includes("Old Church")) moods.push(AFFLICTION_MOOD.churchBurned);
-    if ((s.burned || []).includes("Old Mill")) moods.push(AFFLICTION_MOOD.millFlood);
+    if ((s.burned || []).includes("Old Mill")) moods.push(AFFLICTION_MOOD.millFlood(s.millFloodOutcome));
     if (moods.length && chance(0.4)) dawn.push(ev(pick(moods), undefined, 0));
   }
 
@@ -7024,8 +7582,11 @@ function actSearch(prev, loc) {
         actorIds: [remain.actorId], subjectId: remain.actorId,
         question: remain.kind === "mourning"
           ? `I found what you left at${dead ? ` ${dead.name}'s grave` : ` the ${loc}`}. Why were you there?`
-          : `I found ${remain.object} at the ${loc}. Why was it there?`,
+          : `Return ${definiteFindingObject(remain.object)}`,
         honest, evasive, findingText: remain.text, weather: remain.weather || null,
+        object: remain.object,
+        privateItem: /parcel|packet|bundle|wrapped|satchel|note|letter|message|mail/i.test(String(remain.object || "")),
+        returnable: remain.kind !== "mourning",
       }];
       s.observations = [...(s.observations || []), {
         id: `${eventId}:evidence`, eventId, night: s.nightNum, location: loc,
@@ -7218,9 +7779,28 @@ function settleGiveUpInPlace(s, id, night) {
    Direct witnesses have already lost one disposition point when this runs.
    Everyone else loses one as the story spreads; close ties lose a second.
    The event id makes this safe to run again while repairing an older save. */
-function repairPublicBlame(s, inquiry) {
+function publicBlameLosses(s, event) {
+  const witnesses = new Set(event.witnessIds || event.actorIds || []);
+  const closeTies = new Set(bondedTo(event.victimId));
+  return Object.fromEntries((s.npcs || []).filter((npc) => npc.alive && !npc.fled && npc.id !== event.victimId).map((npc) => [
+    npc.id,
+    1 + (witnesses.has(npc.id) || closeTies.has(npc.id) ? 1 : 0)
+  ]));
+}
+
+function repairPublicBlame(s, inquiry, dispositionBefore) {
+  if (s.monsterUncovered) {
+    const culprit = npcById(s, s.monster && s.monster.vid);
+    if (s.publicBlame) vindicatePlayer(s, culprit ? culprit.name : "the culprit");
+    return s;
+  }
   const event = inquiry || [...(s.worldEvents || [])].reverse().find((entry) => entry && entry.kind === "director_body_investigation" && entry.suspicious);
-  if (!event || !event.victimId || (s.publicBlame && s.publicBlame.eventId === event.eventId)) return s;
+  if (!event || !event.victimId) return s;
+  if (event.corroborated || event.defenceAccepted) return s;
+  if (s.publicBlame && s.publicBlame.eventId === event.eventId) {
+    if (!s.publicBlame.dispositionLossById) s.publicBlame.dispositionLossById = publicBlameLosses(s, event);
+    return s;
+  }
   const victim = npcById(s, event.victimId);
   if (!victim) return s;
   const witnesses = new Set(event.witnessIds || event.actorIds || []);
@@ -7231,6 +7811,9 @@ function repairPublicBlame(s, inquiry) {
     const extra = closeTies.has(npc.id) && !witnesses.has(npc.id) ? 1 : 0;
     return { ...npc, disp: clampDisp((npc.disp || 0) - 1 - extra) };
   });
+  const dispositionLossById = dispositionBefore
+    ? Object.fromEntries(s.npcs.filter((npc) => dispositionBefore[npc.id] != null).map((npc) => [npc.id, Math.max(0, dispositionBefore[npc.id] - (npc.disp || 0))]))
+    : publicBlameLosses(s, event);
   s.publicBlame = {
     eventId: event.eventId,
     victimId: event.victimId,
@@ -7239,6 +7822,7 @@ function repairPublicBlame(s, inquiry) {
     location: event.location,
     kind: event.recognizedChanged ? "changed" : "slain",
     witnessIds: [...witnesses],
+    dispositionLossById,
   };
   s.lastWith = {
     id: victim.id,
@@ -7247,6 +7831,69 @@ function repairPublicBlame(s, inquiry) {
     teller: [...witnesses][0] || null,
     kind: event.recognizedChanged ? "changed" : "slain",
   };
+  return s;
+}
+
+/* Public proof clears a public accusation. Restore only the disposition that
+   this particular story cost the player; later kindnesses and unrelated
+   grudges remain intact. Right face is enough; the creature's exact name may
+   still be wrong when the borrowed human face comes apart before witnesses. */
+function vindicatePlayer(s, culpritName) {
+  const blame = s.publicBlame;
+  if (!blame) return null;
+  const sourceEvent = (s.worldEvents || []).find((event) => event.eventId === blame.eventId) || blame;
+  const losses = blame.dispositionLossById || publicBlameLosses(s, sourceEvent);
+  s.npcs = (s.npcs || []).map((npc) => losses[npc.id]
+    ? { ...npc, disp: clampDisp((npc.disp || 0) + losses[npc.id]) }
+    : npc);
+  const text = blame.kind === "changed"
+    ? `The village turns to you. “We blamed you for what happened to ${blame.victimName}. We were wrong. The thing wearing ${culpritName}'s face did it. Forgive us.”`
+    : `The village turns to you. “We blamed you for ${blame.victimName}'s death. We were wrong. The thing wearing ${culpritName}'s face did it. Forgive us.”`;
+  s.publicVindication = {
+    victimId: blame.victimId, victimName: blame.victimName,
+    culpritName, night: s.nightNum, text
+  };
+  s.publicBlame = null;
+  if (s.lastWith && s.lastWith.id === blame.victimId) s.lastWith = null;
+  return text;
+}
+
+function uncoverMonster(s, culpritName) {
+  s.monsterUncovered = true;
+  if (s.monster && s.monster.vid) s.faceKnown = s.monster.vid;
+  return vindicatePlayer(s, culpritName);
+}
+
+/* Older saves predate the explicit public-proof latch. A monster already
+   exposed and driven into hiding was necessarily uncovered before the whole
+   village, so restore that state and clear any stale accusation on load. */
+function repairMonsterUncovered(s) {
+  const culprit = npcById(s, s.monster && s.monster.vid);
+  const publiclyGone = !!(s.fled && culprit && culprit.fled);
+  if (s.monsterUncovered || publiclyGone) uncoverMonster(s, culprit ? culprit.name : "the culprit");
+  else s.monsterUncovered = false;
+  return s;
+}
+
+/* Repair a saved first day made by the old independent opening rolls. Keep
+   individual suspicion intact, but soften only enough villagers to remove the
+   impossible opening majority. */
+function repairFirstDayStanding(s) {
+  if (!s || s.dayNum !== 1) return s;
+  const living = (s.npcs || []).filter((npc) => npc.alive && !npc.fled);
+  if (living.length < 3) return s;
+  const majorityAt = Math.ceil(living.length / 2);
+  const hostileIds = living
+    .filter((npc) => (npc.disp || 0) <= -2)
+    .map((npc) => npc.id)
+    .sort((a, b) => {
+      const ar = stableIdx(`${s.gameId || "old-save"}:first-day-repair:${a}`, 100000);
+      const br = stableIdx(`${s.gameId || "old-save"}:first-day-repair:${b}`, 100000);
+      return ar - br || a.localeCompare(b);
+    });
+  if (hostileIds.length < majorityAt) return s;
+  const soften = new Set(hostileIds.slice(Math.max(1, majorityAt - 1)));
+  s.npcs = s.npcs.map((npc) => soften.has(npc.id) ? { ...npc, disp: -1 } : npc);
   return s;
 }
 
@@ -7494,16 +8141,34 @@ function craftAnswer(s, id) {
    barb goes in front of the real answer, so nothing is lost but your welcome.
    Applied out here because the answer machinery below assigns `quote` in a
    dozen branches and would overwrite a prefix set inside it. */
+function definiteFindingObject(object) {
+  const item = String(object || "the item").trim();
+  if (/^the\s/i.test(item)) return item;
+  return item.replace(/^an?\s+/i, "the ");
+}
+
+function findingReturnOutcome(event) {
+  if (event && event.privateItem) {
+    const object = String(event.object || "");
+    const privateThing = /note|letter|message|mail/i.test(object) ? "my mail" : "my parcel";
+    return {
+      delta: -1,
+      quote: `“You found ${privateThing}, opened it, and then returned it. I would have thanked you if you had left it sealed.”`
+    };
+  }
+  return { delta: 1, quote: `“Thank you. I thought I had lost it.”` };
+}
+
 function computeAnswer(s, id, night, q, targetId) {
   const r = answerFor(s, id, night, q, targetId);
   const who = npcById(s, id);
   let out = r;
-  if (r && !r.refused && !r.repeat && q !== "talk" && who && dispTier(who.disp) === "cool"
+  if (r && !r.refused && !r.repeat && !r.itemReturn && !r.vindicationAnswer && !r.socialReaction && q !== "talk" && who && dispTier(who.disp) === "cool"
       && typeof r.quote === "string" && r.quote.trim().startsWith('"') && chance(0.2)) {
     out = { ...r, quote: pickFreshIdx(`coolPrefix:${id}`, COOL_PREFIX) + " " + r.quote };
   }
   const investigative = ["where", "saw", "sawAt", "about", "person", "suspect", "craft", "gossip", "context", "press"].includes(q);
-  if (out && !out.refused && !out.repeat && investigative && typeof out.quote === "string") {
+  if (out && !out.refused && !out.repeat && !out.itemReturn && !out.vindicationAnswer && !out.socialReaction && investigative && typeof out.quote === "string") {
     const roll = stableIdx(`${s.gameId}:delivery:${s.dayNum}:${night}:${id}:${q}:${targetId || ""}`, 100);
     const monsterish = id === s.monster.vid || (who && who.turned);
     const fearLimit = Math.min(30, 12 + Math.min(12, (s.deaths || []).length * 3) + ((who && who.disp < 0) ? 4 : 0));
@@ -7519,6 +8184,31 @@ function computeAnswer(s, id, night, q, targetId) {
     }
   }
   return out;
+}
+
+/* Once a villager has given a version of a night, later social answers must
+   use that version too. The hidden outMap remains truth for simulation and
+   accusation checks; it must not leak through a broad person question after
+   the same speaker has claimed to be home and to have seen nobody. */
+function establishedNightClaim(s, id, night) {
+  const statements = [...(s.statements || [])].reverse();
+  const explicit = statements.find((st) => st.id === id && st.night === night
+    && (st.q === "where" || st.q === "saw") && st.claim);
+  if (explicit) return explicit;
+  for (const st of statements) {
+    if (st.id !== id) continue;
+    /* A broad person answer is not itself filed under one night, but saying
+       someone was "with me" at a named place still commits the speaker to
+       that place. Honour it if it was the first account given. */
+    const sharedMention = [...(st.mentions || [])].reverse().find((mn) => mn.night === night && mn.kind === "with" && mn.loc);
+    if (sharedMention) return { claim: sharedMention.loc, q: st.q, night };
+  }
+  return null;
+}
+function accountLocationForNight(s, id, log) {
+  if (!log) return undefined;
+  const established = establishedNightClaim(s, id, log.night);
+  return established ? established.claim : (log.outMap || {})[id];
 }
 
 function answerFor(s, id, night, q, targetId) {
@@ -7543,10 +8233,9 @@ function answerFor(s, id, night, q, targetId) {
   const tn = turnNightOf(s, id);
   const lying = (isMonster && log && log.active) || (npc.turned && tn !== null && night >= tn);
   const evn = log ? log.event : null;
-  const priorNightClaim = [...(s.statements || [])].reverse().find((st) => st.id === id && st.night === night
-    && (st.q === "where" || st.q === "saw") && st.claim);
+  const priorNightClaim = establishedNightClaim(s, id, night);
   const mentions = [];
-  let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false;
+  let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false, socialReaction = false, dispositionDelta = 0;
 
   const key = ["person", "opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
     : q === "craft" ? `${s.dayNum}:craft`
@@ -7565,30 +8254,72 @@ function answerFor(s, id, night, q, targetId) {
   }
   s.askedLog[id].push(key);
 
+  /* Once the village has seen the borrowed face come apart, questions about
+     that culprit cannot fall back into old alibis, relationship gossip or
+     accusations against the player. The proof is now shared public fact. */
+  if (s.monsterUncovered && targetId === s.monster.vid && ["person", "about", "whereNow", "opinion", "worried"].includes(q)) {
+    const culprit = npcById(s, s.monster.vid);
+    const culpritName = culprit ? culprit.name : "the culprit";
+    const vindication = s.publicVindication;
+    quote = vindication
+      ? `“${culpritName} was the face it wore. We blamed you for ${vindication.victimName}, and we were wrong. I am sorry.”`
+      : `“${culpritName} was the face it wore. We all know that now. Whatever else we thought before, you uncovered the truth.”`;
+    return { quote, mentions, claim: null, flag: null, foundSign, clue, followUps: [], vindicationAnswer: true };
+  }
+
   if (q === "context") {
     const eventId = String(targetId || "").replace(/:(seen|not_seen|evidence|memory)$/, "");
     const event = (s.worldEvents || []).find((e) => e.eventId === eventId && e.actorIds && e.actorIds.includes(id));
     if (!event) return { quote: `“I do not know what you think you saw.”`, mentions, claim, flag: null, foundSign, clue, followUps: [] };
+    if (event.kind === "director_finding" && event.returnable) {
+      const outcome = findingReturnOutcome(event);
+      s.npcs = s.npcs.map((person) => person.id === id
+        ? { ...person, disp: clampDisp((person.disp || 0) + outcome.delta) }
+        : person);
+      return {
+        quote: outcome.quote, mentions, claim: event.location, flag: null,
+        foundSign, clue, followUps: [], itemReturn: true, dispositionDelta: outcome.delta
+      };
+    }
     if (event.kind === "director_body_investigation") {
       const victim = npcById(s, event.victimId);
       const victimName = victim ? victim.name : "them";
+      if (s.monsterUncovered) {
+        const culprit = npcById(s, s.monster.vid);
+        quote = `“We blamed you for ${victimName}, and we were wrong. The thing wearing ${culprit ? culprit.name : "that face"} did this. I am sorry.”`;
+        return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps: [], vindicationAnswer: true };
+      }
+      if (event.corroborated && (event.corroboratingWitnessIds || []).includes(id)) {
+        quote = `“I was already there at the ${event.location}. I saw the attacker leave, and I saw you reach ${victimName} afterward. You did not do this.”`;
+        return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps: [], corroborationAnswer: true };
+      }
+      if (event.defenceAccepted && (event.witnessIds || []).includes(id)) {
+        quote = `“You made us look at what was done to ${victimName}, and your account matched it. I believe you arrived too late. I have said so.”`;
+        return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps: [], corroborationAnswer: true };
+      }
       const blameKind = event.recognizedChanged ? "changed" : "slain";
       quote = pickFreshIdx(`publicBlameWitness:${id}`, PUBLIC_BLAME_WITNESS)(victimName, blameKind);
       return { quote, mentions, claim: event.location, flag: null, foundSign, clue, followUps: [] };
     }
     const remembered = String(targetId || "").endsWith(":memory");
+    if (remembered) {
+      const outcome = reverseMemoryOutcome(s, id, event);
+      if (outcome.delta) {
+        s.npcs = s.npcs.map((person) => person.id === id
+          ? { ...person, disp: clampDisp((person.disp || 0) + outcome.delta) }
+          : person);
+      }
+      return {
+        quote: outcome.quote, mentions, claim: event.location, flag: null,
+        foundSign, clue, followUps: [], socialReaction: true, dispositionDelta: outcome.delta
+      };
+    }
     const evasive = isMonster || dispTier(npc.disp) === "hate" || (lying && chance(0.55));
     /* A mutual conversation is settled testimony. They may have lied in the
        road, but daylight cannot make them forget the explanation they chose
        and replace it with a generic denial that contradicts the lived scene. */
     if (event.kind === "director_encounter" && event.acknowledged) quote = event.reaffirm || event.honest;
-    else if (remembered) {
-      const obs = (s.observations || []).find((o) => o.eventId === eventId);
-      if (evasive) quote = `“I saw a lantern moving where sensible people do not go. If you want me to turn that into a confession for you, you will have to supply it yourself.”`;
-      else if (obs && obs.kind === "unobserved") quote = `“I thought you heard me and chose not to turn. Fear, perhaps. Or restraint. I remember the choice more clearly than you remember the dark.”`;
-      else if (obs && ["glimpse", "heard"].includes(obs.kind)) quote = `“I thought you were listening for a name. You had the posture of someone who had seen too little and was already deciding how much of it to believe.”`;
-      else quote = `“I thought you were doing what everyone does now: watching the dark and hoping it would accuse somebody for you.”`;
-    } else quote = evasive ? event.evasive : event.honest;
+    else quote = evasive ? event.evasive : event.honest;
     const followUps = event.location && event.location !== "home"
       ? [{ q: "sawContext", label: `Who else did you see near the ${event.location}?`, targetId: event.eventId }]
       : [];
@@ -7606,7 +8337,7 @@ function answerFor(s, id, night, q, targetId) {
   if (!goodwillQuestion && opened) {
     const refusalChance = hostileTier === "hate" ? (standing.hostileMajority ? 0.88 : 0.62) : standing.hostileMajority ? 0.45 : 0;
     if (refusalChance && chance(refusalChance)) {
-      return { quote: chance(0.35) ? pickFreshIdx(`hostileTurn:${id}`, HOSTILE_TURN) : pickFreshIdx(`hostileBarb:${id}`, HOSTILE_BARB),
+      return { quote: !s.monsterUncovered && chance(0.35) ? pickFreshIdx(`hostileTurn:${id}`, HOSTILE_TURN) : pickFreshIdx(`hostileBarb:${id}`, HOSTILE_BARB),
         mentions, claim: null, flag: null, foundSign, clue, refused: true, followUps: [] };
     }
   }
@@ -7625,7 +8356,7 @@ function answerFor(s, id, night, q, targetId) {
     return s.monsterClaims[night];
   };
 
-  const publicBlame = s.publicBlame && s.publicBlame.victimId !== id ? s.publicBlame : null;
+  const publicBlame = !s.monsterUncovered && s.publicBlame && s.publicBlame.victimId !== id ? s.publicBlame : null;
   if (q === "where" && publicBlame) {
     quote = pickFreshIdx(`publicBlameWhere:${id}`, PUBLIC_BLAME_WHERE)(publicBlame.victimName, publicBlame.kind);
   }
@@ -7748,7 +8479,7 @@ function answerFor(s, id, night, q, targetId) {
          same thing, because the whole village has been asking it since
          breakfast. Said hardest by whoever loved the dead. */
       const lw = s.lastWith;
-      const lwHit = !!(lw && lw.night === night && npc.id !== lw.id && !isMonster && !npc.turned);
+      const lwHit = !!(!s.monsterUncovered && lw && lw.night === night && npc.id !== lw.id && !isMonster && !npc.turned);
       if (lwHit) {
         /* it outranks the ordinary lantern barb below rather than stacking
            with it: one accusation to the face is the beat, two is a speech */
@@ -7951,10 +8682,11 @@ function answerFor(s, id, night, q, targetId) {
       const death = [...(s.deaths || [])].reverse().find((d) => d.id === targetId);
       const limitNight = death ? death.night : s.nightNum;
       const shared = [...(s.nightLogs || [])].filter((entry) => entry.night <= limitNight).reverse().find((entry) => {
-        const mine = entry.outMap && entry.outMap[id];
+        const mine = accountLocationForNight(s, id, entry);
         const theirs = entry.outMap && entry.outMap[targetId];
         return mine && mine !== "home" && mine === theirs;
       });
+      const sharedLoc = shared ? accountLocationForNight(s, id, shared) : null;
       const missing = t.fled || (s.faceKnown === t.id && s.monsterSawYou);
       const sec = secretOf(s, targetId);
       const secretLog = [...(s.nightLogs || [])].reverse().find((entry) => entry.secretOut && entry.secretOut[targetId]);
@@ -7969,7 +8701,7 @@ function answerFor(s, id, night, q, targetId) {
         s.npcs = s.npcs.map((x) => x.id === targetId ? { ...x, secretKnown: true } : x);
         quote = `“${tense} ${t.name}. ${reason} I knew that ${sec.short}.”`;
       } else if (!t.alive && shared) {
-        const loc = shared.outMap[targetId];
+        const loc = sharedLoc;
         mentions.push({ id: t.id, loc, kind: "with", night: shared.night });
         quote = `“${tense} ${t.name}. ${reason} I last saw them at the ${loc} on Night ${shared.night}.”`;
       } else if (!t.alive) {
@@ -7985,7 +8717,7 @@ function answerFor(s, id, night, q, targetId) {
         mentions.push({ id: t.id, kind: "suspects" });
         quote = `“I do not trust ${t.name}. ${RELATIONSHIP_SUSPECTS[targetId]} Watch them after dark.”`;
       } else if (shared) {
-        const loc = shared.outMap[targetId];
+        const loc = sharedLoc;
         mentions.push({ id: t.id, loc, kind: "with", night: shared.night });
         quote = `“${tense} ${t.name}. ${reason} I saw them at the ${loc} on Night ${shared.night}.”`;
       } else quote = `“${tense} ${t.name}. ${reason}”`;
@@ -8045,7 +8777,7 @@ function answerFor(s, id, night, q, targetId) {
     else if (source.id === id) quote = `“You are asking what I said. Ask me what you actually want to know.”`;
     else {
       const shared = [...s.nightLogs].reverse().find((entry) => {
-        const mine = entry.outMap[id], theirs = entry.outMap[source.id];
+        const mine = accountLocationForNight(s, id, entry), theirs = entry.outMap[source.id];
         return mine && mine !== "home" && mine === theirs;
       });
       const bond = tieIn(BONDS, source.id, subject.id);
@@ -8095,7 +8827,7 @@ function answerFor(s, id, night, q, targetId) {
         if (!lg.active) continue;
         const d = s.deaths.find((x) => x.night === lg.night && x.kind === "slain");
         if (!d) continue;
-        const myLoc = lg.outMap[id];
+        const myLoc = accountLocationForNight(s, id, lg);
         if (!myLoc || myLoc === "home" || myLoc === lg.huntLoc) continue;
         if (lg.outMap[targetId] === myLoc) {
           mentions.push({ id: targetId, kind: "cleared", loc: myLoc, night: lg.night });
@@ -8135,7 +8867,7 @@ function answerFor(s, id, night, q, targetId) {
         if (!lg.active || !lg.huntLoc) continue;
         const d = s.deaths.find((x) => x.night === lg.night && x.kind === "slain");
         if (!d) continue;
-        const myLoc = lg.outMap[id];
+        const myLoc = accountLocationForNight(s, id, lg);
         if (myLoc && myLoc !== "home" && myLoc === lg.outMap[s.monster.vid] && chance(0.4)) { evidenced = { night: lg.night, loc: myLoc, dead: d.name }; break; }
       }
       if (id === "ansel" && (npc.disp || 0) < 1) {
@@ -8284,8 +9016,11 @@ function answerFor(s, id, night, q, targetId) {
   }
 
   if (q === "talk") {
-    s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
-    s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
+    const talkPreference = socialPreference(s, id, "personal_concern");
+    dispositionDelta = talkPreference;
+    socialReaction = talkPreference !== 0;
+    if (talkPreference) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + talkPreference) } : x));
+    if (talkPreference > 0) s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
     if (isMonster) {
       /* more often than not it is simply a fine actor: it gives you the
          borrowed face's own warm hour, note-perfect, and you learn nothing */
@@ -8294,6 +9029,8 @@ function answerFor(s, id, night, q, targetId) {
         : pickFreshIdx(`talkLines:${id}`, TALK_LINES[id] || [`They talk, and you listen, and for an hour the village is only a village again.`]);
     } else if (npc.turned) {
       quote = pickFreshIdx(`talkTurned:${id}`, TALK_TURNED);
+    } else if (talkPreference < 0) {
+      quote = `They endure the attempt at conversation, then stand. “I would rather keep this to the investigation.”`;
     } else if (chance(0.15)) {
       quote = pickFreshIdx("talkOff", TALK_OFF);
     } else {
@@ -8345,9 +9082,6 @@ function answerFor(s, id, night, q, targetId) {
       quote = chance(isMonster ? 0.45 : 0.18)
         ? pickFreshIdx("griefOff", GRIEF_OFF)(grief.dead.name)
         : trueLine;
-      /* letting someone talk about their dead is the one kindness the day
-         still has in it, and they remember who asked */
-      if (!isMonster && chance(0.5)) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     } else if (grief && npc.turned) {
       quote = pickFreshIdx("griefTurned", GRIEF_TURNED)(grief.dead.name);
     } else if (grief && grief.kind === "distant" && chance(0.5)) {
@@ -8370,7 +9104,19 @@ function answerFor(s, id, night, q, targetId) {
       quote = chance(0.15)
         ? pickFreshIdx("howareOff", HOWARE_OFF)
         : pickFreshIdx(`howareLines:${id}`, HOWARE_LINES[id] || [`"Holding. Barely. Same as everyone."`]);
-      if (chance(0.5)) s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
+    }
+    if (!npc.turned) {
+      const personalPreference = socialPreference(s, id, "personal_concern");
+      if (personalPreference) {
+        dispositionDelta = personalPreference;
+        socialReaction = true;
+        s.npcs = s.npcs.map((person) => person.id === id
+          ? { ...person, disp: clampDisp((person.disp || 0) + personalPreference) }
+          : person);
+        quote += personalPreference > 0
+          ? ` After a pause: “Thank you for asking.”`
+          : ` Their expression closes. “Do not turn concern into another way of questioning me.”`;
+      }
     }
   }
 
@@ -8504,14 +9250,12 @@ function answerFor(s, id, night, q, targetId) {
       s.secretSpread[targetId] = rec;
       if (alreadyTold) {
         quote = `"You've told me that already." They do not seem to need reminding.`;
-      } else if (id === GOSSIP_LOVER_ID) {
-        s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
-        quote = `Their eyes light up. "${owner.name}? Well now. Tell me everything, and don't leave a single word out." They will not be the one to keep this quiet, and you both know it.`;
-      } else if (id === DISCREET_ID) {
-        s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) - 1) } : x));
-        quote = `Their face closes like a door. "I did not ask, and I did not want to know. What ${owner.name} keeps behind their own door is their own business, not mine, and certainly not yours to hand about."`;
       } else {
-        quote = `They take it in without much reaction. "${owner.name}, is it. I'll keep that in mind." Whether they keep it quiet is another matter entirely.`;
+        dispositionDelta = secretSharingPreference(s, id, targetId);
+        socialReaction = true;
+        rec.reactions = { ...(rec.reactions || {}), [id]: dispositionDelta };
+        s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + dispositionDelta) } : x));
+        quote = secretSharingReply(s, id, owner, sec, dispositionDelta);
       }
     } else quote = `"I don't follow. Whose secret?"`;
   }
@@ -8593,7 +9337,7 @@ function answerFor(s, id, night, q, targetId) {
     }
   }
 
-  return { quote, mentions, claim, flag, foundSign, clue, followUps, guardedLie };
+  return { quote, mentions, claim, flag, foundSign, clue, followUps, guardedLie, socialReaction, dispositionDelta };
 }
 
 /* The questions that are about a NIGHT rather than about the day you are
@@ -8667,6 +9411,10 @@ function actAccuse(prev, id, typeId) {
   const declared = MONSTERS.find((x) => x.id === typeId);
   const beats = [];
   if (s.mob) { s.mob = null; }
+  s.lastAccusationReactions = {
+    targetId: id, night: s.nightNum,
+    byVillager: applyVillagePreference(s, "public_accusation", [id])
+  };
   beats.push(pick(RITE_OPEN)(npc.name, declared.name));
   beats.push(`${ritePreparer(s, id)} readies what the old books prescribe: ${METHODS[declared.method]}.`);
 
@@ -8674,6 +9422,8 @@ function actAccuse(prev, id, typeId) {
     beats.push(`${npc.name} smiles. It is the last time anyone mistakes that smile for a neighbour's.`);
     beats.push(METHOD_KILL_LINES[declared.method]);
     beats.push(`What dies in front of the village is not ${npc.name}. It has not been ${npc.name} for a long time.`);
+    const vindication = uncoverMonster(s, npc.name);
+    if (vindication) beats.push(vindication);
     s.over = { win: true, reason: "won", text: `Right face, right name. ${npc.name} ${npc.role} was a ${m.name}, and its own rite ended it in front of everyone it fed on.` };
     if (s.sideQuest && s.sideQuest.giver === id) s.sideQuest = null;
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
@@ -8700,6 +9450,8 @@ function actAccuse(prev, id, typeId) {
     beats.push(`The rite is performed. The circle closes. Nothing happens.`);
     beats.push(`${npc.name} looks at ${METHOD_CARRY[declared.method]}, then at you, and laughs. It is the last human sound it makes, before it goes over the churchyard wall into the trees.`);
     beats.push("Right face, wrong name. It has no reason to hide now, and every reason to make you pay. Learn what it is from what it leaves, and quickly. Name it wrong once more and it comes for you, not them.");
+    const vindication = uncoverMonster(s, npc.name);
+    if (vindication) beats.push(vindication);
     s.dayEvents.push(ev(`The village knows the face now, but not the name, and only the cure it answers to ends this. Study the signs and be sure: you have one wrong name left before it stops taking neighbours and takes you.`, id));
     s.ap = 0;
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
@@ -10409,7 +11161,7 @@ const IV_CATS = [
   { key: "catN", label: "Ask about a night", hint: "Where they were and who they saw" },
   { key: "catS", label: "Ask about someone", hint: "One relationship or useful lead" },
   { key: "catK", label: "Ask what they know", hint: "Their craft, suspicions and village talk" },
-  { key: "catH", label: "Talk personally", hint: "Build or repair the relationship" },
+  { key: "catH", label: "Talk personally", hint: "Some welcome concern; others do not" },
 ];
 
 function IvIcon({ k }) {
@@ -10510,7 +11262,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
      Death red never appears here - what is in front of you is changed, not
      dead. Your own actions stay amber, because amber means it costs you. */
   const changed = n.turned && n.known;
-  const interviewBlame = s.publicBlame && s.publicBlame.victimId !== n.id ? s.publicBlame : null;
+  const interviewBlame = !s.monsterUncovered && s.publicBlame && s.publicBlame.victimId !== n.id ? s.publicBlame : null;
   const chrome = changed ? { rule: C.turn, ink: "#C0A6E0", fill: "rgba(122,95,160,0.16)" } : { rule: C.line, ink: C.amber, fill: "transparent" };
   /* arrival first, questions second: the room and the reception get the
      screen to themselves until the player chooses to begin */
@@ -10624,7 +11376,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               <div style={{ marginTop: 12 }}>
                 <PersonReadings s={s} n={n} mood={mood} />
               </div>
-              {standing.hostileMajority && (
+              {standing.hostileMajority && !interviewBlame && (
                 <div style={{ marginTop: 10, padding: "8px 10px", borderLeft: `3px solid ${C.red}`, background: "rgba(158,48,57,0.08)", color: C.ink, fontSize: 13.5, lineHeight: 1.4 }}>
                   Most of the village distrusts you. Neighbours may answer once, then shut you out. Apologies and useful work can rebuild trust.
                 </div>
@@ -10672,6 +11424,11 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
                     </p>
                     {t.flag && (
                       <p className="mt-1.5 rounded px-2 py-1" style={{ fontSize: 14, color: C.redBright, fontWeight: 700, background: "rgba(158,48,57,0.14)", border: "1px solid rgba(194,68,80,0.4)" }}>✕ {t.flag}</p>
+                    )}
+                    {!!t.dispositionDelta && (
+                      <div className="mv-display mt-1.5" style={{ fontSize: 9.5, letterSpacing: 1.7, color: t.dispositionDelta > 0 ? C.amber : "#6C7898" }}>
+                        {t.dispositionDelta > 0 ? "DISPOSITION IMPROVED" : "DISPOSITION LOWERED"}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -10809,7 +11566,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           {begun && !done && !changed && ivSub === "catH" && (
             <div>
               {subHead("TALK PERSONALLY")}
-              <p style={{ margin: "0 0 8px", fontSize: 13.5, color: C.parchLine }}>Learn how they are coping, repair harm, or earn trust through useful work.</p>
+              <p style={{ margin: "0 0 8px", fontSize: 13.5, color: C.parchLine }}>Concern may build trust or test their patience. Useful work is safer.</p>
               <div className="grid grid-cols-1 gap-2">
                 <Btn small disabled={howareUsed} onClick={() => askQ("howare")}>How are you holding up?</Btn>
                 {n.disp < 0 && <Btn small disabled={apologyUsed} onClick={() => askQ("apologise")}>Apologise. Ask to start again.</Btn>}
@@ -11027,7 +11784,11 @@ function StampChip({ sign, held = true, suffix = "· STAMPED" }) {
    own words; the dark is the same dark every time. */
 const NIGHT_SCENE_MASK = "linear-gradient(#000 0%, #000 38%, rgba(0,0,0,.96) 50%, rgba(0,0,0,.84) 63%, rgba(0,0,0,.64) 75%, rgba(0,0,0,.4) 86%, rgba(0,0,0,.16) 95%, transparent 100%)";
 /* the ordinary dark, and the dark once it has stopped pretending */
-const NIGHT_TONES = { night: { bg: "#070910", veil: "7,9,16" }, siege: { bg: "#08070C", veil: "10,7,10" } };
+const NIGHT_TONES = {
+  night: { bg: "#070910", veil: "7,9,16" },
+  event: { bg: "#0A0907", veil: "22,17,10", accent: "#D9A441" },
+  siege: { bg: "#08070C", veil: "10,7,10" },
+};
 /* THE SKY THE WALK IS UNDER. The same three words the ruled line already says,
    put where you can see them. `cloud` overrides the shell's one drifting bank;
    `art` is whatever else is falling. This is only ever shown once you are
@@ -11153,7 +11914,7 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
         <div className="mvGrain" />
         {danger && <div className="mvEdgeRed" />}
         <div className="relative flex items-baseline heNightTopline" style={{ flexShrink: 0, gap: 10, padding: "0 22px", paddingTop: "calc(max(env(safe-area-inset-top),23px) + 26px)" }}>
-          <span className="mv-display" style={{ fontSize: 12, letterSpacing: 2.6, whiteSpace: "nowrap", color: danger ? C.redBright : "rgba(233,223,200,0.9)" }}>{kicker}</span>
+          <span className="mv-display" style={{ fontSize: 12, letterSpacing: 2.6, whiteSpace: "nowrap", color: danger ? C.redBright : tn.accent || "rgba(233,223,200,0.9)" }}>{kicker}</span>
           {onClose && (
             <button onClick={onClose} className="mv-btn mv-body" style={{ marginLeft: "auto", padding: "2px 1px", background: "rgba(7,9,16,.28)", border: "none", borderBottom: "1px solid rgba(233,223,200,0.48)", color: "rgba(233,223,200,0.84)", fontSize: 13.5, cursor: "pointer", textShadow: "0 1px 5px #000" }}>{closeLabel}</button>
           )}
@@ -11318,6 +12079,10 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heGameTitle::before, .heGameTitle::after { content:""; position:absolute; bottom:-5px; width:38px; height:1px; background:var(--he-ink); opacity:.72; }
 .heGameTitle::before { left:19%; transform:rotate(3deg); } .heGameTitle::after { right:19%; transform:rotate(-3deg); }
 .heGameTitleType { font-family:'Alegreya',serif; font-size:9.5px; line-height:1; font-weight:700; letter-spacing:2.55px; color:var(--he-graphite); }
+.heHostilityDetails summary::-webkit-details-marker { display:none; }
+.heHostilityDetails summary::marker { content:""; }
+.heHostilityChevron { transition:transform .16s ease; }
+.heHostilityDetails[open] .heHostilityChevron { transform:rotate(180deg); }
 .heGameTitle h1 { margin:5px 0 2px; font-size:clamp(43px,12.5vw,52px); line-height:.88; letter-spacing:.5px; color:var(--he-ink) !important; }
 .heGameTitleTag { font-size:10px; line-height:1; letter-spacing:3.35px; color:var(--he-blood) !important; }
 .heGameTitle.is-veteran { padding-top:7px; padding-bottom:9px; }
@@ -12738,7 +13503,9 @@ function MonsterVillage() {
             run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
             run.nightRemains = (run.nightRemains || []).filter((entry) => entry && LOCS.includes(entry.location) && (!entry.sign || valid.includes(entry.sign)));
             repairDaylightGiveUp(run);
+            repairMonsterUncovered(run);
             repairPublicBlame(run);
+            repairFirstDayStanding(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
                it has already sampled the night and recorded player choices.
@@ -12866,12 +13633,14 @@ function MonsterVillage() {
 
   /* -- ambience follows the phase -- */
   useEffect(() => {
-    if (!s) { Snd.wind_(-34); Snd.beat(false); return; }
+    Snd.homeMusic(!s || (s.phase === "day" && !s.over && !walk), !s);
+    if (!s) { Snd.scene(null); Snd.wind_(-34); Snd.beat(false); return; }
     if (s.phase === "night") { Snd.toll(Math.min(s.nightNum, 4)); Snd.wind_(-24); try { if (navigator.vibrate) navigator.vibrate(25); } catch (e2) {} }
     else if (s.phase === "offer") { Snd.offerDrone(); Snd.wind_(-28); }
-    else Snd.wind_(-30);
+    else if (s.phase === "day" && !walk) { Snd.scene(null); Snd.wind_(-30); }
+    else if (!walk) Snd.wind_(-30);
     if (s.phase !== "day") Snd.beat(false);
-  }, [s && s.phase, s && s.nightNum]);
+  }, [snd, s && s.phase, s && s.nightNum, s && !!s.over, !!walk]);
 
   /* -- a fresh profile opens at the latest page of its log -- */
   useEffect(() => { setFactPage(-1); }, [profile]);
@@ -12893,15 +13662,21 @@ function MonsterVillage() {
      on every walk re-render. -- */
   useEffect(() => {
     const directorBeat = walk && walk.mode === "director" && walk.director && walk.director.currentBeat;
+    const textualCue = directorBeat && Snd.textCue(directorBeat.text, directorBeat.type);
     const stage = directorBeat ? `director:${directorBeat.id}` : walk && walk.mode === "director" ? `director:${walk.director.phase}:${walk.director.cursor}` : walk && walk.stage;
     if (stage !== walkStageRef.current) {
       try {
         if (directorBeat && directorBeat.meta && (directorBeat.meta.soundCue || directorBeat.meta.weatherSoundCue)) {
+          const primaryCue = directorBeat.meta.soundCue;
           if (directorBeat.meta.weatherSoundCue) Snd.cue(directorBeat.meta.weatherSoundCue);
-          Snd.silence(directorBeat.meta.soundCue === "silence");
-          if (directorBeat.meta.soundCue === "wail") Snd.wail();
-          else if (directorBeat.meta.soundCue === "song") Snd.wail("song");
-          else Snd.cue(directorBeat.meta.soundCue);
+          Snd.silence(primaryCue === "silence");
+          if (primaryCue === "wail") Snd.wail();
+          else if (primaryCue === "song") Snd.wail("song");
+          else Snd.cue(primaryCue);
+          /* The director's physical cue and the words on the card may both
+             matter: leaves can move while a laugh crosses the lane. Keep the
+             extra voice low, and never double an hallucination treatment. */
+          if (textualCue && textualCue !== primaryCue && !String(primaryCue || "").startsWith("hallucination_")) Snd.cue(textualCue);
         }
         else if (directorBeat && directorBeat.type === "threat" && directorBeat.meta && directorBeat.meta.recognition) {
           /* Recognition is a held decision, not a jump scare that cuts to
@@ -12916,21 +13691,29 @@ function MonsterVillage() {
         else if (directorBeat && directorBeat.type === "doorstep") {
           Snd.silence(false);
           Snd.scene({ location: "Home", weather: walk.facts.wx, proximity: 0.2 });
-          Snd.knock();
+          /* The knock announces the arrival once. Answer and decision cards
+             continue the exchange without replaying the same knock. */
+          if (!(directorBeat.meta && (directorBeat.meta.thresholdAnswer || directorBeat.meta.thresholdDecision))) Snd.knock();
         }
         else if (directorBeat && directorBeat.type === "whisper") Snd.cue("whisper");
         else if (directorBeat && directorBeat.type === "stamp") Snd.cue("earth");
         else if (directorBeat && directorBeat.type === "delusion" && directorBeat.meta && directorBeat.meta.requiresResponse) {
           Snd.silence(false);
           Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: 0.25 });
-          Snd.cue("breath_close");
+          Snd.cue(textualCue || "hallucination_drift");
         }
         else if (directorBeat && directorBeat.type === "delusion") {
           Snd.silence(false);
           Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: 0.1 });
-          Snd.cue("leaves");
+          Snd.cue(textualCue || "hallucination_drift");
         }
+        else if (directorBeat && textualCue) Snd.cue(textualCue);
         else if (directorBeat && directorBeat.type === "flee") { Snd.silence(false); Snd.cue("leaves"); }
+        else if (directorBeat) {
+          Snd.silence(false);
+          Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: 0.15 });
+          Snd.cue(Snd.ambientCue(directorBeat.text, directorBeat.type, walk.director.player.location, walk.facts.wx));
+        }
         else if (walk && walk.mode === "director") {
           Snd.silence(false);
           Snd.scene({ location: walk.director.player.location, weather: walk.facts.wx, proximity: walk.director.phase === "threat" ? 1 : 0.15 });
@@ -13740,7 +14523,9 @@ function MonsterVillage() {
               {s.nightLogs.map((log) => {
                 const d = s.deaths.find((x) => x.night === log.night && (x.kind === "slain" || x.kind === "drained"));
                 const t = s.deaths.find((x) => x.night === log.night && x.kind === "turned");
-                const itTxt = log.active ? (log.huntLoc ? `it hunted from the ${log.huntLoc}` : "it walked in the open") : "it kept perfectly still";
+                const itTxt = d && d.where && log.huntLoc && d.where !== log.huntLoc
+                  ? `it moved from the ${log.huntLoc} and struck at the ${d.whereDetail || d.where}`
+                  : log.active ? (log.huntLoc ? `it hunted at the ${log.huntLoc}` : "it walked in the open") : "it kept perfectly still";
                 const youTxt = !log.you ? "the village stood siege"
                   : log.you.kind === "out" ? `you searched the ${log.you.loc}`
                   : log.you.kind === "watch" ? (log.you.followedTo
@@ -14176,7 +14961,9 @@ function MonsterVillage() {
         : action.to ? [`You take the direct back lane to the ${action.to}.`, `You leave by the quieter path and reach the ${action.to} without taking the public road.`]
           : ["You step into the night.", "You leave by the quieter road."],
       MOVE: weather ? [weather.move(action.to), weather.move(action.to)] : [`You go to the ${action.to}.`, `You continue toward the ${action.to}.`],
-      WAIT: ["You watch for a long time. Nothing happens, so you head home.", "You wait. Nothing comes. You go home."],
+      /* WAIT spends one stretch of the night; it does not send the player
+         home. They may keep watching and meet someone in the next hour. */
+      WAIT: ["For now, the road stays quiet.", "You wait a while. Nothing moves yet."],
       KEEP_WATCH: action.ignoreDisturbance
         ? [`You remain in the ${place}. No second cry comes. When the bell sounds, you turn for home.`]
         : ["You watch for a long time. Nothing happens. When the bell sounds, you turn for home.", "You keep watch. Nothing moves. At first light, you leave for home."],
@@ -14220,7 +15007,8 @@ function MonsterVillage() {
       usedFeedback: feedback ? [...(walk.usedFeedback || []), feedback] : (walk.usedFeedback || []),
     });
     try {
-      if (action.approachDelusion || action.ignoreDelusion) {
+      if (action.crisisChoice) Snd.cue(((DIRECTOR_AFFLICTION_SCENE[action.affliction] || {}).soundCue));
+      else if (action.approachDelusion || action.ignoreDelusion) {
         Snd.silence(false);
         Snd.scene({ location: next.player.location, weather: wx, proximity: next.phase === "threat" ? 1 : 0.15 });
         if (next.phase === "threat") Snd.danger();
@@ -14238,7 +15026,7 @@ function MonsterVillage() {
       else if (action.type === "IDENTIFY_FIGURE") Snd.cue(wx === "storm" ? "thunder" : "bustle");
       else if (action.type === "INVESTIGATE_HERE") { Snd.cue("bustle"); if (["threat", "dead"].includes(next.phase)) Snd.danger(); }
       else if (action.type === "LOOK_THROUGH") Snd.cue("breath_close");
-      else if (action.type === "ANSWER_DOOR") { if (next.phase === "dead") Snd.danger(); else Snd.cue(next.thresholdEvent && next.thresholdEvent.visitorKind === "neighbour" ? "bustle" : "whisper"); }
+      else if (action.type === "ANSWER_DOOR") { if (next.phase === "dead") Snd.danger(); else Snd.cue("whisper"); }
       else if (["STEP_OUTSIDE", "INVITE_IN"].includes(action.type)) { if (next.phase === "dead") Snd.danger(); else Snd.cue(action.type === "INVITE_IN" ? "latch" : "bustle"); }
       else if (action.type === "REACH_HOME") Snd.cue("latch");
     } catch (e) { console.warn("Night sound cue could not play", e); }
@@ -14286,7 +15074,8 @@ function MonsterVillage() {
       const livedLocation = monsterEndedHere ? monsterEndedHere.location : d.player.location;
       const routeLocation = livedLocation === "Home" ? "Cottage" : (livedLocation || "Village Square");
       const location = afflictionScene ? afflictionScene.location : routeLocation;
-      const danger = !!afflictionScene || ["threat", "chase", "dead"].includes(d.phase) || (beat && (["threat", "flee", "aftermath"].includes(beat.type) || (beat.meta && beat.meta.bodyInvestigation)));
+      const crisisEvent = !!afflictionScene;
+      const danger = ["threat", "chase", "dead"].includes(d.phase) || (beat && (["threat", "flee", "aftermath"].includes(beat.type) || (beat.meta && beat.meta.bodyInvestigation)));
       const changedScene = !!(beat && beat.meta && (beat.meta.recognizedChanged || beat.meta.changedAftermath));
       const actorBase = beat && beat.actorId ? npcById(s, beat.actorId) : null;
       const directorActorState = beat && beat.actorId ? (d.cast || []).find((entry) => entry.id === beat.actorId) : null;
@@ -14302,7 +15091,7 @@ function MonsterVillage() {
         interacted: walk.interacted || {},
       });
       const recognition = d.phase === "threat" && d.pendingThreat && d.pendingThreat.kind === "recognition";
-      const labels = { atmosphere: afflictionScene ? afflictionScene.label : beat && beat.meta && beat.meta.hiddenFigureResolution === "missed" ? "THEY TURN AWAY" : beat && beat.meta && beat.meta.hiddenFigure ? "A FIGURE IN THE LANE" : beat && beat.meta && beat.meta.markedStalk ? "IT FOLLOWED YOU HERE" : beat && beat.meta && beat.meta.quietPresence ? "A SOUND CLOSE BY" : beat && beat.meta && beat.meta.quietPresenceResolution ? "IT MOVES ON" : beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: recognition || (beat && beat.meta && beat.meta.recognition) ? "IT STOPS PRETENDING" : "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : beat && beat.meta && (beat.meta.learnedIdentity || beat.meta.learnedBuild || beat.meta.learnedSign) ? "WHAT YOU SAW" : "RUN", doorstep: beat && beat.meta && beat.meta.thresholdAnswer ? "YOUR ANSWER" : beat && beat.meta && beat.meta.thresholdLook ? "THROUGH THE SHUTTER" : beat && beat.meta && beat.meta.thresholdDecision ? "BEFORE DAWN" : "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: beat && beat.meta && beat.meta.hiddenFigureResolution === "identified" ? "WHO IT WAS" : "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "YOU FOLLOW", linger: "YOU STAY A WHILE" };
+      const labels = { atmosphere: afflictionScene ? afflictionScene.label : beat && beat.meta && beat.meta.hiddenFigureResolution === "missed" ? "THEY TURN AWAY" : beat && beat.meta && beat.meta.hiddenFigure ? "A FIGURE IN THE LANE" : beat && beat.meta && beat.meta.markedStalk ? "IT FOLLOWED YOU HERE" : beat && beat.meta && beat.meta.quietPresence ? "A SOUND CLOSE BY" : beat && beat.meta && beat.meta.quietPresenceResolution ? "IT MOVES ON" : beat && beat.meta && beat.meta.requiresResponse ? "A SOUND CLOSE BY" : "IN THE LANE", stamp: "EVIDENCE", clue: "A THING LEFT BEHIND", watch: beat && beat.meta && beat.meta.departure ? "THE DOOR OPENS" : "OUTSIDE THEIR DOOR", whisper: "A VOICE IN THE DARK", delusion: "A STRANGE SIGHT", threat: recognition || (beat && beat.meta && beat.meta.recognition) ? "IT STOPS PRETENDING" : "TOO CLOSE", flee: d.phase === "chase" ? "IT IS STILL BEHIND YOU" : beat && beat.meta && (beat.meta.learnedIdentity || beat.meta.learnedBuild || beat.meta.learnedSign) ? "WHAT YOU SAW" : "RUN", doorstep: beat && beat.meta && beat.meta.thresholdAnswer ? "YOUR ANSWER" : beat && beat.meta && beat.meta.thresholdLook ? "THROUGH THE SHUTTER" : beat && beat.meta && beat.meta.thresholdDecision ? "BEFORE DAWN" : "AT YOUR DOOR", aftermath: "WHAT THE NIGHT DID", encounter: beat && beat.meta && beat.meta.attackSetup ? "BESIDE YOU" : beat && beat.meta && beat.meta.hiddenFigureResolution === "identified" ? "WHO IT WAS" : "CROSSED PATHS", follow: recognition ? "IT STOPS PRETENDING" : "YOU FOLLOW", linger: "YOU STAY A WHILE" };
       const nightRatio = d.cursor < 0 ? -1 : d.cursor / Math.max(1, d.slots - 1);
       const slotLabel = nightRatio < 0 ? "BEFORE THE LAST LIGHT" : nightRatio < .28 ? "AFTER THE BELL" : nightRatio < .7 ? "THE SMALL HOURS" : "BEFORE DAWN";
       const displayText = beat ? directorBeatText(d, beat) : walk.feedback;
@@ -14316,13 +15105,13 @@ function MonsterVillage() {
         : monsterEndedHere ? "Take the news back to the village →"
           : livedLocation === "Home" ? "Draw the bolt. Let morning come →" : "Head home before morning →";
       return (
-        <NightShell loc={location} kicker={afflictionScene ? "THE VILLAGE BREAKS" : slotLabel} tone={danger ? "siege" : "night"} danger={danger} wound={afflictionScene ? afflictionScene.wound : nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
+        <NightShell loc={location} kicker={crisisEvent ? "A VILLAGE EVENT" : slotLabel} tone={danger ? "siege" : crisisEvent ? "event" : "night"} danger={danger} wound={crisisEvent ? afflictionScene.wound : nightWound(s, location)} wx={walk.facts.wx} withheld={false}>
           <div style={{ minHeight: "clamp(235px,34dvh,295px)", flexShrink: 0 }} />
           <div className="flex items-baseline" style={{ gap: 10, marginBottom: 9, color: "rgba(233,223,200,.72)" }}>
             <span className="mv-display" style={{ fontSize: 10.5, letterSpacing: 1.8 }}>{afflictionScene ? location.toUpperCase() : livedLocation === "Home" ? "YOUR THRESHOLD" : livedLocation.toUpperCase()}</span>
             <span className="mv-display" style={{ marginLeft: "auto", fontSize: 10.5, letterSpacing: 1.8, whiteSpace: "nowrap" }}>{directorWeatherLabel}</span>
           </div>
-          <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
+          <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : crisisEvent ? "rgba(42,33,20,.88)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
               {actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -15475,6 +16264,14 @@ function MonsterVillage() {
     const s2 = JSON.parse(JSON.stringify(s));
     const npc = npcById(s2, id);
     const opener = [demeanorLine(s2, id), pickFreshIdx(`dispLine:${dispTier(npc.disp)}`, DISP_LINES[dispTier(npc.disp)])];
+    const accusationReaction = s2.lastAccusationReactions;
+    const accusationDelta = accusationReaction && accusationReaction.byVillager && accusationReaction.byVillager[id];
+    if (accusationDelta && s2.nightNum - accusationReaction.night <= 1) {
+      const accused = npcById(s2, accusationReaction.targetId);
+      opener.push(accusationDelta > 0
+        ? `They mention ${accused ? accused.name : "the person you named"} before you can. “Someone had to risk being certain. I am glad you did.”`
+        : `They mention ${accused ? accused.name : "the person you named"} before you can. “A public accusation is not investigation. Do not expect me to admire it.”`);
+    }
     if (npc.sawYouWatching) opener.push(`Before you can speak: "I saw you. The other night, in the lane, watching my door. So am I a suspect, then? Say it to my face."`);
     const churchMemory = (s2.memories || []).filter((m2) => m2.actorId === id && m2.kind === "churchyard").slice(-1)[0];
     const churchObservation = churchMemory && (s2.observations || []).find((o) => o.eventId === churchMemory.eventId);
@@ -15502,6 +16299,11 @@ function MonsterVillage() {
     else if (id === "liesel" && s2.tavernShut) opener.push(AFFLICTION_OPENER.liesel(npc.name));
     else if (id === "ansel" && (s2.burned || []).includes("Old Church")) opener.push(AFFLICTION_OPENER.ansel(npc.name));
     else if ((id === "greta" || id === "falk") && s2.wellFouled) opener.push(AFFLICTION_OPENER[id](npc.name));
+    if (s2.millFloodOutcome && s2.millFloodOutcome.injuryId === id) opener.push(
+      s2.millFloodOutcome.people === "badly_hurt"
+        ? `${npc.name} receives you seated, one leg splinted from ankle to thigh. “The mill took this when the rope line failed. Ask what you came to ask.”`
+        : `${npc.name} keeps one wrist bound against their chest, bruised from the mill rope. “It will mend. The mill will take longer.”`
+    );
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
     setModal(null); setIvOpenerOpen(false);
     const valid = s2.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
@@ -15538,7 +16340,7 @@ function MonsterVillage() {
           : targetId
             ? Q_LABELS[q].replace("someone", npcById(s, targetId).name)
             : Q_LABELS[q];
-    setIv({ ...iv, night: questionNight, contextEventId: contextQuestion ? contextQuestion.event.eventId : iv.contextEventId, left: iv.left - 1, transcript: [...iv.transcript, { q: qLabel, night: NIGHT_QS.includes(effectiveQ) ? questionNight : null, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
+    setIv({ ...iv, night: questionNight, contextEventId: contextQuestion ? contextQuestion.event.eventId : iv.contextEventId, left: iv.left - 1, transcript: [...iv.transcript, { q: qLabel, night: NIGHT_QS.includes(effectiveQ) ? questionNight : null, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, dispositionDelta: ans.dispositionDelta || 0, followUps: ans.followUps || [] }] });
   };
   /* free follow-up: does not touch iv.left, at most one per answered main question */
   const askFollowUp = (fu) => {
@@ -15546,7 +16348,7 @@ function MonsterVillage() {
     const { s: ns, ans } = applyAnswer(s, iv.id, iv.night, fu.q, fu.targetId);
     if (((npcById(ns, iv.id) || {}).disp || 0) > prevDisp) Snd.warm();
     setS(ns); setIvSub(null);
-    setIv({ ...iv, transcript: [...iv.transcript, { q: fu.label, night: NIGHT_QS.includes(fu.q) ? iv.night : null, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, followUps: ans.followUps || [] }] });
+    setIv({ ...iv, transcript: [...iv.transcript, { q: fu.label, night: NIGHT_QS.includes(fu.q) ? iv.night : null, a: ans.quote, flag: ans.flag, sign: ans.foundSign, refused: ans.refused, repeat: ans.repeat, dispositionDelta: ans.dispositionDelta || 0, followUps: ans.followUps || [] }] });
   };
   /* -- Pass G2: expose the coercion note to a villager, once, in any
      interview. Trades the grim bargain for a real investigative payoff, and
@@ -16518,10 +17320,9 @@ function MonsterVillage() {
             {/* every morning is the same deck, whether it carries a body or
                 only what the night turned up: one is not bigger news */}
             <DawnCarousel items={s.dawn} s={s} onOpen={setProfile} onDone={acknowledgeDawn} />
-            {(monsterDangerWarning(s) || s.wrongGuesses === 1) && (
-              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 9 }}>
-                {monsterDangerWarning(s) && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.redBright, fontWeight: 700 }}>{monsterDangerWarning(s)}</p>}
-                {s.wrongGuesses === 1 && <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.45, color: C.redBright }}>You have named it wrong once. Name it wrong again, the wrong person or the wrong creature, and it stops taking neighbours and comes for you.</p>}
+            {monsterDangerWarning(s) && (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.redBright, fontWeight: 700 }}>{monsterDangerWarning(s)}</p>
               </div>
             )}
           </div>
@@ -16728,10 +17529,13 @@ function MonsterVillage() {
         </div>
 
         {villageStanding(s).hostileMajority && (
-          <div style={{ marginTop: 12, padding: "9px 11px", border: `1px solid ${C.red}`, borderLeftWidth: 4, background: "rgba(158,48,57,0.08)", color: C.ink }}>
-            <span className="mv-display" style={{ display: "block", color: C.red, fontSize: 10.5, letterSpacing: 2.2 }}>THE VILLAGE HAS TURNED AGAINST YOU</span>
-            <span style={{ display: "block", marginTop: 3, fontSize: 13.5, lineHeight: 1.4 }}>Most neighbours will give little away. Apologise or offer help to rebuild trust.</span>
-          </div>
+          <details className="heHostilityDetails" style={{ marginTop: 12, padding: "8px 10px", border: `1px solid ${C.red}`, borderLeftWidth: 4, background: "rgba(158,48,57,0.08)", color: C.ink }}>
+            <summary className="mv-display" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, color: C.red, fontSize: 10.5, letterSpacing: 1.6, whiteSpace: "nowrap", cursor: "pointer", listStyle: "none" }}>
+              <span>VILLAGE TURNED AGAINST YOU</span>
+              <span className="heHostilityChevron" aria-hidden="true" style={{ flexShrink: 0 }}>⌄</span>
+            </summary>
+            <div style={{ marginTop: 6, fontSize: 13.5, lineHeight: 1.4 }}>Most neighbours will give little away. Apologise or offer help to rebuild trust.</div>
+          </details>
         )}
 
         <div className="mt-3">
