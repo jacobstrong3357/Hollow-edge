@@ -41,6 +41,14 @@ function take(state, wanted) {
   return Director.reduce(state, wanted);
 }
 
+function answerAttackSetup(state, preferredMode) {
+  if (state.phase !== "attack_setup") return state;
+  var choices = Director.availableActions(state);
+  var reply = choices.find(function (entry) { return !preferredMode || entry.responseMode === preferredMode; }) || choices[0];
+  assert(reply && reply.type === "RESPOND_ATTACK_SETUP", "a focused pre-attack exchange must offer a human response");
+  return take(state, reply);
+}
+
 (function deterministicGeneration() {
   var a = Director.createNight(baseConfig("same-seed"));
   var b = Director.createNight(baseConfig("same-seed"));
@@ -129,6 +137,25 @@ function take(state, wanted) {
   state = take(state, { type: "WAIT" });
   state = take(state, { type: "WAIT" });
   assert(state.presentedActorIds.length <= 2, "only a small cast is individually framed during one night");
+})();
+
+(function aRemotePublicGatheringIsAnnouncedBeforeItEntersTheRecord() {
+  var config = baseConfig("remote-grain-weighing");
+  config.monster.active = false;
+  config.player = {};
+  config.forcedBeats = [];
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home", falk: "home", ansel: "home" } };
+  config.gathering = {
+    id: "millgrind", name: "grain weighing", location: "Old Mill",
+    text: "Inside the Old Mill, the season's last grain is weighed by lantern light.",
+    distantText: "Before you choose a road, you know the grain weighing is underway at the Old Mill."
+  };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert.strictEqual(state.currentBeat.type, "atmosphere");
+  assert(/grain weighing|Old Mill/.test(state.currentBeat.text), "the player is told about the public mill event even when taking another road");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "gathering_announced" && event.location === "Old Mill"; }), "the ledger distinguishes public knowledge from attendance");
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "gathering_seen"; }), "a remote announcement does not claim the player attended the mill");
 })();
 
 (function presentationBeatDoesNotRepeatAcrossEmptyActions() {
@@ -417,7 +444,8 @@ function take(state, wanted) {
   var sawClue = false;
   var heardWords = false;
   var drewSuspicion = false;
-  for (var i = 0; i < 140 && !(sawClue && heardWords && drewSuspicion); i += 1) {
+  var offeredDefence = false;
+  for (var i = 0; i < 140 && !(sawClue && heardWords && drewSuspicion && offeredDefence); i += 1) {
     var config = baseConfig("body-investigation:" + i);
     config.slots = 6;
     config.openingIntent = { kind: "search", loc: "Graveyard" };
@@ -445,8 +473,17 @@ function take(state, wanted) {
     heardWords = heardWords || inquiry.heardLastWords;
     drewSuspicion = drewSuspicion || inquiry.suspicious;
     if (inquiry.clueFound) assert(state.found.stamps.some(function (stamp) { return stamp.sign === inquiry.sign; }), "physical evidence beside the body appears as a real stamp");
+    if (inquiry.suspicious) {
+      var defence = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} })
+        .find(function (entry) { return entry.type === "PLEAD_INNOCENCE"; });
+      assert(defence, "a player found beside the body can answer the accusation instead of silently accepting it");
+      state = take(state, defence);
+      var defended = Director.consequenceProjection(state).investigations[0];
+      assert(defended.defenceMade, "the player's account is carried into the daylight consequence projection");
+      offeredDefence = true;
+    }
   }
-  assert(sawClue && heardWords && drewSuspicion, "the deterministic investigation tape contains evidence, last-word and social-suspicion outcomes");
+  assert(sawClue && heardWords && drewSuspicion && offeredDefence, "the deterministic investigation tape contains evidence, last-word, social-suspicion and defence outcomes");
 })();
 
 (function aFinalBeatScreamMustBeAnsweredBeforeGoingHome() {
@@ -1027,6 +1064,7 @@ function take(state, wanted) {
   state = take(state, { type: "MOVE", to: "Old Church" });
   state = take(state, { type: "MOVE", to: "Graveyard" });
   state = take(state, { type: "WAIT" });
+  state = answerAttackSetup(state);
   if (state.pendingThreat.kind === "witness") {
     var victimId = state.pendingThreat.victimId;
     state = Director.reduce(state, { type: "IGNORE" });
@@ -1046,6 +1084,7 @@ function take(state, wanted) {
   state = take(state, { type: "MOVE", to: "Old Church" });
   state = take(state, { type: "MOVE", to: "Graveyard" });
   state = take(state, { type: "WAIT" });
+  state = answerAttackSetup(state);
   assert.strictEqual(state.phase, "threat", "a player present at the sampled attack receives a threat choice");
   var snapshot = JSON.stringify(state.outcomes);
   var actions = Director.availableActions(state);
@@ -1075,6 +1114,10 @@ function take(state, wanted) {
   state = take(state, { type: "WAIT" });
   state = take(state, { type: "WAIT" });
 
+  assert.strictEqual(state.phase, "attack_setup", "the neighbour first becomes the focus of an ordinary exchange");
+  assert(state.currentBeat.actorId === "rosa" && state.currentBeat.type === "encounter", "Rosa is alive and speaking before the danger appears");
+  assert(Director.availableActions(state).every(function (action) { return action.type === "RESPOND_ATTACK_SETUP"; }), "the setup lets the player answer Rosa before the attack interrupts");
+  state = answerAttackSetup(state, "ask");
   assert.strictEqual(state.phase, "threat", "being at the sampled hunt opens a live intervention scene");
   assert(state.pendingThreat && state.pendingThreat.kind === "witness" && state.pendingThreat.victimId === "rosa", "the sampled neighbour remains the quarry when the player witnesses the hunt");
   assert(Director.availableActions(state).some(function (action) { return action.type === "INTERVENE" && action.label === "Shout a warning"; }), "the player can try to stop the killing");
@@ -1083,6 +1126,68 @@ function take(state, wanted) {
   state = take(state, { type: "INTERVENE" });
   assert(state.cast.find(function (villager) { return villager.id === "rosa"; }).alive, "a successful warning saves the neighbour");
   assert(state.ledgers.truth.some(function (event) { return event.kind === "intervention" && event.succeeded; }), "the rescue remains a durable consequence");
+})();
+
+(function aRepeatedVillagerIsReintroducedAtTheLaterThreat() {
+  var config = baseConfig("repeat-villager-threat");
+  config.slots = 4;
+  config.player = {};
+  config.forcedBeats = [];
+  config.villagers = [{
+    id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Village Square",
+    motive: { id: "forest-crossing", family: "work", destination: "Dark Forest", reason: "gather yew", object: "a yew bundle", depart: 0, duration: 4 }
+  }];
+  config.monster = { id: "ghoul", hostId: "rosa", active: true, signs: ["bite"], hunts: ["Dark Forest"], attack: "kill", reach: "out", huntSlot: 2 };
+  config.currentFacts = { weather: "frost", active: true, huntLoc: "Dark Forest", attackSlot: 2, guaranteedVictimId: "greta", outMap: { greta: "Dark Forest" } };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Dark Forest" });
+  state.ledgers.truth.push({ id: "followed:1:greta", slot: 1, kind: "followed", location: "Tavern", actors: ["player", "greta"], actorId: "greta" });
+  state.followedActorIds.push("greta");
+  state = take(state, { type: "WAIT" });
+  state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.phase, "attack_setup");
+  assert(/Greta catches your lantern again\./.test(state.currentBeat.text), "a repeated villager is named as a return rather than introduced cold");
+  assert(/last spoke at the Tavern/.test(state.currentBeat.text) && /Dark Forest/.test(state.currentBeat.text), "the new scene bridges the villager's previous and current locations");
+  assert(state.currentBeat.meta && state.currentBeat.meta.attackSetup, "the repeat encounter holds the danger until the player has focused on Greta");
+  state = answerAttackSetup(state);
+  assert.strictEqual(state.phase, "threat", "the attack interrupts only after the exchange has landed");
+})();
+
+(function everyWitnessedNeighbourAttackBeginsWithAContextualExchange() {
+  var setupKinds = {};
+  for (var i = 0; i < 120; i += 1) {
+    var config = baseConfig("attack-focus-variety:" + i);
+    config.slots = 4;
+    config.player = {};
+    config.forcedBeats = [];
+    config.villagers = [
+      { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "forest-thread", family: "work", destination: "Dark Forest", reason: "collect blackthorn before dawn", object: "a reed basket", depart: 0, duration: 4 } },
+      { id: "wilhelm", name: "Wilhelm", role: "the Miller", alive: true, home: "Old Mill", motive: { id: "mill-check", family: "work", destination: "Old Mill", reason: "check the sluice", object: "a mill key", depart: 0, duration: 4 } },
+      { id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Village Square", motive: { id: "herbs", family: "medicine", destination: "Dark Forest", reason: "gather yew", object: "a yew bundle", depart: 0, duration: 4 } }
+    ];
+    config.monster = { id: "ghoul", hostId: "greta", active: true, signs: ["bite"], hunts: ["Dark Forest"], attack: "kill", reach: "out", huntSlot: 2 };
+    config.currentFacts = { weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 2, guaranteedVictimId: "rosa", outMap: { rosa: "Dark Forest", wilhelm: "Old Mill", greta: "Dark Forest" } };
+    var state = Director.createNight(config);
+    state.phase = "active";
+    state.cursor = 1;
+    state.player.location = "Dark Forest";
+    state.schedules.rosa.slots[1] = "Dark Forest";
+    state.schedules.rosa.slots[2] = "Dark Forest";
+    state.visibility[1].rosa = true;
+    state.currentBeat = { id: "rosa-crossing:" + i, type: "encounter", slot: 1, location: "Dark Forest", actorId: "rosa", text: "Rosa steps into the lantern light." };
+    state.attackPriorities[2] = { rosa: -1 };
+    state = take(state, { type: "FOLLOW", actorId: "rosa" });
+    assert.strictEqual(state.phase, "attack_setup", "Rosa must be alive, speaking and foregrounded before any witnessed kill");
+    assert(state.currentBeat.actorId === "rosa" && state.currentBeat.meta.attackSetup && !state.currentBeat.sign, "the setup is a normal person scene rather than a pre-coloured danger reveal");
+    assert.strictEqual(Director.availableActions(state).length, 2, "the player gets a short, real exchange before the interruption");
+    setupKinds[state.currentBeat.meta.setupKind] = true;
+    state = answerAttackSetup(state);
+    assert.strictEqual(state.phase, "threat");
+    assert(state.ledgers.truth.some(function (event) { return event.kind === "attack_setup_exchange" && event.actorId === "rosa"; }), "the conversation is durable night truth if Rosa survives");
+  }
+  ["returned_item", "shared_suspicion", "errand", "personal_concern"].forEach(function (kind) {
+    assert(setupKinds[kind], "the setup tape includes the " + kind + " conversation family");
+  });
 })();
 
 (function closeMonsterChoicesTradeSafetyForWhatCanBeSeen() {
@@ -1237,6 +1342,8 @@ function take(state, wanted) {
   state = take(state, { type: "WAIT" });
   state = take(state, { type: "WAIT" });
   assert.strictEqual(state.pendingThreat.victimId, "rosa", "the alternate branch catches a neighbour first");
+  assert.strictEqual(state.phase, "attack_setup", "the neighbour is foregrounded before the werewolf interrupts");
+  state = answerAttackSetup(state);
   state = take(state, { type: "INTERVENE" });
   assert.strictEqual(state.phase, "chase", "a successful warning redirects the uninterruptible hunt onto the player");
   assert.strictEqual(state.chase.fallbackVictimId, "rosa");
@@ -1266,6 +1373,103 @@ function take(state, wanted) {
   state = take(state, { type: "WAIT" });
   assert.strictEqual(state.phase, "threat");
   assert.strictEqual(state.pendingThreat.victimId, "player", "the warning becomes a lived survival encounter rather than another neighbour dying nearby");
+})();
+
+(function aHomeReachingAttackIsWitnessedWhereThePlayerAndVictimStand() {
+  var config = baseConfig("graveyard-witness-continuity");
+  config.slots = 3;
+  config.villagers = [{
+    id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Village Square",
+    motive: { id: "tobias-grave", family: "grief", destination: "Graveyard", reason: "stand at Father Ansel's grave", object: "a rusted key", depart: 1, duration: 3 }
+  }];
+  config.monster.reach = "home";
+  config.monster.hostId = "greta";
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Old Church", attackSlot: 2, outMap: { tobias: "Graveyard" } };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 1;
+  state.player.location = "Village Square";
+  state.schedules.tobias.slots[1] = "Village Square";
+  state.schedules.tobias.slots[2] = "Graveyard";
+  state.visibility[1].tobias = true;
+  state.currentBeat = { id: "tobias-crosses", type: "encounter", slot: 1, location: "Village Square", actorId: "tobias", text: "Old Tobias crosses your lantern." };
+  state.attackPriorities[2] = { tobias: -1 };
+  state = take(state, { type: "FOLLOW", actorId: "tobias" });
+  assert.strictEqual(state.phase, "attack_setup", "Tobias speaks to the player before the visible threat interrupts them");
+  assert.strictEqual(state.currentBeat.actorId, "tobias");
+  assert(Director.availableActions(state).length >= 2, "the player can answer Tobias rather than watching a death arrive out of nowhere");
+  state = answerAttackSetup(state);
+  assert.strictEqual(state.phase, "threat", "the attack interrupts the Graveyard scene instead of changing Tobias off screen");
+  assert.strictEqual(state.pendingThreat.victimId, "tobias");
+  assert.strictEqual(state.pendingThreat.location, "Graveyard", "the witnessed attack occurs where Tobias and the player actually stand");
+  assert.strictEqual(state.cast.find(function (actor) { return actor.id === "tobias"; }).alive, true, "Tobias remains alive until the player resolves the visible threat");
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "followed" && event.actorId === "tobias"; }), "the calm follow card is not emitted after the attack has already begun");
+  state = take(state, { type: "IGNORE" });
+  var death = state.ledgers.truth.find(function (event) { return event.kind === "slain" && event.victimId === "tobias"; });
+  assert(death && death.witnessed && death.location === "Graveyard", "the death is recorded as witnessed at the Graveyard");
+  assert(/stay hidden|before your eyes/i.test(state.currentBeat.text) && /Old Tobias/.test(state.currentBeat.text) && /neck breaks|colour drains|frost races|skin turns grey|vessels around it blacken|grave soil pours|wounds tear open/i.test(state.currentBeat.text), "staying silent shows Tobias dying in front of the player rather than replacing the death with a label");
+  var aftermathChoices = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: {}, interacted: {} });
+  assert.strictEqual(aftermathChoices[0].type, "INVESTIGATE_HERE", "a witnessed body makes examination the first immediate choice");
+  assert.strictEqual(aftermathChoices[0].label, "Examine Old Tobias's body and the fresh mark");
+  state = Director.reduce(state, aftermathChoices[0]);
+  var investigation = state.ledgers.truth.find(function (event) { return event.kind === "investigated_attack" && event.victimId === "tobias"; });
+  assert(investigation && investigation.clueFound && investigation.sign === death.sign, "examining a witnessed body always identifies the real physical sign");
+  assert(state.found.stamps.some(function (stamp) { return stamp.sign === death.sign; }), "the fresh mark is recorded in the Journal");
+  assert(/Blood has soaked|neck is broken|Most of .*blood is gone|rigid and colder|blight reached the heart|No ordinary wound|Earth packs/.test(state.currentBeat.text), "the examination states a concrete manner of death");
+  assert(state.currentBeat.meta && state.currentBeat.meta.bodyInvestigation, "the examination remains a full body scene before the next route choice");
+})();
+
+(function aMillRescueCrewWitnessesRosasVisibleDeathAndCorroboratesThePlayer() {
+  var config = baseConfig("mill-rescue-witnesses");
+  config.slots = 4;
+  config.player = {};
+  config.forcedBeats = [];
+  config.villagers = [
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true, home: "Village Square", motive: { id: "rosa-mill", family: "work", destination: "Old Mill", reason: "save the grain", object: "a rope", depart: 0, duration: 4 } },
+    { id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Graveyard", motive: { id: "tobias-mill", family: "duty", destination: "Old Mill", reason: "hold the rescue rope", object: "a rope", depart: 0, duration: 4 } },
+    { id: "liesel", name: "Liesel", role: "the Innkeeper", alive: true, home: "Tavern", motive: { id: "liesel-mill", family: "duty", destination: "Old Mill", reason: "carry grain clear", object: "a grain sack", depart: 0, duration: 4 } }
+  ];
+  config.monster = { id: "blight", hostId: "greta", active: true, signs: ["flora"], hunts: ["Old Mill"], attack: "kill", reach: "out", huntSlot: 2 };
+  config.currentFacts = {
+    weather: "still", active: true, huntLoc: "Old Mill", attackSlot: 2,
+    outMap: { rosa: "Old Mill", tobias: "Old Mill", liesel: "Old Mill" },
+    affliction: "millFlood", afflictionLoc: "Old Mill", afflictionCrowd: ["rosa", "tobias", "liesel"]
+  };
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 1;
+  state.player.location = "Old Mill";
+  ["rosa", "tobias", "liesel"].forEach(function (id) {
+    state.schedules[id].slots[1] = "Old Mill";
+    state.schedules[id].slots[2] = "Old Mill";
+  });
+  state.visibility[1].rosa = true;
+  state.currentBeat = { id: "rosa-on-rope", type: "encounter", slot: 1, location: "Old Mill", actorId: "rosa", text: "Rosa takes the rope beside you." };
+  state.attackPriorities[2] = { rosa: -1 };
+
+  state = take(state, { type: "FOLLOW", actorId: "rosa" });
+  assert.strictEqual(state.phase, "attack_setup", "the mill rescue pauses on Rosa as a living person before the danger");
+  assert(/braces the rescue rope beside you/.test(state.currentBeat.text) && /If the grain goes/.test(state.currentBeat.text), "Rosa works and speaks beside the player before the attack");
+  assert(Director.availableActions(state).some(function (action) { return action.responseMode === "ask" && /who broke the millrace/.test(action.label); }), "the player can ask Rosa about the flooding before the scene turns");
+  state = answerAttackSetup(state, "ask");
+  assert.strictEqual(state.phase, "threat", "the attack interrupts the shared mill rescue");
+  state = take(state, { type: "IGNORE" });
+  assert(/Rosa's skin turns grey/.test(state.currentBeat.text) && /Black veins spread across their face/.test(state.currentBeat.text) && /then fall/.test(state.currentBeat.text), "Rosa's death is shown as a visible physical collapse");
+  assert(/Old Tobias and Liesel are still on the rescue line/.test(state.currentBeat.text), "the death scene keeps the other mill rescuers present as witnesses");
+
+  var examine = Director.guidedActions(state, { target: "Old Mill", kind: "search", intentDone: true, searches: {}, interacted: {} })[0];
+  assert.strictEqual(examine.type, "INVESTIGATE_HERE");
+  state = take(state, examine);
+  assert(/blight reached the heart/.test(state.currentBeat.text), "the body examination explains what killed Rosa");
+  assert(/Every plant beneath Rosa has greyed from the root/.test(state.currentBeat.text), "the examination reveals the separate plant sign around the body");
+  assert(!/Rosa's skin turns grey/.test(state.currentBeat.text), "the examination does not simply replay the witnessed death animation");
+  var inquiry = Director.consequenceProjection(state).investigations[0];
+  assert(inquiry.corroborated && !inquiry.suspicious, "the rescue crew's direct view prevents a false body accusation");
+  assert.deepStrictEqual(inquiry.corroboratingWitnessIds.sort(), ["liesel", "tobias"], "both surviving rescuers can account for the player");
+  assert(!Director.guidedActions(state, { target: "Old Mill", kind: "search", intentDone: true, searches: {}, interacted: {} }).some(function (entry) {
+    return entry.type === "PLEAD_INNOCENCE" || entry.type === "SHOW_BODY_EVIDENCE";
+  }), "the player is not asked to plead against an accusation the witnesses already disproved");
 })();
 
 (function aNeighbourAtTheThresholdNamesThePlayersNightAction() {
@@ -1330,6 +1534,30 @@ function take(state, wanted) {
   assert.strictEqual(state.phase, "complete");
 })();
 
+(function aThresholdLookShowsAConcerningNeighbourWithoutSolvingTheirIdentity() {
+  var config = baseConfig("ambiguous-monster-threshold");
+  config.villagers = [{ id: "greta", name: "Greta", role: "the Herbalist", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.hostId = "greta";
+  config.monster.active = true;
+  config.monster.reach = "home";
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 5, outMap: { greta: "home" } };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "monster";
+  state.thresholdEvent.actorId = "greta";
+  state.thresholdEvent.clueLocation = "Dark Forest";
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "LOOK_THROUGH" });
+  assert.strictEqual(state.currentBeat.type, "doorstep", "looking at Greta keeps the neutral doorstep presentation");
+  assert(/Greta/.test(state.currentBeat.text) && !/\bmonster\b|followed you home|claws|no breath/i.test(state.currentBeat.text), "the scene is unsettling without confirming Greta is the monster");
+  var answer = Director.availableActions(state).find(function (action) { return action.type === "ANSWER_DOOR"; });
+  assert(answer && answer.label === "Answer Greta through the closed door" && answer.tone === "bone", "the action wording and colour do not reveal hidden visitor truth");
+})();
+
 (function aThresholdQuestionBecomesANaturalFollowUp() {
   var config = baseConfig("threshold-question-conversation");
   config.villagers = [{ id: "greta", name: "Greta", role: "the Herbalist", alive: true }];
@@ -1357,10 +1585,45 @@ function take(state, wanted) {
   assert(/“Yes[,.]”/.test(state.currentBeat.text) && /follow me|bring your lantern/i.test(state.currentBeat.text), "the player's answer receives a direct reply");
   var followAction = Director.availableActions(state).find(function (action) { return action.type === "STEP_OUTSIDE"; });
   assert(followAction && followAction.label === "Follow Greta to the Graveyard", "the next choice names the agreed action");
+  assert.strictEqual(followAction.tone, "amber", "a safe neighbour uses the same neutral threshold styling as any unknown visitor");
   state = take(state, followAction);
   assert.strictEqual(state.phase, "complete");
-  assert(/follow Greta to the Graveyard/.test(state.currentBeat.text) && /fresh earth/.test(state.currentBeat.text));
+  assert(/lift the bar and open the door/.test(state.currentBeat.text) && /follow Greta to the Graveyard/.test(state.currentBeat.text) && /fresh earth/.test(state.currentBeat.text));
   assert(state.found.clues.some(function (clue) { return clue.source === "threshold_neighbour" && clue.location === "Graveyard"; }), "following the neighbour produces a concrete lead");
+})();
+
+(function aDoorstepRumourIsOnlyRevealedAfterThePlayerOpensTheDoor() {
+  var config = baseConfig("threshold-rumour-after-risk");
+  config.villagers = [
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true },
+    { id: "wilhelm", name: "Wilhelm", role: "the Blacksmith", alive: true }
+  ];
+  config.monster.hostId = "ansel";
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, huntLoc: "Dark Forest", outMap: { rosa: "home", wilhelm: "home" } };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "neighbour";
+  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.purpose = "rumour";
+  state.thresholdEvent.concernId = "wilhelm";
+  state.thresholdEvent.clueLocation = "Dark Forest";
+  state.thresholdEvent.requestRoll = 0;
+  state.thresholdEvent.dialogueRoll = 0;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert(/need to talk|private word|something you should hear/i.test(state.currentBeat.text), "Rosa first asks for a private conversation");
+  assert(!/Wilhelm|Dark Forest/.test(state.currentBeat.text), "the barred-door request does not give away the clue");
+  assert(!state.found.clues.some(function (clue) { return clue.source === "threshold_neighbour"; }), "the clue is not awarded while the player remains safe inside");
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(!/Wilhelm|Dark Forest/.test(state.currentBeat.text), "answering through the closed door still withholds the private report");
+  var outside = Director.availableActions(state).find(function (action) { return action.type === "STEP_OUTSIDE"; });
+  assert(outside && outside.label === "Step outside and hear Rosa out", "the risky choice clearly promises the conversation");
+  state = take(state, outside);
+  assert(/I saw Wilhelm near the Dark Forest/.test(state.currentBeat.text), "Rosa gives the report once the player steps outside");
+  assert.strictEqual(state.found.clues.filter(function (clue) { return clue.source === "threshold_neighbour"; }).length, 1, "opening the door awards the clue exactly once");
 })();
 
 (function aThresholdNeighbourCanReturnSomethingFromTheSearchedPlace() {
@@ -1428,16 +1691,16 @@ function take(state, wanted) {
 
 (function aFalseNeighbourMustLureThePlayerPastTheBolt() {
   var config = baseConfig("indoor-threshold-kill");
-  config.villagers = [{ id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }];
+  config.villagers = [{ id: "wilhelm", name: "Wilhelm", role: "the Blacksmith", alive: true }];
   config.player = { monsterSawYou: true };
-  config.monster.hostId = "rosa";
+  config.monster.hostId = "wilhelm";
   config.monster.active = true;
   config.monster.reach = "home";
-  config.currentFacts = { weather: "fog", active: true, huntLoc: "Village Square", attackSlot: 3, outMap: { rosa: "home" } };
+  config.currentFacts = { weather: "fog", active: true, huntLoc: "Village Square", attackSlot: 3, outMap: { wilhelm: "home" } };
   var state = Director.createNight(config);
   state.thresholdEvent.roll = 0;
   state.thresholdEvent.visitorKind = "monster";
-  state.thresholdEvent.actorId = "rosa";
+  state.thresholdEvent.actorId = "wilhelm";
   state.thresholdEvent.requestRoll = 0;
   state.thresholdEvent.canEnter = true;
   state = take(state, { type: "LEAVE", to: "Village Square" });
@@ -1446,12 +1709,89 @@ function take(state, wanted) {
   state = take(state, { type: "ANSWER_DOOR" });
   assert.strictEqual(state.phase, "threshold", "answering through the door is not the same as opening it");
   assert(state.player.alive);
-  assert(Director.availableActions(state).some(function (action) { return action.type === "STEP_OUTSIDE"; }), "the false neighbour asks the player to cross the safe threshold");
-  state = take(state, { type: "STEP_OUTSIDE" });
+  var outsideAction = Director.availableActions(state).find(function (action) { return action.type === "STEP_OUTSIDE"; });
+  assert(outsideAction, "the false neighbour asks the player to cross the safe threshold");
+  assert.strictEqual(outsideAction.label, "Open the door. Step outside", "the choice makes the physical risk explicit without naming the visitor");
+  assert.strictEqual(outsideAction.tone, "amber", "the action styling does not reveal that Wilhelm is the monster");
+  state = take(state, outsideAction);
   assert.strictEqual(state.phase, "dead", "stepping outside lets the waiting monster attack");
   assert.strictEqual(state.player.alive, false);
-  assert(/open the door|waiting for this/i.test(state.currentBeat.text), "the death text names the choice that exposed the player");
+  assert(/lift the bar and open the door/i.test(state.currentBeat.text), "the result makes clear that the player opened the door");
+  assert(/Wilhelm stands on the step/.test(state.currentBeat.text) && /something you must see/i.test(state.currentBeat.text), "Wilhelm first appears as an ordinary neighbour with a plausible request");
+  assert(/borrowed face changes/.test(state.currentBeat.text) && /waiting for this/i.test(state.currentBeat.text), "the monster is only revealed after the player steps into the lane");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "threshold_choice" && event.opened === true; }), "the threshold record preserves that the door was opened");
   assert(state.ledgers.truth.some(function (event) { return event.kind === "player_slain" && event.source === "threshold"; }));
+})();
+
+(function aContextualMonsterCanOnlyTalkBeyondTheBarredDoor() {
+  var config = baseConfig("contextual-door-taunt");
+  config.monster.active = false;
+  config.currentFacts = {
+    weather: "still", active: false, huntLoc: null, outMap: {},
+    monsterTaunt: {
+      kind: "wrongful_hanging", channel: "door", accusedId: "hazel", accusedName: "Hazel",
+      line: "The voice laughs softly. “You thought it was Hazel? Do not make me laugh. Hazel could never do what I do.”"
+    }
+  };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert.strictEqual(state.phase, "threshold", "a selected contextual taunt reaches the barred door even on a non-feeding night");
+  assert(/only want to talk/i.test(state.currentBeat.text) && !/Hazel/.test(state.currentBeat.text), "the first knock does not reveal the speech before the player answers");
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(/thought it was Hazel/.test(state.currentBeat.text), "the voice answers the player's actual wrongful accusation");
+  var afterAnswer = Director.availableActions(state);
+  assert(!afterAnswer.some(function (choice) { return choice.type === "STEP_OUTSIDE" || choice.type === "INVITE_IN"; }), "a taunt does not become another lethal lure choice");
+  var keepBarred = afterAnswer.find(function (choice) { return choice.type === "KEEP_BARRED"; });
+  assert(keepBarred && /Let the voice leave/.test(keepBarred.label), "the only resolution keeps the physical safety choice explicit");
+  state = take(state, keepBarred);
+  assert.strictEqual(state.phase, "complete");
+  assert(state.player.alive, "talking through the barred door is safe");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_taunt" && event.contextKind === "wrongful_hanging"; }), "the contextual speech is preserved in the night record");
+})();
+
+(function aPromisedReplacementVictimCarriesTheMonstersNote() {
+  var config = baseConfig("rescue-replacement-note");
+  config.slots = 3;
+  config.villagers = [{
+    id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Village Square",
+    motive: { id: "late-grave", family: "work", destination: "Dark Forest", reason: "check the boundary stones", object: "a spade", depart: 0, duration: 3 }
+  }];
+  config.monster.hostId = "greta";
+  config.monster.active = true;
+  config.monster.reach = "out";
+  config.currentFacts = {
+    weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 1, guaranteedVictimId: "tobias", outMap: { tobias: "Dark Forest" },
+    monsterTaunt: { kind: "rescued_neighbour", channel: "walk", savedId: "greta", savedName: "Greta", targetId: "tobias", targetName: "Old Tobias", noteText: "YOU CHOSE." }
+  };
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Village Square";
+  state.schedules.tobias.slots[1] = "Dark Forest";
+  state = take(state, { type: "WAIT" });
+  var attack = state.ledgers.truth.find(function (event) { return event.kind === "slain" && event.victimId === "tobias"; });
+  assert(attack && attack.monsterNote === "YOU CHOSE.", "the promised replacement victim carries the exact note named by the taunt");
+  assert.strictEqual(attack.tauntKind, "rescued_neighbour");
+})();
+
+(function aQuietGroundTauntResolvesAsARealVoiceNotEvidence() {
+  var config = baseConfig("quiet-hunting-ground-taunt");
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, huntLoc: null, outMap: {} };
+  config.forcedBeats = [{
+    id: "quiet-taunt", type: "atmosphere", slot: 0, location: "Village Square",
+    text: "A voice says you make this easy.",
+    meta: { contextualTaunt: true, tauntKind: "quiet_hunting_ground", quietPresence: true, requiresResponse: true, responseText: "The voice laughs and moves away." }
+  }];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  assert(/make this easy/.test(state.currentBeat.text));
+  state = take(state, { type: "LISTEN" });
+  assert(/laughs and moves away/.test(state.currentBeat.text), "listening resolves the contextual voice instead of repeating it");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "monster_taunt" && event.contextKind === "quiet_hunting_ground"; }), "the voice is recorded as a taunt, not a physical monster sign");
+  assert.strictEqual(state.found.stamps.length, 0, "a taunt never narrows the monster type");
 })();
 
 (function anOutdoorMonsterCannotCrossTheBarredDoor() {
@@ -1605,6 +1945,9 @@ function take(state, wanted) {
   state = take(state, { type: "MOVE", to: "Graveyard" });
   state = take(state, { type: "HAIL", actorId: "rosa" });
   while (state.phase === "active" && state.cursor < state.monsterSchedule.attackSlot) state = take(state, { type: "WAIT" });
+  assert.strictEqual(state.phase, "attack_setup", "Rosa's earlier hail leads into one last focused exchange");
+  assert.strictEqual(state.currentBeat.actorId, "rosa");
+  state = answerAttackSetup(state);
   assert.strictEqual(state.phase, "threat");
   assert.strictEqual(state.pendingThreat.victimId, "rosa", "the timetable, hail delay and seeded priority make Rosa the traceable target");
   assert(state.ledgers.memories.falk.length && state.ledgers.memories.ansel.length, "Falk and Ansel remember the player's church visit independently");
@@ -1680,7 +2023,7 @@ function take(state, wanted) {
   var config = baseConfig("coalesced-encounters");
   config.villagers = [{
     id: "falk", name: "Doctor Falk", role: "the Physician", alive: true,
-    home: "Village Square", motive: { id: "late-call", family: "medicine", destination: "Old Church", reason: "answer a late call", object: "a medical bag", depart: 3, duration: 2 }
+    home: "Village Square", motive: { id: "late-call", family: "medicine", destination: "Old Church", reason: "examine an animal that stopped eating after sunset", object: "a leather roll of instruments", depart: 3, duration: 2 }
   }];
   config.monster.active = false;
   config.currentFacts = { weather: "still", active: false, outMap: { falk: "Old Church" } };
@@ -1700,9 +2043,13 @@ function take(state, wanted) {
   assert(projection.encounters[0].acknowledged, "a hail upgrades the whole thread to a clear mutual memory");
   assert.strictEqual(projection.findings.length, 0, "an unopened object cannot unlock a named evidence question");
   state = take(state, { type: "INSPECT_CLUE" });
+  assert.strictEqual((state.currentBeat.text.match(/Doctor Falk/g) || []).length, 1, "Falk's inspected-object card names him only once");
+  assert(/after dusk/.test(state.currentBeat.text) && !/after sunset/.test(state.currentBeat.text), "the final timing phrase is shortened so it stays with the errand");
+  assert(!/This belongs to|addressed to/.test(state.currentBeat.text), "the compact card does not restate ownership after naming the addressee");
   projection = Director.consequenceProjection(state);
   assert.strictEqual(projection.findings.length, 1, "an actor-linked physical clue becomes an evidence question candidate");
   assert.strictEqual(projection.findings[0].actorId, "falk");
+  assert.strictEqual(projection.findings[0].privateItem, false, "an exposed tool roll can be returned as a considerate ordinary find");
 })();
 
 (function aParcelMustBeOpenedBeforeItNamesTobias() {
@@ -1730,9 +2077,11 @@ function take(state, wanted) {
   state = take(state, choices[0]);
   assert.strictEqual(state.phase, "returning", "opening the final-hour parcel resolves before the explicit journey home");
   assert.strictEqual(state.currentBeat.actorId, "tobias");
-  assert(/grave twine/.test(state.currentBeat.text) && /This belongs to Old Tobias/.test(state.currentBeat.text), "opening the parcel provides visible ownership evidence");
+  assert(/grave twine/.test(state.currentBeat.text) && /asks Old Tobias/.test(state.currentBeat.text), "opening the parcel provides concise visible ownership evidence");
+  assert.strictEqual((state.currentBeat.text.match(/Old Tobias/g) || []).length, 1, "the inspected-object card names its owner once instead of repeating them");
   assert(state.ledgers.truth.some(function (event) { return event.kind === "clue_inspected" && event.actorId === "tobias"; }));
   assert.strictEqual(Director.consequenceProjection(state).findings[0].actorId, "tobias", "inspection unlocks the Tobias interview lead");
+  assert.strictEqual(Director.consequenceProjection(state).findings[0].privateItem, true, "opening a sealed parcel is preserved as snooping for the return conversation");
   choices = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: { ground: true }, interacted: {} });
   assert(!choices.some(function (choice) { return choice.type === "HAIL" || choice.type === "FOLLOW"; }), "identifying an absent owner does not make them available to hail or follow");
 })();
@@ -1826,7 +2175,7 @@ function take(state, wanted) {
     {
       id: "church-burning-arrival", type: "atmosphere", slot: 0, location: "Old Church",
       text: "The Old Church is burning.",
-      meta: { affliction: "churchBurn", afflictionLocation: "Old Church", afflictionWound: "burn", afflictionLabel: "THE CHURCH BURNS", soundCue: "fire", critical: true, crisis: true, crisisStage: "arrival", crisisChoices: [{ choice: "help", label: "Join the bucket line" }, { choice: "witness", label: "Watch who helps" }] }
+      meta: { affliction: "churchBurn", afflictionLocation: "Old Church", afflictionWound: "burn", afflictionLabel: "THE CHURCH BURNS", soundCue: "fire", critical: true, crisis: true, crisisStage: "arrival", crisisChoices: [{ choice: "help", label: "Join the bucket line" }, { choice: "witness", label: "Watch who helps" }], crisisResponses: { help: "You take a bucket and join the line." } }
     },
     {
       id: "church-burning-struggle", type: "atmosphere", slot: 1, location: "Old Church",
@@ -1843,8 +2192,9 @@ function take(state, wanted) {
   var crisisActions = Director.guidedActions(state, { kind: "search", target: "Old Church" });
   assert.deepStrictEqual(crisisActions.map(function (action) { return action.label; }), ["Join the bucket line", "Watch who helps"], "the disaster offers authored responses instead of routine site searches");
   state = Director.reduce(state, crisisActions[0]);
-  assert(state.ledgers.truth.some(function (event) { return event.kind === "crisis_response" && event.choice === "help"; }), "helping in the crisis becomes causal truth for dawn");
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "crisis_response" && event.choice === "help" && event.crisisStage === "arrival"; }), "helping in the crisis becomes stage-specific causal truth for dawn");
   assert.strictEqual(state.currentBeat.id, "church-burning-struggle", "one response advances into the next crisis beat");
+  assert(/^You take a bucket and join the line\./.test(state.currentBeat.text), "the chosen crisis action leads into the next event beat instead of disappearing");
 })();
 
 (function soundCannotBlockTheWalkTransition() {
@@ -1878,12 +2228,63 @@ function take(state, wanted) {
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
   assert(compiledNight.includes("directorAfflictionBeats(s, facts, slots)") && html.includes('crisisStage: "arrival"') && html.includes('crisisStage: "struggle"') && html.includes('crisisStage: "aftermath"') && html.includes('crisisStage: "resolution"'), "a sampled village crisis owns a multi-beat Director sequence through its final outcome");
   assert(html.includes("afflictionLocation: scene.location") && html.includes("afflictionWound: scene.wound"), "the crisis carries its authored location and damaged-night artwork into every beat");
+  assert(html.includes('event: { bg: "#0A0907"') && html.includes('kicker={crisisEvent ? "A VILLAGE EVENT"') && !html.includes('const danger = !!afflictionScene'), "village events use an amber event treatment rather than monster-danger red");
+  [
+    "A drinker accused another of being the monster",
+    "the village's last shared fire, shelter and place to exchange news",
+    "Help Liesel clear the room without a crush",
+    "Help Liesel set the iron bar",
+    "Offer to carry news between the houses"
+  ].forEach(function (phrase) {
+    assert(html.includes(phrase), "the closing tavern explains and advances its event: " + phrase);
+  });
+  [
+    "THE MILL IS FLOODING",
+    "Black water is rising across the ground floor by the second",
+    "Shore the beam holding the rope line",
+    "Save the final dry sacks before the wall gives",
+    "Recover the iron pin from the broken sluice"
+  ].forEach(function (phrase) {
+    assert(html.includes(phrase), "the flooded mill clearly escalates through a new decision: " + phrase);
+  });
+  ["churchBurn", "wellFouled", "breadRiot", "tavernShut", "millFlood"].forEach(function (affliction) {
+    var startAt = html.indexOf(affliction + ": {", html.indexOf("const AFFLICTION_CRISIS"));
+    var nextAt = html.indexOf("\n  },", startAt);
+    var definition = html.slice(startAt, nextAt);
+    assert(definition.includes("stageChoices") && definition.includes("stageResponses"), affliction + " advances through distinct choices whose results carry into the following beat");
+  });
+  assert(fs.readFileSync(path.join(__dirname, "..", "v5-night-director.js"), "utf8").includes("crisisResponseText + \" \" + next.currentBeat.text"), "a village-event choice is acknowledged by the following stage");
+  assert(fs.readFileSync(path.join(__dirname, "..", "v5-night-director.js"), "utf8").includes("crisisStage: presentingBeat.meta.crisisStage"), "the Director records which stage each crisis decision belonged to");
+  assert(html.includes("s.millFloodOutcome = outcome") && html.includes('grain: grainCount >= 2 ? "saved"') && html.includes('sabotage: witnessCount >= 2 ? "certain"'), "mill decisions persist as saved grain, injuries and sabotage evidence rather than decorative dialogue");
+  var tauntSource = html.slice(html.indexOf("function directorContextualTaunt"), html.indexOf("function compileDirectorNight"));
+  var tauntContext = {
+    stableIdx: function () { return 0; },
+    HOME_LOC: {},
+    monsterOf: function () { return { hunts: ["Dark Forest"] }; },
+    npcById: function (state, id) { return state.npcs.find(function (npc) { return npc.id === id; }); }
+  };
+  vm.createContext(tauntContext);
+  vm.runInContext(tauntSource + "; this.directorContextualTaunt = directorContextualTaunt;", tauntContext);
+  var tauntState = {
+    monster: { vid: "wilhelm" }, monsterSawYou: true, enraged: false,
+    npcs: [{ id: "greta", name: "Greta", alive: true }, { id: "tobias", name: "Old Tobias", alive: true }],
+    relationshipEvents: [{ kind: "rescued", actorId: "greta", night: 3 }], deaths: []
+  };
+  var rescueTaunt = tauntContext.directorContextualTaunt(tauntState, { active: true, guaranteedVictimId: "tobias", huntLoc: "Graveyard" }, { kind: "search", loc: "Graveyard" }, 4, "rescue-seed");
+  assert(rescueTaunt && rescueTaunt.channel === "walk" && /Greta\. Greta\. Greta\./.test(rescueTaunt.line) && rescueTaunt.noteText === "YOU CHOSE.", "a recent rescue produces a rare replacement-victim threat with a matching note");
+  var ropeTaunt = tauntContext.directorContextualTaunt({ monster: { vid: "wilhelm" }, npcs: [], relationshipEvents: [], deaths: [{ id: "hazel", name: "Hazel", kind: "executed", night: 3 }] }, { active: false }, { kind: "search", loc: "Village Square" }, 4, "rope-seed");
+  assert(ropeTaunt && ropeTaunt.channel === "door" && /thought it was Hazel/.test(ropeTaunt.line), "a recent wrongful hanging is named rather than receiving a generic threat");
+  var quietTaunt = tauntContext.directorContextualTaunt({ monster: { vid: "wilhelm" }, npcs: [], relationshipEvents: [], deaths: [] }, { active: false }, { kind: "search", loc: "Dark Forest" }, 4, "quiet-seed");
+  assert(quietTaunt && quietTaunt.kind === "quiet_hunting_ground" && /still you walk my ground/.test(quietTaunt.line), "a non-feeding walk taunt is limited to the monster's own hunting ground");
+  assert(compiledNight.includes("contextualTaunt.channel === \"walk\"") && compiledNight.includes("monsterTaunt: contextualTaunt"), "selected taunts enter the same deterministic night plan used by the walk and threshold");
+  assert(html.includes("barred-home-taunt") && html.includes("IF THE LITTLE PIG WILL NOT COME OUT"), "a stay-home night can rarely leave the requested barred-door note");
+  assert(html.includes("directorAttack.monsterNote") && html.includes("Pinned to ${victim.name}'s coat"), "a promised replacement victim carries the taunt's note into the dawn account");
   assert(html.includes('churchBurn: { location: "Old Church", wound: "burn"') && html.includes('wellFouled: { location: "Village Square", wound: "fouled"'), "church fire and poisoned-well nights select their existing crisis plates");
-  assert(html.includes('wound={afflictionScene ? afflictionScene.wound : nightWound(s, location)}'), "the live crisis art is shown before dawn persists the wound");
+  assert(html.includes('wound={crisisEvent ? afflictionScene.wound : nightWound(s, location)}'), "the live crisis art is shown before dawn persists the wound");
   assert(sampledNight.includes("afflictionCrisisRoster") && sampledNight.includes("setOut(id, afflictLoc") && sampledNight.includes("afflictionCrowd"), "rare disasters force a stable crowd onto the damaged ground");
   assert(compiledNight.includes("crisisMotive") && compiledNight.includes("family: \"crisis\"") && compiledNight.includes("duration: slots"), "crisis attendees remain scheduled at the scene rather than resuming unrelated errands");
   assert(start.includes("const livedIntent = crisisScene") && start.includes("AFFLICTION_SUMMON[facts.affliction]"), "the disaster interrupts the player's declared errand and sends them to the real scene");
-  assert(html.includes('event.kind === "crisis_response"') && html.includes('event.choice === "help"') && html.includes('event.choice === "comfort"') && html.includes('event.choice === "witness"'), "help, support and observation have distinct dawn consequences");
+  assert(html.includes('event.kind === "crisis_response"') && html.includes('choiceCount("help")') && html.includes('choiceCount("comfort")') && html.includes('choiceCount("witness")'), "help, support and observation have distinct dawn consequences");
   assert(compiledNight.includes("facts.guaranteedVictimId") && compiledNight.includes("guaranteedTarget ? { ...(sampledMotive || fallbackMotive), depart: 0, duration: slots }"), "the fallback neighbour is physically on the hunting ground throughout the attack hour");
   assert(compiledNight.includes("activeHost ? { ...(sampledMotive || fallbackMotive), depart: 1, duration: slots }"), "an active monster host leaves its house before it hunts");
   assert(html.includes("then followed them to the ${log.you.followedTo}"), "the final night history distinguishes following a watched suspect from remaining at their door");
@@ -1909,6 +2310,73 @@ function take(state, wanted) {
   assert(interviewIa.includes('hasFoundLeads &&') && interviewIa.includes('setIvSub("catF")') && interviewIa.includes('WHAT YOU FOUND'), "relevant evidence receives a conditional, promoted group above generic conversation");
   var evidencePanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catF"'), interviewIa.indexOf('ivSub === "catN"'));
   assert(evidencePanel.includes("contextQuestions.map") && evidencePanel.includes('askQ("press")') && evidencePanel.includes('askQ("report")') && evidencePanel.includes("showNote"), "the evidence group gathers witnessed events, contradictions, reports and the coercion note");
+  var contextualSource = html.slice(html.indexOf("function contextualQuestionsFor"), html.indexOf("/* ---------- grief", html.indexOf("function contextualQuestionsFor")));
+  var contextualContext = {};
+  vm.createContext(contextualContext);
+  vm.runInContext(contextualSource + "; this.contextualQuestionsFor = contextualQuestionsFor;", contextualContext);
+  var contextualState = {
+    nightNum: 3, askedLog: { falk: [] }, npcs: [],
+    worldEvents: [
+      { eventId: "old-find", night: 2, location: "Old Mill", question: "Return the old parcel" },
+      { eventId: "new-find", night: 3, location: "Old Mill", question: "Return the leather roll" },
+      { eventId: "old-memory", night: 2, location: "Village Square" },
+      { eventId: "new-memory", night: 3, location: "Village Square" },
+      { eventId: "newer-memory", night: 3, location: "Old Church" }
+    ],
+    observations: [
+      { eventId: "old-find", night: 2, subjectId: "falk", kind: "evidence" },
+      { eventId: "new-find", night: 3, subjectId: "falk", kind: "evidence" }
+    ],
+    memories: [
+      { eventId: "old-memory", night: 2, actorId: "falk", target: "player" },
+      { eventId: "new-memory", night: 3, actorId: "falk", target: "player" },
+      { eventId: "newer-memory", night: 3, actorId: "falk", target: "player" }
+    ]
+  };
+  var currentContextQuestions = contextualContext.contextualQuestionsFor(contextualState, "falk");
+  assert(currentContextQuestions.length === 2 && currentContextQuestions.every(function (entry) { return entry.night === 3; }), "the evidence tray offers only events from the immediately preceding night");
+  assert.strictEqual(currentContextQuestions.filter(function (entry) { return entry.kind === "memory"; }).length, 1, "several sightings from one walk become one reverse-memory question");
+  assert(currentContextQuestions.some(function (entry) { return /What did you make of that/.test(entry.label); }), "a reverse sighting asks a concise consequential question");
+  assert(!currentContextQuestions.some(function (entry) { return /old parcel/.test(entry.label); }), "older unasked evidence no longer crowds the current interview");
+
+  var socialSource = html.slice(html.indexOf("function socialPreference"), html.indexOf("/* Disposition nudges", html.indexOf("function socialPreference")));
+  var socialContext = {
+    NPC_DEFS: ["marta", "tobias", "ansel", "greta", "wilhelm", "liesel", "falk", "rosa"].map(function (id) { return { id: id }; }),
+    stableIdx: function (text, len) {
+      var h = 0;
+      String(text).split("").forEach(function (ch) { h = (h * 31 + ch.charCodeAt(0)) >>> 0; });
+      return len ? h % len : 0;
+    },
+    clampDisp: function (value) { return Math.max(-3, Math.min(3, value)); }
+  };
+  vm.createContext(socialContext);
+  vm.runInContext(socialSource + "; this.socialPreference = socialPreference; this.secretSharingPreference = secretSharingPreference; this.secretSharingReply = secretSharingReply; this.reverseMemoryOutcome = reverseMemoryOutcome;", socialContext);
+  var socialIds = socialContext.NPC_DEFS.map(function (npc) { return npc.id; });
+  var pursuitPreferences = socialIds.map(function (id) { return socialContext.socialPreference({ gameId: "social-run-a" }, id, "night_pursuit"); });
+  assert.strictEqual(pursuitPreferences.filter(function (value) { return value > 0; }).length, 2, "every run contains villagers who respect risky pursuit");
+  assert.strictEqual(pursuitPreferences.filter(function (value) { return value < 0; }).length, 2, "every run contains villagers who distrust nocturnal pursuit");
+  var positiveId = socialIds[pursuitPreferences.findIndex(function (value) { return value > 0; })];
+  var negativeId = socialIds[pursuitPreferences.findIndex(function (value) { return value < 0; })];
+  assert(/trying to do: catch whoever/.test(socialContext.reverseMemoryOutcome({ gameId: "social-run-a" }, positiveId, {}).quote));
+  assert(/prowling for your next victim/.test(socialContext.reverseMemoryOutcome({ gameId: "social-run-a" }, negativeId, {}).quote));
+  var secondRunPreferences = socialIds.map(function (id) { return socialContext.socialPreference({ gameId: "social-run-b" }, id, "night_pursuit"); });
+  assert.notDeepStrictEqual(pursuitPreferences, secondRunPreferences, "the same cast reshuffles its social preferences in a new game");
+  var secretPreferences = socialIds.map(function (id, index) {
+    return socialContext.secretSharingPreference({ gameId: "social-run-a" }, id, socialIds[(index + 1) % socialIds.length]);
+  });
+  assert(secretPreferences.every(function (value) { return value === 1 || value === -1; }), "sharing a secret always improves or lowers the listener's disposition");
+  assert.deepStrictEqual(secretPreferences, socialIds.map(function (id, index) {
+    return socialContext.secretSharingPreference({ gameId: "social-run-a" }, id, socialIds[(index + 1) % socialIds.length]);
+  }), "each listener's judgement of a secret stays stable within a game");
+  var secretReplies = socialIds.map(function (id) {
+    return socialContext.secretSharingReply({}, id, { name: "Wilhelm" }, { short: "he hid a letter beneath the millstone" }, 1);
+  });
+  assert.strictEqual(new Set(secretReplies).size, 8, "every neighbour reacts to a shared secret in their own voice");
+  assert(secretReplies.every(function (line) { return line.includes("Wilhelm") && line.includes("hid a letter beneath the millstone"); }), "the response names the owner and the specific secret that was shared");
+  assert(html.includes('socialPreference(s, id, "personal_concern")') && html.includes('socialPreference(s, listenerId, "shared_secrets")') && html.includes('applyVillagePreference(s, "public_accusation"'), "personal concern, spreading secrets and public accusations all consult hidden per-run preferences");
+  var secretAnswer = html.slice(html.indexOf('if (q === "share"'), html.indexOf('if (q === "report"', html.indexOf('if (q === "share"')));
+  assert(secretAnswer.includes("secretSharingPreference") && secretAnswer.includes("rec.reactions") && secretAnswer.includes("secretSharingReply"), "a first disclosure records and narrates the listener's disposition change");
+  assert(!secretAnswer.includes("without much reaction"), "secret-sharing no longer falls through to a generic neutral response");
   var nightPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catN"'), interviewIa.indexOf('ivSub === "catS"'));
   assert(nightPanel.includes("nightRow") && nightPanel.includes('askQ("where")') && nightPanel.includes('askQ("saw")') && nightPanel.includes('setIvSub("nightPerson")') && !nightPanel.includes("contextQuestions.map"), "the night group contains only the selected night's whereabouts and sightings");
   var personPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catS"'), interviewIa.indexOf('ivSub === "catK"'));
@@ -1916,7 +2384,7 @@ function take(state, wanted) {
   assert(interviewIa.includes('faceGrid(pickTargets, (x) => askQ("about", x.id))') && !interviewIa.includes("nightPid"), "choosing a portrait under a specific night asks the sighting question immediately");
   var personAnswer = html.slice(html.indexOf('if (q === "person"'), html.indexOf('if (q === "whereNow"', html.indexOf('if (q === "person"')));
   assert(personAnswer.includes("tieIn(BONDS, id, targetId)") && personAnswer.includes("tieIn(FRICTIONS, id, targetId)") && personAnswer.includes("RELATIONSHIP_LIKES") && personAnswer.includes("RELATIONSHIP_SUSPECTS"), "every social answer has a stable trust or suspicion stance, including authored red herrings");
-  assert(personAnswer.includes("s.deaths || []") && personAnswer.includes("s.nightLogs || []") && personAnswer.includes("secretKnown: true") && personAnswer.includes("shared.outMap"), "the same social question promotes a dead neighbour's secret or real last-seen timeline when available");
+  assert(personAnswer.includes("s.deaths || []") && personAnswer.includes("s.nightLogs || []") && personAnswer.includes("secretKnown: true") && personAnswer.includes("accountLocationForNight"), "the same social question promotes a dead neighbour's secret or a last-seen timeline consistent with the speaker's account");
   assert(personAnswer.includes("t.fled") && personAnswer.includes("left before dawn") && personAnswer.includes('kind: "with"') && personAnswer.includes('kind: "suspects"'), "missing-person, witnessed-location and suspicion answers all create useful leads rather than a bare no");
   var answerDelivery = html.slice(html.indexOf("function computeAnswer"), html.indexOf("function answerFor", html.indexOf("function computeAnswer")));
   assert(html.includes("const INTERVIEW_DELIVERY") && html.includes("guarded:") && html.includes("practised:") && html.includes("afraid:"), "interviews have concise guarded, rehearsed and frightened delivery pools without adding choices");
@@ -1951,15 +2419,35 @@ function take(state, wanted) {
   assert(suspectAnswer.includes('id === "ansel" && (npc.disp || 0) < 1') && suspectAnswer.indexOf('id === "ansel" && (npc.disp || 0) < 1') < suspectAnswer.indexOf("if (evidenced)"), "Ansel names nobody, including an evidenced suspect, until he trusts the player");
   assert(suspectAnswer.includes('suspectVoiceLine(id, "", "withhold")') && suspectAnswer.includes('suspectVoiceLine(id, t.name, "accuse")'), "Ansel can withhold while trusted villagers use their own accusation voices");
   assert(!html.includes("Feelings have hanged better people than us") && !html.includes("eats alone now. Always alone"), "the shared stock accusation cannot return");
-  assert(answerCore.includes("const priorNightClaim") && answerCore.includes('st.q === "where" || st.q === "saw"'), "whereabouts and witness answers recover the speaker's established account for that night");
+  var accountSource = html.slice(html.indexOf("function establishedNightClaim"), html.indexOf("function answerFor", html.indexOf("function establishedNightClaim")));
+  assert(answerCore.includes("const priorNightClaim = establishedNightClaim") && accountSource.includes('st.q === "where" || st.q === "saw"'), "whereabouts and witness answers recover the speaker's established account for that night");
+  var accountContext = {};
+  vm.createContext(accountContext);
+  vm.runInContext(accountSource + "; this.accountLocationForNight = accountLocationForNight;", accountContext);
+  var claimedHomeState = {
+    statements: [{ id: "greta", night: 2, q: "where", claim: "home" }, { id: "greta", night: 2, q: "saw", claim: "home" }]
+  };
+  assert.strictEqual(accountContext.accountLocationForNight(claimedHomeState, "greta", { night: 2, outMap: { greta: "Old Mill", wilhelm: "Old Mill" } }), "home", "a later social answer cannot leak Greta's hidden mill route after she claimed home and saw no one");
+  var mentionedMillFirst = {
+    statements: [{ id: "greta", q: "person", mentions: [{ id: "wilhelm", night: 2, kind: "with", loc: "Old Mill" }] }]
+  };
+  assert.strictEqual(accountContext.accountLocationForNight(mentionedMillFirst, "greta", { night: 2, outMap: { greta: "Old Mill", wilhelm: "Old Mill" } }), "Old Mill", "a mill sighting given first becomes Greta's account, so a later whereabouts answer cannot claim home");
+  var olderContradictorySave = {
+    statements: [
+      { id: "greta", night: 2, q: "where", claim: "home" },
+      { id: "greta", q: "person", mentions: [{ id: "wilhelm", night: 2, kind: "with", loc: "Old Mill" }] }
+    ]
+  };
+  assert.strictEqual(accountContext.accountLocationForNight(olderContradictorySave, "greta", { night: 2, outMap: { greta: "Old Mill" } }), "home", "an explicit alibi remains authoritative when repairing an older save that already contains a leaked social mention");
   assert(answerCore.includes('q === "where" && !quote && priorNightClaim') && answerCore.includes('Home. I have already told you that.'), "a later whereabouts question repeats the established cover story instead of resampling the truth");
   var sawAnswer = answerCore.slice(answerCore.indexOf('if (q === "saw")'), answerCore.indexOf('if (q === "read"'));
   assert(sawAnswer.includes("narrativeClaim") && sawAnswer.includes("coveringRealLocation") && sawAnswer.includes("I was home, as I told you") && sawAnswer.includes("I have already told you who was there"), "who did you see stays inside the same claimed location and respects an earlier free witness answer");
   assert(aboutAnswer.includes("priorNightClaim.claim !== actual") && aboutAnswer.includes("I saw nothing of ${t.name} that night"), "asking about one named neighbour cannot jump back to the speaker's hidden real route");
+  assert(personAnswer.includes("const sharedLoc = shared ? accountLocationForNight") && !personAnswer.includes("const loc = shared.outMap[targetId]"), "the broad person question cannot contradict an established home/no-one account with a hidden gathering sighting");
   assert(answerCore.includes('q === "saw" && claim') && answerCore.includes("Their witness account depends on being"), "firsthand player evidence can explicitly expose a mixed witness account as a lie");
   assert(html.includes('marta: "Village Square"') && !html.includes('hazel: "Village Square"'), "Hazel's internal id resolves to her real home location in timeline answers");
   var personalPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catH"'), interviewIa.indexOf('ivSub === "nightPerson"'));
-  assert(personalPanel.includes("Learn how they are coping, repair harm, or earn trust through useful work.") && personalPanel.includes('askQ("howare")') && personalPanel.includes('askQ("apologise")') && personalPanel.includes('askQ("help")') && !personalPanel.includes('askQ("past")') && !personalPanel.includes('askQ("talk")'), "personal conversation is limited to three distinct aims instead of overlapping small talk choices");
+  assert(personalPanel.includes("Concern may build trust or test their patience. Useful work is safer.") && personalPanel.includes('askQ("howare")') && personalPanel.includes('askQ("apologise")') && personalPanel.includes('askQ("help")') && !personalPanel.includes('askQ("past")') && !personalPanel.includes('askQ("talk")'), "personal conversation offers one unpredictable concern question alongside deliberate repair actions");
   var helpAnswer = html.slice(html.indexOf('if (q === "help")'), html.indexOf('if (q === "howare")', html.indexOf('if (q === "help")')));
   assert(helpAnswer.includes("assignFollowFavour(s, id)") && helpAnswer.includes("FOLLOW_FAVOUR_ASK"), "asking what work needs doing can issue the follow-someone-tonight favour through the new personal category");
   var favourResolution = html.slice(html.indexOf("/* --- side quest: did the player watch/follow"), html.indexOf("/* --- a secret the player", html.indexOf("/* --- side quest: did the player watch/follow")));
@@ -2056,14 +2544,14 @@ function take(state, wanted) {
       });
     });
   });
-  var repairBlameSource = html.slice(html.indexOf("function repairPublicBlame"), html.indexOf("/* One short-lived build", html.indexOf("function repairPublicBlame")));
+  var repairBlameSource = html.slice(html.indexOf("function publicBlameLosses"), html.indexOf("/* One short-lived build", html.indexOf("function publicBlameLosses")));
   var repairBlameContext = {
     npcById: function (state, id) { return state.npcs.find(function (npc) { return npc.id === id; }); },
     bondedTo: function () { return ["greta"]; },
     clampDisp: function (value) { return Math.max(-2, Math.min(2, value)); }
   };
   vm.createContext(repairBlameContext);
-  vm.runInContext(repairBlameSource + "; this.repairPublicBlame = repairPublicBlame;", repairBlameContext);
+  vm.runInContext(repairBlameSource + "; this.repairPublicBlame = repairPublicBlame; this.vindicatePlayer = vindicatePlayer; this.uncoverMonster = uncoverMonster; this.repairMonsterUncovered = repairMonsterUncovered;", repairBlameContext);
   var blameState = {
     nightNum: 4,
     npcs: [
@@ -2074,16 +2562,48 @@ function take(state, wanted) {
     ],
     worldEvents: [{ eventId: "investigated:ansel", kind: "director_body_investigation", night: 4, victimId: "ansel", location: "Old Church", recognizedChanged: true, suspicious: true, witnessIds: ["falk"] }]
   };
-  repairBlameContext.repairPublicBlame(blameState);
+  repairBlameContext.repairPublicBlame(blameState, null, { ansel: 0, falk: 0, greta: 0, rosa: 1 });
   assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "falk"; }).disp, -2, "the direct witness keeps their initial distrust and loses wider village trust too");
   assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "greta"; }).disp, -2, "someone close to the victim reacts more strongly");
   assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "rosa"; }).disp, 0, "the accusation lowers the wider village's disposition");
   assert.strictEqual(blameState.publicBlame.kind, "changed", "the lasting accusation distinguishes a changed victim from a death");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(blameState.publicBlame.dispositionLossById)), { ansel: 0, falk: 2, greta: 2, rosa: 1 }, "the accusation records exactly how much trust it cost with each neighbour");
   assert.deepStrictEqual(Array.from(blameState.worldEvents[0].actorIds), ["falk"], "an older save repairs the witness list needed by its interview response");
+  var changedApology = repairBlameContext.uncoverMonster(blameState, "Wilhelm");
+  assert(/We blamed you.*We were wrong.*Wilhelm.*Forgive us/.test(changedApology), "public proof earns an explicit village apology");
+  assert.strictEqual(blameState.monsterUncovered, true, "public proof permanently records that the monster was uncovered");
+  assert.strictEqual(blameState.publicBlame, null, "vindication clears the active accusation");
+  assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "falk"; }).disp, 0);
+  assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "greta"; }).disp, 0);
+  assert.strictEqual(blameState.npcs.find(function (npc) { return npc.id === "rosa"; }).disp, 1, "vindication restores only trust lost to the accusation");
+  var hazelBlame = {
+    nightNum: 3,
+    npcs: [{ id: "rosa", name: "Rosa", alive: true, fled: false, disp: -1 }],
+    worldEvents: [], lastWith: { id: "hazel" },
+    publicBlame: { eventId: "hazel-body", victimId: "hazel", victimName: "Hazel", kind: "slain", dispositionLossById: { rosa: 1 } }
+  };
+  var hazelApology = repairBlameContext.uncoverMonster(hazelBlame, "Wilhelm");
+  assert(/Hazel's death.*thing wearing Wilhelm's face.*Forgive us/.test(hazelApology), "Hazel's false accusation is resolved against the proven culprit");
+  assert.strictEqual(hazelBlame.npcs[0].disp, 0);
+  assert.strictEqual(hazelBlame.lastWith, null);
+  var oldUncoveredSave = {
+    nightNum: 5, fled: true, monster: { vid: "wilhelm" },
+    npcs: [{ id: "wilhelm", name: "Wilhelm", alive: true, fled: true, disp: 0 }, { id: "liesel", name: "Liesel", alive: true, fled: false, disp: -1 }],
+    worldEvents: [],
+    publicBlame: { eventId: "hazel-body", victimId: "hazel", victimName: "Hazel", kind: "slain", dispositionLossById: { liesel: 1 } }
+  };
+  repairBlameContext.repairMonsterUncovered(oldUncoveredSave);
+  assert.strictEqual(oldUncoveredSave.monsterUncovered, true, "an older save with the exposed culprit in hiding repairs the public-proof flag");
+  assert.strictEqual(oldUncoveredSave.publicBlame, null, "repairing public proof removes stale blame from older saves");
+  assert.strictEqual(oldUncoveredSave.npcs[1].disp, 0);
   assert(html.includes("const offeredLabels = new Set()") && html.includes("offeredLabels.has(visible)"), "context questions deduplicate identical visible wording across ledger events");
   assert(html.includes('event.kind === "director_body_investigation"') && html.includes("PUBLIC_BLAME_WITNESS"), "a body witness gives a concrete response instead of a generic denial");
   assert(html.includes('q === "where" && publicBlame') && html.includes("PUBLIC_BLAME_GOSSIP"), "where and village-talk questions surface the lasting accusation");
   assert(html.includes("THE VILLAGE SUSPECTS YOU") && html.includes("repairPublicBlame(run)"), "the accusation is visible in interviews and repaired into existing saves");
+  var accusationSource = html.slice(html.indexOf("function actAccuse"), html.indexOf("/* ================= ART:", html.indexOf("function actAccuse")));
+  assert(accusationSource.includes("uncoverMonster(s, npc.name)"), "both a true rite and a right-face/wrong-name public unmasking set the permanent proof flag");
+  assert(html.includes('!s.monsterUncovered && s.publicBlame') && html.includes('!s.monsterUncovered && lw') && html.includes('event.kind === "director_body_investigation"') && html.includes("vindicationAnswer: true"), "public proof blocks gossip, last-seen and body-witness accusations while replacing culprit questions with an apology");
+  assert(html.includes("repairMonsterUncovered(run);") && html.indexOf("repairMonsterUncovered(run);") < html.indexOf("repairPublicBlame(run);"), "older saves restore public proof before stale blame can be repaired back in");
   var favourLoreSource = html.slice(html.indexOf("const FOLK_HINTS"), html.indexOf("const FLED_OPENERS"));
   var favourLoreContext = {};
   vm.createContext(favourLoreContext);
@@ -2155,8 +2675,11 @@ function take(state, wanted) {
   var followHelperSource = html.slice(html.indexOf("function directorFollowLead"), html.indexOf("function directorDialogueFor", html.indexOf("function directorFollowLead")));
   var followContext = {};
   vm.createContext(followContext);
-  vm.runInContext(followWeatherSource + followHelperSource + "; this.followSamples = ['fog', 'storm', 'frost'].map(function (wx) { return directorFollowAction(wx, { name: 'Greta' }, 'Tavern', 'collect a message left with Liesel and answer none of her questions'); });", followContext);
+  vm.runInContext(followWeatherSource + followHelperSource + "; this.followSamples = ['fog', 'storm', 'frost'].map(function (wx) { return directorFollowAction(wx, { name: 'Greta' }, 'Tavern', 'collect a message left with Liesel and answer none of her questions'); }); this.errandQuestion = directorErrandQuestion;", followContext);
   assert.strictEqual(followContext.followSamples[1], "By lightning, you follow Greta to the Tavern. There, you watch Greta collect a message left with Liesel and answer none of her questions.");
+  assert.strictEqual(followContext.errandQuestion("collect supplies promised before the road became unsafe"), "Was collecting supplies the whole reason?", "the mill-supplies question uses a short grammatical gerund instead of inserting the whole motive");
+  assert.strictEqual(followContext.errandQuestion("finish an errand promised before sunset"), "Was that the whole reason you went?", "other long motives receive a concise grammatical fallback");
+  assert(!html.includes('Was ${ctx.reason} the whole reason?'), "raw motive text cannot be inserted into the interview question as broken grammar");
   followContext.followSamples.forEach(function (text) {
     var words = (text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length;
     assert(words <= 30, "a weather-aware follow result stays concise: " + text);
@@ -2233,7 +2756,11 @@ function take(state, wanted) {
     assert(revealWords <= 22, monsterId + " reveal stays short enough for a three-to-five-line mobile card: " + reveal);
   });
   assert(/claws, frost and grave mould/i.test(revealContext.DIRECTOR_MONSTER_REVEALS.mimic("Father Ansel", "tall")), "the mimic keeps its physical transformation while naming Father Ansel directly");
-  assert(html.includes('(DEATH_SCENES[monsterOf(s).id] || DEATH_SCENES.wraith)(host ? host.name'), "a Director death restores the monster-specific death scene with the actual host named");
+  assert(html.includes('playerDeathBeats(monsterOf(s), host ? host.name'), "a Director death restores the monster-specific death scene with the actual host named and the lived encounter context");
+  assert(html.includes('kind: deathKind') && html.includes('thresholdInside') && html.includes('thresholdOutside'), "a Director death continues from the threshold or lane where the player was caught");
+  assert(html.includes('The road home gives you no room to set that guilt down.'), "prior hangings carry into the player's death scene");
+  assert(html.includes('stageChoices:') && html.includes("Clean the child's mouth with stream water") && !html.includes('Stay until the danger passes'), "the poisoned-well crisis advances through distinct practical choices");
+  assert(!html.includes('const thresholdLook = (director.ledgers.truth || []).find'), "looking through the shutter does not mark the hidden host as known");
   var deathSource = html.slice(html.indexOf("const DEATH_SCENES ="), html.indexOf("/* A live walk may already have shown the face"))
     .replace("const DEATH_SCENES =", "DEATH_SCENES =");
   var deathContext = {};
@@ -2321,8 +2848,79 @@ function take(state, wanted) {
   assert(html.includes('action.type === "INSPECT_CLUE"') && html.includes('Snd.cue("cloth")'), "opening a found parcel is wired into the night UI and soundscape");
   assert(html.includes('"Graveyard": "An object sits outside one grave."'), "a grave object is presented before its meaning is interpreted");
   assert(html.includes('rel.kind === "intrusion"') && html.includes('rel.kind === "restraint"'), "nighttime intrusion and restraint both feed the disposition system");
-  assert(html.includes('THE VILLAGE HAS TURNED AGAINST YOU') && html.includes("hostileMajority"), "village-wide hostility is visible and changes cooperation");
+  assert(html.includes('VILLAGE TURNED AGAINST YOU') && html.includes('className="heHostilityDetails"') && html.includes("hostileMajority"), "village-wide hostility is a compact one-line disclosure and still changes cooperation");
+  assert(!html.includes('THE VILLAGE HAS TURNED AGAINST YOU'), "the longer hostility heading cannot wrap across the mobile day board");
+  var villageStandingSource = html.slice(html.indexOf("function villageStanding"), html.indexOf("/* ---------- when they cannot stand you", html.indexOf("function villageStanding")));
+  assert(villageStandingSource.includes("s.dayNum > 1"), "the village cannot be declared hostile before the player has had a daylight turn");
+  var openingSource = html.slice(html.indexOf("const OPENING_DISPOSITIONS"), html.indexOf("function newGame", html.indexOf("const OPENING_DISPOSITIONS")));
+  var openingContext = {
+    NPC_DEFS: [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }, { id: "f" }, { id: "g" }, { id: "h" }],
+    stableIdx: function (key) { return key.charCodeAt(key.length - 1); },
+    Object: Object
+  };
+  vm.createContext(openingContext);
+  vm.runInContext(openingSource + "; this.openingDispositionMap = openingDispositionMap;", openingContext);
+  assert.deepStrictEqual(
+    Object.values(openingContext.openingDispositionMap("test")).sort(function (a, b) { return a - b; }),
+    [-2, -1, -1, 0, 0, 1, 1, 2],
+    "new games begin with varied but balanced attitudes"
+  );
+  assert(!html.includes("disp: [-2, -1, 0, 1, 2][Math.floor(Math.random() * 5)]"), "opening hostility is no longer rolled independently for every villager");
+  var firstDayRepairSource = html.slice(html.indexOf("function repairFirstDayStanding"), html.indexOf("/* One short-lived build", html.indexOf("function repairFirstDayStanding")));
+  var firstDayRepairContext = { stableIdx: function (key) { return key.charCodeAt(key.length - 1); }, Set: Set, Math: Math };
+  vm.createContext(firstDayRepairContext);
+  vm.runInContext(firstDayRepairSource + "; this.repairFirstDayStanding = repairFirstDayStanding;", firstDayRepairContext);
+  var badOpeningSave = { dayNum: 1, gameId: "old", npcs: [
+    { id: "a", alive: true, fled: false, disp: -2 }, { id: "b", alive: true, fled: false, disp: -2 },
+    { id: "c", alive: true, fled: false, disp: -2 }, { id: "d", alive: true, fled: false, disp: -2 },
+    { id: "e", alive: true, fled: false, disp: 0 }, { id: "f", alive: true, fled: false, disp: 1 },
+    { id: "g", alive: true, fled: false, disp: 2 }
+  ] };
+  firstDayRepairContext.repairFirstDayStanding(badOpeningSave);
+  assert.strictEqual(badOpeningSave.npcs.filter(function (npc) { return npc.disp <= -2; }).length, 3, "an existing first-day save is softened just below a hostile majority");
+  assert(html.includes("repairFirstDayStanding(run);"), "the first-day standing repair runs when a saved game resumes");
+  assert(html.includes('standing.hostileMajority && !interviewBlame'), "a specific village-suspicion notice replaces the generic distrust notice instead of stacking two boxes");
   assert(html.includes('askQ("apologise")') && html.includes('askQ("help")'), "the player has deliberate ways to repair disposition");
+  var findingReturnSource = html.slice(html.indexOf("function definiteFindingObject"), html.indexOf("function computeAnswer", html.indexOf("function definiteFindingObject")));
+  var findingReturnContext = {};
+  vm.createContext(findingReturnContext);
+  vm.runInContext(findingReturnSource + "; this.findingReturnOutcome = findingReturnOutcome; this.definiteFindingObject = definiteFindingObject;", findingReturnContext);
+  assert.strictEqual(findingReturnContext.definiteFindingObject("a leather roll of instruments"), "the leather roll of instruments", "the evidence button describes a concise return action");
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(findingReturnContext.findingReturnOutcome({ object: "a leather roll of instruments", privateItem: false }))),
+    { delta: 1, quote: "“Thank you. I thought I had lost it.”" },
+    "returning an ordinary lost object improves its owner's disposition"
+  );
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(findingReturnContext.findingReturnOutcome({ object: "a small wrapped object", privateItem: true }))),
+    { delta: -1, quote: "“You found my parcel, opened it, and then returned it. I would have thanked you if you had left it sealed.”" },
+    "returning an opened private parcel worsens its owner's disposition"
+  );
+  assert(html.includes('event.kind === "director_finding" && event.returnable') && html.includes("dispositionDelta: outcome.delta"), "returning evidence applies its trust consequence once through the interview state");
+  var contextualSource = html.slice(html.indexOf("function contextualQuestionsFor"), html.indexOf("/* ---------- grief", html.indexOf("function contextualQuestionsFor")));
+  var contextualContext = { npcById: function () { return null; }, Set: Set };
+  vm.createContext(contextualContext);
+  vm.runInContext(contextualSource + "; this.contextualQuestionsFor = contextualQuestionsFor;", contextualContext);
+  var daylightFindingState = {
+    nightNum: 3,
+    askedLog: { greta: [] },
+    memories: [],
+    worldEvents: [{
+      eventId: "day-remain:2:Old Mill:greta", night: 2, location: "Old Mill",
+      kind: "director_finding", actorIds: ["greta"], returnable: true,
+      question: "Return the yew bundle"
+    }],
+    observations: [{
+      eventId: "day-remain:2:Old Mill:greta", night: 2, location: "Old Mill",
+      kind: "evidence", subjectId: "greta"
+    }]
+  };
+  var carriedFinding = contextualContext.contextualQuestionsFor(daylightFindingState, "greta");
+  assert.strictEqual(carriedFinding.length, 1, "an unreturned daylight belonging survives into the owner's next available interview");
+  assert.strictEqual(carriedFinding[0].label, "Return the yew bundle");
+  daylightFindingState.askedLog.greta.push("2:context:day-remain:2:Old Mill:greta:evidence");
+  assert.strictEqual(contextualContext.contextualQuestionsFor(daylightFindingState, "greta").length, 0, "a returned belonging leaves the interview tray permanently");
+  assert(!html.includes("That does not make it mine"), "the repetitive generic ownership denial cannot return");
   assert(html.includes('standing.hostileMajority ? 0.08'), "a hostile village makes calming a mob nearly impossible");
   assert(!directorSource.includes("Open the door and I will return it") && !directorSource.includes("Be more careful next time"), "retired return-item dialogue cannot recur");
   assert(html.includes("question: finding.question ||") && html.includes("honest: finding.honest ||") && html.includes("evasive: finding.evasive ||"), "authored doorstep reports survive into the next interview");
@@ -2331,7 +2929,28 @@ function take(state, wanted) {
   assert(directorSource.includes("var nightOffset") && directorSource.includes("thresholdLine(state, threshold.dialogueRoll, lines)"), "doorstep replies rotate across nights rather than repeating the same seeded line");
   assert(html.includes('/^[,;:\'"‘’“”]+$/.test(fragment)'), "the paced night text drops orphan punctuation fragments");
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
-  assert(html.includes('v5-night-director.js?v=12'), "the local page cache-busts the current Director runtime");
+  assert(html.includes("last evening's work boarding windows and repairing shutters"), "the boarding-up dawn report explains the event instead of relying on its shorthand name");
+  assert(!html.includes("picked apart over breakfast the way a body is picked apart"), "a public event is not described with the unexplained table metaphor");
+  assert(html.includes('v5-night-director.js?v=17'), "the local page cache-busts the current Director runtime");
+  assert(html.includes("homeMusic(!s || (s.phase === \"day\" && !s.over && !walk), !s)"), "the piano distinguishes the fuller title menu from safe day screens");
+  assert(html.includes('s.phase === "day" && !walk) { Snd.scene(null); Snd.wind_(-30); }'), "a true day screen clears the previous night's rain and weather scene");
+  assert(html.includes('else if (!walk) Snd.wind_(-30);'), "the day-labelled state cannot clear weather underneath a night walk still in progress");
+  assert(html.includes("this.pianoMenu ? -28.5 : -30") && html.includes("this.pianoMenu ? 0.12 : 0.09"), "the menu piano is only slightly fuller and louder than the daytime motif");
+  assert(html.includes('}, 7.8)') && html.includes('new Tone.Volume(-30).toDestination()'), "the home piano leaves long, quiet spaces between phrases");
+  ["giggle", "murmur", "hallucination_steps", "hallucination_whispers", "hallucination_drift"].forEach(function (cue) {
+    assert(html.includes('"' + cue + '"'), "the procedural soundscape includes the " + cue + " cue");
+  });
+  assert(html.includes('new Tone.Volume(-24).toDestination()') && html.includes('new Tone.Volume(-28).toDestination()'), "voice and hallucination textures remain quiet but audible beneath weather");
+  assert(html.includes("ambientCue(directorBeat.text, directorBeat.type") && html.includes('kind === "distant_steps"') && html.includes('kind === "hum"'), "otherwise silent night cards receive text- and location-matched environmental cues");
+  assert(html.includes("Snd.textCue(directorBeat.text, directorBeat.type)"), "night card prose selects matching subtle sound cues");
+  assert(html.includes('soundCue: hallucinationCue'), "authored hallucinations receive an unstable cue rather than a generic weather hit");
+  assert(directorSource.includes('threshold.visitorKind === "taunt" ? "murmur" : null'), "a speaking threshold taunt uses a quiet voice texture");
+  assert(directorSource.includes('threshold.visitorKind === "taunt" ? "giggle" : null'), "a departing threshold taunt can leave a quiet laugh behind");
+  assert(directorSource.includes('soundCue: "hallucination_drift"'), "a false sight stays sonically unstable when the player moves closer");
+  assert(html.includes("thresholdAnswer || directorBeat.meta.thresholdDecision"), "answering the visitor does not replay the arrival knock");
+  var directorFallbackSource = html.slice(html.indexOf("const directorFallbackLine"), html.indexOf("const actDirector", html.indexOf("const directorFallbackLine")));
+  assert(directorFallbackSource.includes('WAIT: ["For now, the road stays quiet.", "You wait a while. Nothing moves yet."]'), "a one-hour wait describes a temporary lull before the stay-or-leave choice");
+  assert(!directorFallbackSource.includes("Nothing happens, so you head home") && !directorFallbackSource.includes("Nothing comes. You go home"), "waiting cannot claim the player went home while the night is still active");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
     HOME_LOC: { rosa: "Village Square" },
@@ -2361,6 +2980,7 @@ function take(state, wanted) {
   assert.strictEqual(firstWarning, "It saw you. Nights are more dangerous for you now.", "the first warning is short and concrete");
   assert.strictEqual(repeatedWarning, null, "the warning is shown only once");
   assert.strictEqual(unseenWarning, null, "anger alone cannot claim that the monster saw the player");
+  assert.strictEqual((html.match(/You have named it wrong once\./g) || []).length, 1, "the second-accusation warning appears only in its confirmation screen, not again at dawn");
   var dayHomeSource = html.slice(html.indexOf('<div className="max-w-md mx-auto px-4 pb-32 heDayMainContent">'), html.indexOf("{/* Daylight search/exam findings", html.indexOf('<div className="max-w-md mx-auto px-4 pb-32 heDayMainContent">')));
   assert(!dayHomeSource.includes("monsterDangerWarning"), "the one-time warning does not repeat on the day board");
   assert(html.includes(".heInterviewQuestions .heInkButton { font-size:13.5px !important"), "interview question copy matches the smaller section-heading scale");
