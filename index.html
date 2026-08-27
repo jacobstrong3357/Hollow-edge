@@ -13489,6 +13489,7 @@ function MonsterVillage() {
   const [dayScene, setDayScene] = useState(null);
   const [savedRun, setSavedRun] = useState(null);
   const [savedWalk, setSavedWalk] = useState(null);
+  const [savedDayUi, setSavedDayUi] = useState(null);
   const [bootReady, setBootReady] = useState(false);
   const [deathShown, setDeathShown] = useState(false);
   const [directorTextReadyKey, setDirectorTextReadyKey] = useState(null);
@@ -13533,6 +13534,17 @@ function MonsterVillage() {
               const wr = r3 && r3.value ? JSON.parse(r3.value) : null;
               if (wr && wr.gameId === run.gameId && wr.walk && (wr.walk.mode === "out" || wr.walk.mode === "watch" || wr.walk.mode === "director")) setSavedWalk(wr.walk);
             } catch (e2) { /* a stale walk is safe to ignore */ }
+            /* A paid interview and a completed daylight search have already
+               changed the run. Preserve the presentation beside the save so
+               CONTINUE returns to the exact question or finding the player
+               was reading instead of dropping them back at the day hub. */
+            try {
+              const r4 = await window.storage.get("mv-run-day-ui");
+              const dayUi = r4 && r4.value ? JSON.parse(r4.value) : null;
+              const hasInterview = !!(dayUi && dayUi.iv && dayUi.iv.committed && dayUi.iv.id);
+              const hasSearch = !!(dayUi && dayUi.dayScene && dayUi.dayScene.stage === "beats" && Array.isArray(dayUi.dayScene.beats));
+              if (dayUi && dayUi.gameId === run.gameId && (hasInterview || hasSearch)) setSavedDayUi(dayUi);
+            } catch (e3) { /* stale presentation state is safe to ignore */ }
           }
         }
       } catch (e) { /* a save that will not parse is a save best forgotten */ }
@@ -13562,6 +13574,26 @@ function MonsterVillage() {
       else window.storage.delete("mv-run-walk");
     } catch (e) {}
   }, [walk, s && s.gameId, bootReady]);
+
+  /* Day pickers remain disposable. Once an action is paid, its staged copy
+     becomes part of the lived run and must survive a reload just like the
+     sampled night queue does. */
+  useEffect(() => {
+    if (!bootReady || !s) return;
+    try {
+      const committedIv = iv && iv.committed ? iv : null;
+      const committedSearch = dayScene && dayScene.stage === "beats" ? dayScene : null;
+      if (!s.over && (committedIv || committedSearch)) {
+        window.storage.set("mv-run-day-ui", JSON.stringify({
+          gameId: s.gameId,
+          iv: committedIv,
+          ivSub: committedIv ? ivSub : null,
+          ivOpenerOpen: committedIv ? ivOpenerOpen : false,
+          dayScene: committedSearch,
+        }));
+      } else window.storage.delete("mv-run-day-ui");
+    } catch (e) {}
+  }, [iv, ivSub, ivOpenerOpen, dayScene, s && s.gameId, s && s.over, bootReady]);
 
   /* The monster is known from the first moment of a run. Fetch and decode its
      portrait and both possible ending cards before any of them can mount. */
@@ -13762,16 +13794,22 @@ function MonsterVillage() {
   const start = () => {
     setSavedRun(null);
     setSavedWalk(null);
+    setSavedDayUi(null);
     const hollowedUnlocked = !!(meta && MONSTERS.filter((mm) => mm.id !== "hollowed").every((mm) => meta.defeated[mm.id]));
     setS(newGame(!!(meta && meta.games > 0), hollowedUnlocked));
     resetUi();
   };
   const resume = () => {
-    const run = savedRun, runWalk = savedWalk;
+    const run = savedRun, runWalk = savedWalk, runDayUi = savedDayUi;
     /* Migrate runs saved before unavailable favour-givers were cleaned up. */
     cancelUnavailableFavour(run);
-    setSavedRun(null); setSavedWalk(null); setS(run); resetUi();
+    setSavedRun(null); setSavedWalk(null); setSavedDayUi(null); setS(run); resetUi();
     if (runWalk) setWalk(runWalk);
+    if (runDayUi && runDayUi.iv) {
+      setIv(runDayUi.iv);
+      setIvSub(runDayUi.ivSub || null);
+      setIvOpenerOpen(!!runDayUi.ivOpenerOpen);
+    } else if (runDayUi && runDayUi.dayScene) setDayScene(runDayUi.dayScene);
   };
 
   const doAction = (fn) => {

@@ -3033,6 +3033,9 @@ function answerAttackSetup(state, preferredMode) {
   assert(html.includes("quiet-night-event") && html.includes("inactiveStreak >= 2"), "a strict-cycle lull receives deterministic public activity instead of a dead stretch");
   assert(directorSource.includes("visibleDiscoveries") && directorSource.includes('join(" ")'), "multiple findings earned in one action are presented together before entering the Journal");
   assert(html.includes('source === "threshold_missing_report"') && html.includes("is missing from the village"), "an unavailable subject of a threshold report is explained in the interview picker");
+  assert(html.includes('window.storage.get("mv-run-day-ui")') && html.includes('window.storage.set("mv-run-day-ui"'), "committed daylight presentation is saved separately from the run");
+  assert(html.includes("dayUi.iv.committed") && html.includes('dayUi.dayScene.stage === "beats"'), "only paid interviews and completed searches are restorable");
+  assert(html.includes("if (runDayUi && runDayUi.iv)") && html.includes("setDayScene(runDayUi.dayScene)"), "continue restores the exact interview or search presentation");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [
