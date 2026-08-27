@@ -2406,7 +2406,7 @@ function answerAttackSetup(state, preferredMode) {
   assert(nightPanel.includes("nightRow") && nightPanel.includes('askQ("where")') && nightPanel.includes('askQ("saw")') && nightPanel.includes('setIvSub("nightPerson")') && !nightPanel.includes("contextQuestions.map"), "the night group contains only the selected night's whereabouts and sightings");
   var personPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catS"'), interviewIa.indexOf('ivSub === "catK"'));
   assert(personPanel.includes('faceGrid(pickTargets, (x) => askQ("person", x.id))') && !interviewIa.includes("personId") && !interviewIa.includes("mentionedBy"), "choosing a portrait asks one social question immediately instead of opening another question menu");
-  assert(interviewIa.includes('faceGrid(pickTargets, (x) => askQ("about", x.id))') && !interviewIa.includes("nightPid"), "choosing a portrait under a specific night asks the sighting question immediately");
+  assert(interviewIa.includes('faceGrid(pickTargets, (x) => askQ("about", x.id)') && !interviewIa.includes("nightPid"), "choosing a portrait under a specific night asks the sighting question immediately");
   var personAnswer = html.slice(html.indexOf('if (q === "person"'), html.indexOf('if (q === "whereNow"', html.indexOf('if (q === "person"')));
   assert(personAnswer.includes("tieIn(BONDS, id, targetId)") && personAnswer.includes("tieIn(FRICTIONS, id, targetId)") && personAnswer.includes("RELATIONSHIP_LIKES") && personAnswer.includes("RELATIONSHIP_SUSPECTS"), "every social answer has a stable trust or suspicion stance, including authored red herrings");
   assert(personAnswer.includes("s.deaths || []") && personAnswer.includes("s.nightLogs || []") && personAnswer.includes("secretKnown: true") && personAnswer.includes("accountLocationForNight"), "the same social question promotes a dead neighbour's secret or a last-seen timeline consistent with the speaker's account");
@@ -3036,6 +3036,8 @@ function answerAttackSetup(state, preferredMode) {
   assert(html.includes('window.storage.get("mv-run-day-ui")') && html.includes('window.storage.set("mv-run-day-ui"'), "committed daylight presentation is saved separately from the run");
   assert(html.includes("dayUi.iv.committed") && html.includes('dayUi.dayScene.stage === "beats"'), "only paid interviews and completed searches are restorable");
   assert(html.includes("if (runDayUi && runDayUi.iv)") && html.includes("setDayScene(runDayUi.dayScene)"), "continue restores the exact interview or search presentation");
+  assert(html.includes("function interviewQuestionKey") && html.includes('disabled={whereUsed}') && html.includes('disabled={sawUsed}'), "paid night questions are visibly unavailable after use");
+  assert(html.includes("nightQuestionUsed(\"about\", x.id)") && html.includes("includes(interviewQuestionKey(s, effectiveQ, questionNight, effectiveTarget))"), "per-person night questions and stale duplicate taps cannot spend twice");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [

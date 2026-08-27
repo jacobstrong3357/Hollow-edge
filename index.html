@@ -8171,6 +8171,22 @@ function findingReturnOutcome(event) {
   return { delta: 1, quote: `“Thank you. I thought I had lost it.”` };
 }
 
+/* One canonical key for both the answer engine and the question tray. This
+   keeps a paid line of questioning visibly spent and also lets the handler
+   reject a stale double tap before it costs patience or a question. */
+function interviewQuestionKey(s, q, night, targetId) {
+  return ["person", "opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
+    : q === "craft" ? `${s.dayNum}:craft`
+    : q === "past" ? "past"
+    : q === "talk" ? `${s.dayNum}:talk`
+    : q === "apologise" ? `${s.dayNum}:apologise`
+    : q === "help" ? `${s.dayNum}:help`
+    : q === "gossip" ? `${s.dayNum}:gossip`
+    : q === "share" ? `${s.dayNum}:share:${targetId || ""}`
+    : q === "report" ? `${s.dayNum}:report`
+    : `${night}:${q}${targetId ? ":" + targetId : ""}`;
+}
+
 function computeAnswer(s, id, night, q, targetId) {
   const r = answerFor(s, id, night, q, targetId);
   const who = npcById(s, id);
@@ -8249,16 +8265,7 @@ function answerFor(s, id, night, q, targetId) {
   const mentions = [];
   let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false, socialReaction = false, dispositionDelta = 0;
 
-  const key = ["person", "opinion", "worried", "mentioned", "suspect", "mobcalm", "mobagree", "mobplea", "howare", "whereNow"].includes(q) ? `${s.dayNum}:${q}:${targetId || ""}`
-    : q === "craft" ? `${s.dayNum}:craft`
-    : q === "past" ? "past"
-    : q === "talk" ? `${s.dayNum}:talk`
-    : q === "apologise" ? `${s.dayNum}:apologise`
-    : q === "help" ? `${s.dayNum}:help`
-    : q === "gossip" ? `${s.dayNum}:gossip`
-    : q === "share" ? `${s.dayNum}:share:${targetId || ""}`
-    : q === "report" ? `${s.dayNum}:report`
-    : `${night}:${q}${targetId ? ":" + targetId : ""}`;
+  const key = interviewQuestionKey(s, q, night, targetId);
   s.askedLog[id] = s.askedLog[id] || [];
   if (s.askedLog[id].includes(key)) {
     s.patience[id] = Math.max(0, (s.patience[id] || 3) - 1);
@@ -11257,6 +11264,10 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
   const helpUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:help`);
   const howareUsed = (s.askedLog[iv.id] || []).includes(`${s.dayNum}:howare:`);
   const turnedQuestionUsed = (q) => (s.askedLog[iv.id] || []).includes(`${s.dayNum}:${q}`);
+  const nightQuestionUsed = (q, targetId, night = iv.night) => (s.askedLog[iv.id] || []).includes(interviewQuestionKey(s, q, night, targetId));
+  const whereUsed = nightQuestionUsed("where");
+  const sawQuestion = iv.contextEventId ? ["sawContext", iv.contextEventId] : ["saw", null];
+  const sawUsed = nightQuestionUsed(sawQuestion[0], sawQuestion[1]);
   const pickTargets = s.npcs.filter((x) => x.id !== iv.id);
   const shareCandidates = s.npcs.filter((x) => x.id !== iv.id && x.secretKnown && secretOf(s, x.id));
   const canReport = s.sideQuest && s.sideQuest.giver === iv.id && s.sideQuest.done && !s.sideQuest.reported;
@@ -11326,15 +11337,19 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
     </div>
   );
 
-  const faceGrid = (list, onPick) => (
+  const faceGrid = (list, onPick, isDisabled = () => false) => (
     <div className="grid grid-cols-4 gap-2 mt-1">
-      {list.map((x) => (
-        <button key={x.id} onClick={() => onPick(x)} className="mv-btn mvIvChip flex flex-col items-center gap-1 rounded-lg px-1 py-2"
-          style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: "pointer" }}>
-          <Portrait id={x.id} size={36} dead={!x.alive} turnedKnown={x.turned && x.known} />
-          <span style={{ fontSize: 12.5, color: C.text }}>{x.name}</span>
-        </button>
-      ))}
+      {list.map((x) => {
+        const disabled = isDisabled(x);
+        return (
+          <button key={x.id} onClick={() => !disabled && onPick(x)} disabled={disabled} className="mv-btn mvIvChip flex flex-col items-center gap-1 rounded-lg px-1 py-2"
+            style={{ background: C.panel2, border: `1px solid ${C.line}`, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.48 : 1 }}>
+            <Portrait id={x.id} size={36} dead={!x.alive} turnedKnown={x.turned && x.known} />
+            <span style={{ fontSize: 12.5, color: C.text }}>{x.name}</span>
+            {disabled && <span className="mv-display" style={{ fontSize: 8, letterSpacing: 1, color: C.dim }}>ASKED</span>}
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -11525,7 +11540,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               {subHead("WHAT YOU FOUND")}
               <div className="grid grid-cols-1 gap-2">
                 {contextQuestions.map((cq) => (
-                  <Btn key={cq.id} small kind="amber" onClick={() => askQ("context", cq.id)}>{cq.label}</Btn>
+                  <Btn key={cq.id} small kind="amber" disabled={nightQuestionUsed("context", cq.id, cq.night)} onClick={() => askQ("context", cq.id)}>{cq.label}</Btn>
                 ))}
                 {(iv.transcript.some((t) => t.flag) || s.statements.some((st) => st.id === iv.id && st.flag)) && (
                   <Btn small kind="red" onClick={() => askQ("press")}>You lied to me. Why?</Btn>
@@ -11540,8 +11555,8 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
               {subHead("ASK ABOUT A NIGHT")}
               {nightRow}
               <div className="grid grid-cols-2 gap-2">
-                <Btn small onClick={() => askQ("where")}>Where were you?</Btn>
-                <Btn small onClick={() => askQ("saw")}>Who did you see?</Btn>
+                <Btn small disabled={whereUsed} onClick={() => askQ("where")}>{whereUsed ? "Where were you? · Asked" : "Where were you?"}</Btn>
+                <Btn small disabled={sawUsed} onClick={() => askQ("saw")}>{sawUsed ? "Who did you see? · Asked" : "Who did you see?"}</Btn>
               </div>
               <div className="grid grid-cols-1 gap-2 mt-2">
                 <Btn small onClick={() => setIvSub("nightPerson")}>Did you see someone in particular?</Btn>
@@ -11589,7 +11604,7 @@ function InterviewView({ s, iv, setIv, ivSub, setIvSub, openerOpen, setOpenerOpe
           {begun && !done && !changed && ivSub === "nightPerson" && (
             <div>
               {subHead("WHO DID THEY SEE?", "catN")}
-              {faceGrid(pickTargets, (x) => askQ("about", x.id))}
+              {faceGrid(pickTargets, (x) => askQ("about", x.id), (x) => nightQuestionUsed("about", x.id))}
             </div>
           )}
           {begun && !done && !changed && ivSub === "share" && (
@@ -16385,6 +16400,7 @@ function MonsterVillage() {
     const questionNight = contextQuestion ? contextQuestion.night : turnedQuestion ? (turnNightOf(s, iv.id) || iv.night) : iv.night;
     const effectiveQ = q === "saw" && iv.contextEventId ? "sawContext" : q;
     const effectiveTarget = effectiveQ === "sawContext" ? iv.contextEventId : targetId;
+    if ((s.askedLog[iv.id] || []).includes(interviewQuestionKey(s, effectiveQ, questionNight, effectiveTarget))) return;
     const prevDisp = (npcById(s, iv.id) || {}).disp || 0;
     const { s: ns, ans } = applyAnswer(s, iv.id, questionNight, effectiveQ, effectiveTarget);
     /* -- Pass H: a soft warm chime whenever this question happened to lift
