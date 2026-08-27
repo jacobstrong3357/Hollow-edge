@@ -4204,6 +4204,7 @@ function isActive(s, m, n) {
      Ansel's ledger clue leans on it. Emboldenment only ever forces an EXTRA
      night out of the loose horrors, never an off-cycle kill from a strict one. */
   if (m.rhythm.kind === "strict") return (n - 1) % m.rhythm.n === 0;
+  if (consecutiveInactiveNights(s) >= 2) return true;
   if (n === s.embolden) return true;
   if (n - s.lastActive <= m.rhythm.gap) return false;
   /* Left to the dice alone a loose horror can go six or seven nights without
@@ -4214,6 +4215,15 @@ function isActive(s, m, n) {
   return chance(m.rhythm.p);
 }
 
+function consecutiveInactiveNights(s) {
+  let count = 0;
+  for (let i = (s.nightLogs || []).length - 1; i >= 0; i -= 1) {
+    if (s.nightLogs[i].active) break;
+    count += 1;
+  }
+  return count;
+}
+
 /* ================= NIGHT RESOLUTION ================= */
 
 /* Sample everything the night has decided: who is out and why, the weather,
@@ -4222,6 +4232,7 @@ function isActive(s, m, n) {
    player sees in the lanes is always the same night the dawn reports on. */
 function sampleNight(s, m, n) {
   const active = isActive(s, m, n);
+  const inactiveStreak = consecutiveInactiveNights(s);
   const wx = chance(0.45) ? pick(["fog", "storm", "frost"]) : null;
 
   /* A lasting affliction may fall on the village tonight. It is decided HERE,
@@ -4255,6 +4266,7 @@ function sampleNight(s, m, n) {
   /* Night one and a rare village disaster own their whole chapter. No card
      game or parish supper competes with a burning church or poisoned well. */
   if (n === 1 || affliction) evn = null;
+  else if (!active && inactiveStreak >= 2 && evPool.length) evn = evPool[stableIdx(`${s.gameId}:quiet-night-event:${n}`, evPool.length)];
   else if (evPool.length && chance(wx === "storm" ? 0.07 : 0.15)) evn = pick(evPool);
   const eventLoc = evn ? evn.loc : null;
   /* A crowd is reachable only if the monster can reach the room it occupies.
@@ -5683,7 +5695,7 @@ function resolveNight(prev, planIn, preEvents) {
       const motive = agenda && agenda.motive;
       const object = finding.object || (motive && motive.object && motive.object !== "nothing" ? motive.object : "something tied to your errand");
       const reason = motive && motive.reason ? motive.reason : "finish a private errand";
-      const returnable = finding.source !== "threshold_report";
+      const returnable = !["threshold_report", "threshold_missing_report"].includes(finding.source);
       const privateItem = finding.privateItem != null
         ? !!finding.privateItem
         : /parcel|packet|bundle|wrapped|satchel|note|letter|message|mail/i.test(object);
@@ -5694,7 +5706,7 @@ function resolveNight(prev, planIn, preEvents) {
         honest: finding.honest || `“It is mine. I carried it because I went out to ${reason}.”`,
         evasive: finding.evasive || `“It is not mine.”`,
         findingText: finding.text, weather: director.weather,
-        object, privateItem, returnable,
+        object, privateItem, returnable, source: finding.source || null,
       };
     });
     const findingObservations = (projection.findings || []).map((finding) => ({
@@ -12261,6 +12273,11 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heDeathScene .heDeathLook:hover { background:#FFF7E8 !important; border-color:#772B2B !important; transform:translateY(-1px) rotate(-.08deg); }
 .heDeathScene .heDeathLookLabel { color:var(--he-ink) !important; text-shadow:none !important; font-size:11px !important; line-height:1.2; font-weight:650; text-align:center; }
 .heDeathScene .mvIvDock { background:rgba(31,17,18,.97) !important; border-top:2px solid rgba(119,43,43,.78) !important; }
+@media (max-width: 540px) {
+  .heDeathScene > .max-w-md { width:calc(100% - 28px) !important; max-width:25rem !important; }
+  .heDeathScene .heDeathBody { padding-left:14px !important; padding-right:14px !important; }
+  .heEpilogue > .max-w-md, .heEnding > .max-w-md { width:calc(100% - 28px) !important; max-width:25rem !important; }
+}
 .heLocationPlate { position:relative; width:100%; overflow:hidden; background:#D8CAB3; isolation:isolate; }
 .heLocationPlate > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; user-select:none; }
 .heLocationPlateDay > img { filter:saturate(.94) sepia(.025) contrast(1.02); }
@@ -13285,7 +13302,7 @@ const LOSS_DEATHS = {
   ],
   hag: [
     (nm) => `${nm} went to bed tired, the way everyone is tired now, and did not wake. Whatever rode them down left no mark but the scream caught behind their own face, never released.`,
-    (nm) => `They found ${nm} in bed, sheets barely disturbed, almost peaceful except around the eyes, and permanently gone. The hag leaves no struggle to clean up after; she prefers her work tidy.`,
+    (nm) => `They found ${nm} in bed, sheets barely disturbed, almost peaceful except around the eyes, and permanently gone. The hag leaves no struggle to clean up after; the thing prefers its work tidy.`,
     (nm) => `${nm}'s heart stopped somewhere in the deepest part of the night, ridden down by something delighted, and patient, and far heavier than it looked, that took its time about finishing.`,
   ],
   necromancer: [
@@ -14422,7 +14439,7 @@ function MonsterVillage() {
     );
 
     if (!epiOpen) return (
-      <div className="fixed inset-0 mv-body heNight flex flex-col" style={{ background: tone.ground, color: C.parch, overflow: "hidden" }}>
+      <div className="fixed inset-0 mv-body heNight heEnding flex flex-col" style={{ background: tone.ground, color: C.parch, overflow: "hidden" }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse 74% 46% at 50% 34%, ${tone.glow} 0%, rgba(8,10,10,0.92) 62%, ${tone.ground} 100%)` }} />
@@ -14495,7 +14512,7 @@ function MonsterVillage() {
     );
 
     return (
-      <div className="min-h-screen mv-body" style={{ background: C.bg, color: C.text }}>
+      <div className="min-h-screen mv-body heEpilogue" style={{ background: C.bg, color: C.text }}>
         <style>{CSS_ALL}</style>
         <div className="max-w-md mx-auto px-5 pt-10 pb-10">
           <div className="mvIn" style={{ animationDelay: "0.2s" }}>
@@ -16142,6 +16159,13 @@ function MonsterVillage() {
   /* how many daylight hours are left, said the way the village would say it */
   const apKicker = () => `DAY ${s.dayNum} · ${s.ap === 1 ? "ONE ACTION LEFT" : s.ap === 2 ? "TWO ACTIONS" : `${s.ap} ACTIONS`}`;
 
+  const spentModal = modal === "spent" && pickerShell(
+    `DAY ${s.dayNum} · NO ACTIONS LEFT`,
+    "Daylight is spent",
+    <Plaque rule="bone"><p style={{ margin: 0, fontSize: 16, lineHeight: 1.55 }}>You’ve done all you can today. Let night fall and see what the evening brings.</p></Plaque>,
+    () => setModal(null), C.amber
+  );
+
   const searchModal = modal === "search" && (
     <div className="fixed inset-0 z-40 mv-body heDay heSearchBriefing flex flex-col" style={{ background: C.bg, color: C.text, overflow: "hidden" }}>
       <div className="max-w-md mx-auto w-full h-full flex flex-col relative" style={{ minHeight: 0, overflow: "hidden" }}>
@@ -16395,6 +16419,13 @@ function MonsterVillage() {
               One visit spends an action. Ask about their movements, what they saw, or somebody else in the village. You will have three questions.
             </p>
           </Plaque>
+          {[...new Set((s.worldEvents || []).filter((event) => event.source === "threshold_missing_report").flatMap((event) => event.actorIds || []))].map((id) => {
+            const lead = npcById(s, id);
+            const evading = lead && s.faceKnown === lead.id && s.monsterSawYou;
+            if (lead && lead.alive && !lead.fled && !evading) return null;
+            const reason = !lead || !lead.alive ? "is dead and cannot answer" : lead.fled ? "is missing from the village" : "has gone to ground and cannot be questioned";
+            return <Plaque key={`unavailable-lead:${id}`} rule="amber"><p style={{ margin: 0, fontSize: 14, lineHeight: 1.45 }}><strong>{lead ? lead.name : "That neighbour"}</strong> {reason}. The report remains in your Journal until they can be accounted for.</p></Plaque>;
+          })}
           <div className="heInterviewPicker" style={{ marginTop: "auto", marginBottom: 4 }}>
             <span className="mv-display" style={{ display: "block", textAlign: "center", fontSize: 12, letterSpacing: 2.5, color: C.inkDim }}>· WHO WILL YOU QUESTION ·</span>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "min-content", gap: 8, marginTop: 11 }}>
@@ -17276,9 +17307,9 @@ function MonsterVillage() {
   /* An errand is an engraved plaque with daylight on its rule: amber, because
      pressing it spends one of the day's two hours. The rule is the same on all
      four - what differs is what the errand is, not how much it costs. */
-  const actCard = (icon, title, hint, onClick, disabled) => (
-    <button onClick={onClick} disabled={disabled} className="mv-btn heActionCard"
-      style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", padding: "6px 9px 7px", background: C.sky, border: "none", borderTop: `2px solid ${C.amber}`, borderRadius: 2, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
+  const actCard = (icon, title, hint, onClick, disabled, spent) => (
+    <button onClick={spent ? () => setModal("spent") : onClick} disabled={disabled && !spent} className="mv-btn heActionCard"
+      style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", padding: "6px 9px 7px", background: C.sky, border: "none", borderTop: `2px solid ${C.amber}`, borderRadius: 2, cursor: disabled && !spent ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
       <span className="heActionCardIcon" style={{ color: C.amber, flexShrink: 0, marginTop: 1 }}><MvIcon k={icon} /></span>
       <span style={{ minWidth: 0 }}>
         <span className="mv-display block heActionCardTitle" style={{ fontSize: 14, letterSpacing: 0.8, color: C.parch, lineHeight: 1.15 }}>{title}</span>
@@ -17288,9 +17319,9 @@ function MonsterVillage() {
   );
   /* The errands the village asks of you, rather than the four you choose from:
      bone on the rule, full width, and they still cost an hour. */
-  const sideActCard = (glyph, title, hint, onClick, disabled) => (
-    <button onClick={onClick} disabled={disabled} className="mv-btn heActionCard heActionCardSide w-full"
-      style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", padding: "6px 9px 7px", background: C.sky, border: "none", borderTop: `2px solid ${C.parchLine}`, borderRadius: 2, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
+  const sideActCard = (glyph, title, hint, onClick, disabled, spent) => (
+    <button onClick={spent ? () => setModal("spent") : onClick} disabled={disabled && !spent} className="mv-btn heActionCard heActionCardSide w-full"
+      style={{ display: "flex", gap: 8, alignItems: "flex-start", textAlign: "left", padding: "6px 9px 7px", background: C.sky, border: "none", borderTop: `2px solid ${C.parchLine}`, borderRadius: 2, cursor: disabled && !spent ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
       <span className="heActionCardIcon" style={{ color: C.parchLine, fontSize: 21.5, flexShrink: 0, lineHeight: 1, width: 24, textAlign: "center" }}>{glyph}</span>
       <span style={{ minWidth: 0 }}>
         <span className="mv-display block heActionCardTitle" style={{ fontSize: 14, letterSpacing: 0.8, color: C.parch, lineHeight: 1.15 }}>{title}</span>
@@ -17343,7 +17374,7 @@ function MonsterVillage() {
   return (
     <div className="min-h-screen mv-body heDay" style={{ background: C.bg, color: C.text }}>
       <style>{CSS_ALL}</style>
-      {journal}{searchModal}{daySceneModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{unbindModal}{favourModal}{accuseConfirmModal}{accuseModal}{profileModal}{resultSheet}
+      {journal}{spentModal}{searchModal}{daySceneModal}{questionModal}{interviewModal}{investModal}{examineModal}{planModal}{walkModal}{riteModal}{unbindModal}{favourModal}{accuseConfirmModal}{accuseModal}{profileModal}{resultSheet}
 
       <div inert={dayOverlayOpen ? "" : undefined} aria-hidden={dayOverlayOpen ? "true" : undefined}>
 
@@ -17548,19 +17579,19 @@ function MonsterVillage() {
             </span>
           </div>
           <div className="grid grid-cols-2 heActionGrid" style={{ gap: 8, marginTop: 10 }}>
-            {actCard("invest", investigateTitle(freshDeath), investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum)}
-            {actCard("search", "Search a Place", "Turn a place over by daylight", () => setModal("search"), s.ap < 1)}
-            {actCard("talk", "Hold Interview", "Three questions, one visit", () => setModal("question"), s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length)}
-            {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => { setExamRes(null); setModal("examine"); }, s.ap < 1 || !canExamine)}
+            {actCard("invest", investigateTitle(freshDeath), investigateLabel(s, freshDeath), openInvest, s.ap < 1 || !freshDeath || s.investigatedNight === s.nightNum, s.ap < 1)}
+            {actCard("search", "Search a Place", "Turn a place over by daylight", () => setModal("search"), s.ap < 1, s.ap < 1)}
+            {actCard("talk", "Hold Interview", "Three questions, one visit", () => setModal("question"), s.ap < 1 || s.questionedToday.length >= aliveNpcs(s).length, s.ap < 1)}
+            {actCard("exam", "The Examination", examineLabel(canExamine, !falkCanExamine), () => { setExamRes(null); setModal("examine"); }, s.ap < 1 || !canExamine, s.ap < 1)}
           </div>
           <div className="grid grid-cols-1 heActionGrid heActionGridSide" style={{ gap: 8, marginTop: 8 }}>
-            {s.mob && mobT && mobT.alive && sideActCard("⚖", `Speak for ${mobT.name} in the Square`, defendLabel(s, mobT), () => doAction((x) => actDefend(x)), s.ap < 1 || s.defendedToday)}
+            {s.mob && mobT && mobT.alive && sideActCard("⚖", `Speak for ${mobT.name} in the Square`, defendLabel(s, mobT), () => doAction((x) => actDefend(x)), s.ap < 1 || s.defendedToday, s.ap < 1)}
             {/* Always shown once there is a changed neighbour to try it on, and
                 it says out loud why it cannot be run: a card that is simply
                 dark and silent reads as a tap that did nothing. */}
             {eligibleUnbind.length > 0 && sideActCard("✝", "The Rite of Unbinding",
               s.ap < 1 ? "No hours left today. The rite takes all of them" : `Call ${eligibleUnbind.length === 1 ? eligibleUnbind[0].name : "one of them"} back from the change. Takes the whole day, one attempt each`,
-              () => setModal("unbind"), s.ap < 1)}
+              () => setModal("unbind"), s.ap < 1, s.ap < 1)}
             {/* and once every changed neighbour has had their one attempt, the
                 card stays, spent, rather than vanishing without explanation */}
             {eligibleUnbind.length === 0 && s.npcs.some((x) => x.alive && x.turned && x.known && x.unbindTried) &&

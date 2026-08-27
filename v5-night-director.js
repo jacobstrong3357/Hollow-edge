@@ -824,7 +824,7 @@
       },
       currentFacts: facts,
       knownSigns: (config.knownSigns || []).slice(),
-      gathering: config.gathering ? Object.assign({ shown: false }, clone(config.gathering)) : null,
+      gathering: config.gathering ? Object.assign({ shown: false, announced: false, seen: false }, clone(config.gathering)) : null,
       presentedActorIds: [],
       followedActorIds: [],
       encounterBudget: config.encounterBudget == null ? 2 : Math.max(0, Number(config.encounterBudget)),
@@ -967,7 +967,7 @@
     /* A public gathering is the scene on first arrival. Do not let a random
        private sensation overwrite it and leave the player hearing testimony
        tomorrow about an event the interface never showed. */
-    if (state.currentBeat && state.currentBeat.type === "atmosphere" && state.gathering && state.gathering.shown) return;
+    if (state.currentBeat && state.currentBeat.type === "atmosphere" && state.currentBeat.meta && state.currentBeat.meta.gatheringId) return;
     var key = slot + "|" + state.player.location;
     var entries = (state.discoverySchedule[key] || []).concat(state.discoverySchedule[slot + "|*"] || []).sort(function (a, b) {
       /* The watched door is the player's chosen purpose for this hour. Show
@@ -977,6 +977,7 @@
       var bPriority = b.meta && b.meta.affliction ? 3 : b.type === "watch" ? 2 : b.meta && b.meta.secretLead ? 1 : 0;
       return aPriority - bPriority;
     });
+    var visibleDiscoveries = [];
     entries.forEach(function (beat) {
       var reveal = discoveryReveals(beat, action);
       if (!reveal) return;
@@ -1001,6 +1002,8 @@
       presented.text = weatherDiscoveryText(state, presented);
       var shown = appendBeat(state, presented);
       if (!shown) return;
+      if (visibleDiscoveries.length) shown.text = visibleDiscoveries.map(function (earlier) { return earlier.text; }).concat([shown.text]).join(" ");
+      visibleDiscoveries.push(shown);
       if (beat.type === "stamp") state.found.stamps.push({ sign: beat.sign, slot: slot, location: beat.location, beatId: beat.id });
       if (beat.type === "clue") state.found.clues.push(clone(presented));
       if (beat.type === "whisper") state.found.whispers.push(clone(presented));
@@ -1663,8 +1666,11 @@
     /* A public village event is known before the player chooses a road. If
        they travel elsewhere, announce it once as public context instead of
        silently adding it to tomorrow's testimony and night record. */
-    if (state.gathering && !state.gathering.shown && (atGathering || slot === 0)) {
-      state.gathering.shown = true;
+    var shouldShowGathering = state.gathering && ((atGathering && !state.gathering.seen) || (!atGathering && slot === 0 && !state.gathering.announced));
+    if (shouldShowGathering) {
+      if (atGathering) state.gathering.seen = true;
+      else state.gathering.announced = true;
+      state.gathering.shown = !!state.gathering.seen;
       gatheringShown = true;
       var gatheringTruth = appendTruth(state, {
         id: "gathering:" + slot + ":" + state.gathering.id,
@@ -1875,7 +1881,10 @@
       ];
       return thresholdLine(state, threshold.dialogueRoll, lines);
     }
-    if (threshold.purpose === "concern") return "“I will help,” you say. " + name + " answers, “Bring your lantern. We start at the " + threshold.clueLocation + ".”";
+    if (threshold.purpose === "concern") {
+      var missing = thresholdTarget(state);
+      return "“I will help,” you say. " + name + " answers, “" + (missing ? missing.name : "They") + " left for the " + threshold.clueLocation + " before the bell. Their home is still dark. Bring your lantern; I will show you where I last saw them.”";
+    }
     if (threshold.purpose === "rumour") return "“All right,” you say. " + name + " glances toward the road. “Not at the door. Walk with me.”";
     if (threshold.purpose === "refuge") return "“Wait there,” you say. " + name + " answers, “Please hurry. I heard it behind me.”";
     if (threshold.purpose === "return_item" && !threshold.looked) {
@@ -2332,8 +2341,27 @@
           state.found.stamps.push({ sign: threshold.sign, slot: state.cursor, location: threshold.clueLocation, beatId: "threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), source: "threshold_neighbour" });
         }
       } else if (threshold.purpose === "concern") {
-        text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " says " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " missed an expected return from the " + threshold.clueLocation + ". It may be fear, or it may be useful.";
-        state.found.clues.push({ id: "threshold-concern:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
+        var concernTarget = thresholdTarget(state);
+        var concernName = concernTarget ? concernTarget.name : "the missing neighbour";
+        var reporterName = actor ? actor.name : "Your neighbour";
+        text = "You lift the bar and open the door. Outside, " + reporterName + " retraces the evening: " + concernName + " took the road toward the " + threshold.clueLocation + " before the bell, never reached home, and left no answer there. You search the first stretch together, then agree what each of you must ask by daylight.";
+        state.found.clues.push({ id: "threshold-concern:" + state.cursor, slot: state.cursor, location: threshold.clueLocation, text: text, source: "threshold_neighbour" });
+        if (actor && concernTarget) appendTruth(state, {
+          id: "threshold-missing-report:" + state.cursor + ":" + concernTarget.id,
+          slot: state.cursor,
+          kind: "threshold_missing_report",
+          location: threshold.clueLocation,
+          actors: ["player", actor.id, concernTarget.id],
+          reporterId: actor.id,
+          subjectId: concernTarget.id,
+          text: actor.name + " reported that " + concernTarget.name + " failed to return from the " + threshold.clueLocation + ".",
+          reporterQuestion: "You came to my door because " + concernTarget.name + " had not returned from the " + threshold.clueLocation + ". What exactly did you see?",
+          reporterHonest: "“I saw " + concernTarget.name + " take the road toward the " + threshold.clueLocation + " before the bell. Their home stayed dark, so I came to you.”",
+          reporterEvasive: "“I told you what frightened me. I cannot turn worry into proof.”",
+          subjectQuestion: actor.name + " said you never came home from the " + threshold.clueLocation + ". Where were you?",
+          subjectHonest: "“I was delayed on the road from the " + threshold.clueLocation + ". I should have sent word. " + actor.name + " had reason to worry.”",
+          subjectEvasive: "“" + actor.name + " lost sight of me. That is not the same as knowing where I went.”"
+        });
       } else if (threshold.purpose === "rumour") {
         text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " lowers their voice. “I saw " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " near the " + threshold.clueLocation + " after dark. I cannot say why.” You write down the lead, not a conclusion.";
         state.found.clues.push({ id: "threshold-rumour:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
@@ -3359,6 +3387,13 @@
         acceptedLure ? "Accept. Walk with " + guidedActor.name : null
       );
     }
+    /* A public event announced from another road remains reachable. The
+       first move says where the player is going; arrival owns the event
+       scene, so the UI never pretends they attended it from afar. */
+    if (state.gathering && state.gathering.announced && !state.gathering.seen && state.player.location !== state.gathering.location) {
+      var gatheringPath = shortestPath(state.graph, state.player.location, state.gathering.location);
+      add(all.find(function (item) { return item.type === "MOVE" && item.to === gatheringPath[1]; }), "Go to the " + state.gathering.name + " at the " + state.gathering.location);
+    }
     var atTarget = !!target && state.player.location === target;
     if (target && !atTarget) {
       var path = shortestPath(state.graph, state.player.location, target);
@@ -3502,6 +3537,37 @@
         source: "threshold_report"
       };
     }));
+    findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
+      return event.kind === "threshold_missing_report";
+    }).reduce(function (rows, event) {
+      rows.push({
+        eventId: event.id + ":reporter",
+        actorId: event.reporterId,
+        subjectId: event.subjectId,
+        reporterId: event.reporterId,
+        location: event.location,
+        slot: event.slot,
+        text: event.text,
+        question: event.reporterQuestion,
+        honest: event.reporterHonest,
+        evasive: event.reporterEvasive,
+        source: "threshold_missing_report"
+      });
+      rows.push({
+        eventId: event.id + ":subject",
+        actorId: event.subjectId,
+        subjectId: event.subjectId,
+        reporterId: event.reporterId,
+        location: event.location,
+        slot: event.slot,
+        text: event.text,
+        question: event.subjectQuestion,
+        honest: event.subjectHonest,
+        evasive: event.subjectEvasive,
+        source: "threshold_missing_report"
+      });
+      return rows;
+    }, []));
     var secrets = (state.ledgers.truth || []).filter(function (event) {
       return event.kind === "followed" && event.revealedSecret;
     }).map(function (event) {

@@ -667,6 +667,9 @@ function answerAttackSetup(state, preferredMode) {
   state = take(state, { type: "SEARCH" });
   assert.strictEqual(state.found.stamps.length, 1);
   assert.strictEqual(state.found.clues.length, 1, "a searched mundane object is filed separately from a monster sign");
+  var livedDiscoveries = state.beats.filter(function (beat) { return beat.id === "forced-stamp" || beat.id === "forced-clue"; });
+  assert.strictEqual(livedDiscoveries.length, 2);
+  assert(livedDiscoveries[1].text.includes(livedDiscoveries[0].text), "every discovery filed from one search is surfaced together on the lived card");
   assert.strictEqual(state.found.stamps[0].sign, "tracks");
   assert(state.beats.some(function (beat) { return beat.id === "forced-stamp" && /fog/i.test(beat.text); }), "fog is present in the physical-search presentation, not only the night label");
   assert(state.monsterSchedule.signs.indexOf(state.found.stamps[0].sign) >= 0, "stamps only reveal a real monster sign");
@@ -1910,8 +1913,30 @@ function answerAttackSetup(state, preferredMode) {
   state = take(state, { type: "REACH_HOME" });
   assert(/Doctor Falk has not come home/i.test(state.currentBeat.text));
   state = take(state, { type: "ANSWER_DOOR" });
+  assert(/left for the Old Mill before the bell/i.test(state.currentBeat.text), "answering advances from the missing-person claim to a concrete last sighting");
   state = take(state, { type: "STEP_OUTSIDE" });
-  assert(state.found.clues.some(function (clue) { return /Doctor Falk/.test(clue.text) && /fear, or it may be useful/.test(clue.text); }), "a worried neighbour creates a lead without declaring it true");
+  assert(state.found.clues.some(function (clue) { return /Doctor Falk/.test(clue.text) && /search the first stretch together/i.test(clue.text); }), "opening the door advances the search instead of repeating the threshold line");
+  var findings = Director.consequenceProjection(state).findings.filter(function (finding) { return finding.source === "threshold_missing_report"; });
+  assert.deepStrictEqual(findings.map(function (finding) { return finding.actorId; }).sort(), ["falk", "rosa"], "the reporter and missing neighbour each receive a usable interview lead");
+  assert(findings.every(function (finding) { return finding.question && finding.honest && finding.evasive; }), "both sides of the report have complete interview copy");
+})();
+
+(function announcedGatheringsRemainReachable() {
+  var config = baseConfig("remote-market-route");
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { rosa: "home", falk: "home", ansel: "home" } };
+  config.gathering = { id: "market", name: "market eve", location: "Village Square", text: "Market eve fills the square with lanterns and neighbours.", distantText: "Market eve is underway in the Village Square." };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Tavern" });
+  assert.strictEqual(state.gathering.announced, true);
+  assert.strictEqual(state.gathering.seen, false, "hearing the event from the Tavern does not pretend the player attended it");
+  var route = Director.guidedActions(state, { target: "Tavern", kind: "search", intentDone: false, searches: {}, interacted: {} }).find(function (entry) { return /Go to the market eve/.test(entry.label); });
+  assert(route && route.type === "MOVE" && route.to === "Village Square", "the announced event offers a clear route from another location");
+  state = take(state, route);
+  assert.strictEqual(state.gathering.seen, true);
+  assert(state.ledgers.truth.some(function (event) { return event.kind === "gathering_announced"; }) && state.ledgers.truth.some(function (event) { return event.kind === "gathering_seen"; }), "announcement and attendance remain distinct causal facts");
+  assert(/fills the square/.test(state.currentBeat.text), "arrival shows the event itself rather than repeating the distant notice");
 })();
 
 (function goingHomeDoesNotStopTheVillageClock() {
@@ -2992,6 +3017,22 @@ function answerAttackSetup(state, preferredMode) {
   });
   assert(html.includes("The monster has followed you here.") && html.includes("IT FOLLOWED YOU HERE"), "a live marked stalk says plainly that the monster followed the player");
   assert(directorSource.includes("Turn. Keep the lantern on the footsteps"), "the marked-stalk response describes the player's immediate action instead of promising a confrontation");
+  assert(html.includes('modal === "spent"') && html.includes("You’ve done all you can today. Let night fall and see what the evening brings."), "zero-action daylight taps explain that the day is spent");
+  assert(html.includes('disabled={disabled && !spent}') && html.includes('spent ? () => setModal("spent") : onClick'), "spent daylight cards remain tappable while genuinely unavailable actions remain disabled");
+  assert(!html.includes("The hag leaves no struggle to clean up after; she prefers her work tidy."), "the Night Hag death cannot read as though a male victim is she");
+  assert(html.includes("the thing prefers its work tidy"), "the Night Hag sentence identifies the monster rather than borrowing the victim's pronoun");
+  assert(html.includes('.heDeathScene > .max-w-md { width:calc(100% - 28px)') && html.includes('max-width:25rem'), "mobile death and ending copy receives a narrower inset frame");
+  var pacingSource = html.slice(html.indexOf("function isActive"), html.indexOf("/* ================= NIGHT RESOLUTION", html.indexOf("function isActive")));
+  var pacingContext = { chance: function () { return false; } };
+  vm.createContext(pacingContext);
+  vm.runInContext(pacingSource + "; this.isActive = isActive; this.consecutiveInactiveNights = consecutiveInactiveNights;", pacingContext);
+  var quietRun = { embolden: 0, lastActive: 1, nightLogs: [{ active: true }, { active: false }, { active: false }] };
+  assert.strictEqual(pacingContext.consecutiveInactiveNights(quietRun), 2);
+  assert.strictEqual(pacingContext.isActive(quietRun, { rhythm: { kind: "loose", gap: 1, p: 0 } }, 4), true, "a loose monster cannot produce a third consecutive inactive night");
+  assert.strictEqual(pacingContext.isActive(quietRun, { rhythm: { kind: "strict", n: 4 } }, 4), false, "the pacing guard does not break a strict creature's promised count");
+  assert(html.includes("quiet-night-event") && html.includes("inactiveStreak >= 2"), "a strict-cycle lull receives deterministic public activity instead of a dead stretch");
+  assert(directorSource.includes("visibleDiscoveries") && directorSource.includes('join(" ")'), "multiple findings earned in one action are presented together before entering the Journal");
+  assert(html.includes('source === "threshold_missing_report"') && html.includes("is missing from the village"), "an unavailable subject of a threshold report is explained in the interview picker");
   var runtimeCopy = [html, directorSource, fs.readFileSync(path.join(__dirname, "..", "v5-content.js"), "utf8")].join("\n");
   assert(!runtimeCopy.includes("\u2014"), "player-facing runtime files contain no em dashes");
   [
