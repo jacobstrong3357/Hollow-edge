@@ -3038,7 +3038,7 @@ function answerAttackSetup(state, preferredMode) {
   assert(html.includes("if (runDayUi && runDayUi.iv)") && html.includes("setDayScene(runDayUi.dayScene)"), "continue restores the exact interview or search presentation");
   assert(html.includes("function interviewQuestionKey") && html.includes('disabled={whereUsed}') && html.includes('disabled={sawUsed}'), "paid night questions are visibly unavailable after use");
   assert(html.includes("nightQuestionUsed(\"about\", x.id)") && html.includes("includes(interviewQuestionKey(s, effectiveQ, questionNight, effectiveTarget))"), "per-person night questions and stale duplicate taps cannot spend twice");
-  assert(html.includes("PROLOGUE · BEFORE THE FIRST MORNING") && html.includes('prologueNight ? "THE FIRST NIGHT"'), "the opening night is labelled as a prologue rather than implying player agency already passed");
+  assert(html.includes('prologueNight ? "PROLOGUE"') && html.includes('prologueNight ? "THE FIRST NIGHT"'), "the opening night is labelled as a prologue rather than implying player agency already passed");
   assert(html.includes('aria-label={`Open ${npc.name}`}'), "dawn portrait buttons have an accessible name");
   assert(html.includes("showScrollHint") && html.includes("heNightScrollHint"), "overflowing night scenes show a mobile scroll affordance until the reader reaches the bottom");
   assert(directorSource.includes("function weatherHiddenFigureText") && directorSource.includes("weatherHiddenFigureText(state)"), "an obscured figure has distinct setup copy before identification");
