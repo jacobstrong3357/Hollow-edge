@@ -1701,10 +1701,11 @@
     var priorityDiscovery = (state.discoverySchedule[discoveryKey] || []).some(function (beat) { return discoveryReveals(beat, action); });
     if (!gatheringShown && !priorityDiscovery && action.actorId && visible.some(function (villager) { return villager.id === action.actorId; })) framedId = action.actorId;
     else if (!gatheringShown && !priorityDiscovery && ["LEAVE", "MOVE", "WAIT", "KEEP_WATCH"].indexOf(action.type) >= 0 && state.presentedActorIds.length < state.encounterBudget) {
+      var slotPriorities = state.attackPriorities[slot] || {};
       framedId = visible.filter(function (villager) { return state.presentedActorIds.indexOf(villager.id) < 0; }).sort(function (a, b) {
         var aSecretLead = a.dialogue && a.dialogue.revealsSecret ? 0 : 1;
         var bSecretLead = b.dialogue && b.dialogue.revealsSecret ? 0 : 1;
-        return aSecretLead - bSecretLead || (state.attackPriorities[slot][a.id] || 1) - (state.attackPriorities[slot][b.id] || 1);
+        return aSecretLead - bSecretLead || (slotPriorities[a.id] || 1) - (slotPriorities[b.id] || 1);
       }).map(function (villager) { return villager.id; })[0] || null;
     }
     if (framedId && state.presentedActorIds.indexOf(framedId) < 0) state.presentedActorIds.push(framedId);
