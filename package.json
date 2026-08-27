@@ -1,0 +1,20 @@
+{
+  "name": "hollows-edge",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-site.mjs",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tone": "14.7.77"
+  },
+  "devDependencies": {
+    "autoprefixer": "10.4.21",
+    "esbuild": "0.25.9",
+    "postcss": "8.5.26",
+    "tailwindcss": "3.4.17"
+  }
+}

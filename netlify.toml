@@ -1,4 +1,8 @@
-# The game is index.html alone; repo docs stay out of the published site.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Repo docs stay out of the published site.
 [[redirects]]
   from = "/CLAUDE.md"
   to = "/"
