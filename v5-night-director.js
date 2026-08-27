@@ -70,6 +70,13 @@
     return "A figure crosses the edge of your lantern. Their coat looks familiar, but their face is turned away.";
   }
 
+  function weatherHiddenFigureText(state) {
+    if (state.weather === "fog") return "Someone moves across the road inside the fog. The lantern catches a shoulder, then nothing but white air.";
+    if (state.weather === "storm") return "A person-shaped shadow crosses between flashes. By the next lightning strike, the road is empty.";
+    if (state.weather === "frost") return "A figure crosses the blue lane. Their face is turned away, but breath and bootprints mark the road.";
+    return "Someone passes just beyond the lantern's reach. You know the shape belongs to the village, but not yet whose it is.";
+  }
+
   function weatherMonsterText(state, mode, distance) {
     var near = distance === "near";
     if (state.weather === "fog") return near
@@ -257,8 +264,8 @@
     ],
     [
       "The church bell swings above you without making a sound.",
-      "For one breath you remember being inside it while something struck the bronze around you.",
-      "Then sound returns: insects, wind, your own pulse. The bell is still. The memory was not yours, and it was not real."
+      "For one breath you remember being inside it while something strikes the bronze.",
+      "Sound returns: insects, wind, your pulse. The bell is still. The memory was not yours."
     ]
   ];
 
@@ -1708,7 +1715,7 @@
     if (!gatheringShown && !priorityDiscovery && !framedId && hiddenByWeather.length && ["LEAVE", "MOVE", "WAIT", "KEEP_WATCH"].indexOf(action.type) >= 0) {
       var hiddenFigure = hiddenByWeather[0];
       appendBeat(state, makeBeat("weather-hidden:" + slot + ":" + state.player.location, "atmosphere", slot, state.player.location,
-        state.weather === "frost" ? "A figure crosses the blue lane. Their face is turned away, but breath and bootprints mark the road." : weatherEncounterText(state, hiddenFigure, false),
+        weatherHiddenFigureText(state),
         { meta: { weatherHidden: true, hiddenFigure: true, hiddenActorId: hiddenFigure.id, requiresResponse: true, weather: state.weather } }));
     }
     processDiscoveries(state, action, slot);

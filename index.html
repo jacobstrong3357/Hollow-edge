@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Hollow's Edge</title>
 <meta name="description" content="A village. As many nights as it takes. Something among you." />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="assets/ink-v1/scenes/village-gate-ink-v1.webp" as="image" type="image/webp" fetchpriority="high" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
@@ -1003,10 +1004,10 @@ const DAY_SEARCH_STYLES = {
 const DAY_SEARCH_FOLK = [
   (nm, l) => `${nm} crosses the ${l} carrying a basket, pauses to ask what you have checked, then points out a strip of ground you missed. Nothing is there.`,
   (nm, l) => `You cross paths with ${nm} partway through. Neither of you asks what the other is looking for. Neither of you has to.`,
-  (nm, l) => `${nm} watches you work the ground for a while before moving on. "Find it," they say, quietly, and do not stop to hear an answer.`,
+  (nm, l) => `${nm} watches you work the ground for a while before moving on. "Find it," ${nm} says quietly, and does not stop to hear an answer.`,
   (nm, l) => `${nm} passes with a basket and does not stop, but their eyes go to the same corners yours do. Everyone reads the ground now.`,
   (nm, l) => `${nm} lingers at the edge of the ${l}, arms folded. "My grandmother searched like that," they offer, "the winter nobody names." Then they leave you to it.`,
-  (nm, l) => `Halfway through the morning, ${nm} appears with something wrapped in cloth: bread, still warm. "You're the only one doing anything," they say, and go before you can argue with either half of that.`,
+  (nm, l) => `Halfway through the morning, ${nm} appears with something wrapped in cloth: bread, still warm. "You're the only one doing anything," ${nm} says, and leaves before you can argue with either half of that.`,
 ];
 const DAY_GOSSIP = [
   `Two women count the candles carried from the church and find one missing. Neither remembers whether the count was right to begin with.`,
@@ -1581,7 +1582,7 @@ const N1_TENSION_1 = [
   (nm, s, S, o, p) => `The quiet finds ${o} first. Then the certainty of being watched.`,
 ];
 const N1_TENSION_2 = [
-  (nm, s, S, o, p) => `${S} does not turn around. ${S} walks faster. Whatever keeps pace does not trouble to.`,
+  (nm, s, S, o, p) => `${S} does not turn around. ${S} walks faster. Whatever keeps pace does not need to.`,
   (nm, s, S, o, p) => `The shape ahead was not there a breath ago, and is no neighbour.`,
   (nm, s, S, o, p) => `The last lit window goes dark as ${s} passes. The lane belongs to ${o} and one other thing.`,
 ];
@@ -11921,6 +11922,21 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
   const tn = NIGHT_TONES[tone] || NIGHT_TONES.night;
   const wd = NIGHT_WOUNDS[wound] || null;
   const sky = NIGHT_SKIES[wx] || null;
+  const bodyRef = useRef(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const updateScrollHint = () => {
+    const el = bodyRef.current;
+    if (el) setShowScrollHint(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+  };
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const frame = requestAnimationFrame(updateScrollHint);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateScrollHint) : null;
+    if (observer) observer.observe(el);
+    window.addEventListener("resize", updateScrollHint);
+    return () => { cancelAnimationFrame(frame); if (observer) observer.disconnect(); window.removeEventListener("resize", updateScrollHint); };
+  }, [children]);
   const walkSource = LOCATION_NIGHT_WALK_WOUND_ART[wound] || LOCATION_NIGHT_WALK_ART[loc] || LOCATION_NIGHT_ART[loc] || LOCATION_NIGHT_ART.Cottage;
   return (
     <div className={`fixed inset-0 z-40 mv-body heNight heNightShell flex flex-col${wx ? ` is-wx-${wx}` : " is-wx-still"}${watched ? " heChurchyardWatched" : ""}${withheld ? " heNightWithheld" : ""}`} style={{ height: "100dvh", background: tn.bg, color: C.parch, overflow: "hidden" }}>
@@ -11946,9 +11962,10 @@ function NightShell({ loc, kicker, onClose, closeLabel = "close", tone = "night"
             <button onClick={onClose} className="mv-btn mv-body" style={{ marginLeft: "auto", padding: "2px 1px", background: "rgba(7,9,16,.28)", border: "none", borderBottom: "1px solid rgba(233,223,200,0.48)", color: "rgba(233,223,200,0.84)", fontSize: 13.5, cursor: "pointer", textShadow: "0 1px 5px #000" }}>{closeLabel}</button>
           )}
         </div>
-        <div className="relative flex-1 min-h-0 flex flex-col heNightShellBody" style={{ padding: "0 22px max(env(safe-area-inset-bottom),22px)", overflowY: "auto" }}>
+        <div ref={bodyRef} onScroll={updateScrollHint} className="relative flex-1 min-h-0 flex flex-col heNightShellBody" style={{ padding: "0 22px max(env(safe-area-inset-bottom),22px)", overflowY: "auto" }}>
           {children}
         </div>
+        {showScrollHint && <div className="heNightScrollHint" aria-hidden="true">⌄</div>}
       </div>
       <div className="mvVignette" />
       <div className="mvGrainF" />
@@ -12317,6 +12334,8 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heNight.heNightShell .mvVignette { background:radial-gradient(ellipse at 50% 40%,transparent 66%,rgba(0,0,0,.28) 100%); }
 .heNight.heNightShell .mvGrainF { opacity:.045; }
 .heNightShellBody { scrollbar-color:rgba(212,170,112,.34) transparent; }
+.heNightScrollHint { position:absolute; z-index:5; left:50%; bottom:max(env(safe-area-inset-bottom),7px); width:42px; height:25px; margin-left:-21px; display:flex; align-items:center; justify-content:center; border-radius:50% 50% 5px 5px; color:#E9DFC8; font-size:22px; line-height:1; text-shadow:0 2px 7px #000; background:radial-gradient(ellipse at 50% 100%,rgba(9,8,12,.92),rgba(9,8,12,.5) 54%,transparent 76%); pointer-events:none; animation:heScrollHint 1.5s ease-in-out infinite; }
+@keyframes heScrollHint { 0%,100% { transform:translateY(-2px); opacity:.58; } 50% { transform:translateY(2px); opacity:.92; } }
 .heNight svg { filter:saturate(.68) sepia(.05) contrast(1.08); }
 .heNight .mvGrain, .heNight .mvGrainF { opacity:.085; mix-blend-mode:screen; background-image:repeating-linear-gradient(96deg,rgba(241,230,209,.12) 0 1px,transparent 1px 6px); background-size:23px 27px; }
 .heNight .mvVignette { background:radial-gradient(ellipse at 50% 38%,transparent 52%,rgba(0,0,0,.72) 100%); }
@@ -12457,7 +12476,7 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heChurchBeat { position:relative; padding:14px 15px 15px; background:linear-gradient(105deg,rgba(8,8,12,.88),rgba(21,18,22,.72)); border-top:2px solid rgba(217,164,65,.58); box-shadow:4px 5px 0 rgba(0,0,0,.34),inset 0 0 0 1px rgba(233,223,200,.06); }
 .heChurchFace { display:flex; align-items:center; gap:12px; padding:11px; background:rgba(7,7,11,.82); border-top:2px solid rgba(217,164,65,.5); box-shadow:3px 4px 0 rgba(0,0,0,.36); }
 .heDoorCoda { padding:15px; background:linear-gradient(180deg,rgba(25,17,17,.8),rgba(7,7,10,.92)); border-top:2px solid rgba(194,68,80,.62); box-shadow:4px 5px 0 rgba(0,0,0,.38); }
-@media (prefers-reduced-motion: reduce) { .heChurchyardPresence i,.heChurchyardPresence b,.heChurchyardPresence span { animation:none; } .heChurchyardPresence b { opacity:.3; } .heNightWithheld .heNightTopline { animation:none; opacity:1; filter:none; } }
+@media (prefers-reduced-motion: reduce) { .heChurchyardPresence i,.heChurchyardPresence b,.heChurchyardPresence span,.heNightScrollHint { animation:none; } .heChurchyardPresence b { opacity:.3; } .heNightWithheld .heNightTopline { animation:none; opacity:1; filter:none; } }
 .mvTitleGlow { animation: mvglow 7s ease-in-out infinite alternate; }
 @keyframes mvglow { from { text-shadow: 0 0 12px rgba(158,48,57,0.25); } to { text-shadow: 0 0 26px rgba(158,48,57,0.65); } }
 .mvIn { opacity: 0; animation: mvbeat 1.2s ease forwards; }
@@ -13137,7 +13156,7 @@ function DawnCarousel({ items, s, onOpen, onDone }) {
             const npc = npcById(s, e.pid);
             const face = <Portrait id={npc.id} size={40} dead={!npc.alive} turnedKnown={npc.turned && npc.known} />;
             return onOpen
-              ? <button className="shrink-0" onClick={() => onOpen(npc.id)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>{face}</button>
+              ? <button className="shrink-0" aria-label={`Open ${npc.name}`} onClick={() => onOpen(npc.id)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>{face}</button>
               : <div className="shrink-0">{face}</div>;
           })()}
           <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: C.parch, textWrap: "pretty" }}>{e.t}</p>
@@ -13148,17 +13167,18 @@ function DawnCarousel({ items, s, onOpen, onDone }) {
 }
 
 function demeanorLine(s, id) {
-  if (id === s.monster.vid && s.monster.type === "vampire" && chance(0.22)) return "They keep to the doorway the whole time, weight on the outer step. However the conversation turns, they never quite come inside.";
-  if (id === s.monster.vid && s.monster.type === "hollowed" && chance(0.25)) return "They are delighted to see you. They say 'delighted', twice, and 'colloquy' once, and a dozen other words nobody in this valley was taught, and the hour is the most erudite and the least human conversation you have had all week.";
   const npc = npcById(s, id);
-  if (id === s.monster.vid) return chance(0.3) ? pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal);
-  if (npc.turned) return chance(0.5) ? pickFreshIdx("demeanorTurnedTell", DEMEANOR.turnedTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal);
+  const nameLine = (line) => String(line).replace(/^They\b/, npc.name).replace(/^Their\b/, `${npc.name}'s`);
+  if (id === s.monster.vid && s.monster.type === "vampire" && chance(0.22)) return nameLine("They keep to the doorway the whole time, weight on the outer step. However the conversation turns, they never quite come inside.");
+  if (id === s.monster.vid && s.monster.type === "hollowed" && chance(0.25)) return nameLine("They are delighted to see you. They say 'delighted', twice, and 'colloquy' once, and a dozen other words nobody in this valley was taught, and the hour is the most erudite and the least human conversation you have had all week.");
+  if (id === s.monster.vid) return nameLine(chance(0.3) ? pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal));
+  if (npc.turned) return nameLine(chance(0.5) ? pickFreshIdx("demeanorTurnedTell", DEMEANOR.turnedTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal));
   /* A badly frightened innocent can read exactly as unnervingly composed as
      the thing does: too still, too easy, too rested. The uncanny demeanor is
      a lean, never proof - the monster wears it more often, but it is not the
      monster's alone, so seeing it can never settle anything by itself. */
-  if (chance(0.14)) return pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell);
-  return pickFreshIdx("demeanorNormal", DEMEANOR.normal);
+  if (chance(0.14)) return nameLine(pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell));
+  return nameLine(pickFreshIdx("demeanorNormal", DEMEANOR.normal));
 }
 
 /* One clean sentence per disabled/empty button state, instead of the run-on
@@ -14249,7 +14269,8 @@ function MonsterVillage() {
        the hour in display type, the beats dealt into the dark under it, and
        one thing to press. The beats brighten as they go, so the night
        closes in rather than simply continuing. */
-    const title = won ? "THE VILLAGE BREATHES" : (s.beatTitle || `NIGHT ${s.nightNum}`);
+    const prologueNight = s.nightNum === 1 && s.dayNum === 1 && (s.dayLogs || []).length === 0;
+    const title = won ? "THE VILLAGE BREATHES" : prologueNight ? "THE FIRST NIGHT" : (s.beatTitle || `NIGHT ${s.nightNum}`);
     const bareCinematic = beatsFirst || s.beatTitle === "JUDGMENT" || s.beatTitle === "THE RECKONING";
     const beatColor = (i) => (i === beats.length - 1
       ? "#F1E4C6"
@@ -14279,7 +14300,7 @@ function MonsterVillage() {
               onClick={() => setBeatsRevealed(true)}>
               {!bareCinematic && !won && (
                 <span className="mv-display block heOutcomeEyebrow" style={{ color: "#AEB6D8" }}>
-                  {`DAY ${s.dayNum} GIVES WAY`}
+                  {prologueNight ? "PROLOGUE · BEFORE THE FIRST MORNING" : `DAY ${s.dayNum} GIVES WAY`}
                 </span>
               )}
               {(!bareCinematic || won) && (
@@ -16788,7 +16809,7 @@ function MonsterVillage() {
                     <span style={{ position: "absolute", inset: 0, background: "linear-gradient(rgba(7,9,16,0) 40%, rgba(7,9,16,0.85))" }} />
                   </span>
                   <span style={{ display: "flex", alignItems: "center", width: "100%", padding: "8px 11px 9px", textAlign: "left" }}>
-                    <span className="mv-display" style={{ fontSize: 13.5, letterSpacing: 0.6, color: C.parch }}>{placeNoun(l, "outdoor")}{locAffSuffix(l)}</span>
+                    <span className="mv-display" style={{ fontSize: 13.5, letterSpacing: 0.6, color: C.parch }}>{placeNoun(l, "outdoor").replace(/^./, (ch) => ch.toUpperCase())}{locAffSuffix(l)}</span>
                   </span>
                 </button>
               ))}
