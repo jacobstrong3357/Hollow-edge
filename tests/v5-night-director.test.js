@@ -184,7 +184,7 @@ function answerAttackSetup(state, preferredMode) {
     var state = Director.createNight(config);
     state = take(state, { type: "LEAVE", to: "Village Square" });
     var actions = Director.guidedActions(state, { target: "Old Church", kind: "search", intentDone: false, interacted: {} });
-    assert.deepStrictEqual(actions.map(function (a) { return a.label; }), ["Move closer and see what it is", "Do not look. Continue to the Old Church", "Leave it. Head for home"], "the sight offers curiosity, refusal and retreat as distinct choices");
+    assert.deepStrictEqual(actions.map(function (a) { return a.label; }), ["Move closer and see what it is", "Do not move closer. Continue to the Old Church", "Leave it. Head for home"], "the sight offers curiosity, refusal and retreat as distinct choices without contradicting an ongoing watch");
     state = take(state, actions[0]);
     var choice = state.ledgers.truth.find(function (event) { return event.kind === "delusion_approach"; });
     assert(choice, "approaching the hallucination is recorded as a causal choice");
@@ -246,7 +246,7 @@ function answerAttackSetup(state, preferredMode) {
   assert.strictEqual(state.phase, "active", "the final slot cannot complete while its strange sight still requires a choice");
   assert.strictEqual(state.player.location, "Village Square", "the unresolved sight remains where it happened instead of becoming the threshold");
   var actions = Director.guidedActions(state, { target: "Village Square", kind: "search", intentDone: true, searches: {}, interacted: {} });
-  assert.deepStrictEqual(actions.map(function (item) { return item.label; }), ["Move closer and see what it is", "Do not look. Continue your search", "Leave it. Head for home"]);
+  assert.deepStrictEqual(actions.map(function (item) { return item.label; }), ["Move closer and see what it is", "Do not move closer. Continue your search", "Leave it. Head for home"]);
   var finalSlot = state.cursor;
   state = Director.reduce(state, actions[0]);
   assert.strictEqual(state.cursor, finalSlot, "answering a sight is a reaction in the current slot, not an eighth hour of night");
@@ -265,6 +265,30 @@ function answerAttackSetup(state, preferredMode) {
   var state = Director.createNight(config);
   state = take(state, { type: "LEAVE", to: "Village Square" });
   assert(!state.ledgers.truth.some(function (event) { return event.id.indexOf("encounter:") === 0 && event.actors.indexOf("rosa") >= 0; }), "the person still inside the watched house is not framed as a passer-by");
+})();
+
+(function aDoorWatchUsesPossessivesAndResumesTheDeclaredWatchAfterAPasserBy() {
+  var config = baseConfig("greta-watch-tobias-passes");
+  config.openingIntent = { kind: "watch", id: "greta" };
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { greta: "home", tobias: "Graveyard" } };
+  config.villagers = [
+    { id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Dark Forest", motive: { id: "sleep", family: "home", destination: "home", reason: "sleep", object: "nothing", depart: 9, duration: 0 } },
+    { id: "tobias", name: "Old Tobias", role: "the Gravedigger", alive: true, home: "Village Square", motive: { id: "grave", family: "grief", destination: "Graveyard", reason: "visit a grave", object: "a flower", depart: 0, duration: 4 } }
+  ];
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  var opening = Director.guidedActions(state, { target: "Dark Forest", kind: "watch", actorName: "Greta", intentDone: false, interacted: {} });
+  assert.strictEqual(opening[0].label, "Take the direct back lane to watch Greta's door", "watch routes use the villager's possessive name");
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Dark Forest";
+  state.schedules.tobias.slots[0] = "Dark Forest";
+  state.visibility[0].tobias = true;
+  state.currentBeat = { id: "tobias-passes-greta", type: "encounter", slot: 0, location: "Dark Forest", actorId: "tobias", text: "Old Tobias crosses the road." };
+  var actions = Director.guidedActions(state, { target: "Dark Forest", kind: "watch", actorId: "tobias", actorName: "Greta", intentDone: false, interacted: { "tobias|HAIL": true } });
+  var resume = actions.find(function (action) { return action.type === "WAIT"; });
+  assert(resume && resume.label === "Let Old Tobias go. Take up watch outside Greta's door", "declining to follow a passer-by explicitly returns to the original door watch");
 })();
 
 (function aDoorWatchCommitsToFollowingTheDeparture() {
@@ -858,6 +882,30 @@ function answerAttackSetup(state, preferredMode) {
   assert.strictEqual(state.currentBeat.text, "Old Tobias kneels at one grave and lays down a flower.");
 })();
 
+(function followingFromTheDestinationDoesNotPretendToTravelThere() {
+  var config = baseConfig("already-at-graveyard");
+  config.slots = 4;
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { marta: "Graveyard" } };
+  config.villagers = [{
+    id: "marta", name: "Hazel", role: "the Herbalist", alive: true, home: "Village Square",
+    motive: { id: "grave-herbs", family: "ward", destination: "Graveyard", reason: "leave rowan at a grave", object: "a rowan sprig", depart: 0, duration: 4 },
+    dialogue: { follow: "You follow Hazel to the Graveyard. Hazel kneels and ties the rowan around the grave marker." }
+  }];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Graveyard";
+  state.schedules.marta.slots[0] = "Graveyard";
+  state.schedules.marta.slots[1] = "Graveyard";
+  state.visibility[0].marta = true;
+  state.currentBeat = { id: "hazel-at-grave", type: "encounter", slot: 0, location: "Graveyard", actorId: "marta", text: "Hazel moves between the graves." };
+  state = take(state, { type: "FOLLOW", actorId: "marta" });
+  assert.strictEqual(state.currentBeat.meta.startedHere, true, "a follow remembers that player and villager began at the destination");
+  assert(/Hazel is already at the Graveyard/.test(state.currentBeat.text), "the scene begins from the place where the player is standing");
+  assert(!/follow Hazel to the Graveyard/.test(state.currentBeat.text), "the scene never repeats travel the player did not make");
+})();
+
 (function followingTheActiveHostEndsAllSocialChoices() {
   var config = baseConfig("recognition-is-not-a-chat");
   config.monster = { id: "werewolf", hostId: "rosa", active: true, signs: ["claw", "tracks", "bite"], hunts: ["Graveyard"], attack: "kill", reach: "out", voice: { mode: "beast" }, revealText: "The muzzle opens through Rosa's face, but her long frame and eyes remain unmistakable." };
@@ -874,8 +922,8 @@ function answerAttackSetup(state, preferredMode) {
   assert.strictEqual(state.phase, "threat", "recognising the host immediately enters survival state");
   assert.strictEqual(state.pendingThreat.kind, "recognition");
   assert.strictEqual(state.currentBeat.type, "threat");
-  assert(/monstrous shape/.test(state.currentBeat.text) && /cannot see its face/.test(state.currentBeat.text), "following the active host can reveal the monster without automatically naming its borrowed face");
-  assert(state.currentBeat.text.startsWith("Fog closes over the turning."), "fog can conceal the host during an otherwise unmistakable monster sighting");
+  assert(/Rosa/.test(state.currentBeat.text) && /muzzle opens through Rosa's face/.test(state.currentBeat.text), "following a named host shows that same person transforming instead of replacing them with an anonymous shape");
+  assert(state.currentBeat.text.startsWith("The fog thins at the turning just as the body begins to change."), "fog changes how the transformation is seen without breaking its continuity");
   assert((state.currentBeat.text.match(/[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g) || []).length <= 30, "the complete weather and recognition card fits a three-to-five-line mobile beat");
   var actions = Director.availableActions(state);
   assert(!actions.some(function (action) { return action.type === "HAIL" || action.type === "SEARCH"; }), "hail and search disappear after the mask drops");
@@ -893,7 +941,7 @@ function answerAttackSetup(state, preferredMode) {
   assert(!/what was left here|borrowed body at its work/.test(state.currentBeat.text), "a learned sign cannot be joined to vague unrelated fragments");
   var revealChoice = state.ledgers.truth.find(function (event) { return event.kind === "monster_reveal_choice" && event.action === "WATCH_MONSTER"; });
   assert(revealChoice && revealChoice.location === "Old Church", "the survival choice retains the place where the encounter actually happened");
-  assert.strictEqual(revealChoice.identityVisible, false, "an anonymous sighting stays distinct from identifying the host");
+  assert.strictEqual(revealChoice.identityVisible, true, "following the named host through their transformation identifies the borrowed face");
   assert.strictEqual(revealChoice.seenByMonster, false, "remaining successfully hidden does not invent mutual recognition");
 })();
 
@@ -1559,6 +1607,152 @@ function answerAttackSetup(state, preferredMode) {
   assert(/Greta/.test(state.currentBeat.text) && !/\bmonster\b|followed you home|claws|no breath/i.test(state.currentBeat.text), "the scene is unsettling without confirming Greta is the monster");
   var answer = Director.availableActions(state).find(function (action) { return action.type === "ANSWER_DOOR"; });
   assert(answer && answer.label === "Answer Greta through the closed door" && answer.tone === "bone", "the action wording and colour do not reveal hidden visitor truth");
+})();
+
+(function anIdentifiedMonsterAtTheDoorBecomesAnInterviewQuestion() {
+  var config = baseConfig("liesel-monster-door-interview");
+  config.villagers = [{ id: "liesel", name: "Liesel", role: "the Innkeeper", alive: true }];
+  config.player = { monsterSawYou: true };
+  config.monster.hostId = "liesel";
+  config.monster.active = true;
+  config.monster.reach = "out";
+  config.currentFacts = { weather: "storm", active: true, huntLoc: "Village Square", attackSlot: 5, outMap: { liesel: "home" } };
+  config.forcedBeats = [];
+  var state = Director.createNight(config);
+  state.thresholdEvent.roll = 0;
+  state.thresholdEvent.visitorKind = "monster";
+  state.thresholdEvent.actorId = "liesel";
+  state.thresholdEvent.canEnter = false;
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "LOOK_THROUGH" });
+  state = take(state, { type: "KEEP_BARRED" });
+  var visit = state.ledgers.truth.find(function (event) { return event.kind === "threshold_monster_visit" && event.actorId === "liesel"; });
+  assert(visit && /came to your door/.test(visit.text), "refusing the identified monster records who tried to lure the player outside");
+  var finding = Director.consequenceProjection(state).findings.find(function (entry) { return entry.source === "threshold_monster_visit" && entry.actorId === "liesel"; });
+  assert(finding && finding.question === "You came to my door after midnight and tried to make me step outside. Why?", "the doorstep confrontation is projected into Liesel's daylight interview");
+})();
+
+function rescueDoorConfig(seed, visitorKind) {
+  var config = baseConfig(seed);
+  config.slots = 3;
+  config.forcedBeats = [];
+  config.villagers = [
+    { id: "liesel", name: "Liesel", role: "the Innkeeper", alive: true, home: "Tavern" },
+    { id: "wilhelm", name: "Wilhelm", role: "the Blacksmith", alive: true, home: "Village Square" },
+    { id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Dark Forest" }
+  ];
+  config.player = { monsterSawYou: true };
+  config.monster = { id: "werewolf", hostId: "liesel", active: true, signs: ["claw", "bite", "tracks"], hunts: ["Dark Forest"], attack: "kill", reach: "out", huntSlot: 1, rescueDoor: true };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 1, outMap: { liesel: "Dark Forest", wilhelm: "Dark Forest", greta: "home" } };
+  var state = Director.createNight(config);
+  Object.assign(state.thresholdEvent, {
+    roll: 0,
+    rescuePlanned: true,
+    purpose: "rescue",
+    visitorKind: visitorKind,
+    actorId: visitorKind === "monster" ? "liesel" : "greta",
+    concernId: "wilhelm",
+    clueLocation: "Dark Forest",
+    requestMode: "outside",
+    requestRoll: 0,
+    resolved: false
+  });
+  return state;
+}
+
+function reachRescueDoor(state) {
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  assert.strictEqual(state.phase, "threshold");
+  assert(/Wilhelm/.test(state.currentBeat.text) && /Dark Forest/.test(state.currentBeat.text), "both visitor kinds make the same named rescue plea");
+  return state;
+}
+
+(function refusingTheMonstersNamedRescueLureCostsTheNamedVictim() {
+  var state = reachRescueDoor(rescueDoorConfig("monster-rescue-refused", "monster"));
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "slain"; }), "the ordinary attack waits for the threshold decision");
+  state = take(state, { type: "LOOK_THROUGH" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  state = take(state, { type: "KEEP_BARRED" });
+  assert(state.player.alive && state.phase === "complete");
+  assert.strictEqual(state.cast.find(function (actor) { return actor.id === "wilhelm"; }).alive, false, "refusing the monster leaves Wilhelm as its victim");
+  var death = state.ledgers.truth.find(function (event) { return event.kind === "slain" && event.victimId === "wilhelm"; });
+  assert(death && death.source === "threshold_rescue_refused" && death.location === "Dark Forest");
+  var question = Director.consequenceProjection(state).findings.find(function (finding) { return finding.source === "threshold_monster_visit"; });
+  assert(question && /Wilhelm was hurt/.test(question.question) && /Wilhelm died there/.test(question.question), "the identified host can be challenged about the named lure afterward");
+})();
+
+(function acceptingTheMonstersNamedRescueLureKillsThePlayerInstead() {
+  var state = reachRescueDoor(rescueDoorConfig("monster-rescue-accepted", "monster"));
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert.strictEqual(Director.availableActions(state).find(function (action) { return action.type === "STEP_OUTSIDE"; }).label, "Take your lantern. Help find Wilhelm");
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert.strictEqual(state.phase, "dead");
+  assert.strictEqual(state.player.location, "Dark Forest", "the death occurs on the promised rescue road, not inside the cottage");
+  assert.strictEqual(state.cast.find(function (actor) { return actor.id === "wilhelm"; }).alive, true, "the monster takes the player instead of also inventing a second victim");
+  assert(!state.ledgers.truth.some(function (event) { return event.kind === "slain" && event.victimId === "wilhelm"; }));
+})();
+
+(function acceptingARealNeighboursRescuePleaCreatesASharedRememberedDiscovery() {
+  var state = reachRescueDoor(rescueDoorConfig("neighbour-rescue-accepted", "neighbour"));
+  state = take(state, { type: "ANSWER_DOOR" });
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert(state.player.alive && state.phase === "complete");
+  assert.strictEqual(state.cast.find(function (actor) { return actor.id === "wilhelm"; }).alive, false);
+  var shared = state.ledgers.truth.find(function (event) { return event.kind === "investigated_attack" && event.sharedDiscovery; });
+  assert(shared && shared.corroborated && !shared.suspicious && shared.corroboratingWitnessIds[0] === "greta", "the companion's presence prevents suspicion from being generated");
+  assert(state.ledgers.memories.greta.some(function (memory) { return memory.kind === "shared_body_discovery"; }), "Greta remembers fetching the player and finding Wilhelm together");
+  var projected = Director.consequenceProjection(state).investigations.find(function (entry) { return entry.sharedDiscovery; });
+  assert(projected && projected.victimId === "wilhelm" && projected.rescueReporterId === "greta", "the shared discovery reaches dawn and interview projection intact");
+})();
+
+(function generatedRescuePleasCanBelongToEitherSide() {
+  var found = { monster: false, neighbour: false };
+  for (var i = 0; i < 600 && !(found.monster && found.neighbour); i += 1) {
+    var config = baseConfig("generated-rescue-kind:" + i);
+    config.monster.rescueDoor = true;
+    config.forcedBeats = [];
+    var state = Director.createNight(config);
+    if (state.thresholdEvent.rescuePlanned) found[state.thresholdEvent.visitorKind] = true;
+  }
+  assert(found.monster && found.neighbour, "the deterministic tape includes both a monster lure and an honest neighbour's plea");
+})();
+
+(function everyMonsterTypeCanUseDoctorFalksFaceForTheRescueLure() {
+  ["werewolf", "vampire", "wraith", "ghoul", "witch", "demon", "shifter", "banshee", "lich", "revenant", "doppel", "hag", "necromancer", "mimic", "succubus", "hollowed"].forEach(function (monsterId) {
+    var config = baseConfig("falk-rescue-lure:" + monsterId);
+    config.slots = 3;
+    config.forcedBeats = [];
+    config.villagers = [
+      { id: "falk", name: "Doctor Falk", role: "the Physician", alive: true, home: "Village Square" },
+      { id: "wilhelm", name: "Wilhelm", role: "the Blacksmith", alive: true, home: "Village Square" },
+      { id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Dark Forest" }
+    ];
+    config.player = { monsterSawYou: true };
+    config.monster = {
+      id: monsterId, hostId: "falk", active: true,
+      signs: ["claw", "tracks", "cold"], hunts: ["Dark Forest"],
+      attack: ["vampire", "lich", "doppel"].includes(monsterId) ? "turn" : "kill",
+      reach: monsterId === "vampire" ? "invite" : ["witch", "demon", "banshee", "lich", "doppel", "hag", "necromancer", "succubus"].includes(monsterId) ? "home" : "out",
+      huntSlot: 1, rescueDoor: true
+    };
+    config.currentFacts = { weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 1, outMap: { falk: "Dark Forest", wilhelm: "Dark Forest", greta: "home" } };
+    var state = Director.createNight(config);
+    Object.assign(state.thresholdEvent, {
+      roll: 0, rescuePlanned: true, purpose: "rescue", visitorKind: "monster",
+      actorId: "falk", concernId: "wilhelm", clueLocation: "Dark Forest",
+      requestMode: "outside", requestRoll: 0, resolved: false
+    });
+    state = reachRescueDoor(state);
+    state = take(state, { type: "LOOK_THROUGH" });
+    assert(/Doctor Falk stands on the step/.test(state.currentBeat.text), monsterId + " can use Doctor Falk's face and reveal it through the shutter");
+    state = take(state, { type: "ANSWER_DOOR" });
+    state = take(state, { type: "STEP_OUTSIDE" });
+    assert.strictEqual(state.phase, "dead", monsterId + " kills the player when its Doctor Falk lure succeeds");
+  });
 })();
 
 (function aThresholdQuestionBecomesANaturalFollowUp() {
@@ -2252,6 +2446,7 @@ function answerAttackSetup(state, preferredMode) {
   assert(sampledNight.includes("const secretCatchChance") && sampledNight.includes(": 0.35"), "meeting a secret-carrying villager does not automatically decode the errand");
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
   assert(compiledNight.includes("directorAfflictionBeats(s, facts, slots)") && html.includes('crisisStage: "arrival"') && html.includes('crisisStage: "struggle"') && html.includes('crisisStage: "aftermath"') && html.includes('crisisStage: "resolution"'), "a sampled village crisis owns a multi-beat Director sequence through its final outcome");
+  assert(html.includes('arrival: "WHAT IS HAPPENING"') && html.includes('aftermath: "WHAT CAN STILL BE SAVED"') && html.includes("The village well has been poisoned") && html.includes("decided to close the tavern permanently"), "crisis cards plainly state the incident, its stage and the immediate stakes");
   assert(html.includes("afflictionLocation: scene.location") && html.includes("afflictionWound: scene.wound"), "the crisis carries its authored location and damaged-night artwork into every beat");
   assert(html.includes('event: { bg: "#0A0907"') && html.includes('kicker={crisisEvent ? "A VILLAGE EVENT"') && !html.includes('const danger = !!afflictionScene'), "village events use an amber event treatment rather than monster-danger red");
   [
@@ -2473,6 +2668,7 @@ function answerAttackSetup(state, preferredMode) {
   assert(html.includes('marta: "Village Square"') && !html.includes('hazel: "Village Square"'), "Hazel's internal id resolves to her real home location in timeline answers");
   var personalPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catH"'), interviewIa.indexOf('ivSub === "nightPerson"'));
   assert(personalPanel.includes("Concern may build trust or test their patience. Useful work is safer.") && personalPanel.includes('askQ("howare")') && personalPanel.includes('askQ("apologise")') && personalPanel.includes('askQ("help")') && !personalPanel.includes('askQ("past")') && !personalPanel.includes('askQ("talk")'), "personal conversation offers one unpredictable concern question alongside deliberate repair actions");
+  assert(personalPanel.includes('>What work needs doing?</Btn>') && !personalPanel.includes('>Ask what work needs doing.</Btn>'), "the work prompt is phrased as the question the player actually asks");
   var helpAnswer = html.slice(html.indexOf('if (q === "help")'), html.indexOf('if (q === "howare")', html.indexOf('if (q === "help")')));
   assert(helpAnswer.includes("assignFollowFavour(s, id)") && helpAnswer.includes("FOLLOW_FAVOUR_ASK"), "asking what work needs doing can issue the follow-someone-tonight favour through the new personal category");
   var favourResolution = html.slice(html.indexOf("/* --- side quest: did the player watch/follow"), html.indexOf("/* --- a secret the player", html.indexOf("/* --- side quest: did the player watch/follow")));
@@ -2678,6 +2874,7 @@ function answerAttackSetup(state, preferredMode) {
   });
   var beatTextSource = html.slice(html.indexOf("const directorBeatText"), html.indexOf("const commitDirector", html.indexOf("const directorBeatText")));
   assert(beatTextSource.includes('event.kind === "followed"') && beatTextSource.includes("event.revealedSecret") && beatTextSource.includes("dialogue.caughtHail"), "hailing after a revealed follow acknowledges what the player witnessed");
+  assert(beatTextSource.includes("beat.meta.startedHere ? beat.text"), "the UI preserves corrected same-location follow narration");
   var roadsideSource = html.slice(html.indexOf("const DIRECTOR_ROADSIDE_WARNING"), html.indexOf("function directorHailFor"))
     .replace("const DIRECTOR_ROADSIDE_WARNING =", "DIRECTOR_ROADSIDE_WARNING =");
   var roadsideContext = {};
@@ -2819,7 +3016,9 @@ function answerAttackSetup(state, preferredMode) {
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.beast.some(function (row) { return /growl/i.test(row.open); }), "beast nights can carry a non-hunting growl");
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.speaker.some(function (row) { return /laugh/i.test(row.open); }), "speaker nights can carry an obscure non-hunting laugh");
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.silent.some(function (row) { return /silence|without making a sound|refuses/i.test(row.open); }), "silent horrors take sound away instead of borrowing a beast or speaker cue");
-  assert(html.includes("if (!s.playerSigns.includes(stamp.sign)) s.playerSigns.push(stamp.sign)"), "a Director sign is already stamped when it reaches the Journal");
+  assert(!html.includes("s.playerSigns.push(stamp.sign)"), "finding a Director sign never stamps it on the player's behalf");
+  assert(html.includes("Nothing is stamped for you") && html.includes("TAP TO STAMP"), "the Evidence page makes manual stamping explicit");
+  assert(html.includes('const FOUND_THINGS_SPRITE = "assets/ink-v1/items/found-things-sprite-v3.jpg"') && html.includes("<ItemPortrait object={foundObject}"), "things left behind receive a small illustrated portrait");
   assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
   assert(html.includes("THE NOTE IN YOUR POCKET") && html.includes("At nightfall, you must decide whether to obey."), "an active coercion note remains visible on the day screen");
   assert(html.includes('plan.kind === "give_up"'), "giving up the named villager resolves as a full night choice");
@@ -2956,7 +3155,7 @@ function answerAttackSetup(state, preferredMode) {
   assert(!html.includes("It explains the hour, not the person."), "the retired explanatory tag cannot return");
   assert(html.includes("last evening's work boarding windows and repairing shutters"), "the boarding-up dawn report explains the event instead of relying on its shorthand name");
   assert(!html.includes("picked apart over breakfast the way a body is picked apart"), "a public event is not described with the unexplained table metaphor");
-  assert(html.includes('v5-night-director.js?v=17'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=19'), "the local page cache-busts the current Director runtime");
   assert(html.includes("homeMusic(!s || (s.phase === \"day\" && !s.over && !walk), !s)"), "the piano distinguishes the fuller title menu from safe day screens");
   assert(html.includes('s.phase === "day" && !walk) { Snd.scene(null); Snd.wind_(-30); }'), "a true day screen clears the previous night's rain and weather scene");
   assert(html.includes('else if (!walk) Snd.wind_(-30);'), "the day-labelled state cannot clear weather underneath a night walk still in progress");
@@ -2974,7 +3173,8 @@ function answerAttackSetup(state, preferredMode) {
   assert(directorSource.includes('soundCue: "hallucination_drift"'), "a false sight stays sonically unstable when the player moves closer");
   assert(html.includes("thresholdAnswer || directorBeat.meta.thresholdDecision"), "answering the visitor does not replay the arrival knock");
   var directorFallbackSource = html.slice(html.indexOf("const directorFallbackLine"), html.indexOf("const actDirector", html.indexOf("const directorFallbackLine")));
-  assert(directorFallbackSource.includes('WAIT: ["For now, the road stays quiet.", "You wait a while. Nothing moves yet."]'), "a one-hour wait describes a temporary lull before the stay-or-leave choice");
+  assert(directorFallbackSource.includes(': ["For now, the road stays quiet.", "You wait a while. Nothing moves yet."]'), "a one-hour wait describes a temporary lull before the stay-or-leave choice");
+  assert(directorFallbackSource.includes("settle opposite ${watchedActor.name}'s door") && html.includes("const beat = walk.feedback ? null : d.currentBeat;"), "letting Tobias pass resumes Greta's watch and cannot replay Tobias's stale conversation card");
   assert(!directorFallbackSource.includes("Nothing happens, so you head home") && !directorFallbackSource.includes("Nothing comes. You go home"), "waiting cannot claim the player went home while the night is still active");
   var markedHuntSource = html.slice(html.indexOf("function primeMarkedPlayerHunt"), html.indexOf("function monsterDangerWarning"));
   var markedHuntContext = {
@@ -3022,6 +3222,10 @@ function answerAttackSetup(state, preferredMode) {
   assert(!html.includes("The hag leaves no struggle to clean up after; she prefers her work tidy."), "the Night Hag death cannot read as though a male victim is she");
   assert(html.includes("the thing prefers its work tidy"), "the Night Hag sentence identifies the monster rather than borrowing the victim's pronoun");
   assert(html.includes('.heDeathScene > .max-w-md { width:calc(100% - 28px)') && html.includes('max-width:25rem'), "mobile death and ending copy receives a narrower inset frame");
+  assert(html.includes('padding: "clamp(34px, 6dvh, 58px) 36px 28px"'), "the death-page narrative receives a visibly deeper side inset than its heading");
+  assert(html.includes('borderLeft: `2px solid ${C.amber}`') && html.includes('color: C.ink') && html.includes('>PHYSICAL EVIDENCE</span>'), "the Where They Fell evidence heading has readable contrast against the paper");
+  assert(html.includes("Grave dirt has been tracked out of the burial ground") && directorSource.includes("Grave dirt lies on top of the road mud"), "grave dirt is named and distinguished from ordinary mud in both presentation paths");
+  assert(html.includes("const playerSightings = new Map()") && html.includes("they saw your lantern too") && html.includes("you did not identify them at the time"), "the profile merges reciprocal sightings and never says the player may not have seen someone they explicitly saw");
   var pacingSource = html.slice(html.indexOf("function isActive"), html.indexOf("/* ================= NIGHT RESOLUTION", html.indexOf("function isActive")));
   var pacingContext = { chance: function () { return false; } };
   vm.createContext(pacingContext);
@@ -3032,6 +3236,8 @@ function answerAttackSetup(state, preferredMode) {
   assert.strictEqual(pacingContext.isActive(quietRun, { rhythm: { kind: "strict", n: 4 } }, 4), false, "the pacing guard does not break a strict creature's promised count");
   assert(html.includes("quiet-night-event") && html.includes("inactiveStreak >= 2"), "a strict-cycle lull receives deterministic public activity instead of a dead stretch");
   assert(directorSource.includes("visibleDiscoveries") && directorSource.includes('join(" ")'), "multiple findings earned in one action are presented together before entering the Journal");
+  assert(directorSource.includes('purpose = "rescue"') && directorSource.includes('threshold_rescue_refused') && directorSource.includes('shared_body_discovery'), "the named doorstep rescue can resolve as a lethal lure, a refused victim, or a shared body discovery");
+  assert(html.includes("event.sharedDiscovery") && html.includes("No accusation is made against you") && html.includes("We took the same road and found the body together"), "daylight preserves the companion's corroboration and remembered interview answer");
   assert(html.includes('source === "threshold_missing_report"') && html.includes("is missing from the village"), "an unavailable subject of a threshold report is explained in the interview picker");
   assert(html.includes('window.storage.get("mv-run-day-ui")') && html.includes('window.storage.set("mv-run-day-ui"'), "committed daylight presentation is saved separately from the run");
   assert(html.includes("dayUi.iv.committed") && html.includes('dayUi.dayScene.stage === "beats"'), "only paid interviews and completed searches are restorable");

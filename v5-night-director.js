@@ -310,7 +310,7 @@
     cold: "Frost rims one patch of earth while the grass around it stays wet.",
     flora: "Everything growing within one long stride has greyed from the root.",
     hex: "A cramped working is scored into the stone. Looking at its angles makes your teeth ache.",
-    graves: "Old grave earth lies on top of the road mud, fresh enough to hold a thumbprint."
+    graves: "Grave dirt lies on top of the road mud: dark burial soil, freshly dug and damp enough to hold a thumbprint. It did not come from the road."
   };
 
   var BODY_SIGN_TEXT = {
@@ -645,6 +645,7 @@
       reach: monster.reach || "out",
       voice: clone(monster.voice || { mode: "silent" }),
       revealText: monster.revealText || null,
+      rescueDoor: !!monster.rescueDoor,
       route: route,
       locations: locations,
       maskedHostSlots: active ? [attackSlot] : []
@@ -882,8 +883,10 @@
       purposeRoll: keyedNumber(seed, "threshold:purpose"),
       targetRoll: keyedNumber(seed, "threshold:target"),
       requestRoll: keyedNumber(seed, "threshold:request"),
+      rescueRoll: keyedNumber(seed, "threshold:rescue"),
       resolved: false
     }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]));
+    planThresholdRescue(state);
     state.discoverySchedule = makeDiscoverySchedule(seed, state, config, rng);
     state.ledgers.truth.push({ id: "night-plan", slot: -1, kind: "plan", weather: state.weather, active: monsterSchedule.active, huntLoc: monsterSchedule.huntLoc, attackSlot: monsterSchedule.attackSlot });
     return state;
@@ -998,7 +1001,7 @@
           inspected: false,
           requiresResponse: true,
           ownerId: presented.actorId || null,
-          object: clueSchedule && clueSchedule.motive && clueSchedule.motive.object || null,
+          object: clueSchedule && clueSchedule.motive && clueSchedule.motive.object || presented.meta && presented.meta.object || null,
           inspectLabel: presented.meta && presented.meta.inspectLabel || clueInspectionLabel(clueSchedule && clueSchedule.motive && clueSchedule.motive.object)
         });
         if (presented.actorId) {
@@ -1245,6 +1248,23 @@
   function processAttack(state, slot) {
     var monster = state.monsterSchedule;
     if (!monster.active || slot !== monster.attackSlot || state.resolvedAttackSlots.indexOf(slot) >= 0) return;
+    var rescueTarget = state.thresholdEvent && state.thresholdEvent.purpose === "rescue"
+      ? thresholdActor(state, state.thresholdEvent.concernId) : null;
+    if (rescueTarget && rescueTarget.alive && !rescueTarget.changed) {
+      /* This hunt is still live, but its outcome belongs to the later choice
+         at the player's door. Settling it here would kill the named victim
+         before the player has heard or answered the rescue plea. */
+      state.resolvedAttackSlots.push(slot);
+      appendTruth(state, {
+        id: "rescue-targeted:" + slot + ":" + rescueTarget.id,
+        slot: slot,
+        kind: "rescue_targeted",
+        location: state.thresholdEvent.clueLocation || monster.huntLoc,
+        actors: [monster.hostId, rescueTarget.id].filter(Boolean),
+        victimId: rescueTarget.id
+      });
+      return;
+    }
     var location = monster.huntLoc;
     var villagers = actorsAt(state, location, slot).filter(function (v) { return v.id !== monster.hostId && v.alive && !v.changed; }).map(function (v) { return v.id; });
     /* A curse, dream-rider or other home-reaching horror does not require its
@@ -1461,7 +1481,7 @@
     return beat;
   }
 
-  function recordFollow(state, actorId, slot, locationOverride) {
+  function recordFollow(state, actorId, slot, locationOverride, followStartedAt) {
     var villager = state.cast.find(function (v) { return v.id === actorId; });
     var schedule = state.schedules[actorId];
     if (!villager || !schedule) return;
@@ -1485,6 +1505,7 @@
       changedAftermath: changedAftermath
     });
     var routePlace = destination === HOME ? "door" : destination;
+    var startedHere = !locationOverride && followStartedAt === destination;
     var fallbackLead = state.weather === "fog" ? "You follow " + villager.name + "'s lantern through the fog to the " + routePlace + "."
       : state.weather === "storm" ? "By lightning, you follow " + villager.name + " to the " + routePlace + "."
         : state.weather === "frost" ? "You follow " + villager.name + "'s fresh tracks to the " + routePlace + "."
@@ -1492,13 +1513,25 @@
     var followText = changedAftermath
       ? "You follow " + villager.name + ". They never look back. At the " + routePlace + ", they stop and wait in silence. The attack changed them."
       : dialogue.follow || (fallbackLead + " There, " + villager.name + " finishes an ordinary errand and leaves.");
+    if (startedHere) {
+      var samePlaceLead = state.weather === "fog"
+        ? villager.name + " is already here in the fog. You keep their lantern in sight as they move across the " + routePlace + "."
+        : state.weather === "storm"
+          ? villager.name + " is already at the " + routePlace + ". By lightning, you fall in behind them."
+          : state.weather === "frost"
+            ? villager.name + " is already at the " + routePlace + ". You pick up their fresh tracks from where you stand."
+            : villager.name + " is already at the " + routePlace + ". You fall in behind them when they move on.";
+      var followTail = String(followText || "").replace(/^[^.?!]+[.?!]\s*/, "");
+      followText = samePlaceLead + (followTail ? " " + followTail : "");
+      event.startedHere = true;
+    }
     appendObservation(state, { eventId: event.id, slot: slot, kind: !changedAftermath && dialogue.revealsSecret ? "evidence" : "seen", location: destination, actors: [actorId], clarity: state.weather === "storm" ? "weathered" : "clear", reliability: "direct", text: followText, weather: state.weather });
     state.ledgers.memories[actorId].push({ eventId: event.id, slot: slot, subject: "player", kind: "followed", location: destination, clarity: "uncertain", acknowledged: false, interpretation: "They may not know whether the lantern behind them was yours." });
     appendBeat(state, makeBeat("follow-beat:" + slot + ":" + actorId, "follow", slot, destination,
       followText, {
         actorId: actorId,
         truthEventId: event.id,
-        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, critical: true }
+        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, startedHere: startedHere, critical: true }
       }));
     if (state.followedActorIds.indexOf(actorId) < 0) state.followedActorIds.push(actorId);
     return event;
@@ -1543,15 +1576,15 @@
     }
     state.actionHistory.push({ slot: state.cursor, type: "FOLLOW", to: state.player.location, actorId: action.actorId });
     appendTruth(state, { id: "player:" + state.cursor + ":follow", slot: state.cursor, kind: "player_action", action: "FOLLOW", location: state.player.location, actorId: action.actorId });
-    var followedEvent = recordFollow(state, action.actorId, state.cursor, acceptedMonsterLure ? followStartedAt : null);
+    var followedEvent = recordFollow(state, action.actorId, state.cursor, acceptedMonsterLure ? followStartedAt : null, followStartedAt);
     /* Discovering the active host ends the social scene immediately. The
        player is still hidden for one breath, as in the established walk,
        but may only flee, risk staying to learn, or confront it. */
     if (state.monsterSchedule.active && action.actorId === state.monsterSchedule.hostId) {
-      /* Most monster sightings do not also hand over the borrowed face. Fog
-         and storm conceal it most often; frost is the clearest. */
-      var identityChance = state.weather === "fog" ? 0.18 : state.weather === "storm" ? 0.25 : state.weather === "frost" ? 0.42 : 0.34;
-      var identityVisible = keyedNumber(state.seed, "recognition-identity:" + state.cursor + ":" + action.actorId) < identityChance;
+      /* Following a named neighbour into this reveal is one continuous act.
+         Weather changes how the transformation is lit, but it cannot replace
+         the person being followed with an unrelated anonymous shape. */
+      var identityVisible = true;
       state.pendingThreat = {
         id: "recognition:" + state.cursor + ":" + action.actorId,
         slot: state.cursor,
@@ -1565,12 +1598,11 @@
       };
       state.phase = "threat";
       var host = state.cast.find(function (villager) { return villager.id === action.actorId; });
-      var recognitionText = identityVisible
-        ? (state.monsterSchedule.revealText || ((host && host.name || "Your neighbour") + " turns close enough for the lantern to catch the human shape still trapped inside the monster."))
-        : "You lose " + (host && host.name || "your neighbour") + " at the turning. A monstrous shape crosses the road ahead. You cannot see its face.";
-      if (state.weather === "fog") recognitionText = identityVisible ? "Fog gives the face back at the last moment. " + recognitionText : "Fog closes over the turning. " + recognitionText;
-      else if (state.weather === "storm") recognitionText = identityVisible ? "Lightning shows the face. " + recognitionText : "Rain and darkness hide the face. " + recognitionText;
-      else if (state.weather === "frost") recognitionText = identityVisible ? "Its breath crosses yours. " + recognitionText : "Breath clouds the face. " + recognitionText;
+      var recognitionText = state.monsterSchedule.revealText
+        || ((host && host.name || "Your neighbour") + " turns in the lantern light. Their human shape comes apart and the monster stands inside it.");
+      if (state.weather === "fog") recognitionText = "The fog thins at the turning just as the body begins to change. " + recognitionText;
+      else if (state.weather === "storm") recognitionText = "Lightning holds the turning white while the body changes. " + recognitionText;
+      else if (state.weather === "frost") recognitionText = "Its breath crosses yours as the body changes. " + recognitionText;
       appendBeat(state, makeBeat("recognition-beat:" + state.cursor + ":" + action.actorId, "threat", state.cursor, state.player.location,
         recognitionText, { actorId: identityVisible ? action.actorId : null, sign: state.pendingThreat.sign, truthEventId: followedEvent && followedEvent.id, meta: { recognition: true, identityVisible: identityVisible, critical: true } }));
     }
@@ -1749,6 +1781,31 @@
     return (state.cast || []).find(function (actor) { return actor.id === actorId; }) || null;
   }
 
+  /* A rescue plea is planned before the attack hour so it replaces that
+     night's ordinary off-screen attack instead of creating a second victim.
+     The same plea can belong to the host or to an innocent neighbour; the
+     player must decide from trust, not from a differently coloured action. */
+  function planThresholdRescue(state) {
+    var threshold = state && state.thresholdEvent;
+    var monster = state && state.monsterSchedule;
+    var doorTaunt = state && state.currentFacts && state.currentFacts.monsterTaunt && state.currentFacts.monsterTaunt.channel === "door";
+    if (!threshold || !monster || !monster.active || !monster.rescueDoor || doorTaunt || threshold.roll >= 0.48 || threshold.rescueRoll >= 0.26) return threshold;
+    var candidates = (state.cast || []).filter(function (actor) {
+      return actor.alive && !actor.changed && actor.id !== monster.hostId;
+    });
+    /* One person is named as the endangered neighbour and another must still
+       be available to make the innocent version of the visit. */
+    if (candidates.length < 2) return threshold;
+    var target = candidates[Math.floor((threshold.targetRoll || 0) * candidates.length) % candidates.length];
+    threshold.rescuePlanned = true;
+    threshold.purpose = "rescue";
+    threshold.requestMode = "outside";
+    threshold.concernId = target.id;
+    threshold.clueLocation = monster.huntLoc || "Village Square";
+    threshold.visitorKind = threshold.visitorRoll < (state.player.monsterSawYou ? 0.58 : 0.5) ? "monster" : "neighbour";
+    return threshold;
+  }
+
   function thresholdNeighbour(state) {
     var hostId = state.monsterSchedule && state.monsterSchedule.hostId;
     var ordered = [];
@@ -1759,7 +1816,8 @@
     (state.cast || []).forEach(function (actor) { ordered.push(actor.id); });
     var eligible = ordered.filter(function (id, index) {
       var actor = thresholdActor(state, id);
-      return ordered.indexOf(id) === index && actor && actor.alive && !actor.changed && id !== hostId;
+      var rescueTargetId = state.thresholdEvent && state.thresholdEvent.purpose === "rescue" ? state.thresholdEvent.concernId : null;
+      return ordered.indexOf(id) === index && actor && actor.alive && !actor.changed && id !== hostId && id !== rescueTargetId;
     });
     if (!eligible.length) return null;
     var roll = state.thresholdEvent && state.thresholdEvent.visitorRoll || 0;
@@ -1775,8 +1833,9 @@
     threshold.canEnter = chooseMonster && state.monsterSchedule.reach === "home";
     threshold.item = threshold.item || THRESHOLD_ITEMS[Math.floor(threshold.dialogueRoll * THRESHOLD_ITEMS.length) % THRESHOLD_ITEMS.length];
     if (chooseMonster) {
-      threshold.purpose = "lure";
+      if (threshold.purpose !== "rescue") threshold.purpose = "lure";
       threshold.requestMode = state.monsterSchedule.id === "vampire" ? "inside" : "outside";
+      if (threshold.purpose === "rescue") threshold.requestMode = "outside";
     } else {
       var purposes = ["return_item", "concern", "question", "sign", "rumour", "refuge"];
       threshold.purpose = threshold.purpose || purposes[Math.floor(threshold.purposeRoll * purposes.length) % purposes.length];
@@ -1784,6 +1843,7 @@
       var possibleTargets = (state.cast || []).filter(function (candidate) {
         return candidate.alive && !candidate.changed && candidate.id !== threshold.actorId;
       });
+      if (threshold.purpose === "rescue" && threshold.concernId === threshold.actorId) threshold.concernId = null;
       var host = thresholdActor(state, state.monsterSchedule && state.monsterSchedule.hostId);
       if (possibleTargets.length) {
         threshold.concernId = threshold.concernId || ((host && host.id !== threshold.actorId && threshold.targetRoll < 0.28)
@@ -1817,6 +1877,15 @@
     }
     if (threshold.visitorKind === "taunt") {
       return "Three slow knocks sound against the door. A voice just beyond it says, “Are you awake? I only want to talk.”";
+    }
+    if (threshold.purpose === "rescue") {
+      var targetName = target ? target.name : "Someone from the village";
+      var rescueName = revealed && actor ? actor.name : "A familiar voice";
+      return rescueName + " says, " + choose([
+        "“" + targetName + " is hurt near the " + place + ". Something is tracking them. Help me reach them before it does.”",
+        "“I found " + targetName + " hurt on the road to the " + place + ". Something followed me back. Please help me save them.”",
+        "“" + targetName + " fell near the " + place + ". I heard something circling beyond the lantern. I cannot bring them home alone.”"
+      ]);
     }
     if (threshold.visitorKind === "monster") {
       if (state.monsterSchedule.id === "vampire") {
@@ -1892,6 +1961,10 @@
     if (threshold.purpose === "concern") {
       var missing = thresholdTarget(state);
       return "“I will help,” you say. " + name + " answers, “" + (missing ? missing.name : "They") + " left for the " + threshold.clueLocation + " before the bell. Their home is still dark. Bring your lantern; I will show you where I last saw them.”";
+    }
+    if (threshold.purpose === "rescue") {
+      var rescueTarget = thresholdTarget(state);
+      return "“Where?” you ask. " + name + " answers, “The " + threshold.clueLocation + ". " + (rescueTarget ? rescueTarget.name : "They") + " was still alive when I ran for you. Bring your lantern. We have to go now.”";
     }
     if (threshold.purpose === "rumour") return "“All right,” you say. " + name + " glances toward the road. “Not at the door. Walk with me.”";
     if (threshold.purpose === "refuge") return "“Wait there,” you say. " + name + " answers, “Please hurry. I heard it behind me.”";
@@ -1971,6 +2044,11 @@
     if (threshold.visitorKind === "taunt") {
       return "The step is empty. The voice comes from the darkness beyond the reach of your shutter. Nothing moves where a face should be.";
     }
+    if (threshold.purpose === "rescue") {
+      var rescueTarget = thresholdTarget(state);
+      var rescueReveal = weatherLead || name + " stands on the step. ";
+      return rescueReveal + "They carry a hooded lantern and keep looking toward the " + (threshold.clueLocation || "Village Square") + ". They say " + (rescueTarget ? rescueTarget.name : "someone") + " is hurt. Nothing you can see proves whether they came for help or for you.";
+    }
     if (threshold.visitorKind === "neighbour") {
       var neighbourDetail = threshold.purpose === "return_item" ? "They hold " + (threshold.item || "your glove") + "."
         : threshold.purpose === "sign" ? "They carry a covered lantern and keep pointing down the lane."
@@ -2014,7 +2092,8 @@
     thresholdOpening += thresholdRequestText(state, false);
     var shown = appendBeat(state, makeBeat("threshold:" + state.cursor + ":" + threshold.kind, "doorstep", state.cursor, HOME, thresholdOpening, {
       signature: semanticSignature({ family: "threshold", location: HOME, interaction: threshold.kind, outcome: "unanswered" }),
-      meta: tauntVisit ? { contextualTaunt: true, tauntKind: contextualTaunt.kind, critical: true } : undefined
+      meta: tauntVisit ? { contextualTaunt: true, tauntKind: contextualTaunt.kind, critical: true }
+        : threshold.purpose === "rescue" ? { thresholdRescue: true, victimId: threshold.concernId, critical: true } : undefined
     }));
     if (!shown) {
       threshold.resolved = true;
@@ -2134,6 +2213,7 @@
     if (state.thresholdEvent.purposeRoll == null) state.thresholdEvent.purposeRoll = keyedNumber(state.seed, "threshold:purpose");
     if (state.thresholdEvent.targetRoll == null) state.thresholdEvent.targetRoll = keyedNumber(state.seed, "threshold:target");
     if (state.thresholdEvent.requestRoll == null) state.thresholdEvent.requestRoll = keyedNumber(state.seed, "threshold:request");
+    if (state.thresholdEvent.rescueRoll == null) state.thresholdEvent.rescueRoll = keyedNumber(state.seed, "threshold:rescue");
     state.version = VERSION;
     return state;
   }
@@ -2239,6 +2319,65 @@
     return state;
   }
 
+  function slayThresholdRescueTarget(state, source) {
+    var threshold = state.thresholdEvent;
+    var victim = thresholdTarget(state);
+    if (!victim || !victim.alive) return null;
+    victim.alive = false;
+    var location = threshold.clueLocation || state.monsterSchedule.huntLoc || "Village Square";
+    return appendTruth(state, {
+      id: "threshold-rescue-death:" + state.cursor + ":" + victim.id,
+      slot: state.cursor,
+      kind: "slain",
+      location: location,
+      actors: [state.monsterSchedule.hostId, victim.id].filter(Boolean),
+      victimId: victim.id,
+      sign: actualSign(state, Math.max(0, state.monsterSchedule.attackSlot)),
+      source: source,
+      thresholdRescue: true,
+      rescueReporterId: threshold.visitorKind === "neighbour" ? threshold.actorId : null
+    });
+  }
+
+  function recordSharedRescueDiscovery(state, attack, reporter) {
+    if (!attack || !reporter) return null;
+    var victim = thresholdActor(state, attack.victimId);
+    attack.sharedDiscovery = true;
+    attack.rescueReporterId = reporter.id;
+    var truth = appendTruth(state, {
+      id: "investigated:" + attack.id,
+      slot: state.cursor,
+      kind: "investigated_attack",
+      location: attack.location,
+      actors: ["player", reporter.id],
+      victimId: attack.victimId,
+      attackEventId: attack.id,
+      clueFound: false,
+      sign: null,
+      heardLastWords: false,
+      lastWords: null,
+      recognizedChanged: false,
+      corroborated: true,
+      corroboratingWitnessIds: [reporter.id],
+      suspicious: false,
+      witnessIds: [],
+      sharedDiscovery: true,
+      rescueReporterId: reporter.id
+    });
+    state.ledgers.memories[reporter.id] = state.ledgers.memories[reporter.id] || [];
+    state.ledgers.memories[reporter.id].push({
+      eventId: truth.id,
+      slot: state.cursor,
+      subject: "player",
+      kind: "shared_body_discovery",
+      location: attack.location,
+      clarity: "clear",
+      acknowledged: true,
+      interpretation: "They came to the player's door, searched together, and found " + (victim ? victim.name + "'s body" : "the body") + " side by side."
+    });
+    return truth;
+  }
+
   function resolveThreshold(state, action) {
     var threshold = state.thresholdEvent;
     if (!threshold || threshold.resolved) return invalid(state, action, "Nothing is waiting at the threshold.");
@@ -2262,7 +2401,9 @@
     }
     if (action.type === "ANSWER_DOOR") {
       if (threshold.spoken) return invalid(state, action, "The visitor is waiting for your decision.");
-      var spokenText = threshold.visitorKind === "taunt"
+      var spokenText = threshold.purpose === "rescue"
+        ? thresholdNeighbourAnswer(state, threshold.looked ? actor : null)
+        : threshold.visitorKind === "taunt"
         ? (threshold.contextualTaunt && threshold.contextualTaunt.line || "The voice laughs softly. “Soon.”")
         : threshold.visitorKind === "neighbour"
         ? thresholdNeighbourAnswer(state, actor)
@@ -2291,18 +2432,30 @@
           evasive: "“You watched my house and dropped it there. What else do you expect me to explain?”"
         });
       }
+      var rescueIdentityVisible = threshold.purpose !== "rescue" || threshold.looked;
       var spokenBeat = appendBeat(state, makeBeat("threshold-spoken-beat:" + state.cursor, "doorstep", state.cursor, HOME, spokenText, {
-        actorId: threshold.looked || threshold.visitorKind === "neighbour" ? threshold.actorId || null : null,
+        actorId: threshold.looked || (threshold.visitorKind === "neighbour" && rescueIdentityVisible) ? threshold.actorId || null : null,
         signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: "answer", outcome: threshold.requestMode }),
         meta: { thresholdAnswer: true, visitorKind: threshold.visitorKind, requestMode: threshold.requestMode, soundCue: threshold.visitorKind === "taunt" ? "murmur" : null, critical: true }
       }));
-      appendObservation(state, { eventId: "threshold-spoken:" + state.cursor, beatId: spokenBeat && spokenBeat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: threshold.visitorKind === "neighbour" && threshold.actorId ? [threshold.actorId] : [], clarity: threshold.looked || threshold.visitorKind === "neighbour" ? "clear" : "heard", reliability: "sensory", text: spokenText });
+      appendObservation(state, { eventId: "threshold-spoken:" + state.cursor, beatId: spokenBeat && spokenBeat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: threshold.visitorKind === "neighbour" && threshold.actorId && rescueIdentityVisible ? [threshold.actorId] : [], clarity: threshold.looked || (threshold.visitorKind === "neighbour" && rescueIdentityVisible) ? "clear" : "heard", reliability: "sensory", text: spokenText });
       return state;
     }
     var text;
     var killed = false;
+    var finalLocation = HOME;
     if (action.type === "KEEP_BARRED") {
-      if (threshold.visitorKind === "taunt") {
+      if (threshold.purpose === "rescue") {
+        var barredTarget = thresholdTarget(state);
+        var barredTargetName = barredTarget ? barredTarget.name : "the neighbour they named";
+        var barredAttack = slayThresholdRescueTarget(state, threshold.visitorKind === "monster" ? "threshold_rescue_refused" : "threshold_rescue_unanswered");
+        if (threshold.visitorKind === "monster") {
+          text = "You keep the bolt drawn. The visitor begs once more, then runs toward the " + threshold.clueLocation + ". Later, one cry reaches the cottage and stops. " + barredTargetName + " does not come home.";
+        } else {
+          text = "You keep the bolt drawn. The visitor goes toward the " + threshold.clueLocation + " without you. Before dawn, the village bell sounds for " + barredTargetName + ". They were found too late.";
+        }
+        if (!barredAttack) text = "You keep the bolt drawn. The visitor waits, then leaves toward the " + threshold.clueLocation + " alone.";
+      } else if (threshold.visitorKind === "taunt") {
         var tauntLine = threshold.contextualTaunt && threshold.contextualTaunt.line || "The voice laughs softly. “Soon.”";
         text = threshold.spoken
           ? "You keep one hand on the bolt and let the silence answer. The voice gives a satisfied little laugh, then its footsteps recede."
@@ -2332,19 +2485,57 @@
       } else {
         text = "You keep one hand on the bolt. The voice tries anger, fear and tears. You do not open the door.";
       }
+      /* Looking through the shutter establishes which neighbour tried to
+         coax the player outside. Keep that direct sight available as a
+         daylight interview question even though the visitor will lie. */
+      if (threshold.visitorKind === "monster" && threshold.looked && actor) {
+        var namedRescueTarget = threshold.purpose === "rescue" ? thresholdTarget(state) : null;
+        var visitQuestion = namedRescueTarget
+          ? "You came to my door saying " + namedRescueTarget.name + " was hurt at the " + threshold.clueLocation + ". I stayed inside, and " + namedRescueTarget.name + " died there. Why did you come for me?"
+          : "You came to my door after midnight and tried to make me step outside. Why?";
+        appendTruth(state, {
+          id: "threshold-monster-visit:" + state.cursor + ":" + actor.id,
+          slot: state.cursor,
+          kind: "threshold_monster_visit",
+          location: HOME,
+          actorId: actor.id,
+          subjectId: actor.id,
+          actors: ["player", actor.id],
+          text: actor.name + " came to your door after midnight and tried to coax you outside" + (namedRescueTarget ? " by saying " + namedRescueTarget.name + " needed help" : "") + ".",
+          question: visitQuestion,
+          honest: namedRescueTarget
+            ? "“I heard " + namedRescueTarget.name + " cry out and came for help. By the time I returned, they were dead. I wish you had believed me.”"
+            : "“I heard someone hurt in the lane and came for help. If I frightened you, I am sorry.”",
+          evasive: namedRescueTarget
+            ? "“You stayed behind your bolt while " + namedRescueTarget.name + " died. Ask yourself why you need my version to be the guilty one.”"
+            : "“You saw a face through a shutter and heard fear in a voice. That does not make your version of the night mine.”"
+        });
+      }
     } else if (action.type === "STEP_OUTSIDE" || action.type === "INVITE_IN") {
       threshold.opened = true;
       if (threshold.visitorKind === "monster") {
         killed = !!state.monsterSchedule.active;
         if (!killed) {
           text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " stands on the step, familiar and uneasy. They smile, step back into the dark and leave. You cannot decide what they wanted.";
+        } else if (threshold.purpose === "rescue") {
+          var lureTarget = thresholdTarget(state);
+          finalLocation = threshold.clueLocation || state.monsterSchedule.huntLoc || "Village Square";
+          state.player.location = finalLocation;
+          text = "You take the lantern and follow " + (actor ? actor.name : "the visitor") + " toward the " + finalLocation + ". There is no wounded " + (lureTarget ? lureTarget.name : "neighbour") + " at the turning. The familiar face changes, and the thing takes you instead.";
         } else if (action.type === "INVITE_IN") {
           text = "You lift the bar and open the door. " + (actor ? actor.name : "The visitor") + " stands on the step, frightened and familiar. “Please. Let me in.” You name them and give permission. They cross the threshold smiling. Only then does the borrowed face change. No bolt can help you now.";
         } else {
           text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " stands on the step, frightened and familiar. “There is something you must see,” they say. You take the lantern and step into the lane. At the first turning, the borrowed face changes. The thing was waiting for this.";
         }
+      } else if (threshold.purpose === "rescue") {
+        var rescueTarget = thresholdTarget(state);
+        var rescueAttack = slayThresholdRescueTarget(state, "threshold_rescue_shared_discovery");
+        finalLocation = threshold.clueLocation || state.monsterSchedule.huntLoc || "Village Square";
+        state.player.location = finalLocation;
+        if (rescueAttack && actor) recordSharedRescueDiscovery(state, rescueAttack, actor);
+        text = "You and " + (actor ? actor.name : "your neighbour") + " take lanterns to the " + finalLocation + ". You find " + (rescueTarget ? rescueTarget.name : "the missing neighbour") + " where the road narrows. The attacker is gone; the body is still warm. You arrived together, and " + (actor ? actor.name : "your companion") + " can tell the village exactly that.";
       } else if (threshold.purpose === "sign" && threshold.sign) {
-        text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " You stamp the mark into your Journal.";
+          text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " The physical mark is clear enough to record if you choose.";
         if (!state.found.stamps.some(function (stamp) { return stamp.sign === threshold.sign; })) {
           state.found.stamps.push({ sign: threshold.sign, slot: state.cursor, location: threshold.clueLocation, beatId: "threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), source: "threshold_neighbour" });
         }
@@ -2402,22 +2593,22 @@
     } else return invalid(state, action, "The door remains between you and it.");
     threshold.resolved = true;
     threshold.choice = action.type;
-    appendTruth(state, { id: "threshold-choice:" + state.cursor, slot: state.cursor, kind: "threshold_choice", action: action.type, location: HOME, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, looked: !!threshold.looked, opened: !!threshold.opened, killed: killed, text: text });
+    appendTruth(state, { id: "threshold-choice:" + state.cursor, slot: state.cursor, kind: "threshold_choice", action: action.type, location: finalLocation, thresholdKind: threshold.kind, visitorKind: threshold.visitorKind, actorId: threshold.actorId || null, looked: !!threshold.looked, opened: !!threshold.opened, killed: killed, text: text });
     var beatType = killed ? "flee" : "doorstep";
-    var beat = appendBeat(state, makeBeat("threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), beatType, state.cursor, HOME, text, {
+    var beat = appendBeat(state, makeBeat("threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), beatType, state.cursor, finalLocation, text, {
       actorId: action.type === "KEEP_BARRED" ? null : threshold.actorId || null,
       outcome: killed ? "caught" : "safe",
       signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: threshold.kind, outcome: action.type.toLowerCase() }),
       meta: { thresholdDecision: true, visitorKind: threshold.visitorKind, opened: !!threshold.opened, killed: killed, soundCue: threshold.visitorKind === "taunt" ? "giggle" : null, critical: true }
     }));
-    appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: HOME, actors: action.type !== "KEEP_BARRED" && threshold.actorId ? [threshold.actorId] : [], clarity: action.type === "KEEP_BARRED" ? "partial" : "clear", reliability: "sensory", text: text });
+    appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: finalLocation, actors: action.type !== "KEEP_BARRED" && threshold.actorId ? [threshold.actorId] : [], clarity: action.type === "KEEP_BARRED" ? "partial" : "clear", reliability: "sensory", text: text });
     if (killed) {
       state.player.alive = false;
       state.phase = "dead";
-      appendTruth(state, { id: "player-death-threshold:" + state.cursor, slot: state.cursor, kind: "player_slain", location: HOME, actors: [threshold.actorId, "player"].filter(Boolean), source: "threshold" });
+      appendTruth(state, { id: "player-death-threshold:" + state.cursor, slot: state.cursor, kind: "player_slain", location: finalLocation, actors: [threshold.actorId, "player"].filter(Boolean), source: "threshold" });
       return state;
     }
-    return completeNight(state);
+    return completeNight(state, finalLocation === HOME ? null : finalLocation);
   }
 
   function resolveReturn(state, action) {
@@ -3117,7 +3308,9 @@
       if (!state.thresholdEvent.looked) thresholdActions.push(action("LOOK_THROUGH", "Look through the shutter", "quiet"));
       if (!state.thresholdEvent.spoken) {
         var visitedQuestionPlace = (state.player.route || []).some(function (step) { return step.location === state.thresholdEvent.clueLocation; });
-        var answerLabel = state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "question"
+        var answerLabel = state.thresholdEvent.purpose === "rescue"
+          ? "Ask where they found " + ((thresholdTarget(state) || {}).name || "the injured neighbour")
+          : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "question"
           ? (visitedQuestionPlace ? "Yes. I was near the " : "No. I was not near the ") + (state.thresholdEvent.clueLocation || "Village Square")
           : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "concern"
             ? "I will help you look"
@@ -3136,7 +3329,9 @@
           : "Unbar the door. Invite " + (thresholdVisitor ? thresholdVisitor.name : "them") + " inside";
         thresholdActions.push(action("INVITE_IN", insideLabel, "amber"));
       } else {
-        var outsideLabel = state.thresholdEvent.visitorKind === "neighbour" && ["question", "sign", "concern"].indexOf(state.thresholdEvent.purpose) >= 0
+        var outsideLabel = state.thresholdEvent.purpose === "rescue"
+          ? "Take your lantern. Help find " + ((thresholdTarget(state) || {}).name || "them")
+          : state.thresholdEvent.visitorKind === "neighbour" && ["question", "sign", "concern"].indexOf(state.thresholdEvent.purpose) >= 0
           ? "Follow " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " to the " + (state.thresholdEvent.clueLocation || "Village Square")
           : state.thresholdEvent.visitorKind === "neighbour" && state.thresholdEvent.purpose === "rumour"
             ? "Step outside and hear " + (thresholdVisitor ? thresholdVisitor.name : "your neighbour") + " out"
@@ -3222,7 +3417,7 @@
       var leave = all.find(function (item) { return item.type === "LEAVE" && item.to === openingStep; }) || all[0];
       if (!leave) return [];
       if (guide.kind === "watch") {
-        leave.label = "Take the direct back lane to watch " + (guide.actorName || "their") + "'s door";
+        leave.label = "Take the direct back lane to watch " + (guide.actorName ? guide.actorName + "'s" : "their") + " door";
       } else leave.label = "Take the back lanes straight to the " + target;
       return [leave];
     }
@@ -3283,8 +3478,8 @@
         ignore.ignoreDelusion = true;
       }
       var ignoreLabel = !guide.intentDone && target && state.player.location !== target
-        ? "Do not look. Continue to the " + target
-        : guide.kind === "search" ? "Do not look. Continue your search" : "Do not look. Keep watching";
+        ? "Do not move closer. Continue to the " + target
+        : guide.kind === "search" ? "Do not move closer. Continue your search" : "Do not move closer. Keep watching the door";
       add(ignore, ignoreLabel);
       add(all.find(function (item) { return item.type === "GO_HOME"; }), "Leave it. Head for home");
       return result.slice(0, 3);
@@ -3430,7 +3625,7 @@
       }
       if (guide.intentDone) add(all.find(function (item) { return item.type === "SEARCH_ON"; }), siteChoices.onward || "Make another circuit");
     } else if (atTarget && !guide.intentDone && guide.kind === "watch") {
-      add(all.find(function (item) { return item.type === "WAIT"; }), "Take up watch near " + (guide.actorName || "their") + " door");
+      add(all.find(function (item) { return item.type === "WAIT"; }), (guidedActor ? "Let " + guidedActor.name + " go. " : "") + "Take up watch outside " + (guide.actorName ? guide.actorName + "'s" : "their") + " door");
     }
     if (guide.actorId) {
       if (guide.intentDone && (guide.kind !== "search" || atTarget)) add(all.find(function (item) { return item.type === (guide.kind === "search" ? "SEARCH_ON" : "KEEP_WATCH"); }));
@@ -3546,6 +3741,21 @@
       };
     }));
     findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
+      return event.kind === "threshold_monster_visit";
+    }).map(function (event) {
+      return {
+        eventId: event.id,
+        actorId: event.subjectId || event.actorId,
+        location: event.location,
+        slot: event.slot,
+        text: event.text,
+        question: event.question,
+        honest: event.honest,
+        evasive: event.evasive,
+        source: "threshold_monster_visit"
+      };
+    }));
+    findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
       return event.kind === "threshold_missing_report";
     }).reduce(function (rows, event) {
       rows.push({
@@ -3602,6 +3812,8 @@
         recognizedChanged: !!event.recognizedChanged,
         corroborated: !!event.corroborated,
         corroboratingWitnessIds: (event.corroboratingWitnessIds || []).slice(),
+        sharedDiscovery: !!event.sharedDiscovery,
+        rescueReporterId: event.rescueReporterId || null,
         defenceMade: !!event.defenceMade,
         defenceAccepted: !!event.defenceAccepted,
         suspicious: !!event.suspicious,
