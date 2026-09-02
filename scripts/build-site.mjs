@@ -69,7 +69,8 @@ await fs.writeFile(path.join(outDir, "index.html"), html);
 await Promise.all([
   fs.cp(path.join(root, "assets"), path.join(outDir, "assets"), { recursive: true }),
   fs.copyFile(path.join(root, "v5-content.js"), path.join(outDir, "v5-content.js")),
-  fs.copyFile(path.join(root, "v5-night-director.js"), path.join(outDir, "v5-night-director.js"))
+  fs.copyFile(path.join(root, "v5-night-director.js"), path.join(outDir, "v5-night-director.js")),
+  fs.copyFile(path.join(root, "v6-continuity.js"), path.join(outDir, "v6-continuity.js"))
 ]);
 
 for (const optionalFile of ["favicon.svg"]) {
