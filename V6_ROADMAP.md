@@ -38,16 +38,38 @@ The production V5 build is frozen at commit `268c926`. V6 work lives on the
 - deterministic keyed rolls; and
 - conservative, idempotent V5-to-V6 save preparation.
 
-It is not yet wired into `index.html`. V5 remains authoritative until each
-consumer below has moved and its parity tests pass. This is deliberate: V6
-must replace the compatibility shell, not become another shell beside it.
+It is wired into `index.html` only at the terminal-night import boundary. The
+existing V5 screens remain authoritative until each consumer below has moved
+and its parity tests pass. This is deliberate: V6 must replace the compatibility
+shell gradually, not become another independent story engine beside it.
+
+### Current checkpoint: V6.1a
+
+The playable build now initializes and persists the V6 ledger. When a Director
+night reaches a terminal state, `v6-director-adapter.js` imports every truth
+event, player observation, villager memory, genuine physical discovery and
+planted mark before the existing daylight projection runs. The old daylight UI
+still reads its compatibility collections; this is a parity checkpoint, not the
+end of the migration.
+
+Contextual interview questions are the first daylight consumer: for imported
+V6 nights, a question is only eligible when the player directly observed the
+source event, heard testimony about it, or discovered evidence from it. Nights
+played before V6 retain their legacy questions until they have an explicit
+migration source.
+
+One hundred varied terminal Director nights are projected twice in tests. The
+second import must be identical, proving that reload or repeated settlement
+cannot duplicate events or evidence.
 
 ## Delivery slices
 
-### V6.1 — Canonical continuity
+### V6.1 — Canonical continuity (in progress)
 
-- Give Director truth, observations and memories durable V6 event IDs.
-- Adapt `consequenceProjection` into ledger writes rather than copied arrays.
+- [x] Give Director truth, observations and memories durable V6 event IDs.
+- [x] Record the canonical ledger before `consequenceProjection` runs.
+- [ ] Replace copied compatibility arrays consumer by consumer.
+- [x] Gate contextual interview questions through canonical player knowledge.
 - Move deaths, changes, flight, doorstep visits, shared body discoveries,
   monster recognition and relationship events first.
 - Add a development inspector that shows truth and each observer separately.

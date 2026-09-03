@@ -3855,8 +3855,10 @@
     });
 
     var findings = (state.found.clues || []).filter(function (beat) { return !!beat.actorId; }).map(function (beat) {
+      var observation = (state.ledgers.observations || []).find(function (row) { return row.beatId === beat.id; });
       return {
         eventId: "n" + state.night + ":finding:" + safeId(beat.id),
+        sourceEventIds: observation && observation.eventId ? [observation.eventId] : [],
         actorId: beat.actorId,
         location: beat.location,
         slot: beat.slot,
@@ -3872,6 +3874,7 @@
     }).map(function (event) {
       return {
         eventId: event.id,
+        sourceEventIds: [event.id],
         actorId: event.subjectId,
         reporterId: event.reporterId,
         location: event.location,
@@ -3888,6 +3891,7 @@
     }).map(function (event) {
       return {
         eventId: event.id,
+        sourceEventIds: [event.id],
         actorId: event.subjectId || event.actorId,
         location: event.location,
         slot: event.slot,
@@ -3903,6 +3907,7 @@
     }).reduce(function (rows, event) {
       rows.push({
         eventId: event.id + ":reporter",
+        sourceEventIds: [event.id],
         actorId: event.reporterId,
         subjectId: event.subjectId,
         reporterId: event.reporterId,
@@ -3916,6 +3921,7 @@
       });
       rows.push({
         eventId: event.id + ":subject",
+        sourceEventIds: [event.id],
         actorId: event.subjectId,
         subjectId: event.subjectId,
         reporterId: event.reporterId,

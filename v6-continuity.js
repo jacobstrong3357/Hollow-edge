@@ -37,6 +37,7 @@
 
   function actorMap(actors) {
     var result = {};
+    result[PLAYER_ID] = { id: PLAYER_ID, name: "You", initialStatus: "alive", status: "alive" };
     list(actors).forEach(function (actor) {
       if (!actor || !actor.id) return;
       var status = actor.status || (actor.fled ? "fled" : actor.alive === false ? "dead" : actor.turned ? "changed" : "alive");
@@ -48,6 +49,15 @@
       };
     });
     return result;
+  }
+
+  function ensureActors(input, actors) {
+    var ledger = upgradeLedger(input);
+    var incoming = actorMap(actors);
+    Object.keys(incoming).forEach(function (id) {
+      if (!ledger.actors[id]) ledger.actors[id] = incoming[id];
+    });
+    return ledger;
   }
 
   function createLedger(config) {
@@ -394,6 +404,7 @@
     ledger.seed = ledger.seed || ledger.runId;
     ledger.sequence = Number.isInteger(ledger.sequence) ? ledger.sequence : list(ledger.events).length;
     ledger.actors = ledger.actors || {};
+    if (!ledger.actors[PLAYER_ID]) ledger.actors[PLAYER_ID] = { id: PLAYER_ID, name: "You", initialStatus: "alive", status: "alive" };
     ledger.events = list(ledger.events);
     ledger.observations = list(ledger.observations);
     ledger.testimonies = list(ledger.testimonies);
@@ -422,7 +433,7 @@
       });
       run.legacySchemaVersion = prior;
     } else {
-      run.continuity = upgradeLedger(run.continuity);
+      run.continuity = ensureActors(run.continuity, run.npcs || []);
     }
     run.schemaVersion = VERSION;
     return run;
@@ -488,6 +499,7 @@
     VERSION: VERSION,
     PLAYER_ID: PLAYER_ID,
     createLedger: createLedger,
+    ensureActors: ensureActors,
     upgradeLedger: upgradeLedger,
     upgradeRun: upgradeRun,
     appendEvent: appendEvent,

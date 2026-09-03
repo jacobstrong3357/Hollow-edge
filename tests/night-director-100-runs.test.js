@@ -2,15 +2,28 @@
 
 var assert = require("assert");
 var Director = require("../v5-night-director.js");
+var Continuity = require("../v6-continuity.js");
+var V6Adapter = require("../v6-director-adapter.js");
 
 var locations = ["Village Square", "Old Church", "Graveyard", "Dark Forest", "Old Mill", "Tavern"];
 var weathers = ["still", "fog", "storm", "frost"];
 var monsters = [
   { id: "werewolf", signs: ["tracks", "claw", "bite"] },
   { id: "vampire", signs: ["bite", "cold", "graves"] },
-  { id: "night-hag", signs: ["hex", "cold", "claw"] },
-  { id: "ghoul", signs: ["tracks", "graves", "bite"] },
-  { id: "wraith", signs: ["cold", "hex", "graves"] }
+  { id: "wraith", signs: ["cold", "hex", "graves"] },
+  { id: "witch", signs: ["hex", "flora", "cold"] },
+  { id: "demon", signs: ["claw", "hex", "wail"] },
+  { id: "shifter", signs: ["tracks", "claw", "cold"] },
+  { id: "banshee", signs: ["wail", "cold", "graves"] },
+  { id: "lich", signs: ["graves", "cold", "hex"] },
+  { id: "revenant", signs: ["tracks", "graves", "claw"] },
+  { id: "doppel", signs: ["tracks", "bite", "cold"] },
+  { id: "hag", signs: ["hex", "claw", "flora"] },
+  { id: "necromancer", signs: ["graves", "hex", "wail"] },
+  { id: "mimic", signs: ["tracks", "bite", "flora"] },
+  { id: "succubus", signs: ["bite", "wail", "cold"] },
+  { id: "hollowed", signs: ["tracks", "flora", "wail"] },
+  { id: "ghoul", signs: ["tracks", "graves", "bite"] }
 ];
 
 var cast = [
@@ -113,9 +126,11 @@ function chooseAction(state, actions, run, step) {
 (function oneHundredSerializedPlaythroughs() {
   var terminal = { complete: 0, dead: 0 };
   var coverage = new Set();
+  var monsterCoverage = new Set();
 
   for (var run = 0; run < 100; run += 1) {
     var state = Director.createNight(configFor(run));
+    monsterCoverage.add(state.monsterSchedule.id);
     assert.deepStrictEqual(Director.validateNight(state), [], "run " + run + " starts valid");
 
     var step = 0;
@@ -142,10 +157,20 @@ function chooseAction(state, actions, run, step) {
     ["encounters", "relationships", "findings", "secrets", "investigations"].forEach(function (key) {
       assert(Array.isArray(projection[key]), "run " + run + " produces a " + key + " ledger");
     });
+    var continuity = V6Adapter.projectDirectorNight(null, state, {
+      runId: "qa-playthrough-" + run,
+      seed: state.seed,
+      actors: cast
+    });
+    assert.deepStrictEqual(Continuity.validateLedger(continuity), [], "run " + run + " projects into valid V6 continuity");
+    assert.strictEqual(continuity.lastImportedDirectorNight.night, state.night, "run " + run + " records the imported night");
+    assert.strictEqual(continuity.lastImportedDirectorNight.truthEvents, state.ledgers.truth.length, "run " + run + " imports every Director truth event");
+    assert.deepStrictEqual(V6Adapter.projectDirectorNight(continuity, state, { actors: cast }), continuity, "run " + run + " can be projected twice without duplicating continuity");
   }
 
   assert.strictEqual(terminal.complete + terminal.dead, 100, "all 100 runs terminate");
   assert(coverage.size >= 12, "the stress pass covers varied choices rather than one happy path");
+  assert.strictEqual(monsterCoverage.size, monsters.length, "the stress pass covers every current monster type");
 })();
 
 console.log("night-director: 100 serialized playthroughs passed");

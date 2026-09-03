@@ -92,9 +92,13 @@
 
 <script src="v5-content.js"></script>
 <script src="v5-night-director.js?v=29"></script>
+<script src="v6-continuity.js?v=1"></script>
+<script src="v6-director-adapter.js?v=1"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
+const HE_CONTINUITY = typeof window !== "undefined" ? window.HE_CONTINUITY : null;
+const HE_V6_DIRECTOR_ADAPTER = typeof window !== "undefined" ? window.HE_V6_DIRECTOR_ADAPTER : null;
 
 
 /* ================= SOUND ================= */
@@ -2988,6 +2992,9 @@ function v5Observation(event, choice) {
 }
 function contextualQuestionsFor(s, npcId) {
   const events = s.worldEvents || [];
+  const v6CanRaise = (event) => typeof HE_V6_DIRECTOR_ADAPTER === "undefined"
+    || !HE_V6_DIRECTOR_ADAPTER
+    || HE_V6_DIRECTOR_ADAPTER.playerCanRaiseLegacyEvent(s.continuity, event);
   const relevantNight = s.nightNum;
   const asked = new Set((s.askedLog[npcId] || []).filter((k) => k.includes(":context:")));
   const out = [];
@@ -2997,8 +3004,10 @@ function contextualQuestionsFor(s, npcId) {
      action available across later days until they actually give it back. */
   const relevantDirectObservation = (obs) => {
     if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) return false;
+    const sourceEvent = events.find((entry) => entry.eventId === obs.eventId);
+    if (sourceEvent && !v6CanRaise(sourceEvent)) return false;
     if (obs.night === relevantNight) return true;
-    const event = events.find((entry) => entry.eventId === obs.eventId);
+    const event = sourceEvent;
     const id = `${obs.eventId}:${obs.kind}`;
     return !!(event && event.kind === "director_finding" && event.returnable
       && event.actorIds && event.actorIds.includes(npcId)
@@ -3025,7 +3034,7 @@ function contextualQuestionsFor(s, npcId) {
     /* A villager privately noticing the player's lantern does not give the
        player knowledge of that sighting. Only a shared body scene is a lived
        memory the player can deliberately raise in the interview. */
-    if (!event || event.kind !== "director_body_investigation" || !asked.has(`${mem.night}:context:${event.eventId}:memory`)) continue;
+    if (!event || event.kind !== "director_body_investigation" || !v6CanRaise(event) || !asked.has(`${mem.night}:context:${event.eventId}:memory`)) continue;
     const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
     const label = victim
       ? event.sharedDiscovery
@@ -3062,7 +3071,7 @@ function contextualQuestionsFor(s, npcId) {
     /* If you identified them, ask what THEY were doing. The reverse-memory
        question exists only when they noticed you but you did not identify
        them. One encounter therefore never becomes two versions of itself. */
-    if (!event || event.kind !== "director_body_investigation" || directEvents.has(event.eventId) || offeredEvents.has(event.eventId)) continue;
+    if (!event || event.kind !== "director_body_investigation" || !v6CanRaise(event) || directEvents.has(event.eventId) || offeredEvents.has(event.eventId)) continue;
     const id = `${event.eventId}:memory`;
     const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
     const label = victim
@@ -4334,6 +4343,10 @@ function newGame(veteran, hollowedUnlocked) {
     coerceNote: null, monsterProtects: false, pendingOffer: null,
     offerBeats: [], noteExposedPending: false,
   };
+  if (HE_CONTINUITY) {
+    s.schemaVersion = HE_CONTINUITY.VERSION;
+    s.continuity = HE_CONTINUITY.createLedger({ runId: gameId, seed: gameId, actors: s.npcs });
+  }
   const pre = [];
   if (chance(0.4)) pre.push(ev(`${soundFor(type.id)} At the well this morning it is agreed, loudly, that it was only the wind.`, undefined, 0));
   return resolveNight(s, "home", pre);
@@ -5795,6 +5808,18 @@ function resolveNight(prev, planIn, preEvents) {
      interviews and social systems. This is deliberately one-way: the legacy
      resolver may format the morning, but it cannot invent a different night. */
   if (director) {
+    /* V6 writes the terminal Director trace into one canonical history before
+       the compatibility projection formats it for the existing daylight UI.
+       During V6.1 both paths run from the same immutable night; parity tests
+       guard the handoff until interviews and the Journal read V6 directly. */
+    if (HE_CONTINUITY && HE_V6_DIRECTOR_ADAPTER) {
+      s.continuity = HE_V6_DIRECTOR_ADAPTER.projectDirectorNight(s.continuity || null, director, {
+        runId: s.gameId,
+        seed: s.gameId,
+        actors: s.npcs,
+      });
+      s.schemaVersion = HE_CONTINUITY.VERSION;
+    }
     const projection = HE_DIRECTOR.consequenceProjection(director);
     const encounters = projection.encounters || [];
     /* False marks are authored by the same night ledger as attacks and
@@ -5915,6 +5940,7 @@ function resolveNight(prev, planIn, preEvents) {
         : /parcel|packet|bundle|wrapped|satchel|note|letter|message|mail/i.test(object);
       return {
         eventId: finding.eventId, night: n, location: finding.location, kind: "director_finding",
+        sourceEventIds: finding.sourceEventIds && finding.sourceEventIds.length ? finding.sourceEventIds : [finding.eventId],
         actorIds: [finding.actorId], subjectId: finding.actorId,
         question: finding.question || (returnable ? `Return ${definiteFindingObject(object)}` : `Ask about ${definiteFindingObject(object)}`),
         honest: finding.honest || `“It is mine. I carried it because I went out to ${reason}.”`,
@@ -5942,6 +5968,7 @@ function resolveNight(prev, planIn, preEvents) {
       ...entry,
       night: n,
       kind: "director_body_investigation",
+      sourceEventIds: [entry.eventId],
       actorIds: [...new Set([...(entry.witnessIds || []), ...(entry.corroboratingWitnessIds || [])])],
       subjectId: entry.victimId,
     }));
@@ -13923,7 +13950,7 @@ function MonsterVillage() {
       try {
         const r2 = await window.storage.get("mv-run");
         if (r2 && r2.value) {
-          const run = JSON.parse(r2.value);
+          let run = JSON.parse(r2.value);
           if (run && run.monster && run.npcs && !run.over && MONSTERS.some((mm) => mm.id === run.monster.type)) {
             /* saves from older builds may carry signs that no longer exist
                (e.g. the retired fogged mirrors): scrub them so the journal
@@ -13939,6 +13966,7 @@ function MonsterVillage() {
             repairPublicBlame(run);
             repairFirstDayStanding(run);
             repairPlayerKnowledge(run);
+            if (HE_CONTINUITY) run = HE_CONTINUITY.upgradeRun(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
                it has already sampled the night and recorded player choices.
