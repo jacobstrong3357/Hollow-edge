@@ -94,11 +94,13 @@
 <script src="v5-night-director.js?v=29"></script>
 <script src="v6-continuity.js?v=1"></script>
 <script src="v6-director-adapter.js?v=1"></script>
+<script src="v6-run-continuity.js?v=1"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 const HE_CONTINUITY = typeof window !== "undefined" ? window.HE_CONTINUITY : null;
 const HE_V6_DIRECTOR_ADAPTER = typeof window !== "undefined" ? window.HE_V6_DIRECTOR_ADAPTER : null;
+const HE_V6_RUN_CONTINUITY = typeof window !== "undefined" ? window.HE_V6_RUN_CONTINUITY : null;
 
 
 /* ================= SOUND ================= */
@@ -1524,6 +1526,7 @@ function monsterKillsAccuser(s, beats, intro, where) {
   s.deathAfterBeats = true;
   s.deathBeats = playerDeathBeats(m, mn ? mn.name : "it", where || "square");
   s.over = { win: false, reason: "slain", text: `You named it wrong twice. The second time, it stopped feeding on the village and came for you. No neighbour answered.` };
+  recordActorStatus(s, "player", "dead", { id: `night:${s.nightNum}:wrong-name-player-death`, type: "player_slain", phase: "night", night: s.nightNum, location: where || "Village Square", observedBy: ["player"], truth: { cause: "second_wrong_name" } });
 }
 
 /* ---------- Pass G2: the offer ----------
@@ -4106,6 +4109,25 @@ const monsterOf = (s) => MONSTERS.find((m) => m.id === s.monster.type);
    stable four-by-four collection. */
 const gameMonsters = (s) => MONSTERS.filter((mm) => mm.id !== "hollowed" || (s && s.hollowedIn));
 const npcById = (s, id) => s.npcs.find((n) => n.id === id);
+/* V6 owns whether a person is alive, changed or gone. The familiar fields on
+   each NPC remain as a temporary view for the existing screens, but status
+   changes are recorded in continuity first and only then projected back. */
+const canonicalActorStatus = (s, id) => typeof HE_V6_RUN_CONTINUITY !== "undefined" && HE_V6_RUN_CONTINUITY
+  ? HE_V6_RUN_CONTINUITY.actorStatus(s, id)
+  : (() => { const npc = npcById(s, id); return !npc ? null : npc.fled ? "fled" : !npc.alive ? "dead" : npc.turned ? "changed" : "alive"; })();
+const canonicalActorCanAppear = (s, id) => ["alive", "changed"].includes(canonicalActorStatus(s, id));
+function recordActorStatus(s, id, status, spec = {}) {
+  if (typeof HE_V6_RUN_CONTINUITY !== "undefined" && HE_V6_RUN_CONTINUITY) {
+    HE_V6_RUN_CONTINUITY.recordStatusChange(s, id, status, spec);
+    return s;
+  }
+  s.npcs = s.npcs.map((npc) => npc.id !== id ? npc
+    : status === "alive" ? { ...npc, alive: true, turned: false, fled: false }
+      : status === "changed" ? { ...npc, alive: true, turned: true, fled: false }
+        : status === "dead" ? { ...npc, alive: false }
+          : { ...npc, fled: true });
+  return s;
+}
 /* A favour belongs to the neighbour who asked it. If that neighbour dies or
    goes into hiding there is nobody left to answer at dawn, so the errand is
    over rather than becoming an unreachable banner/modal in the saved run.
@@ -4114,21 +4136,21 @@ const npcById = (s, id) => s.npcs.find((n) => n.id === id);
 function cancelUnavailableFavour(s) {
   if (!s || !s.sideQuest) return false;
   const giver = npcById(s, s.sideQuest.giver);
-  if (giver && giver.alive && !giver.fled) return false;
+  if (giver && canonicalActorCanAppear(s, giver.id)) return false;
   s.sideQuest = null;
   return true;
 }
 function assignFollowFavour(s, giverId, gated = false) {
   if (!s || s.sideQuest) return null;
-  const targets = s.npcs.filter((npc) => npc.alive && !npc.fled && npc.id !== giverId
+  const targets = s.npcs.filter((npc) => canonicalActorCanAppear(s, npc.id) && npc.id !== giverId
     && !(npc.turned && npc.known) && npc.id !== s.faceKnown);
   if (!targets.length) return null;
   const target = targets[stableIdx(`${s.gameId}:follow-favour:${s.dayNum}:${giverId}`, targets.length)];
   s.sideQuest = { giver: giverId, target: target.id, night: s.nightNum, done: false, reported: false, gated };
   return target;
 }
-const untainted = (s) => s.npcs.filter((n) => n.alive && !n.turned && n.id !== s.monster.vid);
-const turnedAlive = (s) => s.npcs.filter((n) => n.alive && n.turned);
+const untainted = (s) => s.npcs.filter((n) => canonicalActorStatus(s, n.id) === "alive" && n.id !== s.monster.vid);
+const turnedAlive = (s) => s.npcs.filter((n) => canonicalActorStatus(s, n.id) === "changed");
 /* How many separate nights the village has watched you go by. Counts NIGHTS,
    not witnesses, so a crowded square costs you no more than one lane does.
    A hail (`met`) never counts: you both stood in the same road and said so,
@@ -4138,7 +4160,7 @@ const seenOutNights = (s) => {
   for (const x of s.npcs) for (const e of (x.sawYouOut || [])) if (!e.met) nights.add(e.night);
   return nights.size;
 };
-const aliveNpcs = (s) => s.npcs.filter((n) => n.alive && !n.fled);
+const aliveNpcs = (s) => s.npcs.filter((n) => canonicalActorCanAppear(s, n.id));
 /* pri ranks a dawn card for the five-card cap: 2 = must-keep (deaths, a
    villager marked for the rope, the note), 1 = normal (your own night's
    findings), 0 = atmosphere, dropped first. */
@@ -5739,6 +5761,7 @@ function resolveNight(prev, planIn, preEvents) {
         const vindication = uncoverMonster(s, monsterNpc.name);
         if (vindication) beats.push(vindication);
         s.over = { win: true, reason: "won", text: `You named it truly at the last: a ${m.name}. Its own rite ended it in the square, in front of everyone it fed on.` };
+        recordActorStatus(s, monsterNpc.id, "dead", { id: `night:${n}:last-rite:${monsterNpc.id}`, type: "monster_slain", phase: "night", night: n, location: "Village Square", observedBy: ["player"], truth: { creature: m.id } });
         s.nightBeats = beats; s.beatTitle = "THE LAST RITE"; s.phase = "night"; s.dawn = dawn;
         s.nightLogs.push({ night: n, active: true, huntLoc: "Village Square", outMap: {}, wail: false, weather: null, event: null });
         return s;
@@ -5756,7 +5779,7 @@ function resolveNight(prev, planIn, preEvents) {
       if (cand.length) {
         const v = pick(cand);
         beats.push(`It takes ${v.name} from the edge of the torchlight, almost gently, and is gone before the screaming starts.`);
-        s.npcs = s.npcs.map((x) => (x.id === v.id ? { ...x, alive: false } : x));
+        recordActorStatus(s, v.id, "dead", { id: `night:${n}:failed-siege-rite:${v.id}`, type: "slain", phase: "night", night: n, location: "Village Square", observedBy: ["player"], truth: { cause: "failed_siege_rite" } });
         s.deaths.push({ night: n, id: v.id, name: v.name, kind: "slain", where: "Village Square", examined: false, found: [] });
         dawn.push(ev(`${v.name} ${v.role} was taken at the failed rite. What is left was found at the tree line.`, v.id, 2));
       }
@@ -5768,7 +5791,7 @@ function resolveNight(prev, planIn, preEvents) {
         const v = pick(cand);
         const sk = pickFreshIdx("siegeKills", SIEGE_KILLS);
         beats.push(sk.beat(v));
-        s.npcs = s.npcs.map((x) => (x.id === v.id ? { ...x, alive: false } : x));
+        recordActorStatus(s, v.id, "dead", { id: `night:${n}:siege:${v.id}`, type: "slain", phase: "night", night: n, location: "home", truth: { cause: "siege" } });
         s.deaths.push({ night: n, id: v.id, name: v.name, kind: "slain", where: "home", examined: false, found: [] });
         dawn.push(ev(sk.dawn(v), v.id, 2));
       } else {
@@ -5819,6 +5842,9 @@ function resolveNight(prev, planIn, preEvents) {
         actors: s.npcs,
       });
       s.schemaVersion = HE_CONTINUITY.VERSION;
+      /* The ledger is already authoritative here. Refresh the compatibility
+         cards before any dawn arithmetic or available-actor query runs. */
+      if (HE_V6_RUN_CONTINUITY) HE_V6_RUN_CONTINUITY.syncRunActors(s);
     }
     const projection = HE_DIRECTOR.consequenceProjection(director);
     const encounters = projection.encounters || [];
@@ -6402,6 +6428,7 @@ function resolveNight(prev, planIn, preEvents) {
             if (vindication) beats.push(`At first light, the body is proof. ${vindication}`);
             s.wonInDark = true;
             s.over = { win: true, reason: "won", text: `You did not wait for dusk and a crowd. You named it at the ${fPlace}: a ${guess.name}. Its own rite ended it in the dark, before it could take one more soul.` };
+            recordActorStatus(s, fw.id, "dead", { id: `night:${n}:true-rite:${fw.id}`, type: "monster_slain", phase: "night", night: n, location: fDest, observedBy: ["player"], truth: { creature: guess.id } });
             return true;
           }
           /* the wrong name, carried into the dark */
@@ -6410,13 +6437,14 @@ function resolveNight(prev, planIn, preEvents) {
             beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
             s.deathBeats = playerDeathBeats(m, fw.name, fPlace, { encounterBegun: true, revealed: true, kind: "wrongRite" });
             s.over = { win: false, reason: "slain", text: `You confronted it at the ${fPlace} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
+            recordActorStatus(s, "player", "dead", { id: `night:${n}:wrong-rite-player-death`, type: "player_slain", phase: "night", night: n, location: fDest, observedBy: ["player"], truth: { cause: "wrong_rite" } });
             return true;
           }
           if (!s.struck.includes(guess.id)) s.struck = [...s.struck, guess.id];
           s.clues.push(`Night ${n}: you put ${METHOD_CARRY[guess.method]} to it and the thing only laughed. Whatever wears ${fw.name}'s face, it is NOT a ${guess.name}. Strike the name and start the arithmetic again.`);
           s.faceKnown = fw.id;
           s.fled = true;
-          s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, fled: true } : x));
+          recordActorStatus(s, fw.id, "fled", { id: `night:${n}:monster-unmasked:${fw.id}`, type: "monster_unmasked", phase: "night", night: n, location: fDest, observedBy: ["player"], truth: { wrongCreatureName: guess.id } });
           beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised, and it does not even flinch. It smiles with far too much of its face, drops the pretence like a coat, and is over the churchyard wall before your heart restarts. Wrong name. Right face. It has nothing left to hide now, and nothing left to lose.`);
           const vindication = uncoverMonster(s, fw.name);
           if (vindication) dawn.push(ev(vindication, undefined, 3));
@@ -6441,6 +6469,7 @@ function resolveNight(prev, planIn, preEvents) {
         beats.push(act === "confront" ? `You step out of the shadow and say ${fw.name}'s name. It is very glad you did.` : "You move. And it is already facing you. It was always already facing you.");
         s.deathBeats = playerDeathBeats(m, fw.name, fPlace, mods.deathContext || { encounterBegun: true, revealed: true, kind: act });
         s.over = { win: false, reason: "slain", text: `You followed ${fw.name} to the ${fPlace}. Only one of you came back, and it was not you.` };
+        recordActorStatus(s, "player", "dead", { id: `night:${n}:follow-player-death`, type: "player_slain", phase: "night", night: n, location: fDest, observedBy: ["player"], truth: { cause: "caught_following", action: act } });
         return true;
       }
       if (identityKnown) {
@@ -6453,7 +6482,7 @@ function resolveNight(prev, planIn, preEvents) {
       else if (act === "confront") shiftMonsterBond(s, -1);
       if (act === "confront") {
         s.fled = true;
-        s.npcs = s.npcs.map((x) => (x.id === fw.id ? { ...x, fled: true } : x));
+        recordActorStatus(s, fw.id, "fled", { id: `night:${n}:monster-driven-off:${fw.id}`, type: "monster_unmasked", phase: "night", night: n, location: fDest, observedBy: ["player"] });
         beats.push(`You step out and say the name aloud. It goes very still. Then it smiles with far too much of its face, drops the last of the pretence like a coat, and is over the churchyard wall before your heart restarts. The mask is off. It has nothing left to hide, and nothing left to lose.`);
         const vindication = uncoverMonster(s, fw.name);
         if (vindication) dawn.push(ev(vindication, undefined, 3));
@@ -6651,6 +6680,7 @@ function resolveNight(prev, planIn, preEvents) {
         }
         s.deathBeats = playerDeathBeats(m, monsterNpc.name, placeNoun(plan.loc, "outdoor"), mods.deathContext || { encounterBegun: true, revealed: false, kind: mods.hid ? "hide" : "approach", action: mods.approach });
         s.over = { win: false, reason: "slain", text: `Something found you at the ${plan.loc}. Your lantern was discovered at dawn, still burning beside what remained.` };
+        recordActorStatus(s, "player", "dead", { id: `night:${n}:encounter-player-death`, type: "player_slain", phase: "night", night: n, location: plan.loc, observedBy: ["player"], truth: { cause: "night_encounter", action: mods.approach } });
         return finish();
       }
       if (wx !== "fog" && chance((press ? 0.75 : mods.hid === "doorway" ? 0.65 : 0.5) + (atEventCrowd ? 0.1 : 0))) {
@@ -6715,6 +6745,7 @@ function resolveNight(prev, planIn, preEvents) {
       }
       s.deathBeats = playerDeathBeats(m, monsterNpc.name, "road home", { encounterBegun: true, revealed: false, kind: "approach", action: "shadow" });
       s.over = { win: false, reason: "slain", text: "A cold you had never known closed around you on the road home. The Wraith takes those who wander." };
+      recordActorStatus(s, "player", "dead", { id: `night:${n}:wraith-road-player-death`, type: "player_slain", phase: "night", night: n, location: "road home", observedBy: ["player"], truth: { cause: "wraith_road" } });
       return finish();
     }
     /* A night that ended in a close pass never got its search: the player
@@ -6851,6 +6882,7 @@ function resolveNight(prev, planIn, preEvents) {
               }
               s.deathBeats = playerDeathBeats(m, target.name, "lanes", { encounterBegun: true, revealed: false, kind: "watch" });
               s.over = { win: false, reason: "slain", text: `You followed ${target.name} out past the last house. Only one of you came back, and it was not you.` };
+              recordActorStatus(s, "player", "dead", { id: `night:${n}:watch-follow-player-death`, type: "player_slain", phase: "night", night: n, location: "lanes", observedBy: ["player"], truth: { cause: "watch_follow" } });
               return finish();
             }
             s.monsterSawYou = true;
@@ -7032,20 +7064,33 @@ function resolveNight(prev, planIn, preEvents) {
             ? "Thunder covers the attack. The body is not found until morning."
             : pickFreshIdx("screamLines", SCREAM_LINES)(victimPlace));
         }
-        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, alive: false } : x));
+        recordActorStatus(s, victim.id, "dead", { id: `night:${n}:legacy-attack:${victim.id}`, type: "slain", phase: "night", night: n, location: victimWhere, observedBy: mods.witnessKill && mods.witnessKill.id === victim.id ? ["player"] : [], truth: { cause: "monster_attack", sign: directorAttack ? directorAttack.sign : null } });
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, whereDetail: victimPlace, exposure: exposureMap[victim.id], examined: false, found: [] });
+        const v6OutcomeKnowledge = director && HE_V6_RUN_CONTINUITY
+          ? HE_V6_RUN_CONTINUITY.playerOutcomeKnowledge(s, n, victim.id)
+          : null;
         /* -- if the dead is someone the player met, followed or watched
            TONIGHT, the recap must say so plainly, not let the connection
            vanish into a generic scream. -- */
         const directorCrossedPaths = !!(director && (director.ledgers.truth || []).some((event) => ["hailed", "crossed_paths"].includes(event.kind) && event.playerSaw !== false && (event.actors || []).includes(victim.id)));
-        const crossedPaths = directorCrossedPaths || [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || []), ...(((mods.v5Scenario || {}).actorIds) || [])].filter(Boolean).includes(victim.id);
+        const crossedPaths = v6OutcomeKnowledge
+          ? v6OutcomeKnowledge.kind === "last_seen_alive"
+          : directorCrossedPaths || [mods.follow, mods.hailed, mods.followSeen, mods.circleSaw, mods.mingledWith, watching, ...(mods.company || []), ...(((mods.v5Scenario || {}).actorIds) || [])].filter(Boolean).includes(victim.id);
         const directorInvestigation = director && (director.ledgers.truth || []).find((event) => event.kind === "investigated_attack" && event.victimId === victim.id);
         /* the watched-and-taken case is its own story: the player held that
            very door under watch and saw nothing. The recap must own that
            plainly (the kill came AFTER the watcher went home to bed), not
            pretend they were out together in the lanes. */
         const watchedHome = watching === victim.id && outMap[victim.id] === "home";
-        if (directorInvestigation && directorAttack && !directorAttack.witnessed) {
+        if (v6OutcomeKnowledge && v6OutcomeKnowledge.kind === "witnessed_death") {
+          beats.push(v6OutcomeKnowledge.heardLastWords
+            ? `${victim.name} died in front of you. You reached them in time for their last words and stayed until the end.`
+            : `${victim.name} died in front of you. You saw the attack and stayed until it was over.`);
+          s.clues.push(`Night ${n}: you witnessed ${victim.name}'s death at the ${victimPlace}. Dawn cannot tell you otherwise.`);
+        } else if (v6OutcomeKnowledge && v6OutcomeKnowledge.kind === "shared_discovery") {
+          const reporter = directorInvestigation && npcById(s, directorInvestigation.rescueReporterId);
+          beats.push(`${reporter ? reporter.name + " brought you" : "You went with another villager"} to the ${victimPlace}. Together, you found ${victim.name} after the attacker had gone.`);
+        } else if ((v6OutcomeKnowledge && v6OutcomeKnowledge.kind === "found_body") || (!v6OutcomeKnowledge && directorInvestigation && directorAttack && !directorAttack.witnessed)) {
           beats.push(directorInvestigation.heardLastWords
             ? `${victim.name} died in front of you. You followed the cry, reached them while they were still breathing, and stayed through their final words. You did not leave them living. You saw the night take them.`
             : `You followed the cry and reached ${victim.name} where they fell. The attacker was already gone; the body was still warm. You already know what dawn will find.`);
@@ -7096,7 +7141,12 @@ function resolveNight(prev, planIn, preEvents) {
             const weatherFinding = wx === "fog" ? "The fog hid the approach and keeps the searchers arguing over which way the body came."
               : wx === "storm" ? "Rain has washed the approach clean; no print and no small sound survived it."
                 : wx === "frost" ? "The frost preserved the last approach in hard-edged prints around the place, stronger ground evidence than the village usually gets." : "It is exactly where the night's last sound came from.";
-            dawn.push(ev(`${victim.name} is missing from the well. They are found at the ${victimWhere}. ${weatherFinding}`, victim.id, 2));
+            const dawnDeathLine = v6OutcomeKnowledge && v6OutcomeKnowledge.kind === "witnessed_death"
+              ? `${victim.name} is dead at the ${victimWhere}. You were there when it happened; first light brings confirmation, not news.`
+              : v6OutcomeKnowledge && v6OutcomeKnowledge.kind === "found_body"
+                ? `Others reach the ${victimWhere} at first light. ${victim.name} is where you already found them. ${weatherFinding}`
+                : `${victim.name} is missing from the well. They are found at the ${victimWhere}. ${weatherFinding}`;
+            dawn.push(ev(dawnDeathLine, victim.id, 2));
             if (directorAttack && directorAttack.monsterNote) {
               const noteLine = `Pinned to ${victim.name}'s coat is a scrap in a small, deliberate hand: “${directorAttack.monsterNote}”`;
               dawn.push(ev(noteLine, victim.id, 3));
@@ -7174,8 +7224,14 @@ function resolveNight(prev, planIn, preEvents) {
            lingers a night or three, greying, then dies emptied. That decay
            night is fixed now, so the walk and the recap agree. */
         const decayNight = m.id === "lich" ? n + (director ? 1 + Math.floor(((director.outcomes[director.monsterSchedule.attackSlot] || {}).sign || 0) * 3) : pick([1, 2, 3])) : undefined;
-        const directorSawChange = !!(director && (director.ledgers.truth || []).some((event) => event.kind === "investigated_attack" && event.victimId === victim.id && event.recognizedChanged));
-        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, turned: true, ...(directorSawChange ? { known: true } : {}), ...(decayNight ? { decay: decayNight } : {}) } : x));
+        const v6ChangeKnowledge = director && HE_V6_RUN_CONTINUITY
+          ? HE_V6_RUN_CONTINUITY.playerOutcomeKnowledge(s, n, victim.id)
+          : null;
+        const directorSawChange = v6ChangeKnowledge
+          ? v6ChangeKnowledge.kind === "witnessed_change"
+          : !!(director && (director.ledgers.truth || []).some((event) => event.kind === "investigated_attack" && event.victimId === victim.id && event.recognizedChanged));
+        recordActorStatus(s, victim.id, "changed", { id: `night:${n}:legacy-change:${victim.id}`, type: "changed", phase: "night", night: n, location: victimWhere, observedBy: directorSawChange || (mods.witnessKill && mods.witnessKill.id === victim.id) ? ["player"] : [], truth: { cause: "monster_attack" } });
+        s.npcs = s.npcs.map((x) => (x.id === victim.id ? { ...x, ...(directorSawChange ? { known: true } : {}), ...(decayNight ? { decay: decayNight } : {}) } : x));
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "turned" });
         dawn.push(ev(
           directorSawChange
@@ -7230,7 +7286,8 @@ function resolveNight(prev, planIn, preEvents) {
   if (!s.over) {
     const decayed = s.npcs.filter((x) => x.alive && x.turned && x.decay && x.decay <= n && x.id !== s.monster.vid && !x.fled);
     for (const dv of decayed) {
-      s.npcs = s.npcs.map((x) => (x.id === dv.id ? { ...x, alive: false, known: true } : x));
+      recordActorStatus(s, dv.id, "dead", { id: `night:${n}:drained:${dv.id}`, type: "drained", phase: "night", night: n, location: "home", truth: { cause: "lich_decay" } });
+      s.npcs = s.npcs.map((x) => (x.id === dv.id ? { ...x, known: true } : x));
       s.deaths.push({ night: n, id: dv.id, name: dv.name, kind: "drained", where: "home", examined: false, found: [] });
       beats.push(`Somewhere in the dark, a breathing you had stopped noticing simply stops. ${dv.name} has been greying and cold for nights, and tonight there is nothing left in them to grey.`);
       dawn.push(ev(`${dv.name} is found in their own bed, unmarked and cold. Their skin is loose, their hair has whitened and their face looks decades older. There is no wound.`, dv.id, 2));
@@ -7286,7 +7343,7 @@ function resolveNight(prev, planIn, preEvents) {
         firstLight.push(`The rope snaps. What rises from the dust was never ${tgt.name}. "Clever ${acc && acc.alive ? acc.name : "little village"}. You counted right. Nobody else did."`);
         if (acc && acc.alive) {
           firstLight.push(`It opens ${acc.name} in the square while everyone watches. "The sharp one," it says, lifting something wet. Then it clears the churchyard wall.`);
-          s.npcs = s.npcs.map((x) => (x.id === acc.id ? { ...x, alive: false } : x));
+          recordActorStatus(s, acc.id, "dead", { id: `first-light:${n}:monster-kills-accuser:${acc.id}`, type: "slain", phase: "firstlight", night: n, location: "Village Square", observedBy: ["player"], truth: { cause: "monster_escape" } });
           s.deaths.push({ night: n, id: acc.id, name: acc.name, kind: "slain", where: "Village Square", examined: false, found: [] });
           /* the morning owes this death a card like any other. It was taken
              in daylight in front of everyone, so there is nothing to find at
@@ -7297,13 +7354,14 @@ function resolveNight(prev, planIn, preEvents) {
         firstLight.push("Right face. Wrong nature. Learn the cure from what it leaves; it returns every night now.");
         dawn.push(ev(`The whole village saw what stood up under the beam wearing ${tgt.name}'s face. Only the cure it answers to ends it now, and it comes back tonight.`, tgt.id, 2));
         s.fled = true;
-        s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, fled: true } : x));
+        recordActorStatus(s, tgt.id, "fled", { id: `first-light:${n}:monster-escapes:${tgt.id}`, type: "monster_unmasked", phase: "firstlight", night: n, location: "Village Square", observedBy: ["player"] });
         const vindication = uncoverMonster(s, tgt.name);
         if (vindication) firstLight.push(vindication);
         s.mob = null;
       } else {
         hangedAtFirstLight = tgt.name;
-        s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
+        recordActorStatus(s, tgt.id, "dead", { id: `first-light:${n}:hanging:${tgt.id}`, type: "wrongful_hanging", phase: "firstlight", night: n, location: "Village Square", observedBy: ["player"], truth: { changedBeforeDeath: !!tgt.turned } });
+        s.npcs = s.npcs.map((x) => (x.id === tgt.id ? { ...x, known: x.turned ? true : x.known } : x));
         s.deaths.push({ night: n, id: tgt.id, name: tgt.name, kind: "mobbed" });
         /* the record of the morning, in the morning's own cards: the village
            took a neighbour off the list itself, and the dawn says so plainly
@@ -7403,7 +7461,7 @@ function resolveNight(prev, planIn, preEvents) {
           s.patience[ownerId] = 0;
           dawn.push(ev(`By midday it is all anyone speaks of: ${owner.name}'s secret is secret no longer. Someone talked. ${owner.name} will want to know who.`, ownerId));
           if (ownerId === FLEE_ON_SECRET_ID && chance(0.25)) {
-            s.npcs = s.npcs.map((x) => (x.id === FLEE_ON_SECRET_ID ? { ...x, fled: true } : x));
+            recordActorStatus(s, FLEE_ON_SECRET_ID, "fled", { id: `dawn:${n}:secret-flight:${FLEE_ON_SECRET_ID}`, type: "fled", phase: "day", day: n, location: "Village Square", truth: { cause: "secret_exposed" } });
             dawn.push(ev(`By the time anyone checks, the forge is cold and the boys taken in next door. ${owner.name} has gone north, ahead of what the lord's men do to a man caught poaching deer. He does not come back.`, ownerId));
           }
         }
@@ -8018,7 +8076,8 @@ function actUnbind(prev, id) {
   const beats = [`${off.name} draws the circle around ${npc.name}. You hold it closed as the rite begins.`];
   if (chance(off.p)) {
     beats.push(...unbindSuccessScene(npc.name));
-    s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, turned: false, cured: true, unbindDay: s.dayNum } : x));
+    recordActorStatus(s, id, "alive", { id: `day:${s.dayNum}:unbind:${id}`, type: "unbound", phase: "day", day: s.dayNum, location: "Village Square", observedBy: ["player"] });
+    s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, cured: true, unbindDay: s.dayNum } : x));
     /* Wresting one of its own back enrages the thing for the rest of the game:
        s.enraged is a one-way latch (never cleared), and it permanently raises
        the odds of a caught/killed night out (outDeathChance) and of it salting
@@ -8057,7 +8116,7 @@ function actUnbind(prev, id) {
     s.bond = 0;
     if (chance(0.4)) {
       beats.push(...unbindFailDeathScene(npc.name));
-      s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false } : x));
+      recordActorStatus(s, id, "dead", { id: `day:${s.dayNum}:unbind-failed:${id}`, type: "rite_death", phase: "day", day: s.dayNum, location: "Village Square", observedBy: ["player"] });
       s.deaths.push({ night: s.nightNum, id, name: npc.name, kind: "slain", where: "home", examined: true, found: [] });
       beats.push(`DEAD. There is nothing left in ${npc.name} to call back.`);
     } else {
@@ -8075,7 +8134,7 @@ function settleGiveUpInPlace(s, id, night) {
   const npc = npcById(s, id);
   if (!npc || !npc.alive || !s.coerceNote || s.coerceNote.target !== id) return null;
   const approval = coercionApprovalFor(s, npc, night);
-  s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false } : x));
+  recordActorStatus(s, id, "dead", { id: `night:${night}:bargain:${id}`, type: "slain", phase: "night", night, location: "home", truth: { cause: "player_bargain" } });
   s.deaths.push({ night, id, name: npc.name, kind: "slain", where: "home", examined: false, found: [] });
   s.monsterProtects = true;
   shiftMonsterBond(s, 2);
@@ -9801,6 +9860,7 @@ function actAccuse(prev, id, typeId) {
     const vindication = uncoverMonster(s, npc.name);
     if (vindication) beats.push(vindication);
     s.over = { win: true, reason: "won", text: `Right face, right name. ${npc.name} ${npc.role} was a ${m.name}, and its own rite ended it in front of everyone it fed on.` };
+    recordActorStatus(s, npc.id, "dead", { id: `day:${s.dayNum}:true-rite:${npc.id}`, type: "monster_slain", phase: "day", day: s.dayNum, location: "Village Square", observedBy: ["player"], truth: { creature: m.id } });
     if (s.sideQuest && s.sideQuest.giver === id) s.sideQuest = null;
     s.nightBeats = beats; s.beatTitle = "THE RECKONING"; s.phase = "night";
     return s;
@@ -9817,7 +9877,7 @@ function actAccuse(prev, id, typeId) {
       return s;
     }
     s.fled = true;
-    s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, fled: true } : x));
+    recordActorStatus(s, id, "fled", { id: `day:${s.dayNum}:wrong-name-monster-flees:${id}`, type: "monster_unmasked", phase: "day", day: s.dayNum, location: "Village Square", observedBy: ["player"], truth: { wrongCreatureName: typeId } });
     cancelUnavailableFavour(s);
     /* A "follow X tonight" favour has already reached its decisive answer
        when X is unmasked and flees. Do not leave the old doorstep banner
@@ -9834,7 +9894,8 @@ function actAccuse(prev, id, typeId) {
     return s;
   }
 
-  s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, alive: false, known: x.turned ? true : x.known } : x));
+  recordActorStatus(s, id, "dead", { id: `day:${s.dayNum}:wrongful-execution:${id}`, type: "wrongful_hanging", phase: "day", day: s.dayNum, location: "Village Square", observedBy: ["player"], truth: { accusedAs: typeId, changedBeforeDeath: !!npc.turned } });
+  s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, known: x.turned ? true : x.known } : x));
   cancelUnavailableFavour(s);
   s.deaths.push({ night: s.nightNum, id, name: npc.name, kind: "executed" });
   s.wrongExecutions += 1;
@@ -13967,6 +14028,7 @@ function MonsterVillage() {
             repairFirstDayStanding(run);
             repairPlayerKnowledge(run);
             if (HE_CONTINUITY) run = HE_CONTINUITY.upgradeRun(run);
+            if (HE_V6_RUN_CONTINUITY) HE_V6_RUN_CONTINUITY.syncRunActors(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
                it has already sampled the night and recorded player choices.

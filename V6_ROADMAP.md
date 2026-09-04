@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1a
+### Current checkpoint: V6.1b
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -62,6 +62,21 @@ One hundred varied terminal Director nights are projected twice in tests. The
 second import must be identical, proving that reload or repeated settlement
 cannot duplicate events or evidence.
 
+Actor fate is now the second live consumer. Every playable death,
+transformation, unbinding, flight and monster defeat records a canonical
+status event before the older NPC-card fields are updated. Loading a save and
+settling a Director night both project those statuses back into the temporary
+UI fields, so a dead or fled actor cannot remain available because one copied
+boolean was missed.
+
+Director death recaps now ask the canonical observation history whether the
+player witnessed the death, reached the aftermath, shared the discovery,
+merely heard danger, last saw the victim alive, or knew nothing until dawn.
+The old collection of follow/hail/watch guesses is used only for pre-V6 fallback
+nights. Witnessing a death can therefore no longer produce “you left them
+living,” and a body already found by the player is not introduced as new
+information at first light.
+
 ## Delivery slices
 
 ### V6.1 — Canonical continuity (in progress)
@@ -70,8 +85,11 @@ cannot duplicate events or evidence.
 - [x] Record the canonical ledger before `consequenceProjection` runs.
 - [ ] Replace copied compatibility arrays consumer by consumer.
 - [x] Gate contextual interview questions through canonical player knowledge.
-- Move deaths, changes, flight, doorstep visits, shared body discoveries,
-  monster recognition and relationship events first.
+- [x] Move actor deaths, changes, flight, unbinding and monster defeat onto
+  canonical status events.
+- [x] Make witnessed-death and aftermath recaps read player observations.
+- [ ] Move doorstep visits, shared body discoveries, monster recognition and
+  relationship events off their compatibility arrays.
 - Add a development inspector that shows truth and each observer separately.
 - Preserve old saves without treating loose legacy prose as newly proven fact.
 

@@ -71,7 +71,8 @@ await Promise.all([
   fs.copyFile(path.join(root, "v5-content.js"), path.join(outDir, "v5-content.js")),
   fs.copyFile(path.join(root, "v5-night-director.js"), path.join(outDir, "v5-night-director.js")),
   fs.copyFile(path.join(root, "v6-continuity.js"), path.join(outDir, "v6-continuity.js")),
-  fs.copyFile(path.join(root, "v6-director-adapter.js"), path.join(outDir, "v6-director-adapter.js"))
+  fs.copyFile(path.join(root, "v6-director-adapter.js"), path.join(outDir, "v6-director-adapter.js")),
+  fs.copyFile(path.join(root, "v6-run-continuity.js"), path.join(outDir, "v6-run-continuity.js"))
 ]);
 
 for (const optionalFile of ["favicon.svg"]) {

@@ -4,6 +4,7 @@ var assert = require("assert");
 var Director = require("../v5-night-director.js");
 var Continuity = require("../v6-continuity.js");
 var V6Adapter = require("../v6-director-adapter.js");
+var V6RunContinuity = require("../v6-run-continuity.js");
 
 var locations = ["Village Square", "Old Church", "Graveyard", "Dark Forest", "Old Mill", "Tavern"];
 var weathers = ["still", "fog", "storm", "frost"];
@@ -166,6 +167,14 @@ function chooseAction(state, actions, run, step) {
     assert.strictEqual(continuity.lastImportedDirectorNight.night, state.night, "run " + run + " records the imported night");
     assert.strictEqual(continuity.lastImportedDirectorNight.truthEvents, state.ledgers.truth.length, "run " + run + " imports every Director truth event");
     assert.deepStrictEqual(V6Adapter.projectDirectorNight(continuity, state, { actors: cast }), continuity, "run " + run + " can be projected twice without duplicating continuity");
+    var playableRun = { npcs: cast.map(function (actor) { return Object.assign({}, actor, { alive: true, changed: false, turned: false, fled: false }); }), continuity: continuity };
+    V6RunContinuity.syncRunActors(playableRun);
+    playableRun.npcs.forEach(function (actor) {
+      var status = Continuity.currentActorStatus(continuity, actor.id);
+      assert.strictEqual(actor.alive, status !== "dead", "run " + run + " projects canonical death for " + actor.id);
+      assert.strictEqual(!!actor.turned, status === "changed", "run " + run + " projects canonical change for " + actor.id);
+      assert.strictEqual(V6RunContinuity.actorCanAppear(playableRun, actor.id), status === "alive" || status === "changed", "run " + run + " availability agrees for " + actor.id);
+    });
   }
 
   assert.strictEqual(terminal.complete + terminal.dead, 100, "all 100 runs terminate");

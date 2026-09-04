@@ -1,0 +1,190 @@
+"use strict";
+
+var assert = require("assert");
+var fs = require("fs");
+var path = require("path");
+var Continuity = require("../v6-continuity.js");
+var Adapter = require("../v6-director-adapter.js");
+var RunContinuity = require("../v6-run-continuity.js");
+
+var actors = [
+  { id: "hazel", name: "Hazel", alive: true },
+  { id: "wilhelm", name: "Wilhelm", alive: true },
+  { id: "rosa", name: "Rosa", alive: true }
+];
+
+function run(seed) {
+  return {
+    gameId: seed,
+    npcs: JSON.parse(JSON.stringify(actors)),
+    continuity: Continuity.createLedger({ runId: seed, seed: seed, actors: actors })
+  };
+}
+
+function addOutcome(state, options) {
+  options = options || {};
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: options.id || "night:2:attack:wilhelm",
+    type: options.status === "changed" ? "changed" : "slain",
+    phase: "night",
+    night: 2,
+    location: options.location || "Old Mill",
+    subjectIds: ["wilhelm"],
+    statusChanges: [{ actorId: "wilhelm", status: options.status || "dead" }],
+    truth: { data: { id: options.rawId || "attack:2:wilhelm", slot: 2, victimId: "wilhelm" } }
+  });
+  return state;
+}
+
+(function canonicalStatusDrivesTheOldNpcCards() {
+  var state = addOutcome(run("status-projection"));
+  assert.strictEqual(state.npcs.find(function (npc) { return npc.id === "wilhelm"; }).alive, true, "the compatibility card has not been projected yet");
+  RunContinuity.syncRunActors(state);
+  assert.strictEqual(state.npcs.find(function (npc) { return npc.id === "wilhelm"; }).alive, false, "canonical death closes the old card");
+  assert.strictEqual(RunContinuity.actorCanAppear(state, "wilhelm"), false);
+})();
+
+(function witnessedDeathsAreNotMisreadAsLeavingSomeoneAlive() {
+  var state = addOutcome(run("witnessed"));
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:attack:wilhelm",
+    observerId: "player",
+    mode: "direct",
+    certainty: "certain",
+    actorIdsRecognised: ["wilhelm"],
+    factKeys: ["kind:attack_aftermath"]
+  });
+  assert.strictEqual(RunContinuity.playerOutcomeKnowledge(state, 2, "wilhelm").kind, "witnessed_death");
+})();
+
+(function theRealDirectorImportClassifiesWitnessedAndInvestigatedOutcomes() {
+  function terminal(truth, observations) {
+    return {
+      seed: "director-outcome-knowledge",
+      night: 2,
+      phase: "complete",
+      cast: JSON.parse(JSON.stringify(actors)),
+      monsterSchedule: { hostId: "hazel" },
+      ledgers: { truth: truth, observations: observations, memories: {} },
+      found: { stamps: [], clues: [], whispers: [] }
+    };
+  }
+  var witnessedDirector = terminal([
+    { id: "attack:2:wilhelm", slot: 2, kind: "slain", location: "Old Mill", actors: ["hazel", "wilhelm"], victimId: "wilhelm", witnessed: true }
+  ], [
+    { eventId: "attack:2:wilhelm", slot: 2, kind: "attack_aftermath", location: "Old Mill", actors: ["wilhelm"], clarity: "partial", reliability: "direct" }
+  ]);
+  var witnessedRun = run("director-witnessed");
+  witnessedRun.continuity = Adapter.projectDirectorNight(witnessedRun.continuity, witnessedDirector, { actors: actors });
+  assert.strictEqual(RunContinuity.playerOutcomeKnowledge(witnessedRun, 2, "wilhelm").kind, "witnessed_death");
+
+  var investigatedDirector = terminal([
+    { id: "attack:2:wilhelm", slot: 2, kind: "slain", location: "Old Mill", actors: ["hazel", "wilhelm"], victimId: "wilhelm", witnessed: false },
+    { id: "investigated:attack:2:wilhelm", slot: 3, kind: "investigated_attack", location: "Old Mill", actors: ["player", "wilhelm"], victimId: "wilhelm", attackEventId: "attack:2:wilhelm", clueFound: false }
+  ], [
+    { eventId: "attack:2:wilhelm", slot: 2, kind: "heard", location: "Village Square", actors: [], clarity: "sensory", reliability: "direct" },
+    { eventId: "investigated:attack:2:wilhelm", slot: 3, kind: "attack_aftermath", location: "Old Mill", actors: ["wilhelm"], clarity: "partial", reliability: "direct" }
+  ]);
+  var investigatedRun = run("director-investigated");
+  investigatedRun.continuity = Adapter.projectDirectorNight(investigatedRun.continuity, investigatedDirector, { actors: actors });
+  assert.strictEqual(RunContinuity.playerOutcomeKnowledge(investigatedRun, 2, "wilhelm").kind, "found_body");
+})();
+
+(function reachingTheBodyAndMerelyHearingTheAttackStayDifferent() {
+  var found = addOutcome(run("found-body"));
+  found.continuity = Continuity.appendEvent(found.continuity, {
+    id: "night:2:investigated:wilhelm",
+    type: "investigated_attack",
+    phase: "night",
+    night: 2,
+    location: "Old Mill",
+    actorIds: ["player"],
+    subjectIds: ["wilhelm"],
+    truth: { data: { id: "investigated:attack:2:wilhelm", attackEventId: "attack:2:wilhelm", victimId: "wilhelm", slot: 3 } }
+  });
+  found.continuity = Continuity.recordObservation(found.continuity, {
+    eventId: "night:2:investigated:wilhelm",
+    observerId: "player",
+    actorIdsRecognised: ["wilhelm"]
+  });
+  assert.strictEqual(RunContinuity.playerOutcomeKnowledge(found, 2, "wilhelm").kind, "found_body");
+
+  var heard = addOutcome(run("heard-only"));
+  heard.continuity = Continuity.recordObservation(heard.continuity, {
+    eventId: "night:2:attack:wilhelm",
+    observerId: "player",
+    mode: "direct",
+    certainty: "sensory",
+    actorIdsRecognised: []
+  });
+  assert.strictEqual(RunContinuity.playerOutcomeKnowledge(heard, 2, "wilhelm").kind, "heard_only");
+})();
+
+(function aRealPriorMeetingCanBecomeLastSeenAlive() {
+  var state = run("last-seen");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:meeting:wilhelm",
+    type: "crossed_paths",
+    phase: "night",
+    night: 2,
+    location: "Village Square",
+    actorIds: ["player", "wilhelm"],
+    truth: { data: { id: "meeting:wilhelm", slot: 1 } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:meeting:wilhelm",
+    observerId: "player",
+    actorIdsRecognised: ["wilhelm"]
+  });
+  state = addOutcome(state);
+  var knowledge = RunContinuity.playerOutcomeKnowledge(state, 2, "wilhelm");
+  assert.strictEqual(knowledge.kind, "last_seen_alive");
+  assert.strictEqual(knowledge.priorLocation, "Village Square");
+})();
+
+(function runStatusEventsAreDurableObservedAndIdempotent() {
+  var state = run("public-hanging");
+  var eventId = RunContinuity.recordStatusChange(state, "rosa", "dead", {
+    id: "first-light:3:rosa:hanged",
+    type: "wrongful_hanging",
+    phase: "firstlight",
+    night: 3,
+    location: "Village Square",
+    observedBy: ["player"]
+  });
+  var eventCount = state.continuity.events.length;
+  assert.strictEqual(eventId, "first-light:3:rosa:hanged");
+  assert.strictEqual(state.npcs.find(function (npc) { return npc.id === "rosa"; }).alive, false);
+  assert.strictEqual(RunContinuity.playerOutcomeKnowledge(state, 3, "rosa").kind, "witnessed_death");
+  RunContinuity.recordStatusChange(state, "rosa", "dead", { id: eventId, night: 3 });
+  assert.strictEqual(state.continuity.events.length, eventCount, "replaying settlement does not duplicate the death");
+  assert.deepStrictEqual(Continuity.validateLedger(state.continuity), []);
+})();
+
+(function legacyRunsStillHaveAStatusFallback() {
+  var state = { npcs: [{ id: "hazel", alive: false }, { id: "rosa", alive: true, turned: true }] };
+  assert.strictEqual(RunContinuity.actorStatus(state, "hazel"), "dead");
+  assert.strictEqual(RunContinuity.actorStatus(state, "rosa"), "changed");
+})();
+
+(function playableAndBuiltPagesLoadTheRunBridgeAfterItsDependencies() {
+  var source = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  var adapter = source.indexOf('<script src="v6-director-adapter.js?v=1"></script>');
+  var bridge = source.indexOf('<script src="v6-run-continuity.js?v=1"></script>');
+  var game = source.indexOf('<script type="text/babel" data-presets="react">');
+  assert(adapter > 0 && adapter < bridge && bridge < game);
+  assert(source.includes("const HE_V6_RUN_CONTINUITY"));
+  assert(source.includes('v6OutcomeKnowledge.kind === "witnessed_death"'), "the recap distinguishes a death lived on screen");
+  assert(source.includes('v6OutcomeKnowledge.kind === "found_body"'), "the recap distinguishes reaching an aftermath");
+  assert(source.includes('v6OutcomeKnowledge.kind === "last_seen_alive"'), "the recap only says the player left someone alive after a recorded prior sighting");
+  var deathWrites = source.split("\n").reduce(function (rows, line, index, lines) {
+    if (!line.includes("s.deaths.push")) return rows;
+    rows.push(lines.slice(Math.max(0, index - 5), index).join("\n"));
+    return rows;
+  }, []);
+  deathWrites.forEach(function (lead) {
+    assert(lead.includes("recordActorStatus"), "every compatibility death is now preceded by a canonical status event");
+  });
+})();
+
+console.log("v6-run-continuity: all tests passed");
