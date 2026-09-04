@@ -4127,6 +4127,39 @@ function recordActorStatus(s, id, status, spec = {}) {
           : { ...npc, fled: true });
   return s;
 }
+function canonicalMonsterAwareness(s) {
+  const fallback = {
+    hostId: s && s.monster ? s.monster.vid : null,
+    playerRecognisedHost: !!(s && s.monster && s.faceKnown === s.monster.vid),
+    hostRecognisedPlayer: !!(s && s.monsterSawYou),
+    failedRiteCount: (s && s.riteFails) || 0,
+    recognitionEventIds: [], mutualEventIds: [],
+  };
+  if (!s || !s.monster || typeof HE_V6_RUN_CONTINUITY === "undefined" || !HE_V6_RUN_CONTINUITY) return fallback;
+  const canonical = HE_V6_RUN_CONTINUITY.monsterAwareness(s, s.monster.vid);
+  return {
+    ...canonical,
+    /* Old saved nights have no source events to reconstruct. Preserve only
+       their established knowledge until a canonical event supersedes it. */
+    playerRecognisedHost: canonical.playerRecognisedHost || fallback.playerRecognisedHost,
+    hostRecognisedPlayer: canonical.hostRecognisedPlayer || fallback.hostRecognisedPlayer,
+    failedRiteCount: Math.max(canonical.failedRiteCount, fallback.failedRiteCount),
+  };
+}
+function syncMonsterAwareness(s) {
+  const awareness = canonicalMonsterAwareness(s);
+  s.monsterSawYou = awareness.hostRecognisedPlayer;
+  if (awareness.playerRecognisedHost) s.faceKnown = awareness.hostId;
+  s.riteFails = Math.max(s.riteFails || 0, awareness.failedRiteCount);
+  return awareness;
+}
+function recordMonsterAwareness(s, spec = {}) {
+  if (typeof HE_V6_RUN_CONTINUITY !== "undefined" && HE_V6_RUN_CONTINUITY && s.monster && s.monster.vid) {
+    HE_V6_RUN_CONTINUITY.recordMonsterAwareness(s, s.monster.vid, spec);
+    syncMonsterAwareness(s);
+  }
+  return s;
+}
 /* A favour belongs to the neighbour who asked it. If that neighbour dies or
    goes into hiding there is nobody left to answer at dawn, so the errand is
    over rather than becoming an unreachable banner/modal in the saved run.
@@ -5507,6 +5540,7 @@ function compileDirectorNight(s, facts, openingIntent) {
   }
   const crisisAttendees = new Set(facts.afflictionCrowd || []);
   const crisisDef = AFFLICTION_CRISIS[facts.affliction] || null;
+  const awareness = canonicalMonsterAwareness(s);
   const directorConfig = {
     seed, night: n, slots, openingIntent,
     villagers: s.npcs.map((npc) => {
@@ -5545,9 +5579,9 @@ function compileDirectorNight(s, facts, openingIntent) {
     },
     player: {
       afflicted: strained, affliction: strained ? "strain" : null,
-      monsterSawYou: !!s.monsterSawYou,
-      recognizedHost: s.faceKnown === s.monster.vid,
-      failedRite: (s.riteFails || 0) > 0,
+      monsterSawYou: awareness.hostRecognisedPlayer,
+      recognizedHost: awareness.playerRecognisedHost,
+      failedRite: awareness.failedRiteCount > 0,
       targeted: !!facts.targetingPlayer,
       armedGuess,
     },
@@ -5767,6 +5801,7 @@ function resolveNight(prev, planIn, preEvents) {
       }
       s.riteFails += 1;
       s.wrongGuesses += 1;
+      recordMonsterAwareness(s, { id: `night:${n}:failed-siege-rite`, type: "failed_rite", night: n, location: "Village Square", playerRecognisedHost: true, hostRecognisedPlayer: true, failedRite: true, truth: { wrongCreatureName: plan.typeId } });
       beats.push(`It comes out of the dark, walks to the very edge of the circle, and stops. The rite means nothing to it.`);
       if (s.wrongGuesses >= 2) {
         monsterKillsAccuser(s, beats, "It does not take a neighbour this time. It steps across the dead circle, unhurried, straight to you, and the village that stood here on your word steps back and lets it.", "square");
@@ -5843,7 +5878,10 @@ function resolveNight(prev, planIn, preEvents) {
       s.schemaVersion = HE_CONTINUITY.VERSION;
       /* The ledger is already authoritative here. Refresh the compatibility
          cards before any dawn arithmetic or available-actor query runs. */
-      if (HE_V6_RUN_CONTINUITY) HE_V6_RUN_CONTINUITY.syncRunActors(s);
+      if (HE_V6_RUN_CONTINUITY) {
+        HE_V6_RUN_CONTINUITY.syncRunActors(s);
+        syncMonsterAwareness(s);
+      }
     }
     const projection = HE_DIRECTOR.consequenceProjection(director);
     const encounters = projection.encounters || [];
@@ -5862,7 +5900,6 @@ function resolveNight(prev, planIn, preEvents) {
     const sparedByMonster = directorTruth.find((event) => event.kind === "monster_spared_player");
     if (sparedByMonster && !s.wasSpared) {
       s.wasSpared = true;
-      s.monsterSawYou = true;
       /* It found you and you obeyed the only available instruction: go home.
          That restores both halves of the old catch-and-release affinity. */
       shiftMonsterBond(s, 2);
@@ -5871,7 +5908,6 @@ function resolveNight(prev, planIn, preEvents) {
     }
     const hailedMonster = directorTruth.some((event) => event.kind === "hailed" && (event.actors || []).includes(s.monster.vid));
     if (active && hailedMonster) {
-      s.monsterSawYou = true;
       shiftMonsterBond(s, 1);
       s.clues.push(`Night ${n}: you hailed ${monsterNpc.name} in the lane. The smile took a beat too long to arrive. It knows your voice now.`);
       dawn.push(ev(`You spoke to ${monsterNpc.name} in the dark. Whatever answered knows that you keep walking into its nights.`, monsterNpc.id, 2));
@@ -5978,8 +6014,10 @@ function resolveNight(prev, planIn, preEvents) {
       id: `${finding.eventId}:evidence`, eventId: finding.eventId, night: n, location: finding.location,
       kind: "evidence", confidence: "certain", subjectId: finding.actorId, source: "player", text: finding.text,
     }));
-    const relationshipEvents = (projection.relationships || []).map((rel) => ({ ...rel, night: n, acknowledged: false }));
-    const relationshipMemories = relationshipEvents.map((rel) => ({
+    const projectedRelationshipEvents = (projection.relationships || []).map((rel) => ({ ...rel, night: n, acknowledged: false }));
+    const canonicalRelationships = HE_V6_RUN_CONTINUITY ? HE_V6_RUN_CONTINUITY.relationshipHistory(s, { night: n }) : [];
+    const relationshipEvents = canonicalRelationships.length ? canonicalRelationships : projectedRelationshipEvents;
+    const relationshipMemories = canonicalRelationships.length ? [] : relationshipEvents.map((rel) => ({
       eventId: rel.eventId, night: n, actorId: rel.actorId, target: "player", kind: rel.kind,
       location: rel.location, confidence: "certain", acknowledged: true,
       text: rel.kind === "rescued" ? "They remember the player drawing the danger away."
@@ -6000,7 +6038,7 @@ function resolveNight(prev, planIn, preEvents) {
     s.worldEvents = [...(s.worldEvents || []), ...directorEvents, ...findingEvents, ...bodyInvestigations];
     s.observations = [...(s.observations || []), ...directorObservations, ...findingObservations];
     s.memories = [...(s.memories || []), ...directorMemories, ...relationshipMemories];
-    s.relationshipEvents = [...(s.relationshipEvents || []), ...relationshipEvents];
+    if (!canonicalRelationships.length) s.relationshipEvents = [...(s.relationshipEvents || []), ...relationshipEvents];
     const revealedSecrets = projection.secrets || [];
     if (revealedSecrets.length) {
       s.lastSecretNight = n;
@@ -6090,7 +6128,7 @@ function resolveNight(prev, planIn, preEvents) {
         dawn.push(ev(`You reached ${victimName} first at the ${inquiry.location}. Whatever else the village makes of that, the night gave you something daylight would have lost.`, undefined, 1));
       }
     }
-    s.monsterSawYou = !!(s.monsterSawYou || director.player.monsterSawYou);
+    syncMonsterAwareness(s);
     s.nightHistory = [...(s.nightHistory || []), {
       night: n,
       signatures: [...new Set(director.usedSignatures || [])],
@@ -6106,7 +6144,6 @@ function resolveNight(prev, planIn, preEvents) {
     for (const reading of (director.ledgers.truth || []).filter((event) => event.kind === "monster_close_read" && event.succeeded)) {
       if (reading.learnedIdentity && reading.actorId) {
         const host = npcById(s, reading.actorId);
-        s.faceKnown = reading.actorId;
         s.clues.push(`Night ${n}: at the ${reading.location}, the thing came close enough for the ruined body to resolve into ${host ? host.name : "someone you knew"}.`);
       } else if (reading.learnedBuild && reading.hostBuild) {
         s.knownBuild = reading.hostBuild;
@@ -6211,6 +6248,7 @@ function resolveNight(prev, planIn, preEvents) {
      and it chose not to. That is not nothing: it knows your face now. -- */
   if (mods.hideSpared && !s.over) {
     s.monsterSawYou = true;
+    recordMonsterAwareness(s, { id: `night:${n}:hide-spared`, type: "monster_spared_player", night: n, location: mods.brushLoc || plan.loc || "the lanes", hostRecognisedPlayer: true });
     s.wasSpared = true;
     shiftMonsterBond(s, 1);
     if (mods.obeyedSpare) shiftMonsterBond(s, 1);
@@ -6435,6 +6473,10 @@ function resolveNight(prev, planIn, preEvents) {
           /* the wrong name, carried into the dark */
           const wrongNameCaught = mods.confrontWrongCaught !== undefined ? mods.confrontWrongCaught : chance(0.7);
           if (wrongNameCaught) {
+            if (!director) {
+              s.riteFails += 1;
+              recordMonsterAwareness(s, { id: `night:${n}:failed-rite:${fw.id}:caught`, type: "failed_rite", night: n, location: fDest, playerRecognisedHost: true, hostRecognisedPlayer: true, failedRite: true, truth: { wrongCreatureName: guess.id } });
+            }
             beats.push(`You step out with ${METHOD_CARRY[guess.method]} raised and say the wrong name. It looks at what you are holding the way a man looks at a child's wooden sword, and then it laughs, low and delighted, and the laugh is what tells your legs to run before your mind has finished understanding.`);
             s.deathBeats = playerDeathBeats(m, fw.name, fPlace, { encounterBegun: true, revealed: true, kind: "wrongRite" });
             s.over = { win: false, reason: "slain", text: `You confronted it at the ${fPlace} carrying the wrong rite. It let you finish saying the wrong name before it began.` };
@@ -6442,6 +6484,10 @@ function resolveNight(prev, planIn, preEvents) {
             return true;
           }
           if (!s.struck.includes(guess.id)) s.struck = [...s.struck, guess.id];
+          if (!director) {
+            s.riteFails += 1;
+            recordMonsterAwareness(s, { id: `night:${n}:failed-rite:${fw.id}:escaped`, type: "failed_rite", night: n, location: fDest, playerRecognisedHost: true, hostRecognisedPlayer: true, failedRite: true, truth: { wrongCreatureName: guess.id } });
+          }
           s.clues.push(`Night ${n}: you put ${METHOD_CARRY[guess.method]} to it and the thing only laughed. Whatever wears ${fw.name}'s face, it is NOT a ${guess.name}. Strike the name and start the arithmetic again.`);
           s.faceKnown = fw.id;
           s.fled = true;
@@ -6476,6 +6522,7 @@ function resolveNight(prev, planIn, preEvents) {
       if (identityKnown) {
         s.clues.push(`Night ${n}: you followed ${fw.name} to the ${fPlace} and saw the monster wearing ${fw.name}'s face.`);
         s.faceKnown = fw.id;
+        if (!director) recordMonsterAwareness(s, { id: `night:${n}:monster-face:${fw.id}`, type: "monster_recognition", night: n, location: fDest, playerRecognisedHost: true });
       } else {
         s.clues.push(`Night ${n}: you lost ${fw.name} near the ${fPlace}, then saw a monster in the road. Its face stayed hidden.`);
       }
@@ -6494,6 +6541,7 @@ function resolveNight(prev, planIn, preEvents) {
            over your hiding place and talked to you. It knows exactly who was
            in the lane, and behaves accordingly from here on. */
         s.monsterSawYou = mods.revealSeen !== undefined ? (mods.revealSeen || s.monsterSawYou) : (mods.brush || chance(0.6) ? true : s.monsterSawYou);
+        if (!director && s.monsterSawYou) recordMonsterAwareness(s, { id: `night:${n}:monster-sees-player:watch`, type: "monster_recognition", night: n, location: fDest, playerRecognisedHost: identityKnown, hostRecognisedPlayer: true });
         /* Staying to LEARN it is the riskier read (see deathP2 above), so on
            survival it earns more than the face fleeing already gives: pressed
            close enough to watch the change, you come away with one of its true
@@ -6524,6 +6572,7 @@ function resolveNight(prev, planIn, preEvents) {
         if (mods.brush && mods.brushBolt) beats.push(mods.brushBolt);
       } else {
         s.monsterSawYou = mods.revealSeen !== undefined ? (mods.revealSeen || s.monsterSawYou) : (mods.brush || chance(0.4) ? true : s.monsterSawYou);
+        if (!director && s.monsterSawYou) recordMonsterAwareness(s, { id: `night:${n}:monster-sees-player:flee`, type: "monster_recognition", night: n, location: fDest, playerRecognisedHost: identityKnown, hostRecognisedPlayer: true });
         beats.push(mods.brush && mods.brushBolt
           ? mods.brushBolt
           : `You go back the way you came, slowly, placing each foot like a debt, and do not breathe properly until your own bolt is thrown.`);
@@ -6598,6 +6647,7 @@ function resolveNight(prev, planIn, preEvents) {
       s.npcs = s.npcs.map((x2) => (x2.id === hw.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: "the lanes", met: true }] } : x2));
       if (hw.id === s.monster.vid && active) {
         s.monsterSawYou = true;
+        recordMonsterAwareness(s, { id: `night:${n}:hailed-monster:${hw.id}`, type: "hailed", night: n, location: hDest || "the lanes", playerRecognisedHost: false, hostRecognisedPlayer: true });
         shiftMonsterBond(s, 1);
         s.clues.push(`Night ${n}: you hailed ${hw.name} in the lane. The smile took a beat too long to arrive. It knows your voice now.`);
         dawn.push(ev(`You spoke to ${hw.name} in the dark last night, and something about the exchange has not let you sleep since. It knows you walk at night now.`, hw.id));
@@ -6888,6 +6938,7 @@ function resolveNight(prev, planIn, preEvents) {
             }
             s.monsterSawYou = true;
             s.faceKnown = watching;
+            if (!director) recordMonsterAwareness(s, { id: `night:${n}:watched-monster:${watching}:mutual`, type: "monster_recognition", night: n, location: huntLoc, playerRecognisedHost: true, hostRecognisedPlayer: true });
             shiftMonsterBond(s, 1);
             s.playerSaw.push({ night: n, id: watching, loc: huntLoc });
             s.clues.push(`Night ${n}: ${target.name} stopped in the lane, turned, and looked directly at the shadow you stood in. Then walked on. It knows you follow, and you know its face: ${target.name}.`);
@@ -6895,6 +6946,7 @@ function resolveNight(prev, planIn, preEvents) {
             dawn.push(ev(`You have seen the face it wears: ${target.name}. It saw you seeing, and said nothing, and did nothing, and that is the worst answer of all. Now you need only its true nature.`, watching, 2));
           } else {
             s.faceKnown = watching;
+            if (!director) recordMonsterAwareness(s, { id: `night:${n}:watched-monster:${watching}:unseen`, type: "monster_recognition", night: n, location: huntLoc, playerRecognisedHost: true, hostRecognisedPlayer: false });
             shiftMonsterBond(s, 1);
             s.playerSaw.push({ night: n, id: watching, loc: huntLoc });
             s.clues.push(`Night ${n}: you followed ${target.name} toward the ${huntLoc}. Halfway there, their shadow bent wrong. Too long in the arm, too many joints. Whatever left that house was not ${target.name}, and yet it wears ${target.name}.`);
@@ -7603,7 +7655,10 @@ function resolveNight(prev, planIn, preEvents) {
     const wk = mods.witnessKill;
     const wv = npcById(s, wk.id);
     const wname = wv ? wv.name : "someone";
-    if (wk.shouted) s.monsterSawYou = true;
+    if (wk.shouted) {
+      s.monsterSawYou = true;
+      if (!director) recordMonsterAwareness(s, { id: `night:${n}:witness-shout`, type: "monster_recognition", night: n, location: plan.loc, hostRecognisedPlayer: true });
+    }
     if (wk.saved) {
       s.clues.push(`Night ${n}: you shouted, at the ${plan.loc}, and ${wname} got clear. It went hungry. It will not be patient about that.`);
       dawn.push(ev(`${wname} is alive this morning because somebody screamed at the ${plan.loc} in the night, and half the village has worked out it was you. It took nobody. Nobody expects it to be gracious about that.`, wk.id, 2));
@@ -7631,6 +7686,7 @@ function resolveNight(prev, planIn, preEvents) {
     /* it stood over your hiding place and talked to you: whatever else it
        did or did not learn, it knows someone was in that lane */
     s.monsterSawYou = true;
+    if (!director) recordMonsterAwareness(s, { id: `night:${n}:close-pass`, type: "monster_recognition", night: n, location: mods.brushLoc || plan.loc, hostRecognisedPlayer: true });
     s.clues.push(`Night ${n}: it came close enough at the ${mods.brushLoc || plan.loc} to speak to you, and it spoke. Then something else bolted and it went after that instead. You are alive by an accident, and not by any part of your own doing.`);
     dawn.push(ev(`You did not sleep. It was near enough last night to be smelled and near enough to be heard speaking, and it spoke. You are alive because something smaller than you ran first.`, undefined, 2));
   }
@@ -8231,7 +8287,10 @@ function vindicatePlayer(s, culpritName) {
 
 function uncoverMonster(s, culpritName) {
   s.monsterUncovered = true;
-  if (s.monster && s.monster.vid) s.faceKnown = s.monster.vid;
+  if (s.monster && s.monster.vid) {
+    s.faceKnown = s.monster.vid;
+    if (typeof recordMonsterAwareness === "function") recordMonsterAwareness(s, { id: `night:${s.nightNum}:public-unmask:${s.monster.vid}`, type: "monster_unmasked", phase: "day", night: s.nightNum, location: "Village Square", playerRecognisedHost: true, truth: { public: true } });
+  }
   return vindicatePlayer(s, culpritName);
 }
 
@@ -16872,14 +16931,17 @@ function MonsterVillage() {
     else if (churchMemory && churchObservation && churchObservation.kind === "not_seen") opener.push(`Before you can begin: "You looked for me at the churchyard. You did not find me. Ask about the difference, if that is why you came."`);
     else if (churchMemory && churchObservation && churchObservation.kind === "unobserved") opener.push(`Before you can begin: "I remember the churchyard. I remember you hearing something and choosing not to turn around."`);
     else if (churchMemory) opener.push(`Before you can begin: "I remember your lantern in the churchyard. You may not have seen me. That does not mean I did not see you."`);
-    const nightConsequence = [...(s2.relationshipEvents || [])].reverse().find((rel) => rel.actorId === id && !rel.acknowledged);
+    const canonicalConsequence = HE_V6_RUN_CONTINUITY
+      ? HE_V6_RUN_CONTINUITY.unacknowledgedRelationship(s2, id)
+      : null;
+    const nightConsequence = canonicalConsequence
+      || [...(s2.relationshipEvents || [])].reverse().find((rel) => rel.actorId === id && !rel.acknowledged);
     if (nightConsequence) {
       if (nightConsequence.kind === "rescued") opener.push(`They do not make you ask about the ${nightConsequence.location}. "I heard you call. I took the road because it was your voice. I am here because you did not stay quiet."`);
       else if (nightConsequence.kind === "attempted_rescue") opener.push(`They look at you for a long moment. "You tried to reach me in the ${nightConsequence.location}. Trying is not nothing. It is not the same as getting there."`);
       else if (nightConsequence.kind === "abandoned") opener.push(`They leave you standing. "I saw you choose. Do not tell me about fear; I was there too. You had a road home. You took it."`);
       else if (nightConsequence.kind === "intrusion") opener.push(`They stop you at the door. "I saw you disturb what was left at the ${nightConsequence.location}. Some things are private."`);
       else if (nightConsequence.kind === "restraint") opener.push(`They let you in at once. "I saw you leave that offering alone at the ${nightConsequence.location}. Thank you."`);
-      s2.relationshipEvents = (s2.relationshipEvents || []).map((rel) => rel.eventId === nightConsequence.eventId ? { ...rel, acknowledged: true } : rel);
     }
     if (npc.offendedExam) opener.push(`They fold their arms. "You had a glass put to my chest like I was cattle at market. I have not forgotten it."`);
     /* the deepest cut of all: the player took their one secret and spent it */
@@ -16900,13 +16962,19 @@ function MonsterVillage() {
     if (s2.fled) opener.push(pick(FLED_OPENERS)(npcById(s2, s2.monster.vid).name));
     setModal(null); setIvOpenerOpen(false);
     const valid = s2.nightLogs.filter((lg) => lg.outMap[id] !== undefined).map((lg) => lg.night);
-    setIv({ id, night: valid.length ? valid[valid.length - 1] : s2.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })), committed: false });
+    setIv({ id, night: valid.length ? valid[valid.length - 1] : s2.nightNum, left: 3, transcript: opener.map((t) => ({ q: null, a: t })), committed: false, relationshipEventId: nightConsequence ? nightConsequence.eventId : null });
   };
   const beginInterview = () => {
     if (!iv || iv.committed) { if (iv) setIv({ ...iv, begun: true }); return; }
     const s2 = JSON.parse(JSON.stringify(s));
     s2.ap -= 1;
     if (!s2.questionedToday.includes(iv.id)) s2.questionedToday.push(iv.id);
+    if (iv.relationshipEventId) {
+      const canonicalRelationship = HE_V6_RUN_CONTINUITY
+        && HE_V6_RUN_CONTINUITY.relationshipHistory(s2, { actorId: iv.id }).find((rel) => rel.eventId === iv.relationshipEventId);
+      if (canonicalRelationship) HE_V6_RUN_CONTINUITY.acknowledgeRelationship(s2, iv.relationshipEventId, { day: s2.dayNum, location: HOME_LOC[iv.id] || "Village Square" });
+      else s2.relationshipEvents = (s2.relationshipEvents || []).map((rel) => rel.eventId === iv.relationshipEventId ? { ...rel, acknowledged: true } : rel);
+    }
     setS(s2);
     setIv({ ...iv, begun: true, committed: true });
   };
@@ -17752,7 +17820,18 @@ function MonsterVillage() {
           : `Night ${e2.night}: they saw your lantern near the ${e2.loc}; you did not identify them at the time.`,
       });
     }
-    (s.memories || []).filter((m2) => m2.actorId === n.id && m2.kind !== "director").forEach((m2) => {
+    const canonicalRelations = HE_V6_RUN_CONTINUITY ? HE_V6_RUN_CONTINUITY.relationshipHistory(s, { actorId: n.id }) : [];
+    canonicalRelations.forEach((rel) => {
+      const relationshipText = rel.kind === "rescued" ? "they remember that you drew the danger away"
+        : rel.kind === "attempted_rescue" ? "they remember that you tried to reach them"
+        : rel.kind === "abandoned" ? "they remember that you chose the road home"
+        : rel.kind === "caught_watching" ? "they remember confronting you about watching their door"
+        : rel.kind === "intrusion" ? "they remember that you disturbed what was left there"
+        : "they remember that you left the private offering untouched";
+      facts.push({ o: rel.night * 10 + 3, t: `Night ${rel.night}: ${relationshipText}.` });
+    });
+    const canonicalRelationNights = new Set(canonicalRelations.map((rel) => `${rel.night}|${rel.kind}`));
+    (s.memories || []).filter((m2) => m2.actorId === n.id && m2.kind !== "director" && !canonicalRelationNights.has(`${m2.night}|${m2.kind}`)).forEach((m2) => {
       const relationshipText = m2.kind === "rescued" ? "they remember that you drew the danger away"
         : m2.kind === "attempted_rescue" ? "they remember that you tried to reach them"
         : m2.kind === "abandoned" ? "they remember that you chose the road home"

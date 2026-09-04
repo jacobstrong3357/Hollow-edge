@@ -260,6 +260,25 @@ function take(state, wanted) {
   assert.strictEqual(Continuity.playerCanRaiseEvent(ledger, eventId), true);
 })();
 
+(function recognitionAndRelationshipKnowledgeRemainActorSpecific() {
+  var state = Director.createNight(config("v6-adapter-awareness"));
+  state.ledgers.truth.push(
+    { id: "hailed:hazel", slot: 1, kind: "hailed", location: "Village Square", actors: ["player", "hazel"] },
+    { id: "monster-reveal-choice:2", slot: 2, kind: "monster_reveal_choice", location: "Graveyard", actorId: "hazel", actors: ["player", "hazel"], learnedIdentity: true, identityVisible: false, seenByMonster: true, wrongName: true },
+    { id: "site-intrusion:parcel", slot: 3, kind: "intrusion_witnessed", location: "Old Mill", actorId: "tobias", actors: ["player", "tobias"] }
+  );
+  state.ledgers.observations.push({
+    eventId: "hailed:hazel", slot: 1, kind: "meeting", location: "Village Square", actors: ["hazel"], clarity: "clear", reliability: "direct"
+  });
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, { runId: "run-awareness", actors: actors });
+  var revealId = Adapter.eventIdFor(state, "monster-reveal-choice:2");
+  var intrusionId = Adapter.eventIdFor(state, "site-intrusion:parcel");
+  assert.strictEqual(Continuity.sharedObservation(ledger, "player", "hazel", revealId), true, "the reveal is mutual");
+  assert.strictEqual(Continuity.observedEvent(ledger, "tobias", intrusionId), true, "the witness owns the intrusion memory");
+  assert.strictEqual(Continuity.observedEvent(ledger, "rosa", intrusionId), false, "unrelated villagers do not inherit it");
+})();
+
 (function playerDeathAndVillagerDeathProjectAsStatuses() {
   var state = Director.createNight(config("v6-adapter-deaths"));
   state.ledgers.truth.push({ id: "rosa-dies", slot: 1, kind: "slain", location: "Old Mill", actors: ["hazel", "rosa"], victimId: "rosa", sign: "bite" });

@@ -196,6 +196,52 @@ function addOutcome(state, options) {
   assert.deepStrictEqual(discovery.companionIds, ["hazel"]);
 })();
 
+(function monsterAwarenessKeepsOrdinaryRecognitionSeparateFromExposure() {
+  var state = run("monster-awareness");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:hailed:hazel", type: "hailed", phase: "night", night: 2,
+    location: "Village Square", actorIds: ["player", "hazel"], truth: { data: { id: "hailed:hazel", actors: ["player", "hazel"] } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:hailed:hazel", observerId: "player", actorIdsRecognised: ["hazel"]
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:hailed:hazel", observerId: "hazel", actorIdsRecognised: ["player"]
+  });
+  var greeted = RunContinuity.monsterAwareness(state, "hazel");
+  assert.strictEqual(greeted.playerRecognisedHost, false, "recognising Hazel as Hazel is not proof she is the monster");
+  assert.strictEqual(greeted.hostRecognisedPlayer, true, "the monster remembers the player who hailed it");
+
+  RunContinuity.recordMonsterAwareness(state, "hazel", {
+    id: "night:2:failed-rite:hazel", type: "failed_rite", night: 2, location: "Old Church",
+    playerRecognisedHost: true, hostRecognisedPlayer: true, failedRite: true
+  });
+  var exposed = RunContinuity.monsterAwareness(state, "hazel");
+  assert.strictEqual(exposed.playerRecognisedHost, true);
+  assert.strictEqual(exposed.hostRecognisedPlayer, true);
+  assert.strictEqual(exposed.failedRiteCount, 1);
+  assert.deepStrictEqual(exposed.mutualEventIds, ["night:2:failed-rite:hazel"]);
+})();
+
+(function relationshipConsequencesAreAcknowledgedExactlyOnce() {
+  var state = run("relationship-acknowledgement");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:intervene:2", type: "intervention", phase: "night", night: 2,
+    location: "Graveyard", actorIds: ["player", "rosa"], truth: { data: { id: "intervene:2", succeeded: true } }
+  });
+  assert.strictEqual(RunContinuity.unacknowledgedRelationship(state, "rosa"), null, "a truth event alone cannot invent Rosa's memory");
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:intervene:2", observerId: "rosa", actorIdsRecognised: ["player"]
+  });
+  var relationship = RunContinuity.unacknowledgedRelationship(state, "rosa");
+  assert(relationship && relationship.kind === "rescued");
+  RunContinuity.acknowledgeRelationship(state, relationship.eventId, { day: 2 });
+  assert.strictEqual(RunContinuity.unacknowledgedRelationship(state, "rosa"), null);
+  var before = state.continuity.events.length;
+  RunContinuity.acknowledgeRelationship(state, relationship.eventId, { day: 2 });
+  assert.strictEqual(state.continuity.events.length, before, "reopening the interview cannot duplicate the acknowledgement");
+})();
+
 (function runStatusEventsAreDurableObservedAndIdempotent() {
   var state = run("public-hanging");
   var eventId = RunContinuity.recordStatusChange(state, "rosa", "dead", {
@@ -233,6 +279,9 @@ function addOutcome(state, options) {
   assert(source.includes('v6OutcomeKnowledge.kind === "last_seen_alive"'), "the recap only says the player left someone alive after a recorded prior sighting");
   assert(source.includes("v6Run.sharedDiscoveryForActor"), "shared interview memories come from canonical mutual observation");
   assert(source.includes("HE_V6_RUN_CONTINUITY.thresholdVisitCount"), "door visit totals come from canonical visit chains");
+  assert(source.includes("canonicalMonsterAwareness(s)"), "night planning receives canonical mutual monster awareness");
+  assert(source.includes("HE_V6_RUN_CONTINUITY.unacknowledgedRelationship"), "interview consequences come from canonical relationship history");
+  assert(source.includes("HE_V6_RUN_CONTINUITY.acknowledgeRelationship"), "opening an interview durably acknowledges its relationship consequence");
   assert(!source.includes('kind: "shared_body_discovery",\n          location:'), "daylight no longer writes a duplicate shared-discovery memory");
   var deathWrites = source.split("\n").reduce(function (rows, line, index, lines) {
     if (!line.includes("s.deaths.push")) return rows;

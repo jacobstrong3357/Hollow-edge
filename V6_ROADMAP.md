@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1c
+### Current checkpoint: V6.1d
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -88,6 +88,19 @@ same investigation event. Dawn and interview prompts read that mutual event;
 daylight no longer writes a duplicate compatibility memory that can drift from
 the night. Conservative legacy fallback remains for nights saved before V6.
 
+Monster awareness is now directional canonical knowledge. Recognising a
+neighbour in the road does not reveal that they are the monster; witnessing the
+borrowed face break does. Likewise the monster only knows the player after a
+mutual confrontation, chase, hail, shout or close discovery. Failed rites are
+canonical events, so later threshold taunts receive the real history without
+double-counting the daylight compatibility pass.
+
+Rescue, attempted rescue, abandonment, caught-watching, intrusion and restraint
+now read from the participant's observation of the original night event. Their
+interview opener is acknowledged by a separate durable event, preventing it
+from repeating. Character records also read these canonical relationships
+instead of the temporary memory list.
+
 ## Delivery slices
 
 ### V6.1 — Canonical continuity (in progress)
@@ -99,7 +112,7 @@ the night. Conservative legacy fallback remains for nights saved before V6.
 - [x] Move actor deaths, changes, flight, unbinding and monster defeat onto
   canonical status events.
 - [x] Make witnessed-death and aftermath recaps read player observations.
-- [ ] Move doorstep visits, shared body discoveries, monster recognition and
+- [x] Move doorstep visits, shared body discoveries, monster recognition and
   relationship events off their compatibility arrays.
 - Add a development inspector that shows truth and each observer separately.
 - Preserve old saves without treating loose legacy prose as newly proven fact.

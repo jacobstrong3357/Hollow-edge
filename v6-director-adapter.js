@@ -209,6 +209,45 @@
     return ledger;
   }
 
+  function observerRecognised(ledger, eventId, observerId, actorId) {
+    return list(ledger.observations).some(function (row) {
+      return row.eventId === eventId && row.observerId === observerId
+        && list(row.actorIdsRecognised).indexOf(actorId) >= 0;
+    });
+  }
+
+  function addRecognitionObservation(ledger, eventId, observerId, actorId, suffix) {
+    if (!eventExists(ledger, eventId) || observerRecognised(ledger, eventId, observerId, actorId)) return ledger;
+    return Continuity.recordObservation(ledger, {
+      id: eventId + ":observation:" + slug(observerId) + ":" + suffix,
+      eventId: eventId,
+      observerId: observerId,
+      mode: "direct",
+      certainty: "certain",
+      factKeys: [actorId === PLAYER_ID ? "player-recognised" : "monster-host:" + actorId],
+      actorIdsRecognised: [actorId],
+      locationRecognised: true
+    });
+  }
+
+  function importMonsterAwareness(ledger, director) {
+    var hostId = director.monsterSchedule && director.monsterSchedule.hostId;
+    if (!hostId || !ledger.actors[hostId]) return ledger;
+    list(director.ledgers && director.ledgers.truth).forEach(function (event) {
+      var eventId = eventIdFor(director, event.id);
+      var playerLearnsHost = (event.kind === "monster_reveal_choice" && (event.learnedIdentity || event.identityVisible))
+        || (event.kind === "monster_close_read" && event.learnedIdentity)
+        || (event.kind === "monster_slain" && (event.actorId || hostId) === hostId);
+      var hostLearnsPlayer = (event.kind === "monster_reveal_choice" && event.seenByMonster)
+        || event.kind === "chase_started"
+        || event.kind === "monster_spared_player"
+        || (event.kind === "hailed" && list(event.actors).indexOf(hostId) >= 0);
+      if (playerLearnsHost) ledger = addRecognitionObservation(ledger, eventId, PLAYER_ID, hostId, "monster-face");
+      if (hostLearnsPlayer) ledger = addRecognitionObservation(ledger, eventId, hostId, PLAYER_ID, "player-face");
+    });
+    return ledger;
+  }
+
   function importVillagerMemories(ledger, director) {
     var memories = director.ledgers && director.ledgers.memories || {};
     Object.keys(memories).sort().forEach(function (observerId) {
@@ -233,6 +272,19 @@
           locationRecognised: !!memory.location
         });
       });
+    });
+    return ledger;
+  }
+
+  function importRelationshipObservations(ledger, director) {
+    var kinds = { intervention: true, abandonment: true, threshold_confrontation: true, intrusion_witnessed: true, restraint_witnessed: true };
+    list(director.ledgers && director.ledgers.truth).filter(function (event) {
+      return !!kinds[event.kind];
+    }).forEach(function (event) {
+      var actorId = event.actorId || event.victimId || list(event.actors).find(function (id) { return id !== PLAYER_ID; });
+      if (!actorId || !ledger.actors[actorId]) return;
+      var eventId = eventIdFor(director, event.id);
+      ledger = addRecognitionObservation(ledger, eventId, actorId, PLAYER_ID, "relationship");
     });
     return ledger;
   }
@@ -325,7 +377,9 @@
     });
     ledger = importPlayerObservations(ledger, director);
     ledger = importLivedPlayerEvents(ledger, director);
+    ledger = importMonsterAwareness(ledger, director);
     ledger = importVillagerMemories(ledger, director);
+    ledger = importRelationshipObservations(ledger, director);
     ledger = importEvidence(ledger, director);
     ledger.lastImportedDirectorNight = {
       night: director.night,

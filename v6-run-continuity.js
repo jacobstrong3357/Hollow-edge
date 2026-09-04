@@ -256,6 +256,174 @@
     return rows.length ? rows[rows.length - 1] : null;
   }
 
+  var MONSTER_KNOWLEDGE_TYPES = {
+    monster_reveal_choice: true,
+    monster_close_read: true,
+    monster_spared_player: true,
+    chase_started: true,
+    monster_unmasked: true,
+    monster_slain: true,
+    monster_recognition: true,
+    failed_rite: true,
+    hailed: true
+  };
+
+  function monsterAwareness(run, hostId) {
+    var ledger = run && run.continuity;
+    var result = {
+      hostId: hostId || null,
+      playerRecognisedHost: false,
+      hostRecognisedPlayer: false,
+      failedRiteCount: 0,
+      recognitionEventIds: [],
+      mutualEventIds: []
+    };
+    if (!ledger || !hostId) return result;
+    canonicalEvents(run).forEach(function (event) {
+      var raw = rawEvent(event);
+      var relevant = !!MONSTER_KNOWLEDGE_TYPES[event.type]
+        && (list(event.actorIds).indexOf(hostId) >= 0 || list(event.subjectIds).indexOf(hostId) >= 0 || raw.actorId === hostId);
+      if (!relevant) return;
+      var rows = observationsForEvent(run, event.id);
+      var playerRecognisesActor = rows.some(function (row) {
+        return row.observerId === PLAYER_ID && list(row.actorIdsRecognised).indexOf(hostId) >= 0;
+      });
+      var revealsHost = ["monster_reveal_choice", "monster_close_read", "monster_unmasked", "monster_slain", "monster_recognition", "failed_rite"].indexOf(event.type) >= 0;
+      var playerKnows = revealsHost && playerRecognisesActor;
+      var hostKnows = rows.some(function (row) {
+        return row.observerId === hostId && list(row.actorIdsRecognised).indexOf(PLAYER_ID) >= 0;
+      });
+      if (playerKnows) {
+        result.playerRecognisedHost = true;
+        result.recognitionEventIds.push(event.id);
+      }
+      if (hostKnows) result.hostRecognisedPlayer = true;
+      if (playerKnows && hostKnows) result.mutualEventIds.push(event.id);
+      if (raw.wrongName || raw.failedRite || event.type === "failed_rite") result.failedRiteCount += 1;
+    });
+    result.recognitionEventIds = unique(result.recognitionEventIds);
+    result.mutualEventIds = unique(result.mutualEventIds);
+    return result;
+  }
+
+  function recordMonsterAwareness(run, hostId, spec) {
+    spec = spec || {};
+    if (!run || !hostId) throw new Error("a run and monster host are required");
+    run.continuity = Continuity.ensureActors(run.continuity, run.npcs || []);
+    var id = spec.id || ["run", "night-" + (spec.night == null ? "unknown" : spec.night), spec.type || "monster-recognition", hostId].map(slug).join(":");
+    if (!Continuity.eventById(run.continuity, id)) {
+      var hostCanAct = Continuity.actorCanAct(run.continuity, hostId);
+      run.continuity = Continuity.appendEvent(run.continuity, {
+        id: id,
+        type: spec.type || "monster_recognition",
+        phase: spec.phase || "night",
+        night: spec.night == null ? null : spec.night,
+        location: spec.location || null,
+        actorIds: unique([PLAYER_ID].concat(hostCanAct ? [hostId] : [])),
+        subjectIds: hostCanAct ? [] : [hostId],
+        truth: Object.assign({}, spec.truth || {}, {
+          actorId: hostId,
+          playerRecognisedHost: !!spec.playerRecognisedHost,
+          hostRecognisedPlayer: !!spec.hostRecognisedPlayer,
+          failedRite: !!spec.failedRite,
+          source: spec.source || "playable-run"
+        }),
+        tags: unique(["monster-awareness"].concat(spec.tags || []))
+      });
+      if (spec.playerRecognisedHost) run.continuity = Continuity.recordObservation(run.continuity, {
+        id: id + ":observation:player",
+        eventId: id,
+        observerId: PLAYER_ID,
+        mode: "direct",
+        certainty: "certain",
+        factKeys: ["monster-host:" + hostId],
+        actorIdsRecognised: [hostId],
+        locationRecognised: spec.locationRecognised !== false
+      });
+      if (spec.hostRecognisedPlayer) run.continuity = Continuity.recordObservation(run.continuity, {
+        id: id + ":observation:" + slug(hostId),
+        eventId: id,
+        observerId: hostId,
+        mode: "direct",
+        certainty: "certain",
+        factKeys: ["player-recognised"],
+        actorIdsRecognised: [PLAYER_ID],
+        locationRecognised: spec.locationRecognised !== false
+      });
+    }
+    return id;
+  }
+
+  var RELATIONSHIP_TYPES = {
+    intervention: true,
+    abandonment: true,
+    threshold_confrontation: true,
+    intrusion_witnessed: true,
+    restraint_witnessed: true
+  };
+
+  function relationshipKind(event, raw) {
+    if (event.type === "intervention") return raw.succeeded ? "rescued" : "attempted_rescue";
+    if (event.type === "abandonment") return "abandoned";
+    if (event.type === "threshold_confrontation") return "caught_watching";
+    if (event.type === "intrusion_witnessed") return "intrusion";
+    if (event.type === "restraint_witnessed") return "restraint";
+    return null;
+  }
+
+  function relationshipHistory(run, options) {
+    options = options || {};
+    var acknowledgements = {};
+    canonicalEvents(run, "relationship_acknowledged").forEach(function (event) {
+      var raw = rawEvent(event);
+      if (raw.relationshipEventId) acknowledgements[raw.relationshipEventId] = event.id;
+    });
+    return canonicalEvents(run, null, options.night).map(function (event) {
+      if (!RELATIONSHIP_TYPES[event.type]) return null;
+      var raw = rawEvent(event);
+      var kind = relationshipKind(event, raw);
+      var actorId = raw.actorId || raw.victimId || list(event.actorIds).find(function (id) { return id !== PLAYER_ID; }) || null;
+      if (!actorId || !Continuity.observedEvent(run.continuity, actorId, event.id)) return null;
+      return {
+        eventId: event.id,
+        night: event.night,
+        actorId: actorId,
+        kind: kind,
+        location: event.location,
+        succeeded: raw.succeeded == null ? null : !!raw.succeeded,
+        acknowledged: !!acknowledgements[event.id],
+        acknowledgementEventId: acknowledgements[event.id] || null
+      };
+    }).filter(Boolean).filter(function (event) {
+      return !options.actorId || event.actorId === options.actorId;
+    });
+  }
+
+  function unacknowledgedRelationship(run, actorId) {
+    var rows = relationshipHistory(run, { actorId: actorId }).filter(function (event) { return !event.acknowledged; });
+    return rows.length ? rows[rows.length - 1] : null;
+  }
+
+  function acknowledgeRelationship(run, relationshipEventId, spec) {
+    spec = spec || {};
+    if (!run || !run.continuity || !Continuity.eventById(run.continuity, relationshipEventId)) return null;
+    var id = relationshipEventId + ":acknowledged";
+    if (Continuity.eventById(run.continuity, id)) return id;
+    var source = Continuity.eventById(run.continuity, relationshipEventId);
+    run.continuity = Continuity.appendEvent(run.continuity, {
+      id: id,
+      type: "relationship_acknowledged",
+      phase: "day",
+      day: spec.day == null ? null : spec.day,
+      location: spec.location || source.location,
+      actorIds: [PLAYER_ID],
+      subjectIds: list(source.actorIds).filter(function (actorId) { return actorId !== PLAYER_ID; }).slice(0, 1),
+      truth: { relationshipEventId: relationshipEventId, source: "interview" },
+      tags: ["relationship", "acknowledgement"]
+    });
+    return id;
+  }
+
   function playerOutcomeKnowledge(run, night, actorId) {
     var outcome = outcomeEvent(run, night, actorId);
     if (!outcome) return null;
@@ -326,6 +494,11 @@
     thresholdVisits: thresholdVisits,
     thresholdVisitCount: thresholdVisitCount,
     sharedDiscoveries: sharedDiscoveries,
-    sharedDiscoveryForActor: sharedDiscoveryForActor
+    sharedDiscoveryForActor: sharedDiscoveryForActor,
+    monsterAwareness: monsterAwareness,
+    recordMonsterAwareness: recordMonsterAwareness,
+    relationshipHistory: relationshipHistory,
+    unacknowledgedRelationship: unacknowledgedRelationship,
+    acknowledgeRelationship: acknowledgeRelationship
   });
 });

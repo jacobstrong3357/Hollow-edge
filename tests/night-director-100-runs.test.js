@@ -175,6 +175,22 @@ function chooseAction(state, actions, run, step) {
       assert.strictEqual(!!actor.turned, status === "changed", "run " + run + " projects canonical change for " + actor.id);
       assert.strictEqual(V6RunContinuity.actorCanAppear(playableRun, actor.id), status === "alive" || status === "changed", "run " + run + " availability agrees for " + actor.id);
     });
+    var awareness = V6RunContinuity.monsterAwareness(playableRun, state.monsterSchedule.hostId);
+    var rawTruth = state.ledgers.truth || [];
+    var hostSawPlayer = rawTruth.some(function (event) {
+      return (event.kind === "monster_reveal_choice" && event.seenByMonster)
+        || event.kind === "chase_started" || event.kind === "monster_spared_player"
+        || (event.kind === "hailed" && (event.actors || []).includes(state.monsterSchedule.hostId));
+    });
+    var playerSawHost = rawTruth.some(function (event) {
+      return (event.kind === "monster_reveal_choice" && (event.learnedIdentity || event.identityVisible))
+        || (event.kind === "monster_close_read" && event.learnedIdentity)
+        || event.kind === "monster_slain";
+    });
+    if (hostSawPlayer) assert.strictEqual(awareness.hostRecognisedPlayer, true, "run " + run + " preserves the monster's recognition of the player");
+    if (playerSawHost) assert.strictEqual(awareness.playerRecognisedHost, true, "run " + run + " preserves the player's recognition of the host");
+    var canonicalRelationships = V6RunContinuity.relationshipHistory(playableRun, { night: state.night });
+    assert.strictEqual(canonicalRelationships.length, projection.relationships.length, "run " + run + " gives every relationship consequence an actor memory");
   }
 
   assert.strictEqual(terminal.complete + terminal.dead, 100, "all 100 runs terminate");
