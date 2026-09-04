@@ -142,6 +142,60 @@ function addOutcome(state, options) {
   assert.strictEqual(knowledge.priorLocation, "Village Square");
 })();
 
+(function doorstepVisitsAreOneObservedChain() {
+  var state = run("doorstep-chain");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:threshold-arrival:4", type: "threshold_arrival", phase: "night", night: 2,
+    location: "Home", truth: { data: { id: "threshold-arrival:4", slot: 4, actorId: "hazel", visitorKind: "neighbour", thresholdKind: "knock" } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:threshold-arrival:4", observerId: "player", mode: "heard", actorIdsRecognised: []
+  });
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:threshold-missing-report:4", type: "threshold_missing_report", phase: "night", night: 2,
+    location: "Home", actorIds: ["player", "hazel"], subjectIds: ["wilhelm"],
+    truth: { data: { id: "threshold-missing-report:4", slot: 4, reporterId: "hazel", subjectId: "wilhelm" } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:threshold-missing-report:4", observerId: "player", actorIdsRecognised: ["hazel", "wilhelm"]
+  });
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:threshold-choice:4", type: "threshold_choice", phase: "night", night: 2,
+    location: "Old Mill", actorIds: ["player", "hazel"],
+    truth: { data: { id: "threshold-choice:4", slot: 4, actorId: "hazel", action: "STEP_OUTSIDE", opened: true } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:threshold-choice:4", observerId: "player", actorIdsRecognised: ["hazel"]
+  });
+  var visits = RunContinuity.thresholdVisits(state, 2);
+  assert.strictEqual(visits.length, 1);
+  assert.strictEqual(visits[0].visitorId, "hazel");
+  assert.strictEqual(visits[0].subjectId, "wilhelm");
+  assert.strictEqual(visits[0].action, "STEP_OUTSIDE");
+  assert.deepStrictEqual(visits[0].recognisedActorIds.sort(), ["hazel", "wilhelm"]);
+  assert.strictEqual(RunContinuity.thresholdVisitCount(state), 1);
+})();
+
+(function sharedDiscoveriesRequireMutualMemoryOfOneEvent() {
+  var state = run("shared-discovery");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:investigated:attack:wilhelm", type: "investigated_attack", phase: "night", night: 2,
+    location: "Old Mill", actorIds: ["player", "hazel"], subjectIds: ["wilhelm"],
+    truth: { data: { id: "investigated:attack:wilhelm", slot: 4, victimId: "wilhelm", attackEventId: "attack:wilhelm", sharedDiscovery: true, rescueReporterId: "hazel", corroboratingWitnessIds: ["hazel"] } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:investigated:attack:wilhelm", observerId: "player", actorIdsRecognised: ["wilhelm", "hazel"]
+  });
+  assert.deepStrictEqual(RunContinuity.sharedDiscoveries(state, { night: 2 }), [], "one person's memory is not a shared scene");
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:investigated:attack:wilhelm", observerId: "hazel", actorIdsRecognised: ["player"]
+  });
+  var discovery = RunContinuity.sharedDiscoveryForActor(state, "hazel", 2);
+  assert(discovery);
+  assert.strictEqual(discovery.victimId, "wilhelm");
+  assert.deepStrictEqual(discovery.companionIds, ["hazel"]);
+})();
+
 (function runStatusEventsAreDurableObservedAndIdempotent() {
   var state = run("public-hanging");
   var eventId = RunContinuity.recordStatusChange(state, "rosa", "dead", {
@@ -177,6 +231,9 @@ function addOutcome(state, options) {
   assert(source.includes('v6OutcomeKnowledge.kind === "witnessed_death"'), "the recap distinguishes a death lived on screen");
   assert(source.includes('v6OutcomeKnowledge.kind === "found_body"'), "the recap distinguishes reaching an aftermath");
   assert(source.includes('v6OutcomeKnowledge.kind === "last_seen_alive"'), "the recap only says the player left someone alive after a recorded prior sighting");
+  assert(source.includes("v6Run.sharedDiscoveryForActor"), "shared interview memories come from canonical mutual observation");
+  assert(source.includes("HE_V6_RUN_CONTINUITY.thresholdVisitCount"), "door visit totals come from canonical visit chains");
+  assert(!source.includes('kind: "shared_body_discovery",\n          location:'), "daylight no longer writes a duplicate shared-discovery memory");
   var deathWrites = source.split("\n").reduce(function (rows, line, index, lines) {
     if (!line.includes("s.deaths.push")) return rows;
     rows.push(lines.slice(Math.max(0, index - 5), index).join("\n"));

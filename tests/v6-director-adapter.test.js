@@ -226,6 +226,40 @@ function take(state, wanted) {
   assert.strictEqual(Adapter.playerCanRaiseLegacyEvent(ledger, finding), true, "an inspected object's interview question is backed by the observation that identified it");
 })();
 
+(function derivedDoorstepFactsRemainPlayerKnowledge() {
+  var state = Director.createNight(config("v6-adapter-threshold-memory"));
+  state.ledgers.truth.push(
+    { id: "threshold-arrival:4", slot: 4, kind: "threshold_arrival", location: "Home", actorId: "hazel", visitorKind: "monster", thresholdKind: "knock" },
+    { id: "threshold-monster-visit:4:hazel", slot: 4, kind: "threshold_monster_visit", location: "Home", actorId: "hazel", subjectId: "hazel", actors: ["player", "hazel"], text: "Hazel came to the door." },
+    { id: "threshold-missing-report:4", slot: 4, kind: "threshold_missing_report", location: "Home", actorId: "hazel", reporterId: "hazel", subjectId: "rosa", actors: ["player", "hazel", "rosa"], text: "Hazel said Rosa was missing." }
+  );
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, { runId: "run-threshold-memory", actors: actors });
+  ["threshold-arrival:4", "threshold-monster-visit:4:hazel", "threshold-missing-report:4"].forEach(function (rawId) {
+    assert.strictEqual(Continuity.playerCanRaiseEvent(ledger, Adapter.eventIdFor(state, rawId)), true, rawId + " is remembered by the player");
+  });
+  var reportEvent = Continuity.eventById(ledger, Adapter.eventIdFor(state, "threshold-missing-report:4"));
+  assert(reportEvent.actorIds.includes("hazel"), "the reporter participates in the canonical event");
+})();
+
+(function aSharedRescueGivesBothParticipantsTheSameMemory() {
+  var state = Director.createNight(config("v6-adapter-shared-rescue"));
+  state.ledgers.truth.push({
+    id: "investigated:rescue:rosa", slot: 4, kind: "investigated_attack", location: "Old Mill",
+    actors: ["player", "tobias"], victimId: "rosa", attackEventId: "attack:rosa",
+    sharedDiscovery: true, rescueReporterId: "tobias", corroboratingWitnessIds: ["tobias"]
+  });
+  state.ledgers.memories.tobias.push({
+    eventId: "investigated:rescue:rosa", slot: 4, subject: "player", kind: "shared_body_discovery",
+    location: "Old Mill", clarity: "clear", acknowledged: true
+  });
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, { runId: "run-shared-rescue", actors: actors });
+  var eventId = Adapter.eventIdFor(state, "investigated:rescue:rosa");
+  assert.strictEqual(Continuity.sharedObservation(ledger, "player", "tobias", eventId), true);
+  assert.strictEqual(Continuity.playerCanRaiseEvent(ledger, eventId), true);
+})();
+
 (function playerDeathAndVillagerDeathProjectAsStatuses() {
   var state = Director.createNight(config("v6-adapter-deaths"));
   state.ledgers.truth.push({ id: "rosa-dies", slot: 1, kind: "slain", location: "Old Mill", actors: ["hazel", "rosa"], victimId: "rosa", sign: "bite" });

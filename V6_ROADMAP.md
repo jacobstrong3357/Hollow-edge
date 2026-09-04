@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1b
+### Current checkpoint: V6.1c
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -76,6 +76,17 @@ The old collection of follow/hail/watch guesses is used only for pre-V6 fallback
 nights. Witnessing a death can therefore no longer produce “you left them
 living,” and a body already found by the player is not introduced as new
 information at first light.
+
+Doorstep arrivals, spoken reports and the player's final door choice are now
+read as one canonical visit chain. Derived doorstep facts are explicitly
+recorded as player knowledge, so a visitor cannot knock at night and then lose
+that interview topic in daylight. The displayed door-visit total is rebuilt
+from those chains rather than incremented independently.
+
+Shared rescue discoveries now require the player and companion to remember the
+same investigation event. Dawn and interview prompts read that mutual event;
+daylight no longer writes a duplicate compatibility memory that can drift from
+the night. Conservative legacy fallback remains for nights saved before V6.
 
 ## Delivery slices
 

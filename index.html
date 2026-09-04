@@ -2995,12 +2995,36 @@ function v5Observation(event, choice) {
 }
 function contextualQuestionsFor(s, npcId) {
   const events = s.worldEvents || [];
+  const v6Run = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  const v6Adapter = typeof HE_V6_DIRECTOR_ADAPTER !== "undefined" ? HE_V6_DIRECTOR_ADAPTER : null;
   const v6CanRaise = (event) => typeof HE_V6_DIRECTOR_ADAPTER === "undefined"
     || !HE_V6_DIRECTOR_ADAPTER
     || HE_V6_DIRECTOR_ADAPTER.playerCanRaiseLegacyEvent(s.continuity, event);
   const relevantNight = s.nightNum;
   const asked = new Set((s.askedLog[npcId] || []).filter((k) => k.includes(":context:")));
   const out = [];
+  const canonicalShared = v6Run
+    ? v6Run.sharedDiscoveryForActor(s, npcId, relevantNight)
+    : null;
+  const canonicalSharedEvent = canonicalShared && events.find((event) =>
+    event.kind === "director_body_investigation"
+    && v6Adapter && v6Adapter.canonicalIdsForLegacyEvent(event).includes(canonicalShared.eventId)
+  );
+  const canonicalNightImported = v6Adapter && v6Adapter.hasImportedNight(s.continuity, relevantNight);
+  let legacySharedEvent = null;
+  if (!canonicalShared && !canonicalNightImported) {
+    for (const mem of [...(s.memories || [])].reverse()) {
+      if (mem.night !== relevantNight || mem.actorId !== npcId || mem.target !== "player") continue;
+      const event = events.find((entry) => entry.eventId === mem.eventId);
+      if (!event || event.kind !== "director_body_investigation" || !event.sharedDiscovery) continue;
+      if (!(event.corroboratingWitnessIds || []).includes(npcId)) continue;
+      legacySharedEvent = event;
+      break;
+    }
+  }
+  const sharedEvent = canonicalSharedEvent || legacySharedEvent;
+  const sharedVictimId = canonicalShared ? canonicalShared.victimId : sharedEvent && sharedEvent.victimId;
+  const sharedLocation = canonicalShared ? canonicalShared.location : sharedEvent && sharedEvent.location;
   const directKinds = ["seen", "not_seen", "evidence"];
   /* Ordinary sightings belong to the preceding night only. A physical item
      found by daylight is different: the player still has it. Keep its return
@@ -3031,21 +3055,13 @@ function contextualQuestionsFor(s, npcId) {
     const id = `${obs.eventId}:${obs.kind}`;
     if (event && event.question && asked.has(`${obs.night}:context:${id}`)) offeredLabels.add(`${obs.night}|${event.question}`);
   }
-  for (const mem of [...(s.memories || [])].reverse()) {
-    if (mem.night !== relevantNight || mem.actorId !== npcId || mem.target !== "player") continue;
-    const event = events.find((entry) => entry.eventId === mem.eventId);
-    /* A villager privately noticing the player's lantern does not give the
-       player knowledge of that sighting. Only a shared body scene is a lived
-       memory the player can deliberately raise in the interview. */
-    if (!event || event.kind !== "director_body_investigation" || !v6CanRaise(event) || !asked.has(`${mem.night}:context:${event.eventId}:memory`)) continue;
-    const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
-    const label = victim
-      ? event.sharedDiscovery
-        ? `You came to my door for help. We went together and found ${victim.name}. What do you remember?`
-        : `You found me beside ${victim.name} after the scream. What do you think happened?`
-      : null;
-    if (!label) continue;
-    offeredLabels.add(`${mem.night}|${label}`);
+  if (sharedEvent) {
+    const victim = npcById(s, sharedVictimId);
+    const label = victim ? `You came to my door for help. We went together and found ${victim.name}. What do you remember?` : null;
+    if (label && asked.has(`${relevantNight}:context:${sharedEvent.eventId}:memory`)) {
+      offeredLabels.add(`${relevantNight}|${label}`);
+      offeredEvents.add(sharedEvent.eventId);
+    }
   }
   for (const obs of (s.observations || [])) {
     if (!relevantDirectObservation(obs)) continue;
@@ -3065,37 +3081,20 @@ function contextualQuestionsFor(s, npcId) {
       offeredLabels.add(visible);
     }
   }
-  /* A shared body discovery belongs to both people and can be raised later.
-     One-sided lantern sightings stay private to the villager until they
-     choose to mention them in an answer; they never become player prompts. */
-  for (const mem of [...(s.memories || [])].reverse()) {
-    if (mem.night !== relevantNight || mem.actorId !== npcId || mem.target !== "player") continue;
-    const event = events.find((e) => e.eventId === mem.eventId);
-    /* If you identified them, ask what THEY were doing. The reverse-memory
-       question exists only when they noticed you but you did not identify
-       them. One encounter therefore never becomes two versions of itself. */
-    if (!event || event.kind !== "director_body_investigation" || !v6CanRaise(event) || directEvents.has(event.eventId) || offeredEvents.has(event.eventId)) continue;
-    const id = `${event.eventId}:memory`;
-    const victim = event.kind === "director_body_investigation" ? npcById(s, event.victimId) : null;
-    const label = victim
-      ? event.sharedDiscovery
-        ? `You came to my door for help. We went together and found ${victim.name}. What do you remember?`
-        : `You found me beside ${victim.name} after the scream. What do you think happened?`
-      : null;
-    if (!label) continue;
-    const shape = `${mem.night}|memory|${event.location}`;
-    const visible = `${mem.night}|${label}`;
-    if (asked.has(`${mem.night}:context:${id}`)) {
-      offeredEvents.add(event.eventId);
-      offeredShapes.add(shape);
-      offeredLabels.add(visible);
-    } else if (!offeredShapes.has(shape) && !offeredLabels.has(visible)) {
-      out.push({ id, night: mem.night, kind: "memory", label, event });
-      offeredEvents.add(event.eventId);
+  /* Shared discoveries are mutual only when both people observed the same
+     canonical event. Private lantern sightings never create player prompts. */
+  if (sharedEvent && !offeredEvents.has(sharedEvent.eventId)) {
+    const id = `${sharedEvent.eventId}:memory`;
+    const victim = npcById(s, sharedVictimId);
+    const label = victim ? `You came to my door for help. We went together and found ${victim.name}. What do you remember?` : null;
+    const shape = `${relevantNight}|memory|${sharedLocation}`;
+    const visible = `${relevantNight}|${label}`;
+    if (label && !asked.has(`${relevantNight}:context:${id}`) && !offeredShapes.has(shape) && !offeredLabels.has(visible)) {
+      out.push({ id, night: relevantNight, kind: "memory", label, event: sharedEvent });
+      offeredEvents.add(sharedEvent.eventId);
       offeredShapes.add(shape);
       offeredLabels.add(visible);
     }
-    break;
   }
   return out.sort((a, b) => b.night - a.night).slice(0, 6);
 }
@@ -6048,14 +6047,14 @@ function resolveNight(prev, planIn, preEvents) {
       }
       if (inquiry.heardLastWords && inquiry.lastWords) s.clues.push(`Night ${n}: ${victimName}'s last words at the ${inquiry.location}: ${inquiry.lastWords}`);
       if (inquiry.sharedDiscovery) {
-        const companions = (inquiry.corroboratingWitnessIds || []).map((id) => npcById(s, id)).filter(Boolean);
+        const canonicalInquiryIds = HE_V6_DIRECTOR_ADAPTER.canonicalIdsForLegacyEvent(inquiry);
+        const canonicalDiscovery = HE_V6_RUN_CONTINUITY
+          ? HE_V6_RUN_CONTINUITY.sharedDiscoveries(s, { night: n }).find((entry) => canonicalInquiryIds.includes(entry.eventId))
+          : null;
+        const companionIds = canonicalDiscovery ? canonicalDiscovery.companionIds : (inquiry.corroboratingWitnessIds || []);
+        const companions = companionIds.map((id) => npcById(s, id)).filter(Boolean);
         const companionNames = companions.map((npc) => npc.name).join(" and ") || "The neighbour who fetched you";
         s.clues.push(`Night ${n}: ${companionNames} came to your door for help. You travelled together to the ${inquiry.location} and found ${victimName}'s body side by side; nobody can place the attack on you.`);
-        s.memories = [...(s.memories || []), ...companions.map((npc) => ({
-          eventId: inquiry.eventId, night: n, actorId: npc.id, target: "player", kind: "shared_body_discovery",
-          location: inquiry.location, confidence: "certain", acknowledged: true,
-          text: `They fetched you from home, stayed beside you on the road, and found ${victimName}'s body with you. They can account for your innocence.`,
-        }))];
         dawn.push(ev(`${companionNames} tells the same account at first light: they came to your door, you went together, and you found ${victimName} only after the attacker had gone. No accusation is made against you.`, victim ? victim.id : undefined, 2));
       } else if (inquiry.corroborated) {
         const corroborators = (inquiry.corroboratingWitnessIds || []).map((id) => npcById(s, id)).filter(Boolean);
@@ -6118,7 +6117,9 @@ function resolveNight(prev, planIn, preEvents) {
     for (const whisper of (director.found.whispers || [])) s.clues.push(`Night ${n}, heard at the ${whisper.location}: ${whisper.text} A voice is not proof.`);
     const thresholdChoice = (director.ledgers.truth || []).find((e) => e.kind === "threshold_choice");
     if (thresholdChoice) {
-      s.doorVisits = (s.doorVisits || 0) + 1;
+      s.doorVisits = HE_V6_RUN_CONTINUITY
+        ? HE_V6_RUN_CONTINUITY.thresholdVisitCount(s)
+        : (s.doorVisits || 0) + 1;
     }
     /* sawYouOut remains a compatibility projection only. The Director's
        memory ledger is the source; disposition will decide later whether a

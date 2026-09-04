@@ -48,6 +48,13 @@
     abandonment: true,
     investigated_attack: true
   };
+  var PLAYER_LIVED_KINDS = {
+    threshold_arrival: true,
+    threshold_monster_visit: true,
+    threshold_missing_report: true,
+    threshold_watched_item_report: true,
+    threshold_confrontation: true
+  };
 
   function list(value) {
     return Array.isArray(value) ? value : [];
@@ -91,7 +98,7 @@
   }
 
   function actorIdsFor(event, subjects, ledger) {
-    var actors = list(event.actors).concat(event.actorId ? [event.actorId] : []);
+    var actors = list(event.actors).concat(event.actorId ? [event.actorId] : [], event.reporterId ? [event.reporterId] : []);
     if ((event.action || PLAYER_ACTION_KINDS[event.kind]) && subjects.indexOf(PLAYER_ID) < 0) actors.push(PLAYER_ID);
     return unique(actors).filter(function (id) {
       return subjects.indexOf(id) < 0 && !!ledger.actors[id];
@@ -168,6 +175,35 @@
         factKeys: factKeys,
         actorIdsRecognised: recognised,
         locationRecognised: !!observation.location
+      });
+    });
+    return ledger;
+  }
+
+  /* Some doorstep facts are produced after the spoken beat they describe.
+     They are still lived by the player, but V5 did not attach a second
+     observation row to the derived interview fact. Canonical V6 does. */
+  function importLivedPlayerEvents(ledger, director) {
+    list(director.ledgers && director.ledgers.truth).filter(function (event) {
+      return !!PLAYER_LIVED_KINDS[event.kind] || (event.kind === "investigated_attack" && event.sharedDiscovery);
+    }).forEach(function (event) {
+      var canonicalId = eventIdFor(director, event.id);
+      if (!eventExists(ledger, canonicalId) || Continuity.observedEvent(ledger, PLAYER_ID, canonicalId)) return;
+      var recognised = unique([event.actorId, event.reporterId, event.subjectId, event.victimId]).filter(function (actorId) {
+        return actorId && actorId !== PLAYER_ID && !!ledger.actors[actorId];
+      });
+      /* Arrival alone may be an unidentified voice. Later explicit reports
+         and identified visits carry the names the player actually heard. */
+      if (event.kind === "threshold_arrival") recognised = [];
+      ledger = Continuity.recordObservation(ledger, {
+        id: canonicalId + ":observation:player:lived",
+        eventId: canonicalId,
+        observerId: PLAYER_ID,
+        mode: event.kind === "threshold_arrival" ? "heard" : "direct",
+        certainty: event.kind === "threshold_arrival" ? "sensory" : "certain",
+        factKeys: unique(["kind:" + event.kind].concat(event.location ? ["location:" + event.location] : [])),
+        actorIdsRecognised: recognised,
+        locationRecognised: !!event.location
       });
     });
     return ledger;
@@ -288,6 +324,7 @@
       ledger = appendDirectorEvent(ledger, director, event);
     });
     ledger = importPlayerObservations(ledger, director);
+    ledger = importLivedPlayerEvents(ledger, director);
     ledger = importVillagerMemories(ledger, director);
     ledger = importEvidence(ledger, director);
     ledger.lastImportedDirectorNight = {

@@ -158,6 +158,104 @@
     return playerObservations(run).filter(function (row) { return row.eventId === eventId; });
   }
 
+  function canonicalEvents(run, type, night) {
+    return list(run && run.continuity && run.continuity.events).filter(function (event) {
+      return (!type || event.type === type) && (night == null || event.night === night);
+    }).sort(function (a, b) { return a.sequence - b.sequence; });
+  }
+
+  function observationsForEvent(run, eventId) {
+    return list(run && run.continuity && run.continuity.observations).filter(function (row) {
+      return row.eventId === eventId;
+    });
+  }
+
+  /* A visit is a chain, not three unrelated flags. The arrival, anything
+     said through the door and the final choice share a night/slot and are
+     returned together. Player recognition comes only from observations. */
+  function thresholdVisits(run, night) {
+    var arrivals = canonicalEvents(run, "threshold_arrival", night);
+    return arrivals.map(function (arrival) {
+      var arrivalRaw = rawEvent(arrival);
+      var slot = eventSlot(arrival);
+      var related = canonicalEvents(run, null, arrival.night).filter(function (event) {
+        return eventSlot(event) === slot && [
+          "threshold_look", "threshold_spoken", "threshold_choice",
+          "threshold_monster_visit", "threshold_missing_report",
+          "threshold_watched_item_report", "threshold_confrontation"
+        ].indexOf(event.type) >= 0;
+      });
+      var choice = related.find(function (event) { return event.type === "threshold_choice"; }) || null;
+      var report = related.find(function (event) {
+        return ["threshold_monster_visit", "threshold_missing_report", "threshold_watched_item_report"].indexOf(event.type) >= 0;
+      }) || null;
+      var choiceRaw = rawEvent(choice);
+      var reportRaw = rawEvent(report);
+      var observed = [arrival].concat(related).some(function (event) {
+        return observedByPlayer(run, event.id).length > 0;
+      });
+      var recognisedIds = unique([arrival].concat(related).reduce(function (ids, event) {
+        observationsForEvent(run, event.id).filter(function (row) {
+          return row.observerId === PLAYER_ID;
+        }).forEach(function (row) { ids = ids.concat(row.actorIdsRecognised); });
+        return ids;
+      }, []));
+      return {
+        eventId: arrival.id,
+        night: arrival.night,
+        slot: slot,
+        visitorId: arrivalRaw.actorId || choiceRaw.actorId || reportRaw.actorId || reportRaw.reporterId || null,
+        visitorKind: arrivalRaw.visitorKind || choiceRaw.visitorKind || null,
+        thresholdKind: arrivalRaw.thresholdKind || choiceRaw.thresholdKind || null,
+        action: choiceRaw.action || null,
+        opened: !!choiceRaw.opened,
+        killed: !!choiceRaw.killed,
+        location: choice && choice.location || arrival.location,
+        choiceEventId: choice && choice.id || null,
+        reportEventId: report && report.id || null,
+        subjectId: reportRaw.subjectId || null,
+        recognisedActorIds: recognisedIds,
+        playerObserved: observed
+      };
+    });
+  }
+
+  function thresholdVisitCount(run) {
+    return thresholdVisits(run).filter(function (visit) { return visit.playerObserved; }).length;
+  }
+
+  /* A shared discovery exists only when the investigation says it happened
+     and both the player and companion observed that same canonical event. */
+  function sharedDiscoveries(run, options) {
+    options = options || {};
+    return canonicalEvents(run, "investigated_attack", options.night).map(function (event) {
+      var raw = rawEvent(event);
+      if (!raw.sharedDiscovery) return null;
+      var victimId = raw.victimId || list(event.subjectIds)[0] || null;
+      var candidates = unique([raw.rescueReporterId].concat(raw.corroboratingWitnessIds || [], event.actorIds || []))
+        .filter(function (actorId) { return actorId !== PLAYER_ID && actorId !== victimId; });
+      var companions = candidates.filter(function (actorId) {
+        return Continuity.sharedObservation(run.continuity, PLAYER_ID, actorId, event.id);
+      });
+      if (!companions.length) return null;
+      return {
+        eventId: event.id,
+        night: event.night,
+        location: event.location,
+        victimId: victimId,
+        companionIds: companions,
+        attackEventId: raw.attackEventId || null
+      };
+    }).filter(Boolean).filter(function (discovery) {
+      return !options.actorId || discovery.companionIds.indexOf(options.actorId) >= 0;
+    });
+  }
+
+  function sharedDiscoveryForActor(run, actorId, night) {
+    var rows = sharedDiscoveries(run, { actorId: actorId, night: night });
+    return rows.length ? rows[rows.length - 1] : null;
+  }
+
   function playerOutcomeKnowledge(run, night, actorId) {
     var outcome = outcomeEvent(run, night, actorId);
     if (!outcome) return null;
@@ -224,6 +322,10 @@
     syncRunActors: syncRunActors,
     recordStatusChange: recordStatusChange,
     outcomeEvent: outcomeEvent,
-    playerOutcomeKnowledge: playerOutcomeKnowledge
+    playerOutcomeKnowledge: playerOutcomeKnowledge,
+    thresholdVisits: thresholdVisits,
+    thresholdVisitCount: thresholdVisitCount,
+    sharedDiscoveries: sharedDiscoveries,
+    sharedDiscoveryForActor: sharedDiscoveryForActor
   });
 });
