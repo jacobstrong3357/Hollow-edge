@@ -8742,6 +8742,11 @@ function computeAnswer(s, id, night, q, targetId) {
    accusation checks; it must not leak through a broad person question after
    the same speaker has claimed to be home and to have seen nobody. */
 function establishedNightClaim(s, id, night) {
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  const canonical = runContinuity ? runContinuity.alibiTestimonies(s, id, night).slice(-1)[0] : null;
+  if (canonical && canonical.claims && canonical.claims.location) {
+    return { claim: canonical.claims.location, q: canonical.claims.question, night, testimonyId: canonical.id };
+  }
   const statements = [...(s.statements || [])].reverse();
   const explicit = statements.find((st) => st.id === id && st.night === night
     && (st.q === "where" || st.q === "saw") && st.claim);
@@ -8759,7 +8764,10 @@ function establishedNightClaim(s, id, night) {
 function accountLocationForNight(s, id, log) {
   if (!log) return undefined;
   const established = establishedNightClaim(s, id, log.night);
-  return established ? established.claim : (log.outMap || {})[id];
+  if (established) return established.claim;
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  const remembered = runContinuity ? runContinuity.rememberedNightRoute(s, id, log.night) : null;
+  return remembered ? remembered.location : (log.outMap || {})[id];
 }
 
 function answerFor(s, id, night, q, targetId) {
@@ -8776,7 +8784,9 @@ function answerFor(s, id, night, q, targetId) {
     return { quote: pickFreshIdx("turnedRaving", TURNED_RAVING), mentions: [], claim: null, flag: null, foundSign: null, clue: null, followUps: [], raving: true };
   }
   const log = s.nightLogs.find((x) => x.night === night);
-  const actual = log ? log.outMap[id] : undefined;
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  const rememberedRoute = runContinuity ? runContinuity.rememberedNightRoute(s, id, night) : null;
+  const actual = rememberedRoute ? rememberedRoute.location : log ? log.outMap[id] : undefined;
   const actualPlace = actual && actual !== "home" ? placeNoun(actual, (log && log.exposureMap && log.exposureMap[id]) || "outdoor") : actual;
   const isMonster = id === s.monster.vid;
   const monsterFaceKnown = isMonster && s.faceKnown === id;
@@ -8898,7 +8908,7 @@ function answerFor(s, id, night, q, targetId) {
       const truth = actual;
       if (!log || !log.active || truth === "home") s.monsterClaims[night] = { loc: truth || "home", admitOut: truth && truth !== "home" };
       else {
-        const r = Math.random();
+        const r = stableIdx(`${s.gameId}:monster-alibi:${night}:${id}`, 1000) / 1000;
         if (r < 0.6) s.monsterClaims[night] = { loc: "home", admitOut: false };
         else if (r < 0.8) s.monsterClaims[night] = { loc: pick(LOCS.filter((l) => l !== truth && l !== HOME_LOC[id])), admitOut: false };
         else s.monsterClaims[night] = { loc: pick(LOCS.filter((l) => l !== truth && l !== HOME_LOC[id])), admitOut: true };
@@ -9943,6 +9953,17 @@ function applyAnswer(prev, id, night, q, targetId) {
     contextEventId: q === "context" ? String(targetId || "").replace(/:(seen|not_seen|evidence|memory)$/, "") : null,
     contextDenied: !!ans.contextDenied,
   });
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  if (!ans.repeat && !ans.refused && ans.claim && ["where", "saw"].includes(q) && runContinuity) {
+    const route = runContinuity.rememberedNightRoute(s, id, night);
+    runContinuity.recordAlibiTestimony(s, id, night, {
+      day: s.dayNum,
+      question: q,
+      claim: ans.claim,
+      namedActorIds: (ans.mentions || []).map((mention) => mention.id),
+      deliberateLie: !!(route && route.location !== ans.claim),
+    });
+  }
   return { s, ans };
 }
 

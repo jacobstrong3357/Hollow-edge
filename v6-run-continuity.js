@@ -442,6 +442,62 @@
     return unique(ids);
   }
 
+  function rememberedNightRoute(run, actorId, night) {
+    if (!run || !run.continuity || !actorId) return null;
+    var route = canonicalEvents(run, "night_route", night).filter(function (event) {
+      var raw = rawEvent(event);
+      return (raw.actorId || list(event.subjectIds)[0]) === actorId
+        && Continuity.observedEvent(run.continuity, actorId, event.id);
+    }).slice(-1)[0];
+    if (!route) return null;
+    var raw = rawEvent(route);
+    return {
+      eventId: route.id,
+      actorId: actorId,
+      night: route.night,
+      location: raw.primaryLocation || route.location || "home",
+      locations: unique(raw.locations),
+      slots: list(raw.slots).slice(),
+      depart: raw.depart == null ? null : raw.depart,
+      duration: raw.duration == null ? null : raw.duration,
+      motiveId: raw.motiveId || null
+    };
+  }
+
+  function alibiTestimonies(run, speakerId, night) {
+    return list(run && run.continuity && run.continuity.testimonies).filter(function (row) {
+      return row.speakerId === speakerId && row.listenerId === PLAYER_ID
+        && row.claims && row.claims.kind === "alibi"
+        && (night == null || row.claims.night === night);
+    });
+  }
+
+  function recordAlibiTestimony(run, speakerId, night, spec) {
+    spec = spec || {};
+    if (!run || !run.continuity || !speakerId || night == null || !spec.claim) return null;
+    var route = rememberedNightRoute(run, speakerId, night);
+    if (!route) return null;
+    var id = spec.id || ["interview", "day-" + (spec.day == null ? "unknown" : spec.day), "alibi", speakerId, "night-" + night, spec.question || "where"].map(slug).join(":");
+    var existing = list(run.continuity.testimonies).find(function (row) { return row.id === id; });
+    if (existing) return existing.id;
+    run.continuity = Continuity.recordTestimony(run.continuity, {
+      id: id,
+      speakerId: speakerId,
+      listenerId: PLAYER_ID,
+      aboutEventId: route.eventId,
+      claims: {
+        kind: "alibi",
+        night: night,
+        location: spec.claim,
+        question: spec.question || "where",
+        namedActorIds: unique(spec.namedActorIds),
+        truthfulness: spec.claim === route.location ? "consistent" : "contradicted_by_route",
+        deliberateLie: !!spec.deliberateLie
+      }
+    });
+    return id;
+  }
+
   /* A secret is knowledge, not a boolean on its owner. The truth event says
      which secret was learned and from what scene; the player observation is
      the only thing that makes it available to interviews and endings. */
@@ -592,6 +648,9 @@
     unacknowledgedRelationship: unacknowledgedRelationship,
     acknowledgeRelationship: acknowledgeRelationship,
     observedCompanionIds: observedCompanionIds,
+    rememberedNightRoute: rememberedNightRoute,
+    alibiTestimonies: alibiTestimonies,
+    recordAlibiTestimony: recordAlibiTestimony,
     secretKnowledge: secretKnowledge,
     recordSecretLearned: recordSecretLearned
   });

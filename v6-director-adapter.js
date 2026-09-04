@@ -134,6 +134,65 @@
     });
   }
 
+  function routeLocation(schedule) {
+    var motive = schedule && schedule.motive || {};
+    var destination = motive.destination || list(schedule && schedule.slots).find(function (location) {
+      return location && String(location).toLowerCase() !== "home";
+    }) || "home";
+    return String(destination).toLowerCase() === "home" ? "home" : destination;
+  }
+
+  /* The hidden schedule is truth, but not public knowledge. Give each actor
+     one private memory of their own route before importing outcomes that may
+     kill or change them. Interviews can then consult the speaker's memory
+     without reading omniscient simulation state. */
+  function importActorRoutes(ledger, director) {
+    Object.keys(director.schedules || {}).sort().forEach(function (actorId) {
+      var schedule = director.schedules[actorId];
+      if (!ledger.actors[actorId]) return;
+      var id = prefixFor(director) + ":route:" + slug(actorId);
+      var location = routeLocation(schedule);
+      var slots = list(schedule.slots).map(function (entry) {
+        return String(entry).toLowerCase() === "home" ? "home" : entry;
+      });
+      if (!eventExists(ledger, id)) {
+        ledger = Continuity.appendEvent(ledger, {
+          id: id,
+          type: "night_route",
+          phase: "night",
+          night: director.night,
+          location: location,
+          subjectIds: [actorId],
+          truth: {
+            actorId: actorId,
+            primaryLocation: location,
+            locations: unique(slots),
+            slots: slots,
+            depart: schedule.depart == null ? null : schedule.depart,
+            duration: schedule.duration == null ? null : schedule.duration,
+            motiveId: schedule.motive && schedule.motive.id || null,
+            source: "director_schedule"
+          },
+          tags: ["director", "night-" + director.night, "route", "private-memory"]
+        });
+      }
+      var observationId = id + ":observation:" + slug(actorId);
+      if (!observationExists(ledger, observationId)) {
+        ledger = Continuity.recordObservation(ledger, {
+          id: observationId,
+          eventId: id,
+          observerId: actorId,
+          mode: "memory",
+          certainty: "certain",
+          factKeys: ["own-route", "location:" + slug(location)],
+          actorIdsRecognised: [actorId],
+          locationRecognised: true
+        });
+      }
+    });
+    return ledger;
+  }
+
   function appendSyntheticSource(ledger, director, id, type, source) {
     if (eventExists(ledger, id)) return ledger;
     return Continuity.appendEvent(ledger, {
@@ -428,6 +487,7 @@
       actors: config.actors || director.cast
     });
     ledger = Continuity.ensureActors(ledger, config.actors || director.cast);
+    ledger = importActorRoutes(ledger, director);
     list(director.ledgers.truth).forEach(function (event) {
       ledger = appendDirectorEvent(ledger, director, event);
     });

@@ -2882,7 +2882,13 @@ function reachRescueDoor(state) {
     ]
   };
   assert.strictEqual(accountContext.accountLocationForNight(olderContradictorySave, "greta", { night: 2, outMap: { greta: "Old Mill" } }), "home", "an explicit alibi remains authoritative when repairing an older save that already contains a leaked social mention");
+  accountContext.HE_V6_RUN_CONTINUITY = {
+    alibiTestimonies: function () { return []; },
+    rememberedNightRoute: function () { return { location: "Graveyard" }; }
+  };
+  assert.strictEqual(accountContext.accountLocationForNight({ continuity: {} }, "greta", { night: 2, outMap: { greta: "Old Mill" } }), "Graveyard", "an imported V6 night reads Greta's own canonical route memory instead of the hidden compatibility schedule");
   assert(answerCore.includes('q === "where" && !quote && priorNightClaim') && answerCore.includes('Home. I have already told you that.'), "a later whereabouts question repeats the established cover story instead of resampling the truth");
+  assert(answerCore.includes("monster-alibi:${night}:${id}") && !answerCore.slice(answerCore.indexOf("const monsterClaim"), answerCore.indexOf('if (q === "where"')).includes("Math.random"), "a monster's cover story is keyed and cannot change after reload");
   var sawAnswer = answerCore.slice(answerCore.indexOf('if (q === "saw")'), answerCore.indexOf('if (q === "read"'));
   assert(sawAnswer.includes("narrativeClaim") && sawAnswer.includes("coveringRealLocation") && sawAnswer.includes("I was home, as I told you") && sawAnswer.includes("I have already told you who was there"), "who did you see stays inside the same claimed location and respects an earlier free witness answer");
   assert(aboutAnswer.includes("priorNightClaim.claim !== actual") && aboutAnswer.includes("I saw nothing of ${t.name} that night"), "asking about one named neighbour cannot jump back to the speaker's hidden real route");
@@ -2912,6 +2918,8 @@ function reachRescueDoor(state) {
   var nightPlan = html.slice(html.indexOf('const planModal = modal === "plan"'), html.indexOf("const riteModal", html.indexOf('const planModal = modal === "plan"')));
   assert(nightPlan.includes("favourGiver") && nightPlan.includes("favourTarget") && nightPlan.includes("Keep {favourGiver.name}'s favour: watch {favourTarget.name}"), "nightfall gives an active interview favour a direct route to its named target");
   assert(html.includes('night: NIGHT_QS.includes(effectiveQ) ? questionNight : null') && html.includes('night: NIGHT_QS.includes(fu.q) ? iv.night : null'), "present-day interview questions no longer display a misleading night label");
+  var applyAnswerSource = html.slice(html.indexOf("function applyAnswer"), html.indexOf("/* ================= ACCUSATION", html.indexOf("function applyAnswer")));
+  assert(applyAnswerSource.includes("recordAlibiTestimony") && applyAnswerSource.includes('["where", "saw"].includes(q)'), "whereabouts and witness answers are written to canonical testimony as well as the temporary transcript");
   assert(html.includes('npc.alive && !npc.fled && !npc.turned && npc.disp >= 1'), "a known changed villager cannot end the interview by assigning an ordinary watch favour");
   var turnedInterviewSource = html.slice(html.indexOf('const TURNED_INTERVIEW_QS'), html.indexOf('/* The moment the examination lands'));
   function turnedInterviewContext(stableValue) {

@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1f
+### Current checkpoint: V6.1g
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -130,6 +130,14 @@ Unearthly Wailing remains a true sign for its established monsters—including
 the Night Hag and all-sign Mimic—but no search, village sweep, gravedigger hint
 or migrated ground cache may return it as an object found in daylight. The
 monster/sign table is regression-locked independently of that filter.
+
+Every Director schedule now enters continuity as a private `night_route` event
+observed by the actor whose route it was, not by the player. Interview alibis
+read that self-memory rather than the omniscient `nightLogs.outMap`, then record
+the spoken location as separate canonical testimony. Truth, memory and claim
+therefore survive reload independently: a lie does not rewrite the night, and
+hearing it does not become firsthand sight. Monster cover stories use a keyed
+choice so the same unanswered interview cannot reroll its lie after reload.
 
 ## Delivery slices
 

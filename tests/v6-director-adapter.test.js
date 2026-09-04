@@ -71,7 +71,26 @@ function take(state, wanted) {
   state.ledgers.truth.forEach(function (event) {
     assert(Continuity.eventById(ledger, Adapter.eventIdFor(state, event.id)), "truth event is imported: " + event.id);
   });
+  actors.forEach(function (actor) {
+    var route = Continuity.eventById(ledger, "night:2:director:route:" + actor.id);
+    assert(route && route.type === "night_route", "the actor receives a canonical private route: " + actor.id);
+    assert.strictEqual(Continuity.observedEvent(ledger, actor.id, route.id), true, "the actor remembers their own route: " + actor.id);
+    assert.strictEqual(Continuity.observedEvent(ledger, "player", route.id), false, "the hidden route is not given to the player: " + actor.id);
+  });
   assert.deepStrictEqual(Continuity.validateLedger(ledger), []);
+})();
+
+(function stayingHomeIsARealPrivateRouteRatherThanAWorldDefault() {
+  var homeConfig = config("v6-adapter-home-route");
+  homeConfig.currentFacts.outMap.rosa = "home";
+  var state = Director.createNight(homeConfig);
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, { runId: "run-home-route", actors: actors });
+  var route = Continuity.eventById(ledger, "night:2:director:route:rosa");
+  assert(route, "Rosa's home route is recorded");
+  assert.strictEqual(route.location, "home");
+  assert.deepStrictEqual(route.truth.locations, ["home"]);
+  assert.deepStrictEqual(route.truth.slots, ["home", "home", "home", "home"], "the exact timeline remains available for later overlap checks");
 })();
 
 (function oneSidedSightingsNeverBecomePlayerKnowledge() {

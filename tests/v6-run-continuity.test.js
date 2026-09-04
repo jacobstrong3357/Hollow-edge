@@ -277,6 +277,36 @@ function addOutcome(state, options) {
   assert.deepStrictEqual(RunContinuity.observedCompanionIds(state, "rosa", 2, "Graveyard"), ["hazel"], "an observed and recognised meeting is remembered");
 })();
 
+(function alibisAreClaimsAboutPrivateRouteMemory() {
+  var state = run("canonical-alibi");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:route:rosa", type: "night_route", phase: "night", night: 2,
+    location: "Graveyard", subjectIds: ["rosa"],
+    truth: { actorId: "rosa", primaryLocation: "Graveyard", locations: ["Graveyard"] }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:route:rosa", observerId: "rosa", mode: "memory",
+    actorIdsRecognised: ["rosa"], locationRecognised: true
+  });
+  assert.strictEqual(RunContinuity.rememberedNightRoute(state, "rosa", 2).location, "Graveyard");
+  assert.strictEqual(Continuity.observedEvent(state.continuity, "player", "night:2:route:rosa"), false, "the player does not inherit Rosa's private memory");
+
+  var testimonyId = RunContinuity.recordAlibiTestimony(state, "rosa", 2, {
+    day: 2, question: "where", claim: "home", deliberateLie: true
+  });
+  var testimony = RunContinuity.alibiTestimonies(state, "rosa", 2)[0];
+  assert.strictEqual(testimony.id, testimonyId);
+  assert.strictEqual(testimony.claims.location, "home");
+  assert.strictEqual(testimony.claims.truthfulness, "contradicted_by_route");
+  assert.strictEqual(testimony.claims.deliberateLie, true);
+  assert.strictEqual(Continuity.observedEvent(state.continuity, "player", "night:2:route:rosa"), false, "hearing a false alibi never becomes firsthand sight");
+  assert.strictEqual(RunContinuity.recordAlibiTestimony(state, "rosa", 2, { day: 2, question: "where", claim: "home" }), testimonyId, "the same answer cannot duplicate after reload");
+  var reloaded = Continuity.upgradeRun(JSON.parse(JSON.stringify(state)));
+  assert.strictEqual(RunContinuity.rememberedNightRoute(reloaded, "rosa", 2).location, "Graveyard", "private route memory survives serialization");
+  assert.strictEqual(RunContinuity.alibiTestimonies(reloaded, "rosa", 2)[0].claims.location, "home", "the spoken cover story survives separately from the truth");
+  assert.deepStrictEqual(Continuity.validateLedger(reloaded.continuity), []);
+})();
+
 (function relationshipConsequencesAreAcknowledgedExactlyOnce() {
   var state = run("relationship-acknowledgement");
   state.continuity = Continuity.appendEvent(state.continuity, {
