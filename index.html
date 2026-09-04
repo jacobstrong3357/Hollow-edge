@@ -95,12 +95,15 @@
 <script src="v6-continuity.js?v=1"></script>
 <script src="v6-director-adapter.js?v=1"></script>
 <script src="v6-run-continuity.js?v=1"></script>
+<script src="v6-continuity-inspector.js?v=1"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 const HE_CONTINUITY = typeof window !== "undefined" ? window.HE_CONTINUITY : null;
 const HE_V6_DIRECTOR_ADAPTER = typeof window !== "undefined" ? window.HE_V6_DIRECTOR_ADAPTER : null;
 const HE_V6_RUN_CONTINUITY = typeof window !== "undefined" ? window.HE_V6_RUN_CONTINUITY : null;
+const HE_V6_CONTINUITY_INSPECTOR = typeof window !== "undefined" ? window.HE_V6_CONTINUITY_INSPECTOR : null;
+const V6_CONTINUITY_DEBUG = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("continuity") === "1";
 
 
 /* ================= SOUND ================= */
@@ -13997,6 +14000,100 @@ function epilogueLine(s, x) {
   ]);
 }
 
+/* Development-only: append ?continuity=1 to inspect canonical truth beside
+   exactly what the player or any villager remembers. It is mounted outside
+   the game screen so every phase can use the same read-only panel. */
+function ContinuityInspector({ run }) {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState("truth");
+  if (!run || !HE_V6_CONTINUITY_INSPECTOR) return null;
+  const snap = HE_V6_CONTINUITY_INSPECTOR.snapshot(run);
+  const observerIds = Object.keys(snap.observers).sort((a, b) => {
+    if (a === "player") return -1;
+    if (b === "player") return 1;
+    return snap.observers[a].actor.name.localeCompare(snap.observers[b].actor.name);
+  });
+  const chosen = snap.observers[view];
+  const panelStyle = {
+    position: "fixed", zIndex: 10050, left: 10, right: 10, bottom: 10,
+    maxWidth: 760, maxHeight: "78vh", margin: "0 auto", overflow: "auto",
+    padding: 14, border: "1px solid #C08A37", borderRadius: 5,
+    background: "rgba(10,12,22,.98)", color: "#F1E6D1",
+    boxShadow: "0 8px 30px rgba(0,0,0,.65)", fontFamily: "ui-monospace, Menlo, monospace",
+    fontSize: 12, lineHeight: 1.45
+  };
+  const smallButton = (active) => ({
+    border: `1px solid ${active ? "#D9A441" : "#665D50"}`,
+    background: active ? "#3B2B19" : "#151827", color: active ? "#FFE0A1" : "#D5CCBC",
+    borderRadius: 3, padding: "5px 8px", cursor: "pointer", font: "inherit"
+  });
+  return (
+    <>
+      <button onClick={() => setOpen(!open)} style={{
+        position: "fixed", zIndex: 10051, left: 10, bottom: 10, padding: "7px 10px",
+        border: "1px solid #C08A37", borderRadius: 3, background: "#101321", color: "#F0C36A",
+        font: "11px ui-monospace, Menlo, monospace", letterSpacing: 1, cursor: "pointer"
+      }}>{open ? "CLOSE CONTINUITY" : "CONTINUITY"}</button>
+      {open && <section aria-label="Continuity inspector" style={panelStyle}>
+        <div style={{ marginBottom: 10, paddingLeft: 134 }}>
+          <strong>V6 CANONICAL LEDGER</strong> · {snap.sequence} events · {snap.issues.length ? `${snap.issues.length} ISSUE(S)` : "VALID"}
+          <div style={{ color: "#AFA797", marginTop: 3 }}>{snap.runId} · read only · save/reload {HE_V6_CONTINUITY_INSPECTOR.serializationAudit(run).ok ? "stable" : "CHANGED"}</div>
+        </div>
+        <nav style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
+          <button onClick={() => setView("truth")} style={smallButton(view === "truth")}>TRUTH ({snap.truth.length})</button>
+          {observerIds.map((id) => (
+            <button key={id} onClick={() => setView(id)} style={smallButton(view === id)}>
+              {snap.observers[id].actor.name.toUpperCase()} ({snap.observers[id].observations.length})
+            </button>
+          ))}
+        </nav>
+        {snap.issues.length > 0 && <div style={{ borderLeft: "3px solid #C24450", padding: "7px 9px", marginBottom: 10, background: "#35151C" }}>{snap.issues.join(" · ")}</div>}
+        {view === "truth" ? (
+          <div>
+            {snap.truth.length === 0 && <p>No canonical events yet.</p>}
+            {snap.truth.map((event) => (
+              <details key={event.id} style={{ padding: "7px 0", borderTop: "1px solid #343849" }}>
+                <summary style={{ cursor: "pointer" }}><span style={{ color: "#F0C36A" }}>#{event.sequence} {event.type}</span>{event.location ? ` · ${event.location}` : ""}{event.night != null ? ` · night ${event.night}` : event.day != null ? ` · day ${event.day}` : ""}</summary>
+                <div style={{ color: "#CFC7B9", padding: "6px 0 0 14px", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                  actors: {event.actorIds.join(", ") || "none"} · subjects: {event.subjectIds.join(", ") || "none"}<br />
+                  {JSON.stringify(event.truth)}
+                </div>
+              </details>
+            ))}
+            <div style={{ marginTop: 12, color: "#AFA797" }}>Evidence: {snap.evidence.length} · promises: {snap.promises.length} · journal stamps: {(snap.journal.stamps || []).length}</div>
+          </div>
+        ) : chosen ? (
+          <div>
+            <div style={{ marginBottom: 8 }}><strong>{chosen.actor.name}</strong> · {chosen.actor.status} · {chosen.observations.length} direct/derived observations · {chosen.testimonyHeard.length} testimonies heard</div>
+            {chosen.observations.length === 0 && <p>They have no canonical memory of these events.</p>}
+            {chosen.observations.map((row) => (
+              <details key={row.id} style={{ padding: "7px 0", borderTop: "1px solid #343849" }}>
+                <summary style={{ cursor: "pointer" }}><span style={{ color: "#F0C36A" }}>{row.event ? row.event.type : "MISSING EVENT"}</span> · {row.mode} · {row.certainty}</summary>
+                <div style={{ color: "#CFC7B9", padding: "6px 0 0 14px", overflowWrap: "anywhere" }}>
+                  {row.eventId}<br />recognised: {row.actorIdsRecognised.join(", ") || "none"} · facts: {row.factKeys.join(", ") || "none"}
+                </div>
+              </details>
+            ))}
+          </div>
+        ) : null}
+      </section>}
+    </>
+  );
+}
+
+let continuityInspectorRoot = null;
+function updateContinuityInspector(run) {
+  if (!V6_CONTINUITY_DEBUG) return;
+  let mount = document.getElementById("v6-continuity-inspector");
+  if (!mount) {
+    mount = document.createElement("div");
+    mount.id = "v6-continuity-inspector";
+    document.body.appendChild(mount);
+    continuityInspectorRoot = ReactDOM.createRoot(mount);
+  }
+  continuityInspectorRoot.render(<ContinuityInspector run={run} />);
+}
+
 function MonsterVillage() {
   const [s, setS] = useState(null);
   const [tab, setTab] = useState(null);
@@ -14057,6 +14154,8 @@ function MonsterVillage() {
   const [directorTextReadyKey, setDirectorTextReadyKey] = useState(null);
   const recordedRef = useRef(null);
   const walkStageRef = useRef(null);
+
+  useEffect(() => { updateContinuityInspector(s); }, [s]);
 
   /* -- the black book: load once, in-memory fallback if storage is unavailable -- */
   useEffect(() => {

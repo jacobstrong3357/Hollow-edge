@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1d
+### Current checkpoint: V6.1e
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -101,6 +101,18 @@ interview opener is acknowledged by a separate durable event, preventing it
 from repeating. Character records also read these canonical relationships
 instead of the temporary memory list.
 
+A development-only continuity inspector is available by opening the game with
+`?continuity=1`. It displays canonical truth separately from the player's and
+each villager's observations, reports ledger validation errors and checks that
+the displayed history survives serialization unchanged. It is read-only and
+does not appear in the ordinary game.
+
+The 100-run night gate now pauses after every fourth action, serializes and
+upgrades the save, then proves both the exact available choices and the exact
+result of the following choice are unchanged. Legacy prose remains visible to
+the compatibility build but is deliberately not promoted into V6 truth or
+observer knowledge during migration.
+
 ## Delivery slices
 
 ### V6.1 — Canonical continuity (in progress)
@@ -114,8 +126,8 @@ instead of the temporary memory list.
 - [x] Make witnessed-death and aftermath recaps read player observations.
 - [x] Move doorstep visits, shared body discoveries, monster recognition and
   relationship events off their compatibility arrays.
-- Add a development inspector that shows truth and each observer separately.
-- Preserve old saves without treating loose legacy prose as newly proven fact.
+- [x] Add a development inspector that shows truth and each observer separately.
+- [x] Preserve old saves without treating loose legacy prose as newly proven fact.
 
 Gate: a serialized night and its following day produce no fact outside the V6
 ledger, and the same save produces the same next action after reload.

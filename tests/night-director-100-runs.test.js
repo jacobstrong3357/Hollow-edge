@@ -145,8 +145,18 @@ function chooseAction(state, actions, run, step) {
       assert.deepStrictEqual(Director.validateNight(state), [], "run " + run + " remains valid after " + selected.type);
 
       if (step % 4 === 2) {
-        state = Director.upgradeState(JSON.parse(JSON.stringify(state)));
-        assert.deepStrictEqual(Director.validateNight(state), [], "run " + run + " survives save/restore at step " + step);
+        var beforeReload = state;
+        var beforeActions = Director.availableActions(beforeReload);
+        var restored = Director.upgradeState(JSON.parse(JSON.stringify(beforeReload)));
+        assert.deepStrictEqual(Director.validateNight(restored), [], "run " + run + " survives save/restore at step " + step);
+        assert.deepStrictEqual(Director.availableActions(restored), beforeActions, "run " + run + " offers the exact same next actions after reload at step " + step);
+        if (beforeActions.length && restored.phase !== "complete" && restored.phase !== "dead") {
+          var nextChoice = chooseAction(beforeReload, beforeActions, run, step + 1);
+          var uninterruptedNext = Director.reduce(JSON.parse(JSON.stringify(beforeReload)), nextChoice);
+          var reloadedNext = Director.reduce(JSON.parse(JSON.stringify(restored)), nextChoice);
+          assert.deepStrictEqual(reloadedNext, uninterruptedNext, "run " + run + " produces the exact same next result after reload at step " + step);
+        }
+        state = restored;
       }
       step += 1;
     }
