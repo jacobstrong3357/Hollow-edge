@@ -223,6 +223,60 @@ function addOutcome(state, options) {
   assert.deepStrictEqual(exposed.mutualEventIds, ["night:2:failed-rite:hazel"]);
 })();
 
+(function secretsBelongToObservedEventsRatherThanNpcFlags() {
+  var state = run("canonical-secret");
+  state.secretPick = { hazel: 2 };
+  state.npcs = state.npcs.map(function (npc) {
+    return npc.id === "hazel" ? Object.assign({}, npc, { secretKnown: true }) : npc;
+  });
+  assert.strictEqual(RunContinuity.secretKnowledge(state, "hazel"), null, "a stray compatibility flag cannot give the player a secret");
+  var eventId = RunContinuity.recordSecretLearned(state, "hazel", {
+    night: 2,
+    location: "Graveyard",
+    source: "watched_scene",
+    secretIndex: 2,
+    summary: "she visits an unmarked grave"
+  });
+  var learned = RunContinuity.secretKnowledge(state, "hazel");
+  assert.strictEqual(learned.eventId, eventId);
+  assert.strictEqual(learned.secretIndex, 2);
+  assert.strictEqual(learned.location, "Graveyard");
+  assert.strictEqual(Continuity.observedEvent(state.continuity, "player", eventId), true);
+  assert.strictEqual(RunContinuity.recordSecretLearned(state, "hazel", { night: 3, source: "confession", secretIndex: 2 }), eventId, "the same learned secret cannot duplicate itself");
+})();
+
+(function aDeadVillagerCannotConfessAfterTheirDeath() {
+  var state = run("dead-secret-owner");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:hazel-dies", type: "slain", phase: "night", night: 2,
+    subjectIds: ["hazel"], statusChanges: [{ actorId: "hazel", status: "dead" }]
+  });
+  assert.throws(function () {
+    RunContinuity.recordSecretLearned(state, "hazel", { day: 2, source: "confession", secretIndex: 0 });
+  }, /inactive character cannot reveal/, "death closes live confession routes");
+})();
+
+(function witnessListsRequireRecognisedSharedEvents() {
+  var state = run("canonical-companions");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:hazel-at-graveyard", type: "private_errand", phase: "night", night: 2,
+    location: "Graveyard", actorIds: ["hazel"]
+  });
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:rosa-at-graveyard", type: "private_errand", phase: "night", night: 2,
+    location: "Graveyard", actorIds: ["rosa"]
+  });
+  assert.deepStrictEqual(RunContinuity.observedCompanionIds(state, "rosa", 2, "Graveyard"), [], "sharing a schedule location is not proof Rosa met Hazel");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:rosa-meets-hazel", type: "encounter", phase: "night", night: 2,
+    location: "Graveyard", actorIds: ["rosa", "hazel"]
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:rosa-meets-hazel", observerId: "rosa", actorIdsRecognised: ["hazel"], locationRecognised: true
+  });
+  assert.deepStrictEqual(RunContinuity.observedCompanionIds(state, "rosa", 2, "Graveyard"), ["hazel"], "an observed and recognised meeting is remembered");
+})();
+
 (function relationshipConsequencesAreAcknowledgedExactlyOnce() {
   var state = run("relationship-acknowledgement");
   state.continuity = Continuity.appendEvent(state.continuity, {

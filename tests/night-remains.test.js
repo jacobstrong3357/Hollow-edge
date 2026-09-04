@@ -81,6 +81,10 @@ vm.runInContext(between("const NIGHT_REMAIN_SCENES", "/* ---------- the raised d
 })();
 
 context.monsterOf = function () { return { id: "ghoul", hunts: ["Dark Forest"] }; };
+context.pickFreshIdx = function (_key, rows) { return rows[0]; };
+context.physicalEvidenceAt = function (state, location) {
+  return (((state || {}).locEvidence || {})[location] || []).filter(function (sign) { return sign && sign !== "wail"; });
+};
 context.ev = function (text, pid, pri) { return { t: text, pid: pid, pri: pri == null ? 1 : pri }; };
 context.evPlaque = function (event, rule, sign) { event.plaque = { rule: rule, sign: sign }; return event; };
 context.chance = function () { return false; };
@@ -119,6 +123,17 @@ vm.runInContext(between("function actSearch(prev, loc)", "function actDefend(pre
   assert.strictEqual(next.worldEvents[0].question, "Return the folded note");
   assert.strictEqual(next.worldEvents[0].returnable, true);
   assert.strictEqual(next.worldEvents[0].privateItem, true, "reading named mail before returning it is treated as snooping");
+})();
+
+(function daylightCannotFindAStoredSoundAsPhysicalEvidence() {
+  var state = {
+    nightNum: 2, dayNum: 2, ap: 2,
+    searchCount: {}, planted: [], deaths: [], foundSigns: [], clues: [], dayEvents: [],
+    nightRemains: [], locEvidence: { "Dark Forest": ["wail"] }, nightLogs: [{ weather: "still" }],
+    npcs: [], monster: { type: "ghoul", vid: "ansel" }, worldEvents: [], observations: [],
+  };
+  var next = context.actSearch(state, "Dark Forest");
+  assert.strictEqual(next.foundSigns.indexOf("wail"), -1, "wailing cannot be picked up from the ground in daylight");
 })();
 
 console.log("night-remains: all tests passed");

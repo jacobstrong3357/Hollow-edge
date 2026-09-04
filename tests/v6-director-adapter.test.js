@@ -138,6 +138,26 @@ function take(state, wanted) {
   }), true);
 })();
 
+(function witnessedSecretsBecomeCanonicalPlayerKnowledge() {
+  var state = Director.createNight(config("v6-adapter-secret"));
+  state.ledgers.truth.push({
+    id: "followed:1:rosa", slot: 1, kind: "followed", location: "Old Mill",
+    actors: ["player", "rosa"], actorId: "rosa", playerSaw: true,
+    revealedSecret: true, secretSummary: "she writes under another name"
+  });
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, {
+    runId: "run-secret", actors: actors, secretPick: { rosa: 3 }
+  });
+  var secretEvent = ledger.events.find(function (event) {
+    return event.type === "secret_learned" && event.subjectIds.indexOf("rosa") >= 0;
+  });
+  assert(secretEvent, "a witnessed secret receives its own canonical event");
+  assert.strictEqual(secretEvent.truth.secretIndex, 3);
+  assert.strictEqual(secretEvent.truth.sourceEventId, Adapter.eventIdFor(state, "followed:1:rosa"));
+  assert.strictEqual(Continuity.observedEvent(ledger, "player", secretEvent.id), true);
+})();
+
 (function preV6NightsRemainCompatibleUntilTheyAreImported() {
   var ledger = Continuity.createLedger({ runId: "migrated-v5", actors: actors });
   assert.strictEqual(Adapter.playerCanRaiseLegacyEvent(ledger, {

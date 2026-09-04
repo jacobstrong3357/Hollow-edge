@@ -771,6 +771,12 @@ const SIGN_CATS = {
   air: ["cold"],
   surroundings: ["flora", "hex"],
 };
+/* Wailing remains a real sign for every creature that owns it, including
+   the Night Hag and the Mimic. It is an experience, though, not an object:
+   only a lived night scene may surface it. Every path that searches or
+   stores physical traces passes through this boundary. */
+const isPhysicalSign = (sg) => !!sg && sg !== "wail";
+const physicalEvidenceAt = (s, loc) => (((s && s.locEvidence) || {})[loc] || []).filter(isPhysicalSign);
 /* The "none" lines must never read as "there is nothing here" - there is
    always a body, and it is always bad. They read as "there is plenty here,
    and none of it narrows what did it": too destroyed, too fed-on, too
@@ -2694,7 +2700,7 @@ const WATCH_RESTLESS = [
    night facts. Never fires on the monster (never a giveaway). */
 function secretDroughtNights(s, n) {
   if (s.lastSecretNight != null) return Math.max(0, n - s.lastSecretNight);
-  return s.npcs.some((npc) => npc.secretKnown) ? 1 : Math.max(1, n);
+  return s.npcs.some((npc) => hasEarnedSecret(s, npc.id)) ? 1 : Math.max(1, n);
 }
 function rollHomeWatch(s, id, outMap, n = s.nightNum + 1) {
   const target = npcById(s, id);
@@ -2708,7 +2714,7 @@ function rollHomeWatch(s, id, outMap, n = s.nightNum + 1) {
      this only governs how often a single night's watching catches them out. */
   const drought = secretDroughtNights(s, n);
   const secretChance = drought >= 5 ? 0.35 : drought >= 4 ? 0.26 : drought >= 3 ? 0.18 : 0.12;
-  if (secretOf(s, id) && !target.secretKnown && roll < secretChance) return { kind: "secret", short: secretOf(s, id).short };
+  if (secretOf(s, id) && !hasEarnedSecret(s, id) && roll < secretChance) return { kind: "secret", short: secretOf(s, id).short };
   if (others.length && roll < 0.4) return { kind: "visitor", visitorId: pick(others).id };
   if (roll < 0.62) return { kind: "restless", ri: freshIndex(`watchRestless:${id}`, WATCH_RESTLESS.length) };
   return { kind: "quiet" };
@@ -3415,12 +3421,26 @@ const secretOf = (s, id) => { const pool = SECRET_POOL[id]; if (!pool) return nu
    secret into the clue ledger. Treat that ledger as the authority whenever a
    secret is shown, shared, rewarded or carried into an ending. */
 function learnSecret(s, id, source) {
+  const sec = secretOf(s, id);
+  const secretIndex = s.secretPick && s.secretPick[id] != null ? s.secretPick[id] : null;
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  const canonicalEventId = runContinuity
+    ? runContinuity.recordSecretLearned(s, id, {
+        night: source === "confession" ? null : s.nightNum,
+        day: source === "confession" ? s.dayNum : null,
+        phase: source === "confession" ? "day" : "night",
+        source: source || "observation",
+        secretIndex,
+        summary: sec && sec.short,
+      })
+    : null;
   s.playerKnowledge = s.playerKnowledge || {};
   s.playerKnowledge.secrets = s.playerKnowledge.secrets || {};
   s.playerKnowledge.secrets[id] = {
     source: source || "observation",
     night: s.nightNum,
     day: s.dayNum,
+    eventId: canonicalEventId,
   };
   s.npcs = s.npcs.map((npc) => npc.id === id ? { ...npc, secretKnown: true } : npc);
 }
@@ -3428,7 +3448,11 @@ function learnSecret(s, id, source) {
 function hasEarnedSecret(s, id) {
   const owner = npcById(s, id);
   const sec = secretOf(s, id);
-  if (!owner || !owner.secretKnown || !sec) return false;
+  if (!owner || !sec) return false;
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  if (runContinuity && runContinuity.secretKnowledge(s, id)) return true;
+  if (s.schemaVersion >= 6 && s.continuity) return false;
+  if (!owner.secretKnown) return false;
   if (s.playerKnowledge && s.playerKnowledge.secrets && s.playerKnowledge.secrets[id]) return true;
   return (s.clues || []).some((entry) => {
     const text = String(entry || "");
@@ -3437,11 +3461,33 @@ function hasEarnedSecret(s, id) {
 }
 
 function repairPlayerKnowledge(s) {
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
   s.playerKnowledge = s.playerKnowledge || {};
   s.playerKnowledge.secrets = s.playerKnowledge.secrets || {};
   for (const npc of (s.npcs || [])) {
-    if (!s.playerKnowledge.secrets[npc.id] && hasEarnedSecret(s, npc.id)) {
+    const sec = secretOf(s, npc.id);
+    const exactClue = sec && (s.clues || []).some((entry) => {
+      const text = String(entry || "");
+      return text.includes(npc.name) && text.includes(sec.short);
+    });
+    const legacyProof = s.playerKnowledge.secrets[npc.id] || exactClue;
+    if (!s.playerKnowledge.secrets[npc.id] && exactClue) {
       s.playerKnowledge.secrets[npc.id] = { source: "legacy_clue", night: null, day: null };
+    }
+    if (legacyProof && runContinuity && !runContinuity.secretKnowledge(s, npc.id)) {
+      const prior = s.playerKnowledge.secrets[npc.id] || {};
+      const eventId = runContinuity.recordSecretLearned(s, npc.id, {
+        id: `migration:secret-learned:${npc.id}`,
+        phase: prior.day != null ? "day" : "night",
+        night: prior.night == null ? null : prior.night,
+        day: prior.day == null ? null : prior.day,
+        source: "legacy_migration",
+        secretIndex: s.secretPick && s.secretPick[npc.id] != null ? s.secretPick[npc.id] : null,
+        summary: sec && sec.short,
+        mode: "migrated",
+        locationRecognised: false,
+      });
+      s.playerKnowledge.secrets[npc.id] = { ...prior, eventId };
     }
   }
   /* The old bug set `secretKnown` with no observation behind it. Once any
@@ -3449,7 +3495,7 @@ function repairPlayerKnowledge(s) {
      they cannot leak through older alibi, cadence or confession branches. */
   s.npcs = (s.npcs || []).map((npc) => ({
     ...npc,
-    secretKnown: !!s.playerKnowledge.secrets[npc.id],
+    secretKnown: runContinuity ? !!runContinuity.secretKnowledge(s, npc.id) : !!s.playerKnowledge.secrets[npc.id],
   }));
   return s;
 }
@@ -4500,7 +4546,7 @@ function sampleNight(s, m, n) {
      every neighbour. At most one eligible human takes their hidden route on
      an ordinary night. Everyone else who goes out keeps a visible, mundane
      errand, so crossed paths are not synonymous with uncovering a secret. */
-  const secretCandidates = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && !npc.secretKnown && secretOf(s, npc.id));
+  const secretCandidates = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && npc.id !== s.monster.vid && !hasEarnedSecret(s, npc.id) && secretOf(s, npc.id));
   const secretNightChance = 0.35;
   const secretWalkerId = secretCandidates.length && chance(secretNightChance) ? pick(secretCandidates).id : null;
   for (const npc of s.npcs) {
@@ -4646,7 +4692,7 @@ function monsterDangerWarning(s) {
 function primeDirectorSecret(s, facts, openingIntent, n) {
   if (facts && facts.affliction) return facts;
   if (secretDroughtNights(s, n) < 5) return facts;
-  const eligible = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && !npc.secretKnown
+  const eligible = s.npcs.filter((npc) => npc.alive && !npc.fled && !npc.turned && !hasEarnedSecret(s, npc.id)
     && npc.id !== s.monster.vid && npc.id !== facts.guaranteedVictimId && secretOf(s, npc.id));
   let chosen = null;
   if (openingIntent.kind === "watch") chosen = eligible.find((npc) => npc.id === openingIntent.id) || null;
@@ -5877,6 +5923,7 @@ function resolveNight(prev, planIn, preEvents) {
         runId: s.gameId,
         seed: s.gameId,
         actors: s.npcs,
+        secretPick: s.secretPick,
       });
       s.schemaVersion = HE_CONTINUITY.VERSION;
       /* The ledger is already authoritative here. Refresh the compatibility
@@ -6297,7 +6344,7 @@ function resolveNight(prev, planIn, preEvents) {
     if (attendees.length >= 2 && chance(0.2)) { const a = pick(attendees); const b = pick(attendees.filter((x) => x.id !== a.id)); evFight = [a.id, b.id]; s.grudges[a.id] = { other: b.id, until: n + 3 }; s.grudges[b.id] = { other: a.id, until: n + 3 }; }
     if (attendees.length >= 2 && chance(0.25)) { const cand2 = attendees.filter((x) => !evFight || !evFight.includes(x.id)); if (cand2.length >= 2) { const a = pick(cand2); const b = pick(cand2.filter((x) => x.id !== a.id)); evPair = [a.id, b.id]; } }
     if (attendees.length && chance(0.15)) { const w = pick(attendees.filter((x) => x.id !== s.monster.vid && x.id !== mods.follow && x.id !== mods.hailed)); if (w) { evWander = w.id; outMap[w.id] = "Dark Forest"; exposureMap[w.id] = "outdoor"; } }
-    if (evn.id === "sweep") { const unfound = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg)); if (unfound.length && chance(0.35)) { evSweepFind = pick(unfound); evSweepSense = senseFor(evSweepFind); s.foundSigns.push(evSweepFind); } }
+    if (evn.id === "sweep") { const unfound = physicalEvidenceAt(s, "Graveyard").filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg)); if (unfound.length && chance(0.35)) { evSweepFind = pick(unfound); evSweepSense = senseFor(evSweepFind); s.foundSigns.push(evSweepFind); } }
   }
 
   if (n === 1) {
@@ -6806,7 +6853,7 @@ function resolveNight(prev, planIn, preEvents) {
        spent it running. Whatever the errand was, it is not what the morning
        has to report. */
     if (!wentHome && mods.approach !== "back" && !mods.brush && !mods.witnessKill) {
-      const unfound = s.locEvidence[plan.loc].filter((sg) => !s.foundSigns.includes(sg));
+      const unfound = physicalEvidenceAt(s, plan.loc).filter((sg) => !s.foundSigns.includes(sg));
       if (plan.facts && mods.searchRoll) {
         /* the interactive walk already rolled and SHOWED this result live;
            here we only settle the ledger, never re-roll or re-narrate */
@@ -6862,7 +6909,7 @@ function resolveNight(prev, planIn, preEvents) {
             continue;
           }
           if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
-          if (mods.style === "wait" && secretOut[npc.id] && secretCatch[npc.id] && !npc.secretKnown) {
+          if (mods.style === "wait" && secretOut[npc.id] && secretCatch[npc.id] && !hasEarnedSecret(s, npc.id)) {
             const sec = secretOf(s, npc.id);
             s.lastSecretNight = n;
             learnSecret(s, npc.id, "watched_scene");
@@ -6885,7 +6932,7 @@ function resolveNight(prev, planIn, preEvents) {
             s.playerSaw.push({ night: n, id: npc.id, loc: plan.loc });
             seenHere.push(npc.name);
             if (chance(mods.vigil === "shift" ? 0.85 : 0.6)) s.npcs = s.npcs.map((x2) => (x2.id === npc.id ? { ...x2, sawYouOut: [...(x2.sawYouOut || []), { night: n, loc: plan.loc }] } : x2));
-            if (mods.style === "wait" && secretOut[npc.id] && secretCatch[npc.id] && !npc.secretKnown) {
+            if (mods.style === "wait" && secretOut[npc.id] && secretCatch[npc.id] && !hasEarnedSecret(s, npc.id)) {
               const sec = secretOf(s, npc.id);
               s.lastSecretNight = n;
               learnSecret(s, npc.id, "watched_scene");
@@ -7305,7 +7352,8 @@ function resolveNight(prev, planIn, preEvents) {
     const placed = s.locEvidence[huntLoc];
     /* the mimic strews a DIFFERENT sign every night it hunts: many traces,
        all real, all true of nothing. Everything else leaves its own two. */
-    const sitePool = m.id === "mimic" ? Object.keys(SIGNS).filter((sg) => sg !== "wail") : m.signs.slice(0, 2);
+    const physicalSitePool = (m.id === "mimic" ? Object.keys(SIGNS) : m.signs).filter(isPhysicalSign);
+    const sitePool = m.id === "mimic" ? physicalSitePool : physicalSitePool.slice(0, 2);
     const site = sitePool.filter((sg) => !placed.includes(sg));
     const remainSign = directorAttack && directorAttack.sign && directorAttack.sign !== "wail"
       ? directorAttack.sign
@@ -7513,7 +7561,7 @@ function resolveNight(prev, planIn, preEvents) {
         rec.reachedNight = n;
         const owner = npcById(s, ownerId);
         if (owner && owner.alive && !owner.fled) {
-          s.npcs = s.npcs.map((x) => (x.id === ownerId ? { ...x, secretKnown: true, disp: -2 } : x));
+          s.npcs = s.npcs.map((x) => (x.id === ownerId ? { ...x, disp: -2 } : x));
           s.patience[ownerId] = 0;
           dawn.push(ev(`By midday it is all anyone speaks of: ${owner.name}'s secret is secret no longer. Someone talked. ${owner.name} will want to know who.`, ownerId));
           if (ownerId === FLEE_ON_SECRET_ID && chance(0.25)) {
@@ -8047,7 +8095,7 @@ function actSearch(prev, loc) {
   } else if (chance(0.5)) {
     s.dayEvents.push(ev(pickFreshIdx("dayGossip", DAY_GOSSIP), undefined, 0));
   }
-  const unfound = s.locEvidence[loc].filter((sg) => !s.foundSigns.includes(sg));
+  const unfound = physicalEvidenceAt(s, loc).filter((sg) => !s.foundSigns.includes(sg));
   /* last night's weather works for you or against you by daylight */
   const lastWx = (s.nightLogs[s.nightLogs.length - 1] || {}).weather;
   const dayFindP = lastWx === "frost" ? 0.55 : lastWx === "storm" ? 0.22 : 0.4;
@@ -8535,7 +8583,7 @@ function craftAnswer(s, id) {
     /* An honest gravedigger only ever shows you what is genuinely there of
        the real thing: never a planted decoy (those you must find, and expose,
        yourself). "The ground don't lie" has to actually be true of him. */
-    const gy = s.locEvidence["Graveyard"].filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg));
+    const gy = physicalEvidenceAt(s, "Graveyard").filter((sg) => !s.foundSigns.includes(sg) && m.signs.includes(sg));
     if (gy.length && dispChance(0.6, speakerDisp)) { foundSign = pick(gy); quote = `"Come and see, then." He shows you, out among the stones. "${senseFor(foundSign)} Been that way three days. The ground don't lie."`; }
     else quote = pickFreshIdx("craftFallback:tobias", [`"The ground's unhappy. Won't settle over the new graves. Beyond that it's keeping its own counsel, same as me."`, `"Nothing new among the stones. It's the quiet above ground I'd worry at."`]);
   } else if (id === "ansel") {
@@ -8625,6 +8673,12 @@ function findingReturnOutcome(event) {
 }
 
 function recordedCompanions(s, speakerId, night, location) {
+  const v6Adapter = typeof HE_V6_DIRECTOR_ADAPTER !== "undefined" ? HE_V6_DIRECTOR_ADAPTER : null;
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  if (runContinuity && v6Adapter && s.continuity && v6Adapter.hasImportedNight(s.continuity, night)) {
+    return runContinuity.observedCompanionIds(s, speakerId, night, location)
+      .map((actorId) => npcById(s, actorId)).filter(Boolean);
+  }
   const ids = new Set();
   (s.worldEvents || []).filter((event) => event.night === night && event.location === location
     && (event.actorIds || []).includes(speakerId)).forEach((event) => {
@@ -8937,7 +8991,7 @@ function answerFor(s, id, night, q, targetId) {
         claim = "home";
         quote = pickFreshIdx(`griefWhereLie:${id}`, GRIEF_WHERE_LIE)(npc.name, gname);
       }
-    } else if (log && log.secretOut && log.secretOut[id] && !npc.secretKnown) {
+    } else if (log && log.secretOut && log.secretOut[id] && !hasEarnedSecret(s, id)) {
       /* an innocent hiding a human secret lies too: badly, unless the lie is already dead on arrival */
       if (playerWitnessed) {
         claim = playerWitnessed.loc;
@@ -8953,7 +9007,7 @@ function answerFor(s, id, night, q, targetId) {
           `"Home." A pause. "Why? Did someone say otherwise?" Which is not what innocence sounds like, and not quite what guilt sounds like either.`,
         ]);
       }
-    } else if (log && log.secretOut && log.secretOut[id] && npc.secretKnown) {
+    } else if (log && log.secretOut && log.secretOut[id] && hasEarnedSecret(s, id)) {
       claim = actual;
       quote = `"You know where. The ${actualPlace}. My business there is my own, and you of all people know what it is. Ask what you actually want to ask."`;
     } else if (evn && actual === evn.loc) {
@@ -9029,7 +9083,7 @@ function answerFor(s, id, night, q, targetId) {
        beyond that first answer (an absence, odd behaviour, or someone met
        on the road). */
     const playerWitnessed = (s.playerSaw || []).find((f) => f.night === night && f.id === id && f.loc && f.loc !== "home");
-    const selfSecretCover = log && log.secretOut && log.secretOut[id] && !npc.secretKnown && !playerWitnessed;
+    const selfSecretCover = log && log.secretOut && log.secretOut[id] && !hasEarnedSecret(s, id) && !playerWitnessed;
     const narrativeClaim = priorNightClaim
       ? priorNightClaim.claim
       : isMonster
@@ -9083,7 +9137,7 @@ function answerFor(s, id, night, q, targetId) {
         ? `"You have the names from the ${actual} already."`
         : seen.length
           ? `"${seen.map((x) => x.name).join(" and ")} ${seen.length > 1 ? "were" : "was"} at the ${actual} with me. Ask them if you doubt me."`
-          : `"I was alone at the ${actual}. Foolish, I know."`;
+          : `"I met no one there I could identify. I was not at the ${actual} for the whole night."`;
     }
   }
 
@@ -9115,7 +9169,7 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "about" && targetId) {
     const t = npcById(s, targetId);
     const tLoc = log ? log.outMap[targetId] : undefined;
-    const protectsTargetSecret = t && log && log.secretOut && log.secretOut[targetId] && !t.secretKnown
+    const protectsTargetSecret = t && log && log.secretOut && log.secretOut[targetId] && !hasEarnedSecret(s, targetId)
       && tieIn(BONDS, id, targetId) && !isMonster && !lying
       && stableIdx(`${s.gameId}:protect-night:${night}:${id}:${targetId}`, 100) < 48;
     if (targetId === id) {
@@ -9178,7 +9232,7 @@ function answerFor(s, id, night, q, targetId) {
       const missing = t.fled || (s.faceKnown === t.id && s.monsterSawYou);
       const sec = secretOf(s, targetId);
       const secretLog = [...(s.nightLogs || [])].reverse().find((entry) => entry.secretOut && entry.secretOut[targetId]);
-      const protectsSecret = t.alive && !missing && bond && secretLog && !t.secretKnown && !isMonster && !lying
+      const protectsSecret = t.alive && !missing && bond && secretLog && !hasEarnedSecret(s, targetId) && !isMonster && !lying
         && stableIdx(`${s.gameId}:protect:${id}:${targetId}:${secretLog.night}`, 100) < 45;
       if (!trusts) mentions.push({ id: t.id, kind: "suspects" });
       if (protectsSecret) {
@@ -9425,11 +9479,11 @@ function answerFor(s, id, night, q, targetId) {
         `They stare past you for several breaths. "I was mistaken. I am often mistaken now." They touch their own wrist once.`,
         `"Did I lie?" they say without changing expression. "Then I lied. It hardly seems to matter anymore, does it."`,
       ]);
-    } else if (sec && secretNight !== null && !npc.secretKnown) {
+    } else if (sec && secretNight !== null && !hasEarnedSecret(s, id)) {
       learnSecret(s, id, "confession");
       s.clues.push(`Day ${s.dayNum}: pressed on the lie, ${npc.name} confessed the truth of their nights: ${sec.short}. Human, and nothing worse. Their false alibis are explained.`);
       quote = sec.confess;
-    } else if (sec && npc.secretKnown) {
+    } else if (sec && hasEarnedSecret(s, id)) {
       quote = `"You know why I lied. You've known since you dragged it out of me. Do not make me say it twice in one lifetime."`;
     } else {
       quote = pickFreshIdx(`pressFallback:${id}`, [
@@ -14178,15 +14232,15 @@ function MonsterVillage() {
             const valid = Object.keys(SIGNS);
             run.playerSigns = (run.playerSigns || []).filter((sg) => valid.includes(sg));
             run.foundSigns = (run.foundSigns || []).filter((sg) => valid.includes(sg));
-            Object.keys(run.locEvidence || {}).forEach((l) => { run.locEvidence[l] = (run.locEvidence[l] || []).filter((sg) => valid.includes(sg)); });
+            Object.keys(run.locEvidence || {}).forEach((l) => { run.locEvidence[l] = (run.locEvidence[l] || []).filter((sg) => valid.includes(sg) && isPhysicalSign(sg)); });
             run.planted = (run.planted || []).filter((p) => p && valid.includes(p.sg));
-            run.nightRemains = (run.nightRemains || []).filter((entry) => entry && LOCS.includes(entry.location) && (!entry.sign || valid.includes(entry.sign)));
+            run.nightRemains = (run.nightRemains || []).filter((entry) => entry && LOCS.includes(entry.location) && (!entry.sign || (valid.includes(entry.sign) && isPhysicalSign(entry.sign))));
             repairDaylightGiveUp(run);
             repairMonsterUncovered(run);
             repairPublicBlame(run);
             repairFirstDayStanding(run);
-            repairPlayerKnowledge(run);
             if (HE_CONTINUITY) run = HE_CONTINUITY.upgradeRun(run);
+            repairPlayerKnowledge(run);
             if (HE_V6_RUN_CONTINUITY) HE_V6_RUN_CONTINUITY.syncRunActors(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
@@ -15502,7 +15556,7 @@ function MonsterVillage() {
       /* -- the ground gives its answer live, too: rolled once, shown here,
          settled in resolveNight without re-rolling or re-narrating -- */
       if (!newMods.searchRoll) {
-        const unfound = s.locEvidence[walk.loc].filter((sg) => !s.foundSigns.includes(sg));
+        const unfound = physicalEvidenceAt(s, walk.loc).filter((sg) => !s.foundSigns.includes(sg));
         let findP = f.wx === "frost" && unfound.some((sg) => SIGN_CATS.ground.includes(sg)) ? 0.8 : 0.6;
         if (newMods.style === "ground") findP = Math.min(0.92, findP + 0.25);
         if (newMods.vigil === "shift") findP = Math.min(0.95, findP + 0.15);
@@ -16425,7 +16479,7 @@ function MonsterVillage() {
                  about their own business. resolveNight reports only these. */
               const ids = walk.mods.company || walk.company || [];
               const names = ids.map((id) => npcById(s, id).name);
-              const secretId = walk.mods.style === "wait" ? ids.find((id) => walk.facts.secretOut[id] && (walk.facts.secretCatch || {})[id] && !npcById(s, id).secretKnown) : null;
+              const secretId = walk.mods.style === "wait" ? ids.find((id) => walk.facts.secretOut[id] && (walk.facts.secretCatch || {})[id] && !hasEarnedSecret(s, id)) : null;
               const text = secretId
                 ? secretOf(s, secretId).walk(npcById(s, secretId).name)
                 : names.length === 1

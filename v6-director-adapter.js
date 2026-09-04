@@ -362,6 +362,62 @@
     return ledger;
   }
 
+  function importSecrets(ledger, director, config) {
+    /* Reconstruct the same small projection locally so this adapter remains
+       usable in the browser without importing another module. */
+    var projection = list(director.ledgers.truth).filter(function (event) {
+      return event.kind === "followed" && event.revealedSecret;
+    }).map(function (event) {
+      return { eventId: event.id, actorId: event.actorId, location: event.location, summary: event.secretSummary || null };
+    });
+    list(director.beats).filter(function (beat) {
+      return beat.type === "watch" && beat.actorId && beat.meta && beat.meta.revealsSecret;
+    }).forEach(function (beat) {
+      projection.push({ eventId: beat.id, actorId: beat.actorId, location: beat.location, summary: beat.meta.secretSummary || null, beat: beat });
+    });
+    projection.forEach(function (secret, index) {
+      if (!secret.actorId || !ledger.actors[secret.actorId]) return;
+      var sourceEventId = eventIdFor(director, secret.eventId);
+      if (!eventExists(ledger, sourceEventId)) {
+        sourceEventId = prefixFor(director) + ":secret-source:" + slug(secret.eventId || index);
+        ledger = appendSyntheticSource(ledger, director, sourceEventId, "secret_witnessed", secret.beat || secret);
+      }
+      var id = prefixFor(director) + ":secret-learned:" + slug(secret.actorId) + ":" + slug(secret.eventId || index);
+      if (!eventExists(ledger, id)) {
+        ledger = Continuity.appendEvent(ledger, {
+          id: id,
+          type: "secret_learned",
+          phase: "night",
+          night: director.night,
+          location: secret.location || null,
+          subjectIds: [secret.actorId],
+          truth: {
+            actorId: secret.actorId,
+            secretIndex: config.secretPick && config.secretPick[secret.actorId] != null ? config.secretPick[secret.actorId] : null,
+            summary: secret.summary,
+            source: "director",
+            sourceEventId: sourceEventId
+          },
+          tags: ["director", "night-" + director.night, "secret", "player-knowledge"]
+        });
+      }
+      var observationId = id + ":observation:player";
+      if (!observationExists(ledger, observationId)) {
+        ledger = Continuity.recordObservation(ledger, {
+          id: observationId,
+          eventId: id,
+          observerId: PLAYER_ID,
+          mode: "direct",
+          certainty: "certain",
+          factKeys: ["secret:" + secret.actorId],
+          actorIdsRecognised: [secret.actorId],
+          locationRecognised: !!secret.location
+        });
+      }
+    });
+    return ledger;
+  }
+
   function projectDirectorNight(input, director, config) {
     if (!director || !director.ledgers) throw new Error("a completed Director state is required");
     if (director.phase !== "complete" && director.phase !== "dead") throw new Error("only a terminal Director night can enter continuity");
@@ -381,6 +437,7 @@
     ledger = importVillagerMemories(ledger, director);
     ledger = importRelationshipObservations(ledger, director);
     ledger = importEvidence(ledger, director);
+    ledger = importSecrets(ledger, director, config);
     ledger.lastImportedDirectorNight = {
       night: director.night,
       seed: director.seed,

@@ -2747,6 +2747,14 @@ function reachRescueDoor(state) {
     "sharing a broad location does not let Tobias claim he saw Falk; only a recorded shared scene does"
   );
   assert(companionSource.includes("filter(Boolean)") && companionSource.includes("function recordedTogether"), "a real shared scene remains available as memory even after its other participant dies");
+  companionContext.HE_V6_DIRECTOR_ADAPTER = { hasImportedNight: function () { return true; } };
+  companionContext.HE_V6_RUN_CONTINUITY = { observedCompanionIds: function () { return ["falk"]; } };
+  companionState.continuity = {};
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(companionContext.recordedCompanions(companionState, "tobias", 2, "Old Church").map(function (npc) { return npc.id; }))),
+    ["falk"],
+    "an imported V6 night takes its witness list from canonical observations rather than the legacy event array"
+  );
 
   var secretSource = html.slice(html.indexOf("const secretOf"), html.indexOf("const SUSPECT_VOICES", html.indexOf("const secretOf")));
   var secretContext = {
@@ -3246,7 +3254,11 @@ function reachRescueDoor(state) {
   assert(temperamentContext.DIRECTOR_TEMPERAMENT_QUIET.silent.some(function (row) { return /silence|without making a sound|refuses/i.test(row.open); }), "silent horrors take sound away instead of borrowing a beast or speaker cue");
   assert(!html.includes("s.playerSigns.push(stamp.sign)"), "finding a Director sign never stamps it on the player's behalf");
   assert(html.includes("Nothing is stamped for you") && html.includes("TAP TO STAMP"), "the Evidence page makes manual stamping explicit");
+  assert(html.includes('{ id: "hag", name: "Night Hag", signs: ["hex", "cold", "wail"]'), "the Night Hag keeps wailing as a real sign");
+  assert(html.includes('{ id: "demon", name: "Demon", signs: ["cold", "hex", "flora"]'), "the Demon does not acquire wailing as a sign");
+  assert(html.includes('{ id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"]'), "the Mimic retains all eight signs");
   assert(html.includes('{ id: "succubus", name: "Succubus", signs: ["wail", "hex", "bite"]'), "wailing, hex marks and bite marks keep the real Succubus possible in the journal");
+  assert(html.includes('const physicalEvidenceAt') && html.includes('.filter(isPhysicalSign)'), "searches filter sounds from physical evidence without changing any monster's sign definition");
   assert(html.includes('const directorInvestigation = director') && html.includes('You did not leave them living. You saw the night take them.'), "a death the player reached and witnessed cannot be replaced by the generic left-them-living recap");
   assert(html.includes('recognizedHost: awareness.playerRecognisedHost') && html.includes('failedRite: awareness.failedRiteCount > 0'), "the doorstep Director receives canonical mutual identity and failed-rite continuity");
   assert(html.includes('const FOUND_THINGS_SPRITE = "assets/ink-v1/items/found-things-sprite-v4.jpg"') && html.includes("<ItemPortrait object={foundObject}"), "things left behind receive a small illustrated portrait");
@@ -3262,6 +3274,7 @@ function reachRescueDoor(state) {
   assert(html.includes("lostAfterFollow: !!(secret && !secretCaught)"), "an uncaught secret errand tells the Director that the villager escaped the player's reach");
   assert(html.includes('I thought I was right more often than I was') && !html.includes('most of them mine'), "Ansel's grief over a disagreement is grammatical and emotionally coherent");
   assert(answerCore.includes("contextDenied") && answerCore.includes("I cannot name people on a road I deny walking"), "a denied sighting cannot turn into an eyewitness list from the same place");
+  assert(answerCore.includes("I met no one there I could identify") && answerCore.includes("I was not at the ${actual} for the whole night"), "an honest empty witness list explains that two people may visit the same place at different times");
   assert(html.includes("ans.contextDenied ? null : contextQuestion.event.eventId"), "the interview tray clears a denied location instead of offering it as the next night question");
   assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
   assert(html.includes("THE NOTE IN YOUR POCKET") && html.includes("At nightfall, you must decide whether to obey."), "an active coercion note remains visible on the day screen");

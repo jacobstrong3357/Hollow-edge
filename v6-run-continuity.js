@@ -424,6 +424,97 @@
     return id;
   }
 
+  /* A shared destination is not a meeting. Witness answers may name only
+     people present in an event this speaker observed and recognised. This
+     deliberately ignores the hidden schedule: two villagers can use the
+     graveyard at different hours without seeing one another. */
+  function observedCompanionIds(run, observerId, night, location) {
+    if (!run || !run.continuity || !observerId || !location) return [];
+    var ids = [];
+    Continuity.observationsFor(run.continuity, observerId).forEach(function (observation) {
+      var event = Continuity.eventById(run.continuity, observation.eventId);
+      if (!event || event.night !== night || event.location !== location || observation.locationRecognised === false) return;
+      var participants = unique(list(event.actorIds).concat(list(event.subjectIds)));
+      list(observation.actorIdsRecognised).forEach(function (actorId) {
+        if (actorId !== observerId && actorId !== PLAYER_ID && participants.indexOf(actorId) >= 0 && run.continuity.actors[actorId]) ids.push(actorId);
+      });
+    });
+    return unique(ids);
+  }
+
+  /* A secret is knowledge, not a boolean on its owner. The truth event says
+     which secret was learned and from what scene; the player observation is
+     the only thing that makes it available to interviews and endings. */
+  function secretKnowledge(run, actorId) {
+    if (!run || !run.continuity || !actorId) return null;
+    var rows = canonicalEvents(run, "secret_learned").map(function (event) {
+      var raw = rawEvent(event);
+      var ownerId = raw.actorId || list(event.subjectIds)[0] || null;
+      if (ownerId !== actorId || !Continuity.observedEvent(run.continuity, PLAYER_ID, event.id)) return null;
+      return {
+        eventId: event.id,
+        actorId: ownerId,
+        night: event.night,
+        day: event.day,
+        location: event.location,
+        source: raw.source || null,
+        sourceEventId: raw.sourceEventId || null,
+        secretIndex: raw.secretIndex == null ? null : raw.secretIndex,
+        summary: raw.summary || null
+      };
+    }).filter(Boolean);
+    return rows.length ? rows[rows.length - 1] : null;
+  }
+
+  function recordSecretLearned(run, actorId, spec) {
+    spec = spec || {};
+    if (!run || !actorId) throw new Error("a run and secret owner are required");
+    run.continuity = Continuity.ensureActors(run.continuity, run.npcs || []);
+    if (!run.continuity.actors[actorId]) throw new Error("unknown secret owner: " + actorId);
+    if (["confession", "followed_scene", "watched_scene", "watched_door"].indexOf(spec.source) >= 0
+      && !Continuity.actorCanAct(run.continuity, actorId)) {
+      throw new Error("an inactive character cannot reveal a live secret: " + actorId);
+    }
+    var existing = secretKnowledge(run, actorId);
+    if (existing && (spec.secretIndex == null || existing.secretIndex == null || existing.secretIndex === spec.secretIndex)) return existing.eventId;
+    var when = spec.night != null ? "night-" + spec.night : spec.day != null ? "day-" + spec.day : "turn-" + run.continuity.sequence;
+    var id = spec.id || ["run", when, "secret-learned", actorId, spec.source || "observation"].map(slug).join(":");
+    if (!Continuity.eventById(run.continuity, id)) {
+      run.continuity = Continuity.appendEvent(run.continuity, {
+        id: id,
+        type: "secret_learned",
+        phase: spec.phase || (spec.day != null ? "day" : "night"),
+        night: spec.night == null ? null : spec.night,
+        day: spec.day == null ? null : spec.day,
+        location: spec.location || null,
+        actorIds: [PLAYER_ID],
+        subjectIds: [actorId],
+        truth: {
+          actorId: actorId,
+          secretIndex: spec.secretIndex == null ? null : spec.secretIndex,
+          summary: spec.summary || null,
+          source: spec.source || "observation",
+          sourceEventId: spec.sourceEventId || null
+        },
+        tags: ["secret", "player-knowledge"]
+      });
+    }
+    var observationId = id + ":observation:player";
+    if (!list(run.continuity.observations).some(function (row) { return row.id === observationId; })) {
+      run.continuity = Continuity.recordObservation(run.continuity, {
+        id: observationId,
+        eventId: id,
+        observerId: PLAYER_ID,
+        mode: spec.mode || "direct",
+        certainty: "certain",
+        factKeys: ["secret:" + actorId],
+        actorIdsRecognised: [actorId],
+        locationRecognised: spec.locationRecognised !== false
+      });
+    }
+    return id;
+  }
+
   function playerOutcomeKnowledge(run, night, actorId) {
     var outcome = outcomeEvent(run, night, actorId);
     if (!outcome) return null;
@@ -499,6 +590,9 @@
     recordMonsterAwareness: recordMonsterAwareness,
     relationshipHistory: relationshipHistory,
     unacknowledgedRelationship: unacknowledgedRelationship,
-    acknowledgeRelationship: acknowledgeRelationship
+    acknowledgeRelationship: acknowledgeRelationship,
+    observedCompanionIds: observedCompanionIds,
+    secretKnowledge: secretKnowledge,
+    recordSecretLearned: recordSecretLearned
   });
 });

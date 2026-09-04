@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1e
+### Current checkpoint: V6.1f
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -112,6 +112,24 @@ upgrades the save, then proves both the exact available choices and the exact
 result of the following choice are unchanged. Legacy prose remains visible to
 the compatibility build but is deliberately not promoted into V6 truth or
 observer knowledge during migration.
+
+Learned secrets are now canonical player observations with their exact owner,
+selected secret, source scene and time. The old `secretKnown` field is only a
+UI projection; an orphan flag can no longer teach the player a secret after its
+owner died. Followed and watched Director scenes import the same durable secret
+event, and an inactive villager cannot produce a later live confession.
+
+Witness lists for imported nights now come from events the speaker actually
+observed and people they recognised. The hidden location schedule is not used
+as eyewitness memory: two villagers may visit the Graveyard at different hours
+without meeting, and an empty answer says this plainly rather than claiming an
+all-night alibi.
+
+The boundary between sensory and physical evidence is enforced centrally.
+Unearthly Wailing remains a true sign for its established monsters—including
+the Night Hag and all-sign Mimic—but no search, village sweep, gravedigger hint
+or migrated ground cache may return it as an object found in daylight. The
+monster/sign table is regression-locked independently of that filter.
 
 ## Delivery slices
 
