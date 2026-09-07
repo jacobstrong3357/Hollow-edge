@@ -524,6 +524,17 @@
     };
   }
 
+  var PRIVATE_ERRAND_OBJECTS = {
+    marta: "a flour-stained household ledger",
+    tobias: "a narrow grave spade",
+    ansel: "a sealed parish note",
+    greta: "a stoppered medicine bottle",
+    wilhelm: "an iron fitting wrapped in sacking",
+    liesel: "a brass room key on red cord",
+    falk: "a folded medical letter",
+    rosa: "a silk-thread sample pinned to card"
+  };
+
   function motiveFor(villager, config, facts, recent, used, rng) {
     var outMap = facts.outMap || {};
     var forcedDestination = outMap[villager.id];
@@ -533,7 +544,7 @@
     var pool = (ROLE_MOTIVES[roleKey(villager)] || ROLE_MOTIVES.generic).concat(ROLE_MOTIVES.generic);
     var specialMotive = griefId === villager.id || isGrieving || secretIds.indexOf(villager.id) >= 0;
     if (griefId === villager.id || isGrieving) pool = [motive("grief_errand", "grief", "Graveyard", "visit a grave before anyone can watch them mourn", "a private mourning token")];
-    if (secretIds.indexOf(villager.id) >= 0) pool = [motive("secret_errand", "secret", forcedDestination || "Old Church", "keep a private meeting promised before the bell", "a small wrapped object")];
+    if (secretIds.indexOf(villager.id) >= 0) pool = [motive("secret_errand", "secret", forcedDestination || "Old Church", "keep a private meeting promised before the bell", PRIVATE_ERRAND_OBJECTS[villager.id] || "a sealed private parcel")];
     if (forcedDestination && forcedDestination !== "home" && forcedDestination !== HOME) {
       var exact = specialMotive ? pool.map(function (m) { var c = clone(m); c.destination = forcedDestination; return c; }) : pool.filter(function (m) { return m.destination === forcedDestination; });
       if (exact.length) pool = exact;
@@ -1477,7 +1488,7 @@
     if (event.kind === "slain" && action.examineWitnessedBody && !clueFound) {
       text += " " + (BODY_DEATH_TEXT[event.sign] ? BODY_DEATH_TEXT[event.sign](victimName) : "The body is still warm.");
     }
-    if (lastWords) text += " They whisper: " + lastWords;
+    if (lastWords) text += " They are still breathing when you reach them.";
     else if (event.kind === "slain" && !action.examineWitnessedBody) text += " You are too late.";
     if (clueFound) text += " " + (BODY_SIGN_TEXT[event.sign] ? BODY_SIGN_TEXT[event.sign](victimName) : STAMP_TEXT[event.sign]);
     if (corroborated) text += " " + corroboratingWitnesses.map(function (row) { return row.name; }).join(" and ") + " saw it leave. You are cleared.";
@@ -3429,9 +3440,9 @@
         action("CONFRONT_MONSTER", state.player.armedGuess ? "Step out. Name it. End it here" : "Step out and say the name", "danger")
       ];
       if (state.pendingThreat.kind === "witness") return [
-        action("INTERVENE", "Shout a warning", "danger"),
-        action("IGNORE", "Stay silent", "quiet"),
-        action("FLEE", "Run for home", "danger")
+        action("INTERVENE", "Shout a warning", "danger", { hint: "You may save them. If it turns, the thing may chase you." }),
+        action("IGNORE", "Stay silent", "quiet", { hint: "They die. You stay hidden and can examine the body." }),
+        action("FLEE", "Run for home", "danger", { hint: "They die. You reach home without examining the body." })
       ];
       return concealmentActions(state.player.location);
     }

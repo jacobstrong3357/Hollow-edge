@@ -569,8 +569,12 @@
     if (existing) return existing.id;
     var timeline = actorNightTimeline(run, speakerId, night);
     var claimHome = String(spec.claim).toLowerCase() === "home";
+    /* "I was home" describes one part of a night. Only "I was home all
+       night" excludes an earlier road, a later threshold visit, or any other
+       remembered stop. Treating every home answer as an all-night alibi was
+       the source of most false red lie cards. */
     var claimConsistent = claimHome
-      ? !timeline.some(function (row) { return String(row.location).toLowerCase() !== "home" && row.kind === "route"; })
+      ? (!spec.exclusive || !timeline.some(function (row) { return String(row.location).toLowerCase() !== "home"; }))
       : timeline.some(function (row) { return row.location === spec.claim; });
     run.continuity = Continuity.recordTestimony(run.continuity, {
       id: id,
@@ -581,6 +585,8 @@
         kind: "alibi",
         night: night,
         location: spec.claim,
+        locations: unique(spec.locations || [spec.claim]),
+        exclusive: !!spec.exclusive,
         question: spec.question || "where",
         namedActorIds: unique(spec.namedActorIds),
         truthfulness: claimConsistent ? "consistent" : "contradicted_by_route",

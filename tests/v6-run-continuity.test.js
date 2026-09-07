@@ -360,11 +360,12 @@ function addOutcome(state, options) {
   assert.strictEqual(Continuity.observedEvent(state.continuity, "player", "night:2:route:rosa"), false, "the player does not inherit Rosa's private memory");
 
   var testimonyId = RunContinuity.recordAlibiTestimony(state, "rosa", 2, {
-    day: 2, question: "where", claim: "home", deliberateLie: true
+    day: 2, question: "where", claim: "home", exclusive: true, deliberateLie: true
   });
   var testimony = RunContinuity.alibiTestimonies(state, "rosa", 2)[0];
   assert.strictEqual(testimony.id, testimonyId);
   assert.strictEqual(testimony.claims.location, "home");
+  assert.strictEqual(testimony.claims.exclusive, true);
   assert.strictEqual(testimony.claims.truthfulness, "contradicted_by_route");
   assert.strictEqual(testimony.claims.deliberateLie, true);
   assert.strictEqual(Continuity.observedEvent(state.continuity, "player", "night:2:route:rosa"), false, "hearing a false alibi never becomes firsthand sight");
@@ -446,6 +447,14 @@ function addOutcome(state, options) {
   assert(timeline.some(function (row) { return row.location === "Old Church" && row.slot === 4; }), "a late shared visit is preserved beside the earlier route");
   RunContinuity.recordAlibiTestimony(state, "rosa", 2, { day: 2, question: "where", claim: "Village Square" });
   assert.strictEqual(RunContinuity.alibiTestimonies(state, "rosa", 2)[0].claims.truthfulness, "consistent", "one truthful stop is not contradicted by a later stop");
+
+  var homeId = RunContinuity.recordAlibiTestimony(state, "rosa", 2, { day: 2, question: "saw", claim: "home" });
+  var homeClaim = RunContinuity.alibiTestimonies(state, "rosa", 2).find(function (row) { return row.id === homeId; });
+  assert.strictEqual(homeClaim.claims.truthfulness, "consistent", "being home for part of a night does not deny earlier stops");
+
+  var exclusiveId = RunContinuity.recordAlibiTestimony(state, "rosa", 2, { day: 3, question: "where", claim: "home", exclusive: true });
+  var exclusiveHome = RunContinuity.alibiTestimonies(state, "rosa", 2).find(function (row) { return row.id === exclusiveId; });
+  assert.strictEqual(exclusiveHome.claims.truthfulness, "contradicted_by_route", "only an explicit all-night home claim excludes the rest of the route");
 })();
 
 (function everyRecordedInterviewAnswerNamesItsProvenance() {

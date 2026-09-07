@@ -1261,7 +1261,9 @@ function answerAttackSetup(state, preferredMode) {
   state = answerAttackSetup(state, "ask");
   assert.strictEqual(state.phase, "threat", "being at the sampled hunt opens a live intervention scene");
   assert(state.pendingThreat && state.pendingThreat.kind === "witness" && state.pendingThreat.victimId === "rosa", "the sampled neighbour remains the quarry when the player witnesses the hunt");
-  assert(Director.availableActions(state).some(function (action) { return action.type === "INTERVENE" && action.label === "Shout a warning"; }), "the player can try to stop the killing");
+  var witnessChoices = Director.availableActions(state);
+  assert(witnessChoices.some(function (action) { return action.type === "INTERVENE" && action.label === "Shout a warning"; }), "the player can try to stop the killing");
+  assert(witnessChoices.every(function (action) { return action.hint && /die|save/i.test(action.hint); }), "every witnessed-death choice previews its stakes");
 
   state.outcomes[2].intervene = 0.1;
   state = take(state, { type: "INTERVENE" });
@@ -3594,6 +3596,11 @@ function reachRescueDoor(state) {
   assert(!runtimeCopy.includes("Nobody can agree whether the dogs belong to the same lane"), "the malformed dog rumour cannot return");
   assert(!runtimeCopy.includes("They will not say where they are bound, then say it anyway"), "a villager cannot refuse and answer in the same breath");
   assert(!runtimeCopy.includes("near the Home") && !runtimeCopy.includes("at the Home"), "a doorstep event is never rendered as a map location called Home");
+  assert(html.includes("exclusiveClaim") && html.includes("actorNightTimeline") && html.includes("I came home afterward"), "interviews distinguish one stop from an exclusive all-night alibi and can recount multiple stops");
+  assert(html.includes("Someone keeping beyond my lantern could have passed unseen") && html.includes("If somebody followed me, they stayed outside my lantern"), "a villager can truthfully miss a hidden follower without claiming the place was empty");
+  assert(html.includes("PERSONAL ONLY") && html.includes("done answering investigative questions today"), "spent patience is explained in player language");
+  assert(html.includes("beat.meta.lastWords") && html.includes(">LAST WORDS</div>"), "last words are shown in the live night scene before the Journal records them");
+  assert(html.includes("PRIVATE_ERRAND_OBJECTS") && directorSource.includes("PRIVATE_ERRAND_OBJECTS"), "private errands use villager-specific objects in both route generators");
 })();
 
 console.log("v5-night-director: all tests passed");

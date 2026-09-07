@@ -5157,13 +5157,23 @@ function directorFindingAlreadyRecorded(s, text, agenda) {
   }
   return !!text && recorded.includes(String(text).toLowerCase());
 }
+const PRIVATE_ERRAND_OBJECTS = {
+  marta: "a flour-stained household ledger",
+  tobias: "a narrow grave spade",
+  ansel: "a sealed parish note",
+  greta: "a stoppered medicine bottle",
+  wilhelm: "an iron fitting wrapped in sacking",
+  liesel: "a brass room key on red cord",
+  falk: "a folded medical letter",
+  rosa: "a silk-thread sample pinned to card",
+};
 function directorMotiveFor(s, facts, npc) {
   const secret = facts.secretOut && facts.secretOut[npc.id] ? secretOf(s, npc.id) : null;
   const mourns = facts.griefOut && facts.griefOut[npc.id];
   /* Secret summaries are third-person Journal notes, not grammatical action
      phrases. Keep them out of "I went out to ..." interview sentences; the
      specific secret is revealed only by actually catching it. */
-  if (secret) return { id: `secret:${npc.id}`, family: "secret", destination: facts.outMap[npc.id], reason: "keep a private appointment before dawn", object: "a small wrapped object", secret: true };
+  if (secret) return { id: `secret:${npc.id}`, family: "secret", destination: facts.outMap[npc.id], reason: "keep a private appointment before dawn", object: PRIVATE_ERRAND_OBJECTS[npc.id] || "a sealed private parcel", secret: true };
   if (mourns) {
     const dead = npcById(s, mourns);
     return { id: `grief:${npc.id}`, family: "grief", destination: "Graveyard", reason: `leave something at ${dead ? dead.name + "'s" : "a"} grave`, object: "a private mourning token" };
@@ -5386,9 +5396,10 @@ const DIRECTOR_SIGHTING_LINES = [
   (nm, c) => `Between two houses, ${nm} enters the light with ${c.visible}.`,
   (nm, c) => `The figure becomes ${nm} only when your lantern reaches them; they hold ${c.visible}.`,
 ];
-function directorVisibleObject(family) {
+function directorVisibleObject(family, motiveObject) {
+  if (motiveObject && motiveObject !== "nothing") return motiveObject;
   return family === "grief" ? "something small"
-    : family === "secret" ? "a wrapped object"
+    : family === "secret" ? "a sealed private parcel"
       : family === "medicine" ? "a medical bag"
         : family === "faith" ? "a book"
           : family === "work" ? "a work bundle"
@@ -5399,7 +5410,7 @@ function directorVisibleObject(family) {
 }
 function directorSightingFor(seed, npc, motive, ctx, wx) {
   const family = (motive && motive.family) || "personal";
-  const visibleCtx = { ...ctx, visible: directorVisibleObject(family) };
+  const visibleCtx = { ...ctx, visible: directorVisibleObject(family, motive && motive.object) };
   const base = directorStableLine(`${seed}:${npc.id}:${(motive && motive.id) || family}:sighting`, DIRECTOR_SIGHTING_LINES, npc.name, visibleCtx);
   if (wx === "fog") return `At speaking distance through the fog, ${base.charAt(0).toLowerCase()}${base.slice(1)}`;
   if (wx === "storm") return `In a lightning flash, ${base.charAt(0).toLowerCase()}${base.slice(1)}`;
@@ -9029,7 +9040,15 @@ function establishedNightClaim(s, id, night) {
   const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
   const canonical = runContinuity ? runContinuity.alibiTestimonies(s, id, night).slice(-1)[0] : null;
   if (canonical && canonical.claims && canonical.claims.location) {
-    return { claim: canonical.claims.location, q: canonical.claims.question, night, testimonyId: canonical.id };
+    return {
+      claim: canonical.claims.location,
+      locations: canonical.claims.locations || [canonical.claims.location],
+      exclusive: !!canonical.claims.exclusive,
+      deliberateLie: !!canonical.claims.deliberateLie,
+      q: canonical.claims.question,
+      night,
+      testimonyId: canonical.id,
+    };
   }
   const statements = [...(s.statements || [])].reverse();
   const explicit = statements.find((st) => st.id === id && st.night === night
@@ -9095,10 +9114,15 @@ function answerFor(s, id, night, q, targetId) {
     ? runContinuity.thresholdVisits(s, night).find((visit) => visit.playerObserved
       && visit.visitorId === id && visit.recognisedActorIds.includes(id))
     : null;
+  const actorTimeline = runContinuity ? runContinuity.actorNightTimeline(s, id, night) : [];
+  const timelineStops = actorTimeline.reduce((stops, row) => {
+    if (!row.location || isHomePlace(row.location) || !LOCS.includes(row.location) || stops.includes(row.location)) return stops;
+    return [...stops, row.location];
+  }, []);
   const actorWitnessedPlayer = encounter.actorSawPlayer;
   const acknowledgedMeeting = encounter.acknowledged;
   const mentions = [];
-  let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false, socialReaction = false, dispositionDelta = 0;
+  let quote = "", claim = null, claimLocations = [], exclusiveClaim = false, foundSign = null, clue = null, guardedLie = false, socialReaction = false, dispositionDelta = 0;
 
   const key = interviewQuestionKey(s, q, night, targetId);
   s.askedLog[id] = s.askedLog[id] || [];
@@ -9379,7 +9403,7 @@ function answerFor(s, id, night, q, targetId) {
       seen.forEach((x) => mentions.push({ id: x.id, loc: event.location, kind: "with", night }));
       quote = seen.length
         ? `“I saw ${seen.map((x) => x.name).join(" and ")} near the ${event.location}. No one else I could identify.”`
-        : `“No one I could identify near the ${event.location}.”`;
+        : `“I noticed no one else near the ${event.location}. Someone keeping beyond my lantern could have passed unseen.”`;
     }
   }
 
@@ -10126,7 +10150,7 @@ function answerFor(s, id, night, q, targetId) {
       seenThere.forEach((x) => mentions.push({ id: x.id, loc: claimLoc, kind: "with", night }));
       quote = seenThere.length
         ? `"${seenThere.map((x) => x.name).join(" and ")} ${seenThere.length > 1 ? "were" : "was"} there too, near the ${claimLoc}. Ask them, if you don't believe me."`
-        : `"No one. I had the ${claimLoc} to myself, as far as I could tell."`;
+        : `"I noticed no one else at the ${claimLoc}. If somebody followed me, they stayed outside my lantern."`;
     }
   }
 
@@ -10144,22 +10168,45 @@ function answerFor(s, id, night, q, targetId) {
     }
   }
 
-  if (q === "where" && quote && thresholdVisit) {
-    const wentElsewhere = thresholdVisit.opened && thresholdVisit.location && !isHomePlace(thresholdVisit.location);
-    const visitPlace = wentElsewhere ? ` and we went to the ${placeNoun(thresholdVisit.location, "outdoor")}` : "";
-    quote += ` “Later I came to your door${visitPlace}. You know that part; you were there.”`;
+  if (q === "where" && quote) {
+    const truthfulTimeline = !publicBlame && !lying && !guardedLie && !(priorNightClaim && priorNightClaim.deliberateLie);
+    const stopPhrase = (stops) => stops.map((stop) => `the ${placeNoun(stop, "outdoor")}`).join(stops.length > 2 ? ", then " : " then ");
+    if (truthfulTimeline && thresholdVisit) {
+      const visitLocation = thresholdVisit.opened && thresholdVisit.location && !isHomePlace(thresholdVisit.location) ? thresholdVisit.location : null;
+      const earlierStops = timelineStops.filter((stop) => stop !== visitLocation);
+      const earlier = earlierStops.length ? `I was at ${stopPhrase(earlierStops)} earlier. ` : "";
+      const visit = visitLocation
+        ? `Later I came to your door and we went to the ${placeNoun(visitLocation, "outdoor")}.`
+        : "Later I came to your door.";
+      quote = `“${earlier}${visit} You were there.”`;
+      claimLocations = [...new Set([...earlierStops, ...(visitLocation ? [visitLocation] : []), "home"])];
+      claim = earlierStops[0] || visitLocation || "home";
+    } else if (truthfulTimeline && timelineStops.length > 1) {
+      quote = `“I was at ${stopPhrase(timelineStops)}. I came home afterward.”`;
+      claimLocations = [...timelineStops, "home"];
+      claim = timelineStops[0];
+    }
   }
 
   let flag = null;
+  if (claim && !claimLocations.length) claimLocations = priorNightClaim && priorNightClaim.locations
+    ? [...priorNightClaim.locations]
+    : [claim];
+  exclusiveClaim = !!(claim && isHomePlace(claim) && (
+    guardedLie
+    || (isMonster && log && log.active)
+    || (priorNightClaim && priorNightClaim.exclusive)
+    || /(?:all|whole) night|never (?:went out|left)|did not leave|didn't leave|stayed home/i.test(quote)
+  ));
   if (q === "where" && claim) {
     /* One truthful stop does not deny every other hour of the night. Only an
        explicit home-all-night account is disproved by an outdoor sight. */
     const contra = isHomePlace(claim) && encounter.playerSawActor.find((row) => row.location && !isHomePlace(row.location));
-    if (contra) flag = `They said they were home all night. You saw them at the ${contra.location}. This is a lie.`;
+    if (contra && exclusiveClaim) flag = `They said they were home all night. You saw them at the ${contra.location}. This is a lie.`;
   }
   if (q === "saw" && claim) {
     const contra = isHomePlace(claim) && encounter.playerSawActor.find((row) => row.location && !isHomePlace(row.location));
-    if (contra) flag = `Their account says they stayed home. You saw them at the ${contra.location}. This is a lie.`;
+    if (contra && exclusiveClaim) flag = `Their account says they stayed home all night. You saw them at the ${contra.location}. This is a lie.`;
   }
   /* A sighting at another hour cannot disprove a placement. */
 
@@ -10184,7 +10231,7 @@ function answerFor(s, id, night, q, targetId) {
     }
   }
 
-  return { quote, mentions, claim, flag, foundSign, clue, followUps, guardedLie, socialReaction, dispositionDelta };
+  return { quote, mentions, claim, claimLocations, exclusiveClaim, flag, foundSign, clue, followUps, guardedLie, socialReaction, dispositionDelta };
 }
 
 /* The questions that are about a NIGHT rather than about the day you are
@@ -10249,12 +10296,14 @@ function applyAnswer(prev, id, night, q, targetId) {
     const timeline = runContinuity.actorNightTimeline(s, id, night);
     const claimIsHome = String(ans.claim).toLowerCase() === "home";
     const claimMatches = claimIsHome
-      ? !timeline.some((row) => row.kind === "route" && String(row.location).toLowerCase() !== "home")
+      ? (!ans.exclusiveClaim || !timeline.some((row) => String(row.location).toLowerCase() !== "home"))
       : timeline.some((row) => row.location === ans.claim);
     runContinuity.recordAlibiTestimony(s, id, night, {
       day: s.dayNum,
       question: q,
       claim: ans.claim,
+      locations: ans.claimLocations,
+      exclusive: ans.exclusiveClaim,
       namedActorIds: (ans.mentions || []).map((mention) => mention.id),
       deliberateLie: !!(route && !claimMatches),
     });
@@ -16297,6 +16346,12 @@ function MonsterVillage() {
                 )}
                 {crisisStageLabel && <div className="mv-display" style={{ marginTop: crisisChoiceResult ? 0 : 3, fontSize: 9.5, letterSpacing: 1.6, color: "rgba(233,223,200,.68)" }}>{crisisStageLabel}</div>}
                 <NightTextFlow key={flowKey} text={flowText} italic={!!(beat && (beat.type === "whisper" || beat.type === "delusion"))} onComplete={() => setDirectorTextReadyKey(flowKey)} />
+                {flowReady && beat && beat.meta && beat.meta.lastWords && (
+                  <div className="mvIn" style={{ marginTop: 10, padding: "8px 10px", background: "rgba(0,0,0,.22)", borderLeft: `2px solid ${C.redBright}` }}>
+                    <div className="mv-display" style={{ fontSize: 9, letterSpacing: 1.6, color: C.redBright }}>LAST WORDS</div>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, lineHeight: 1.4, color: C.parch }}>“{beat.meta.lastWords}”</p>
+                  </div>
+                )}
                 {flowReady && beat && beat.sign && (beat.type === "stamp" || (beat.meta && beat.meta.learnedSign)) && <div className="mvIn" style={{ marginTop: 10 }}><StampChip sign={beat.sign} /></div>}
               </div>
             </div>
@@ -16307,7 +16362,10 @@ function MonsterVillage() {
                 <NightChoice key={`${a.type}:${a.to || ""}:${a.actorId || ""}:${a.pauseMode || i}`} quiet={a.tone === "quiet"} danger={a.tone === "danger"} onClick={() => actDirector(a)}>
                   <span className="flex items-center" style={{ gap: 9 }}>
                     <span aria-hidden="true" style={{ width: 18, textAlign: "center", opacity: .8 }}>{["MOVE", "LEAVE", "RUN", "STEP_OUTSIDE", "INVESTIGATE_HERE"].includes(a.type) ? "→" : ["SEARCH", "SEARCH_ON", "INSPECT_CLUE"].includes(a.type) ? "⌕" : ["LISTEN", "KEEP_WATCH", "LINGER_AFTER_FOLLOW"].includes(a.type) ? "◌" : a.type === "HAIL" ? "◇" : a.type === "FOLLOW" ? "↝" : ["IDENTIFY_FIGURE", "WATCH_MONSTER"].includes(a.type) ? "◐" : a.type === "CONFRONT_MONSTER" ? "†" : ["GO_HOME", "REACH_HOME", "KEEP_BARRED"].includes(a.type) ? "⌂" : a.type === "LOOK_THROUGH" ? "◐" : ["ANSWER_DOOR", "INVITE_IN"].includes(a.type) ? "◈" : a.type === "WAIT" ? "·" : danger ? "!" : "›"}</span>
-                    <span>{a.label}</span>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ display: "block" }}>{a.label}</span>
+                      {a.hint && <span style={{ display: "block", marginTop: 2, fontSize: 11.5, lineHeight: 1.3, opacity: .76 }}>{a.hint}</span>}
+                    </span>
                   </span>
                 </NightChoice>
               ))}
@@ -17597,6 +17655,13 @@ function MonsterVillage() {
               One visit spends an action. Ask about their movements, what they saw, or somebody else in the village. You will have three questions.
             </p>
           </Plaque>
+          {aliveNpcs(s).some((person) => (s.patience[person.id] || 0) <= 0) && (
+            <Plaque rule="amber">
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.42 }}>
+                <strong>Personal only</strong> means they are done answering investigative questions today. Sit with them, apologise, or offer help to rebuild trust.
+              </p>
+            </Plaque>
+          )}
           {[...new Set((s.worldEvents || []).filter((event) => event.source === "threshold_missing_report").flatMap((event) => event.actorIds || []))].map((id) => {
             const lead = npcById(s, id);
             const evading = lead && s.faceKnown === lead.id && s.monsterSawYou;
@@ -17613,7 +17678,7 @@ function MonsterVillage() {
                 const evading = s.faceKnown === n.id && s.monsterSawYou;
                 const already = s.questionedToday.includes(n.id);
                 const disabled = evading || already;
-                const status = evading ? "GONE TO GROUND" : already ? "ASKED TODAY" : s.patience[n.id] <= 0 ? "NO PATIENCE" : n.role.replace(/^the /, "").toUpperCase();
+                const status = evading ? "GONE TO GROUND" : already ? "ASKED TODAY" : s.patience[n.id] <= 0 ? "PERSONAL ONLY" : n.role.replace(/^the /, "").toUpperCase();
                 return (
                   <button key={n.id} onClick={() => !disabled && startInterview(n.id)} disabled={disabled}
                     className="mv-btn mv-body mvIvChip heInterviewTarget"
