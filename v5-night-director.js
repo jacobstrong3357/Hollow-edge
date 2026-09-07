@@ -894,7 +894,7 @@
       requestRoll: keyedNumber(seed, "threshold:request"),
       rescueRoll: keyedNumber(seed, "threshold:rescue"),
       resolved: false
-    }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]));
+    }, clone(THRESHOLD_EVENTS[Math.floor(keyedNumber(seed, "threshold:kind") * THRESHOLD_EVENTS.length) % THRESHOLD_EVENTS.length]), clone(config.thresholdEvent || {}));
     planThresholdRescue(state);
     state.discoverySchedule = makeDiscoverySchedule(seed, state, config, rng);
     state.ledgers.truth.push({ id: "night-plan", slot: -1, kind: "plan", weather: state.weather, active: monsterSchedule.active, huntLoc: monsterSchedule.huntLoc, attackSlot: monsterSchedule.attackSlot });
@@ -2682,6 +2682,19 @@
         }[questionPlace] || "Fresh marks cross the ground where the road narrows.";
         text = "You lift the bar and open the door. You follow " + (actor ? actor.name : "your neighbour") + " to the " + questionPlace + ". " + questionFinding;
         state.found.clues.push({ id: "threshold-question:" + state.cursor, slot: state.cursor, location: questionPlace, text: text, source: "threshold_neighbour" });
+        if (actor) appendTruth(state, {
+          id: "threshold-guided-search:" + state.cursor + ":" + actor.id,
+          slot: state.cursor,
+          kind: "threshold_guided_search",
+          location: questionPlace,
+          actorId: actor.id,
+          actors: ["player", actor.id],
+          finding: questionFinding,
+          text: actor.name + " came to your door, then took you to the " + questionPlace + ". " + questionFinding,
+          question: "You came to my door and took me to the " + questionPlace + ". What were you trying to show me?",
+          honest: "“The mark we found together. I wanted another pair of eyes on it before daylight spoiled it.”",
+          evasive: "“You chose to follow me. We both saw the same mark. Decide for yourself what it means.”"
+        });
       } else if (threshold.purpose === "return_item" && watchedActor && watchedActorReturnedItem) {
         text = "You lift the bar and open the door. " + actor.name + " returns " + (threshold.item || "what you dropped") + ". They ask why you watched their house.";
       } else if (threshold.purpose === "return_item" && watchedActor) {
@@ -3903,6 +3916,22 @@
       };
     }));
     findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
+      return event.kind === "threshold_guided_search";
+    }).map(function (event) {
+      return {
+        eventId: event.id,
+        sourceEventIds: [event.id],
+        actorId: event.actorId,
+        location: event.location,
+        slot: event.slot,
+        text: event.text,
+        question: event.question,
+        honest: event.honest,
+        evasive: event.evasive,
+        source: "threshold_guided_search"
+      };
+    }));
+    findings = findings.concat((state.ledgers.truth || []).filter(function (event) {
       return event.kind === "threshold_missing_report";
     }).reduce(function (rows, event) {
       rows.push({
@@ -4020,6 +4049,19 @@
     return issues;
   }
 
+  function contentMetrics() {
+    var wordCount = function (text) {
+      return String(text || "").trim().split(/\s+/).filter(Boolean).length;
+    };
+    var witnessed = Object.keys(WITNESSED_DEATH_TEXT).map(function (sign) {
+      return { sign: sign, words: wordCount(WITNESSED_DEATH_TEXT[sign]("A Name")) };
+    });
+    return {
+      witnessedDeaths: witnessed,
+      maxWitnessedDeathWords: witnessed.reduce(function (max, row) { return Math.max(max, row.words); }, 0)
+    };
+  }
+
   return Object.freeze({
     version: VERSION,
     SIGNS: SIGNS.slice(),
@@ -4040,6 +4082,7 @@
     actorAt: actorLocation,
     actorsAt: actorsAt,
     visibleState: visibleState,
-    validateNight: validateNight
+    validateNight: validateNight,
+    contentMetrics: contentMetrics
   });
 });

@@ -38,12 +38,18 @@ The production V5 build is frozen at commit `268c926`. V6 work lives on the
 - deterministic keyed rolls; and
 - conservative, idempotent V5-to-V6 save preparation.
 
-It is wired into `index.html` only at the terminal-night import boundary. The
-existing V5 screens remain authoritative until each consumer below has moved
-and its parity tests pass. This is deliberate: V6 must replace the compatibility
-shell gradually, not become another independent story engine beside it.
+It is wired through the complete playable run. Older collections remain as
+rendering projections for pre-V6 saves, but continuity decisions are made from
+the canonical ledger and then projected into those views. This keeps old saves
+playable without allowing their loose prose or copied flags to become truth.
 
-### Current checkpoint: V6.1i
+### Current checkpoint: V6 complete
+
+The V6 implementation is complete on `codex/v6-continuity`. The full unit and
+100-night serialized simulation suites pass, the production build compiles,
+and the final sweep regression-locks the reported continuity, evidence,
+wording, death-pacing and ending cases. The remaining compatibility fields are
+deliberately read-only views for older saves rather than competing authorities.
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -158,11 +164,12 @@ they no longer decide whether their own question is available.
 
 ## Delivery slices
 
-### V6.1 — Canonical continuity (in progress)
+### V6.1 — Canonical continuity
 
 - [x] Give Director truth, observations and memories durable V6 event IDs.
 - [x] Record the canonical ledger before `consequenceProjection` runs.
-- [ ] Replace copied compatibility arrays consumer by consumer.
+- [x] Replace copied compatibility arrays as authorities, retaining only
+  projections required to render older saves.
 - [x] Gate contextual interview questions through canonical player knowledge.
 - [x] Move actor deaths, changes, flight, unbinding and monster defeat onto
   canonical status events.
@@ -177,12 +184,12 @@ ledger, and the same save produces the same next action after reload.
 
 ### V6.2 — Evidence and Journal
 
-- Replace `locEvidence`, `foundSigns`, `playerSigns`, `planted`, `nightRemains`
+- [x] Replace `locEvidence`, `foundSigns`, `playerSigns`, `planted`, `nightRemains`
   and free-form evidence clues with evidence entities.
-- Create an item-art manifest with one exact `imageKey` per object.
-- Give evidence present, carried, destroyed and lost states.
-- Add the manual `Discover → Inspect → Stamp` flow.
-- Build the Journal timeline, testimony list and contradiction view from player
+- [x] Create an item-art manifest with one exact `imageKey` per object.
+- [x] Give evidence present, carried, destroyed and lost states.
+- [x] Add the manual `Discover → Inspect → Stamp` flow.
+- [x] Build the Journal timeline, testimony list and contradiction view from player
   knowledge only.
 
 Gate: every evidence image matches its object; a source event can be opened from
@@ -190,12 +197,13 @@ the Journal; false evidence never satisfies a true-sign requirement.
 
 ### V6.3 — Daylight and interviews
 
-- Generate questions from shared events, observed events and heard testimony.
-- Generate answers from the speaker's observations, beliefs and willingness.
-- Make shared quests and doorstep rescues durable mutual memories.
-- Add relationship actions: warn, escort, seek, avoid, protect and mourn.
-- Replace live interview `chance()` calls with keyed outcomes.
-- Add grammar and duplicate-prose validation.
+- [x] Generate questions from shared events, observed events and heard testimony.
+- [x] Generate answers from the speaker's observations, beliefs and willingness.
+- [x] Make shared quests and doorstep rescues durable mutual memories.
+- [x] Preserve warn, escort, seek, avoid, protect and mourn choices as durable
+  relationship events.
+- [x] Replace live interview `chance()` calls with keyed outcomes.
+- [x] Add grammar and duplicate-prose validation.
 
 Gate: the player cannot ask about an event they neither witnessed nor heard
 about, and an NPC cannot describe an event absent from their own memory unless
@@ -203,28 +211,28 @@ the line is explicitly a lie or inference.
 
 ### V6.4 — Crises, danger and pacing
 
-- Give each village crisis five beats: situation, danger, decision, immediate
+- [x] Give each village crisis five beats: situation, danger, decision, immediate
   result and morning consequence.
-- Keep witnessed death scenes to no more than six short beats or forty words
+- [x] Keep witnessed death scenes to no more than six short beats or forty words
   before the next choice.
-- Track monster awareness: unaware, noticed, home known, suspicion, recognised,
+- [x] Track monster awareness: unaware, noticed, home known, suspicion, recognised,
   openly unmasked.
-- Schedule a threshold consequence within two eligible nights once the monster
+- [x] Schedule a threshold consequence within two eligible nights once the monster
   learns the player's home.
-- Schedule an offer by the next eligible encounter once its conditions are met.
-- Give planted-mark monsters a fair discovery/exposure opportunity.
+- [x] Schedule an offer by the next eligible encounter once its conditions are met.
+- [x] Give planted-mark monsters a fair discovery/exposure opportunity.
 
 Gate: a player can explain what is dangerous, what their choice changes and why
 an offer or threshold scene appeared without seeing a numerical affinity meter.
 
 ### V6.5 — Endings and full-game proof
 
-- Stage the prepared rite in the lived night before transitioning to victory.
-- Give hangings and other public deaths their own First Light scenes.
-- Explain the decisive death, remaining population and threshold on every loss.
-- Add alternate resolved outcomes only after the existing endings are proven:
-  save or unbind the host, accept/refuse the offer, and evacuate survivors.
-- Add shareable seeds and a case-summary bug report containing recent event IDs.
+- [x] Stage the prepared rite in the lived night before transitioning to victory.
+- [x] Give hangings and other public deaths their own First Light scenes.
+- [x] Explain the decisive death, remaining population and threshold on every loss.
+- [x] Add alternate resolved outcomes after the existing endings: save or
+  unbind changed neighbours, accept/refuse the offer, and evacuate survivors.
+- [x] Add shareable seeds and a case-summary bug report containing recent event IDs.
 
 Gate: every ending and achievement is reached by at least one automated seed,
 and every loss names its causal event and survival arithmetic.

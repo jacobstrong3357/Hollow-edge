@@ -9,21 +9,21 @@ var V6RunContinuity = require("../v6-run-continuity.js");
 var locations = ["Village Square", "Old Church", "Graveyard", "Dark Forest", "Old Mill", "Tavern"];
 var weathers = ["still", "fog", "storm", "frost"];
 var monsters = [
-  { id: "werewolf", signs: ["tracks", "claw", "bite"] },
-  { id: "vampire", signs: ["bite", "cold", "graves"] },
-  { id: "wraith", signs: ["cold", "hex", "graves"] },
-  { id: "witch", signs: ["hex", "flora", "cold"] },
-  { id: "demon", signs: ["claw", "hex", "wail"] },
-  { id: "shifter", signs: ["tracks", "claw", "cold"] },
-  { id: "banshee", signs: ["wail", "cold", "graves"] },
-  { id: "lich", signs: ["graves", "cold", "hex"] },
-  { id: "revenant", signs: ["tracks", "graves", "claw"] },
-  { id: "doppel", signs: ["tracks", "bite", "cold"] },
-  { id: "hag", signs: ["hex", "claw", "flora"] },
-  { id: "necromancer", signs: ["graves", "hex", "wail"] },
-  { id: "mimic", signs: ["tracks", "bite", "flora"] },
-  { id: "succubus", signs: ["bite", "wail", "cold"] },
-  { id: "hollowed", signs: ["tracks", "flora", "wail"] },
+  { id: "werewolf", signs: ["claw", "bite", "tracks"] },
+  { id: "vampire", signs: ["bite", "claw", "graves"] },
+  { id: "wraith", signs: ["cold", "tracks", "wail"] },
+  { id: "witch", signs: ["flora", "hex", "graves"] },
+  { id: "demon", signs: ["cold", "hex", "flora"] },
+  { id: "shifter", signs: ["claw", "hex", "tracks"] },
+  { id: "banshee", signs: ["cold", "flora", "wail"] },
+  { id: "lich", signs: ["graves", "flora", "tracks"] },
+  { id: "revenant", signs: ["graves", "tracks", "cold"] },
+  { id: "doppel", signs: ["claw", "bite", "wail"] },
+  { id: "hag", signs: ["hex", "cold", "wail"] },
+  { id: "necromancer", signs: ["graves", "hex", "cold"] },
+  { id: "mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"] },
+  { id: "succubus", signs: ["wail", "hex", "bite"] },
+  { id: "hollowed", signs: ["claw", "flora", "tracks"] },
   { id: "ghoul", signs: ["tracks", "graves", "bite"] }
 ];
 

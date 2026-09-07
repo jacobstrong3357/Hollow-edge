@@ -239,7 +239,7 @@
         return eventSlot(event) === slot && [
           "threshold_look", "threshold_spoken", "threshold_choice",
           "threshold_monster_visit", "threshold_missing_report",
-          "threshold_watched_item_report", "threshold_confrontation"
+          "threshold_watched_item_report", "threshold_guided_search", "threshold_confrontation"
         ].indexOf(event.type) >= 0;
       });
       var choice = related.find(function (event) { return event.type === "threshold_choice"; }) || null;
@@ -521,6 +521,36 @@
     };
   }
 
+  /* A night is a timeline, not one pin on a map. The private route supplies
+     the planned stops; lived events such as a late threshold visit add their
+     own time-slotted stops when the actor remembers participating in them. */
+  function actorNightTimeline(run, actorId, night) {
+    if (!run || !run.continuity || !actorId || night == null) return [];
+    var route = rememberedNightRoute(run, actorId, night);
+    var rows = [];
+    var routeSlots = list(route && route.slots);
+    if (!routeSlots.length && route && route.location) routeSlots = [route.location];
+    routeSlots.forEach(function (location, index) {
+      rows.push({ eventId: route.eventId, slot: index, location: location, kind: "route" });
+    });
+    canonicalEvents(run, null, night).forEach(function (event) {
+      if (event.type === "night_route" || !event.location) return;
+      var raw = rawEvent(event);
+      var participated = list(event.actorIds).indexOf(actorId) >= 0
+        || raw.actorId === actorId || raw.reporterId === actorId;
+      if (!participated || !Continuity.observedEvent(run.continuity, actorId, event.id)) return;
+      rows.push({ eventId: event.id, slot: eventSlot(event), location: event.location, kind: event.type });
+    });
+    var seen = {};
+    return rows.sort(function (a, b) { return a.slot - b.slot || String(a.eventId).localeCompare(String(b.eventId)); })
+      .filter(function (row) {
+        var key = row.slot + ":" + String(row.location).toLowerCase() + ":" + row.kind;
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+  }
+
   function alibiTestimonies(run, speakerId, night) {
     return list(run && run.continuity && run.continuity.testimonies).filter(function (row) {
       return row.speakerId === speakerId && row.listenerId === PLAYER_ID
@@ -537,6 +567,11 @@
     var id = spec.id || ["interview", "day-" + (spec.day == null ? "unknown" : spec.day), "alibi", speakerId, "night-" + night, spec.question || "where"].map(slug).join(":");
     var existing = list(run.continuity.testimonies).find(function (row) { return row.id === id; });
     if (existing) return existing.id;
+    var timeline = actorNightTimeline(run, speakerId, night);
+    var claimHome = String(spec.claim).toLowerCase() === "home";
+    var claimConsistent = claimHome
+      ? !timeline.some(function (row) { return String(row.location).toLowerCase() !== "home" && row.kind === "route"; })
+      : timeline.some(function (row) { return row.location === spec.claim; });
     run.continuity = Continuity.recordTestimony(run.continuity, {
       id: id,
       speakerId: speakerId,
@@ -548,8 +583,34 @@
         location: spec.claim,
         question: spec.question || "where",
         namedActorIds: unique(spec.namedActorIds),
-        truthfulness: spec.claim === route.location ? "consistent" : "contradicted_by_route",
-        deliberateLie: !!spec.deliberateLie
+        truthfulness: claimConsistent ? "consistent" : "contradicted_by_route",
+        deliberateLie: !!spec.deliberateLie,
+        provenance: spec.deliberateLie ? "deliberate_lie" : "direct_memory"
+      }
+    });
+    return id;
+  }
+
+  function recordInterviewTestimony(run, speakerId, spec) {
+    spec = spec || {};
+    if (!run || !run.continuity || !speakerId || !actorCanAppear(run, speakerId)) return null;
+    var id = spec.id || ["interview", "day-" + (spec.day == null ? "unknown" : spec.day), speakerId,
+      spec.question || "answer", "night-" + (spec.night == null ? "none" : spec.night), spec.targetId || "none"].map(slug).join(":");
+    if (list(run.continuity.testimonies).some(function (row) { return row.id === id; })) return id;
+    var aboutEventId = spec.aboutEventId && Continuity.eventById(run.continuity, spec.aboutEventId)
+      ? spec.aboutEventId : null;
+    run.continuity = Continuity.recordTestimony(run.continuity, {
+      id: id,
+      speakerId: speakerId,
+      listenerId: PLAYER_ID,
+      aboutEventId: aboutEventId,
+      claims: {
+        kind: "interview_answer",
+        question: spec.question || null,
+        night: spec.night == null ? null : spec.night,
+        targetId: spec.targetId || null,
+        quote: spec.quote || null,
+        provenance: spec.provenance || "opinion"
       }
     });
     return id;
@@ -686,6 +747,221 @@
     return { kind: "unknown", eventId: outcome.id, status: status, location: outcome.location };
   }
 
+  function evidenceInventory(run, options) {
+    options = options || {};
+    return list(run && run.continuity && run.continuity.evidence).filter(function (evidence) {
+      if (options.location && evidence.location !== options.location) return false;
+      if (options.sign && evidence.sign !== options.sign) return false;
+      if (options.authenticity && evidence.authenticity !== options.authenticity) return false;
+      if (options.discoveredBy && list(evidence.discoveredBy).indexOf(options.discoveredBy) < 0) return false;
+      if (options.inspectedBy && list(evidence.inspectedBy).indexOf(options.inspectedBy) < 0) return false;
+      if (options.active !== false && (evidence.state === "destroyed" || evidence.state === "lost")) return false;
+      return true;
+    }).map(function (evidence) { return Object.assign({}, evidence); });
+  }
+
+  function discoveredSignKeys(run, options) {
+    options = options || {};
+    var physical = evidenceInventory(run, {
+      location: options.location,
+      authenticity: options.genuineOnly ? "genuine" : null,
+      discoveredBy: PLAYER_ID,
+      active: options.active
+    }).map(function (evidence) { return evidence.sign; });
+    var sensory = canonicalEvents(run, "sensory_sign_observed").filter(function (event) {
+      if (options.location && event.location !== options.location) return false;
+      return observedByPlayer(run, event.id).length > 0;
+    }).map(function (event) { return rawEvent(event).sign; });
+    return unique(physical.concat(sensory));
+  }
+
+  function journalSignKeys(run) {
+    if (!run || !run.continuity) return unique(run && run.playerSigns);
+    return Continuity.journalSigns(run.continuity);
+  }
+
+  function recordEvidence(run, spec) {
+    spec = spec || {};
+    if (!run) throw new Error("a run is required");
+    var sign = spec.sign || null;
+    var objectKey = spec.objectKey || (sign ? "sign:" + sign : null);
+    if (!objectKey) throw new Error("evidence objectKey is required");
+    run.continuity = Continuity.ensureActors(run.continuity, run.npcs || []);
+    var sourceEventId = spec.sourceEventId || [
+      "run", spec.phase || (spec.day != null ? "day" : "night"),
+      spec.night != null ? "night-" + spec.night : spec.day != null ? "day-" + spec.day : "turn-" + run.continuity.sequence,
+      spec.type || "evidence-source", spec.location || "unknown", sign || objectKey
+    ].map(slug).join(":");
+    if (!Continuity.eventById(run.continuity, sourceEventId)) {
+      run.continuity = Continuity.appendEvent(run.continuity, {
+        id: sourceEventId,
+        type: spec.type || (spec.authenticity === "planted" ? "monster_plants_evidence" : "evidence_discovered"),
+        phase: spec.phase || null,
+        night: spec.night == null ? null : spec.night,
+        day: spec.day == null ? null : spec.day,
+        location: spec.location || null,
+        actorIds: unique(spec.actorIds),
+        subjectIds: unique(spec.subjectIds),
+        truth: Object.assign({}, spec.truth || {}, { source: spec.source || "playable-run" }),
+        tags: unique(["evidence-source"].concat(spec.tags || []))
+      });
+    }
+    var evidenceId = spec.id || sourceEventId + ":evidence:" + slug(sign || objectKey);
+    if (!Continuity.evidenceById(run.continuity, evidenceId)) {
+      run.continuity = Continuity.addEvidence(run.continuity, {
+        id: evidenceId,
+        objectKey: objectKey,
+        imageKey: spec.imageKey || objectKey,
+        sign: sign,
+        sourceEventId: sourceEventId,
+        location: spec.location || null,
+        authenticity: spec.authenticity || "uncertain",
+        state: spec.state || "present",
+        discoveredBy: spec.discovered === false ? [] : [PLAYER_ID],
+        inspectedBy: spec.inspected === false || spec.discovered === false ? [] : [PLAYER_ID]
+      });
+    } else {
+      if (spec.state && Continuity.evidenceById(run.continuity, evidenceId).state !== spec.state) {
+        run.continuity = Continuity.updateEvidence(run.continuity, evidenceId, { state: spec.state });
+      }
+      if (spec.discovered !== false) run.continuity = Continuity.discoverEvidence(run.continuity, evidenceId, PLAYER_ID);
+      if (spec.inspected !== false && spec.discovered !== false) run.continuity = Continuity.inspectEvidence(run.continuity, evidenceId, PLAYER_ID);
+    }
+    return evidenceId;
+  }
+
+  function exposeEvidence(run, evidenceId, spec) {
+    spec = spec || {};
+    if (!run || !run.continuity || !Continuity.evidenceById(run.continuity, evidenceId)) return null;
+    var eventId = spec.eventId || evidenceId + ":exposed";
+    if (!Continuity.eventById(run.continuity, eventId)) {
+      run.continuity = Continuity.appendEvent(run.continuity, {
+        id: eventId, type: "evidence_exposed", phase: spec.phase || "day",
+        night: spec.night == null ? null : spec.night,
+        day: spec.day == null ? null : spec.day,
+        location: spec.location || Continuity.evidenceById(run.continuity, evidenceId).location,
+        truth: { evidenceId: evidenceId, source: spec.source || "playable-run" },
+        tags: ["evidence", "exposed"]
+      });
+      run.continuity = Continuity.recordObservation(run.continuity, {
+        id: eventId + ":observation:player", eventId: eventId, observerId: PLAYER_ID,
+        mode: "direct", certainty: "certain", factKeys: ["evidence-exposed:" + evidenceId]
+      });
+    }
+    run.continuity = Continuity.updateEvidence(run.continuity, evidenceId, { state: "destroyed" });
+    return eventId;
+  }
+
+  function setJournalSign(run, sign, present) {
+    if (!run) return [];
+    run.continuity = Continuity.ensureActors(run.continuity, run.npcs || []);
+    run.continuity = Continuity.setJournalSign(run.continuity, sign, present);
+    run.playerSigns = Continuity.journalSigns(run.continuity);
+    return run.playerSigns;
+  }
+
+  function ensureDramaticPromises(run, night, options) {
+    options = options || {};
+    if (!run || !run.monster || !run.monster.vid) return [];
+    run.continuity = Continuity.ensureActors(run.continuity, run.npcs || []);
+    var hostId = run.monster.vid;
+    var awareness = monsterAwareness(run, hostId);
+    var existingKinds = {};
+    list(run.continuity.promises).forEach(function (promise) { existingKinds[promise.kind + ":" + (promise.actorId || "")] = true; });
+
+    if (awareness.hostRecognisedPlayer && !existingKinds["threshold_consequence:" + hostId]) {
+      var cause = awareness.mutualEventIds.slice(-1)[0] || awareness.recognitionEventIds.slice(-1)[0] || null;
+      var causeEvent = cause && Continuity.eventById(run.continuity, cause);
+      var eligible = Math.max(1, causeEvent && causeEvent.night != null ? causeEvent.night + 1 : night);
+      run.continuity = Continuity.schedulePromise(run.continuity, {
+        id: "promise:threshold:" + slug(hostId), kind: "threshold_consequence", actorId: hostId,
+        createdByEventId: cause, eligibleNight: eligible, dueByNight: eligible + 1,
+        payload: { reason: "monster_knows_player_home", visitorKind: "monster" }
+      });
+    }
+    if ((run.bond || 0) >= (options.offerBondMin == null ? 2 : options.offerBondMin)
+      && night >= (options.offerMinNight == null ? 3 : options.offerMinNight)
+      && !run.offerMade && !existingKinds["monster_offer:" + hostId]) {
+      run.continuity = Continuity.schedulePromise(run.continuity, {
+        id: "promise:offer:" + slug(hostId), kind: "monster_offer", actorId: hostId,
+        eligibleNight: night, dueByNight: night,
+        payload: { reason: "earned_monster_interest" }
+      });
+    }
+    return list(run.continuity.promises).map(function (promise) { return Object.assign({}, promise); });
+  }
+
+  function pendingDramaticPromise(run, kind, night) {
+    if (!run || !run.continuity) return null;
+    var rows = Continuity.pendingPromises(run.continuity, { night: night, kinds: kind ? [kind] : [] });
+    return rows.length ? rows[0] : null;
+  }
+
+  function recordDramaticFulfillment(run, kind, spec) {
+    spec = spec || {};
+    if (!run || !run.continuity) return null;
+    var promise = list(run.continuity.promises).find(function (row) {
+      return row.kind === kind && row.status === "pending";
+    });
+    if (!promise) return null;
+    var eventId = spec.eventId || ["run", "night-" + (spec.night == null ? "unknown" : spec.night), kind, "fulfilled"].map(slug).join(":");
+    if (!Continuity.eventById(run.continuity, eventId)) {
+      run.continuity = Continuity.appendEvent(run.continuity, {
+        id: eventId, type: kind, phase: spec.phase || "night",
+        night: spec.night == null ? null : spec.night, day: spec.day == null ? null : spec.day,
+        location: spec.location || null,
+        actorIds: Continuity.actorCanAct(run.continuity, promise.actorId) ? [promise.actorId] : [],
+        subjectIds: Continuity.actorCanAct(run.continuity, promise.actorId) ? [] : [promise.actorId],
+        truth: Object.assign({}, spec.truth || {}, { promiseId: promise.id, source: spec.source || "playable-run" }),
+        tags: ["dramatic-promise", "fulfilled"]
+      });
+    }
+    /* Fulfilling a promise is not itself player knowledge. The caller must
+       say that the player actually observed the resulting event; otherwise
+       a scheduled threshold arrival could accidentally reveal the host. */
+    if (spec.playerObserved === true && !Continuity.observedEvent(run.continuity, PLAYER_ID, eventId)) {
+      run.continuity = Continuity.recordObservation(run.continuity, {
+        id: eventId + ":observation:player", eventId: eventId, observerId: PLAYER_ID,
+        mode: "direct", certainty: "certain",
+        factKeys: [kind], actorIdsRecognised: promise.actorId ? [promise.actorId] : [],
+        locationRecognised: true
+      });
+    }
+    run.continuity = Continuity.fulfillPromise(run.continuity, promise.id, eventId);
+    return eventId;
+  }
+
+  function recordResolvedOutcome(run, spec) {
+    spec = spec || {};
+    if (!run || !run.continuity || !spec.eventId || Continuity.eventById(run.continuity, spec.eventId)) return spec.eventId || null;
+    var actorIds = list(spec.actorIds).filter(function (actorId) {
+      return Continuity.actorCanAct(run.continuity, actorId);
+    });
+    run.continuity = Continuity.appendEvent(run.continuity, {
+      id: spec.eventId,
+      type: spec.kind || "resolved_outcome",
+      phase: "day",
+      day: spec.day == null ? null : spec.day,
+      location: spec.location || null,
+      actorIds: actorIds,
+      truth: Object.assign({}, spec.truth || {}, { source: "playable-run" }),
+      tags: ["resolved-outcome"]
+    });
+    [PLAYER_ID].concat(actorIds).forEach(function (observerId) {
+      run.continuity = Continuity.recordObservation(run.continuity, {
+        id: spec.eventId + ":observation:" + slug(observerId),
+        eventId: spec.eventId,
+        observerId: observerId,
+        mode: observerId === PLAYER_ID ? "direct" : "participated",
+        certainty: "certain",
+        factKeys: [spec.kind || "resolved_outcome"],
+        actorIdsRecognised: actorIds,
+        locationRecognised: true
+      });
+    });
+    return spec.eventId;
+  }
+
   return Object.freeze({
     legacyStatus: legacyStatus,
     actorStatus: actorStatus,
@@ -708,9 +984,21 @@
     acknowledgeRelationship: acknowledgeRelationship,
     observedCompanionIds: observedCompanionIds,
     rememberedNightRoute: rememberedNightRoute,
+    actorNightTimeline: actorNightTimeline,
     alibiTestimonies: alibiTestimonies,
     recordAlibiTestimony: recordAlibiTestimony,
+    recordInterviewTestimony: recordInterviewTestimony,
     secretKnowledge: secretKnowledge,
-    recordSecretLearned: recordSecretLearned
+    recordSecretLearned: recordSecretLearned,
+    evidenceInventory: evidenceInventory,
+    discoveredSignKeys: discoveredSignKeys,
+    journalSignKeys: journalSignKeys,
+    recordEvidence: recordEvidence,
+    exposeEvidence: exposeEvidence,
+    setJournalSign: setJournalSign,
+    ensureDramaticPromises: ensureDramaticPromises,
+    pendingDramaticPromise: pendingDramaticPromise,
+    recordDramaticFulfillment: recordDramaticFulfillment,
+    recordResolvedOutcome: recordResolvedOutcome
   });
 });

@@ -51,6 +51,7 @@
   var PLAYER_LIVED_KINDS = {
     threshold_arrival: true,
     threshold_monster_visit: true,
+    threshold_guided_search: true,
     threshold_missing_report: true,
     threshold_watched_item_report: true,
     threshold_confrontation: true
@@ -247,23 +248,41 @@
       return !!PLAYER_LIVED_KINDS[event.kind] || (event.kind === "investigated_attack" && event.sharedDiscovery);
     }).forEach(function (event) {
       var canonicalId = eventIdFor(director, event.id);
-      if (!eventExists(ledger, canonicalId) || Continuity.observedEvent(ledger, PLAYER_ID, canonicalId)) return;
+      if (!eventExists(ledger, canonicalId)) return;
       var recognised = unique([event.actorId, event.reporterId, event.subjectId, event.victimId]).filter(function (actorId) {
         return actorId && actorId !== PLAYER_ID && !!ledger.actors[actorId];
       });
       /* Arrival alone may be an unidentified voice. Later explicit reports
          and identified visits carry the names the player actually heard. */
       if (event.kind === "threshold_arrival") recognised = [];
-      ledger = Continuity.recordObservation(ledger, {
-        id: canonicalId + ":observation:player:lived",
-        eventId: canonicalId,
-        observerId: PLAYER_ID,
-        mode: event.kind === "threshold_arrival" ? "heard" : "direct",
-        certainty: event.kind === "threshold_arrival" ? "sensory" : "certain",
-        factKeys: unique(["kind:" + event.kind].concat(event.location ? ["location:" + event.location] : [])),
-        actorIdsRecognised: recognised,
-        locationRecognised: !!event.location
-      });
+      if (!Continuity.observedEvent(ledger, PLAYER_ID, canonicalId)) {
+        ledger = Continuity.recordObservation(ledger, {
+          id: canonicalId + ":observation:player:lived",
+          eventId: canonicalId,
+          observerId: PLAYER_ID,
+          mode: event.kind === "threshold_arrival" ? "heard" : "direct",
+          certainty: event.kind === "threshold_arrival" ? "sensory" : "certain",
+          factKeys: unique(["kind:" + event.kind].concat(event.location ? ["location:" + event.location] : [])),
+          actorIdsRecognised: recognised,
+          locationRecognised: !!event.location
+        });
+      }
+      /* A named visitor remembers making the visit. This does not teach them
+         anything about the player's other movements or the missing subject. */
+      var participantId = event.actorId || event.reporterId || null;
+      if (participantId && participantId !== PLAYER_ID && ledger.actors[participantId]
+        && !Continuity.observedEvent(ledger, participantId, canonicalId)) {
+        ledger = Continuity.recordObservation(ledger, {
+          id: canonicalId + ":observation:" + slug(participantId) + ":participant",
+          eventId: canonicalId,
+          observerId: participantId,
+          mode: "memory",
+          certainty: "certain",
+          factKeys: ["participated", "kind:" + event.kind],
+          actorIdsRecognised: [PLAYER_ID],
+          locationRecognised: !!event.location
+        });
+      }
     });
     return ledger;
   }

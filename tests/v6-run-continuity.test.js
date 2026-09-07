@@ -319,6 +319,32 @@ function addOutcome(state, options) {
   assert.strictEqual(hailed.acknowledged.length, 1, "an acknowledged mutual meeting survives serialization");
 })();
 
+(function evidenceAndJournalProjectFromOneCanonicalInventory() {
+  var state = run("canonical-evidence");
+  var genuineId = RunContinuity.recordEvidence(state, {
+    id: "evidence:grave-dirt", sourceEventId: "night:2:grave-dirt", type: "physical_mark_discovered",
+    night: 2, location: "Graveyard", objectKey: "sign:graves", imageKey: "sign:graves",
+    sign: "graves", authenticity: "genuine"
+  });
+  var plantedId = RunContinuity.recordEvidence(state, {
+    id: "evidence:false-hex", sourceEventId: "night:2:false-hex", type: "monster_plants_evidence",
+    night: 2, location: "Old Church", objectKey: "sign:hex", imageKey: "sign:hex",
+    sign: "hex", authenticity: "planted", discovered: false, inspected: false
+  });
+  assert.deepStrictEqual(RunContinuity.discoveredSignKeys(state), ["graves"]);
+  assert.deepStrictEqual(RunContinuity.discoveredSignKeys(state, { genuineOnly: true }), ["graves"]);
+  state.continuity = Continuity.discoverEvidence(state.continuity, plantedId, "player");
+  state.continuity = Continuity.inspectEvidence(state.continuity, plantedId, "player");
+  assert.deepStrictEqual(RunContinuity.discoveredSignKeys(state), ["graves", "hex"], "a planted mark looks usable until it is exposed");
+  assert.deepStrictEqual(RunContinuity.discoveredSignKeys(state, { genuineOnly: true }), ["graves"], "false evidence never becomes a true sign");
+  RunContinuity.setJournalSign(state, "hex", true);
+  assert.deepStrictEqual(RunContinuity.journalSignKeys(state), ["hex"]);
+  RunContinuity.exposeEvidence(state, plantedId, { day: 2, location: "Old Church" });
+  assert.deepStrictEqual(RunContinuity.discoveredSignKeys(state), ["graves"], "exposed false evidence leaves the active evidence trail");
+  assert.strictEqual(Continuity.evidenceById(state.continuity, genuineId).imageKey, "sign:graves");
+  assert.deepStrictEqual(Continuity.validateLedger(state.continuity), []);
+})();
+
 (function alibisAreClaimsAboutPrivateRouteMemory() {
   var state = run("canonical-alibi");
   state.continuity = Continuity.appendEvent(state.continuity, {
@@ -366,6 +392,93 @@ function addOutcome(state, options) {
   var before = state.continuity.events.length;
   RunContinuity.acknowledgeRelationship(state, relationship.eventId, { day: 2 });
   assert.strictEqual(state.continuity.events.length, before, "reopening the interview cannot duplicate the acknowledgement");
+})();
+
+(function earnedDramaticScenesBecomeDurablePromises() {
+  var state = run("dramatic-promises");
+  state.monster = { vid: "hazel", type: "hag" };
+  state.bond = 2;
+  state.offerMade = false;
+  RunContinuity.recordMonsterAwareness(state, "hazel", {
+    id: "night:2:mutual-recognition", type: "monster_recognition", night: 2,
+    location: "Old Church", playerRecognisedHost: true, hostRecognisedPlayer: true
+  });
+  RunContinuity.ensureDramaticPromises(state, 3, { offerBondMin: 2, offerMinNight: 3 });
+  var threshold = RunContinuity.pendingDramaticPromise(state, "threshold_consequence", 3);
+  var offer = RunContinuity.pendingDramaticPromise(state, "monster_offer", 3);
+  assert(threshold && threshold.dueByNight === 4, "a known home owes a threshold consequence within two nights");
+  assert(offer && offer.dueByNight === 3, "earned interest owes an offer at the next eligible encounter");
+  var offerEvent = RunContinuity.recordDramaticFulfillment(state, "monster_offer", {
+    night: 3, location: "Dark Forest", playerObserved: true
+  });
+  assert.strictEqual(RunContinuity.pendingDramaticPromise(state, "monster_offer", 3), null);
+  assert.strictEqual(Continuity.observedEvent(state.continuity, "player", offerEvent), true);
+  var thresholdEvent = RunContinuity.recordDramaticFulfillment(state, "threshold_consequence", {
+    night: 3, location: "Home"
+  });
+  assert.strictEqual(Continuity.observedEvent(state.continuity, "player", thresholdEvent), false, "scheduling a knock cannot reveal the host before the player recognises the visitor");
+  var saved = Continuity.upgradeRun(JSON.parse(JSON.stringify(state)));
+  RunContinuity.ensureDramaticPromises(saved, 4, { offerBondMin: 2, offerMinNight: 3 });
+  assert.strictEqual(saved.continuity.promises.filter(function (row) { return row.kind === "monster_offer"; }).length, 1, "reload cannot schedule the same offer twice");
+  assert.deepStrictEqual(Continuity.validateLedger(saved.continuity), []);
+})();
+
+(function aNightTimelineCanHoldAnErrandAndALaterDoorstepVisit() {
+  var state = run("multi-stop-night");
+  state.monster = { vid: "hazel", type: "hag" };
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:route:rosa", type: "night_route", phase: "night", night: 2,
+    location: "Village Square", subjectIds: ["rosa"],
+    truth: { actorId: "rosa", primaryLocation: "Village Square", locations: ["Village Square", "home"], slots: ["Village Square", "home", "home", "home"] }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:route:rosa", observerId: "rosa", mode: "memory", actorIdsRecognised: ["rosa"]
+  });
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:guided:rosa", type: "threshold_guided_search", phase: "night", night: 2,
+    location: "Old Church", actorIds: ["player", "rosa"], truth: { actorId: "rosa", slot: 4 }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:guided:rosa", observerId: "rosa", mode: "memory", actorIdsRecognised: ["player"]
+  });
+  var timeline = RunContinuity.actorNightTimeline(state, "rosa", 2);
+  assert(timeline.some(function (row) { return row.location === "Village Square"; }));
+  assert(timeline.some(function (row) { return row.location === "Old Church" && row.slot === 4; }), "a late shared visit is preserved beside the earlier route");
+  RunContinuity.recordAlibiTestimony(state, "rosa", 2, { day: 2, question: "where", claim: "Village Square" });
+  assert.strictEqual(RunContinuity.alibiTestimonies(state, "rosa", 2)[0].claims.truthfulness, "consistent", "one truthful stop is not contradicted by a later stop");
+})();
+
+(function everyRecordedInterviewAnswerNamesItsProvenance() {
+  var state = run("testimony-provenance");
+  var id = RunContinuity.recordInterviewTestimony(state, "rosa", {
+    day: 2, night: 1, question: "opinion", targetId: "hazel",
+    quote: "I trust her.", provenance: "opinion"
+  });
+  var row = state.continuity.testimonies.find(function (entry) { return entry.id === id; });
+  assert(row);
+  assert.strictEqual(row.claims.provenance, "opinion");
+  assert.strictEqual(RunContinuity.recordInterviewTestimony(state, "rosa", {
+    day: 2, night: 1, question: "opinion", targetId: "hazel", quote: "Changed text", provenance: "opinion"
+  }), id, "reload or a double tap cannot duplicate the same answer");
+})();
+
+(function resolvedOutcomesAreRememberedByEveryParticipant() {
+  var state = run("evacuation-memory");
+  var id = RunContinuity.recordResolvedOutcome(state, {
+    eventId: "day:4:village-evacuated", day: 4, location: "Village Square",
+    kind: "village_evacuated", actorIds: ["hazel", "wilhelm", "rosa"],
+    truth: { survivorCount: 3 }
+  });
+  assert.strictEqual(id, "day:4:village-evacuated");
+  ["player", "hazel", "wilhelm", "rosa"].forEach(function (observerId) {
+    assert.strictEqual(Continuity.observedEvent(state.continuity, observerId, id), true, observerId + " remembers leaving together");
+  });
+  var count = state.continuity.events.length;
+  RunContinuity.recordResolvedOutcome(state, {
+    eventId: id, day: 4, location: "Village Square", kind: "village_evacuated", actorIds: ["hazel"]
+  });
+  assert.strictEqual(state.continuity.events.length, count, "reloading an ending cannot duplicate it");
+  assert.deepStrictEqual(Continuity.validateLedger(state.continuity), []);
 })();
 
 (function runStatusEventsAreDurableObservedAndIdempotent() {

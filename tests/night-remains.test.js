@@ -14,6 +14,7 @@ function between(start, end) {
 
 var context = {
   console: console,
+  HE_V6_RUN_CONTINUITY: null,
   stableIdx: function (text, len) {
     var h = 0;
     text = String(text);
@@ -89,6 +90,11 @@ context.ev = function (text, pid, pri) { return { t: text, pid: pid, pri: pri ==
 context.evPlaque = function (event, rule, sign) { event.plaque = { rule: rule, sign: sign }; return event; };
 context.chance = function () { return false; };
 context.SIGNS = { bite: "Bite Marks" };
+context.observedSignKeys = function (state) { return state.foundSigns || []; };
+context.recordObservedSign = function (state, sign) {
+  state.foundSigns = state.foundSigns || [];
+  if (state.foundSigns.indexOf(sign) < 0) state.foundSigns.push(sign);
+};
 vm.runInContext(between("function definiteFindingObject", "function findingReturnOutcome"), context);
 vm.runInContext(between("function actSearch(prev, loc)", "function actDefend(prev)"), context);
 

@@ -2928,7 +2928,7 @@ function reachRescueDoor(state) {
   assert(whereNowAnswer.indexOf("!t.alive") < whereNowAnswer.indexOf("!goneToGround"), "asking where a dead neighbour is cannot say they are still living in the village");
   assert(secretAnswer.includes("hasEarnedSecret") && interviewIa.includes("hasEarnedSecret(s, x.id)"), "unearned legacy secrets are blocked both from the share handler and its portrait tray");
   assert(html.includes("function learnSecret") && html.includes("playerKnowledge: { secrets: {} }") && html.includes("repairPlayerKnowledge(run)"), "player knowledge has one explicit provenance ledger and legacy saves are migrated through it");
-  assert(answerCore.includes('q === "saw" && claim') && answerCore.includes("Their witness account depends on being"), "firsthand player evidence can explicitly expose a mixed witness account as a lie");
+  assert(answerCore.includes('q === "saw" && claim') && answerCore.includes("Their account says they stayed home") && answerCore.includes("A sighting at another hour cannot disprove a placement"), "only an explicit home-all-night account is contradicted; two different stops are not treated as mutually exclusive");
   assert(html.includes('marta: "Village Square"') && !html.includes('hazel: "Village Square"'), "Hazel's internal id resolves to her real home location in timeline answers");
   var personalPanel = interviewIa.slice(interviewIa.indexOf('ivSub === "catH"'), interviewIa.indexOf('ivSub === "nightPerson"'));
   assert(personalPanel.includes("Concern may build trust or test their patience. Useful work is safer.") && personalPanel.includes('askQ("howare")') && personalPanel.includes('askQ("apologise")') && personalPanel.includes('askQ("help")') && !personalPanel.includes('askQ("past")') && !personalPanel.includes('askQ("talk")'), "personal conversation offers one unpredictable concern question alongside deliberate repair actions");
@@ -3269,7 +3269,8 @@ function reachRescueDoor(state) {
   assert(/always wanted your face/i.test(deathContext.DEATH_SCENES.shifter("Hazel", "Village Square").join(" ")), "the shapeshifter covets the player's face before taking it");
   assert(/which one did you like best/i.test(deathContext.DEATH_SCENES.mimic("Hazel", "Village Square").join(" ")), "the mimic asks the player to choose among its killing shapes");
   var playerDeathSource = html.slice(html.indexOf("function playerDeathBeats"), html.indexOf("/* Two wrong names", html.indexOf("function playerDeathBeats")));
-  assert(playerDeathSource.includes("return [opening, ...full.slice(1)];"), "an interactive recognition death keeps both the monster's taunt and its killing beat");
+  assert(playerDeathSource.includes("return [opening, coda];"), "an interactive death keeps the lived approach and one distinct killing image");
+  assert(html.includes("const DEATH_CODAS =") && playerDeathSource.includes("DEATH_CODAS[m.id]"), "the death screen is capped at two short beats instead of replaying a long scene");
   var temperamentSource = html.slice(html.indexOf("const DIRECTOR_TEMPERAMENT_QUIET"), html.indexOf("function directorHostBuild"))
     .replace("const DIRECTOR_TEMPERAMENT_QUIET =", "DIRECTOR_TEMPERAMENT_QUIET =");
   var temperamentContext = {};
@@ -3306,7 +3307,7 @@ function reachRescueDoor(state) {
   assert(html.includes("lostAfterFollow: !!(secret && !secretCaught)"), "an uncaught secret errand tells the Director that the villager escaped the player's reach");
   assert(html.includes('I thought I was right more often than I was') && !html.includes('most of them mine'), "Ansel's grief over a disagreement is grammatical and emotionally coherent");
   assert(answerCore.includes("contextDenied") && answerCore.includes("I cannot name people on a road I deny walking"), "a denied sighting cannot turn into an eyewitness list from the same place");
-  assert(answerCore.includes("I met no one there I could identify") && answerCore.includes("I was not at the ${actual} for the whole night"), "an honest empty witness list explains that two people may visit the same place at different times");
+  assert(answerCore.includes("I saw nobody there I could identify") && answerCore.includes("I left before the bell"), "an honest empty witness list stays limited to the part of the night the speaker remembers");
   assert(html.includes("ans.contextDenied ? null : contextQuestion.event.eventId"), "the interview tray clears a denied location instead of offering it as the next night question");
   assert(html.includes("const buildGlow = n.alive") && html.includes("0 0 14px rgba(217,164,65,.72)"), "a settled build gives every matching living villager a visible amber glow");
   assert(html.includes("THE NOTE IN YOUR POCKET") && html.includes("At nightfall, you must decide whether to obey."), "an active coercion note remains visible on the day screen");
@@ -3587,6 +3588,12 @@ function reachRescueDoor(state) {
     assert(!runtimeCopy.includes(phrase), "retired vague prose cannot return: " + phrase);
   });
   assert(runtimeCopy.includes("The soil shows bootprints and recent shovel cuts, but no grave has been opened."), "an empty graveyard search reports concrete visible evidence");
+  assert(Director.contentMetrics().maxWitnessedDeathWords <= 40, "a death witnessed in front of the player stays under forty words before the next choice");
+  assert(html.includes('reason: "evacuated"') && html.includes('"Evacuate the Living"') && html.includes('>LEAD THEM OUT</DockBtn>'), "an openly unmasked monster unlocks a confirmed evacuation ending");
+  assert(html.includes('"THE ROAD OUT"') && html.includes('"WHO MADE IT OUT"'), "evacuation has its own ending language instead of pretending the monster died");
+  assert(!runtimeCopy.includes("Nobody can agree whether the dogs belong to the same lane"), "the malformed dog rumour cannot return");
+  assert(!runtimeCopy.includes("They will not say where they are bound, then say it anyway"), "a villager cannot refuse and answer in the same breath");
+  assert(!runtimeCopy.includes("near the Home") && !runtimeCopy.includes("at the Home"), "a doorstep event is never rendered as a map location called Home");
 })();
 
 console.log("v5-night-director: all tests passed");

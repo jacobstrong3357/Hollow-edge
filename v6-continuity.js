@@ -73,7 +73,7 @@
       testimonies: [],
       evidence: [],
       promises: [],
-      journal: { stamps: [] },
+      journal: { stamps: [], signs: [] },
       migration: config.migration ? clone(config.migration) : null
     };
   }
@@ -252,6 +252,28 @@
     return ledger;
   }
 
+  /* The Journal is the player's judgement, not an automatic evidence dump.
+     A sign may be entered from inspected evidence or from testimony; the
+     evidence stamp retains provenance while `signs` retains the player's
+     editable conclusion. */
+  function setJournalSign(input, sign, present) {
+    var ledger = upgradeLedger(input);
+    sign = requireText(sign, "journal sign");
+    ledger.journal.signs = unique(ledger.journal.signs);
+    if (present === false) ledger.journal.signs = ledger.journal.signs.filter(function (row) { return row !== sign; });
+    else if (ledger.journal.signs.indexOf(sign) < 0) ledger.journal.signs.push(sign);
+    return ledger;
+  }
+
+  function journalSigns(ledger) {
+    var direct = list(ledger && ledger.journal && ledger.journal.signs);
+    var stamped = list(ledger && ledger.journal && ledger.journal.stamps).map(function (id) {
+      var evidence = evidenceById(ledger, id);
+      return evidence && evidence.sign;
+    });
+    return unique(direct.concat(stamped));
+  }
+
   function observationsFor(ledger, observerId) {
     return list(ledger && ledger.observations).filter(function (row) { return row.observerId === observerId; });
   }
@@ -417,6 +439,7 @@
     });
     ledger.journal = ledger.journal || {};
     ledger.journal.stamps = unique(ledger.journal.stamps);
+    ledger.journal.signs = unique(ledger.journal.signs);
     return ledger;
   }
 
@@ -510,6 +533,8 @@
     discoverEvidence: discoverEvidence,
     inspectEvidence: inspectEvidence,
     stampEvidence: stampEvidence,
+    setJournalSign: setJournalSign,
+    journalSigns: journalSigns,
     eventById: eventById,
     evidenceById: evidenceById,
     currentActorStatus: currentActorStatus,

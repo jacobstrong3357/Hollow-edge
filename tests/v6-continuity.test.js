@@ -98,6 +98,11 @@ function baseLedger() {
   ledger = Continuity.inspectEvidence(ledger, "evidence:grave-dirt:1", "player");
   ledger = Continuity.stampEvidence(ledger, "evidence:grave-dirt:1");
   assert.deepStrictEqual(Continuity.countedSigns(ledger), ["graves"]);
+  ledger = Continuity.setJournalSign(ledger, "graves", true);
+  ledger = Continuity.setJournalSign(ledger, "wail", true);
+  assert.deepStrictEqual(Continuity.journalSigns(ledger), ["graves", "wail"], "heard signs can be recorded as player judgement without becoming physical evidence");
+  ledger = Continuity.setJournalSign(ledger, "wail", false);
+  assert.deepStrictEqual(Continuity.journalSigns(ledger), ["graves"]);
   assert.deepStrictEqual(Continuity.validateLedger(ledger), []);
 })();
 
