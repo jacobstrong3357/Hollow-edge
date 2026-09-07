@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1g
+### Current checkpoint: V6.1h
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -138,6 +138,15 @@ the spoken location as separate canonical testimony. Truth, memory and claim
 therefore survive reload independently: a lie does not rewrite the night, and
 hearing it does not become firsthand sight. Monster cover stories use a keyed
 choice so the same unanswered interview cannot reroll its lie after reload.
+
+Night recognition is now directional everywhere it affects daylight. The
+player seeing a villager, a villager seeing the player's lantern and both
+people openly hailing one another are three distinct canonical results tied to
+the same event. Interviews cannot invent “you hailed me” or “I saw your
+lantern” from co-location or the opposite person's sighting. Witness lists,
+death-night alibis, suspicion for being abroad and character records use those
+same observer-specific events; copied `playerSaw` and `sawYouOut` rows remain
+only as fallback for nights saved before the V6 import boundary.
 
 ## Delivery slices
 

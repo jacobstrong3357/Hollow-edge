@@ -170,6 +170,63 @@
     });
   }
 
+  /* Recognition is directional. Two people occupying the same truth event
+     does not mean either identified the other, and one clear sighting does
+     not manufacture the reverse memory. Every interview-facing sighting
+     query goes through the observer's own observation rows. */
+  function recognitionEvents(run, observerId, targetId, options) {
+    options = options || {};
+    if (!run || !run.continuity || !observerId || !targetId) return [];
+    return list(run.continuity.observations).map(function (observation) {
+      if (observation.observerId !== observerId
+        || list(observation.actorIdsRecognised).indexOf(targetId) < 0) return null;
+      var event = Continuity.eventById(run.continuity, observation.eventId);
+      if (!event || (options.night != null && event.night !== options.night)
+        || (options.location && event.location !== options.location)) return null;
+      var raw = rawEvent(event);
+      return {
+        eventId: event.id,
+        observationId: observation.id,
+        night: event.night,
+        location: event.location || raw.location || null,
+        type: event.type,
+        kind: raw.kind || event.type,
+        slot: eventSlot(event),
+        mode: observation.mode,
+        certainty: observation.certainty,
+        acknowledged: !!raw.acknowledged || event.type === "hailed" || raw.kind === "hailed"
+      };
+    }).filter(Boolean).sort(function (a, b) {
+      return a.slot - b.slot || String(a.eventId).localeCompare(String(b.eventId));
+    });
+  }
+
+  function encounterRecognition(run, actorId, options) {
+    options = options || {};
+    var playerRows = recognitionEvents(run, PLAYER_ID, actorId, options);
+    var actorRows = recognitionEvents(run, actorId, PLAYER_ID, options);
+    var actorByEvent = {};
+    actorRows.forEach(function (row) { actorByEvent[row.eventId] = row; });
+    var mutual = playerRows.map(function (playerRow) {
+      var actorRow = actorByEvent[playerRow.eventId];
+      if (!actorRow) return null;
+      return {
+        eventId: playerRow.eventId,
+        night: playerRow.night,
+        location: playerRow.location || actorRow.location,
+        slot: playerRow.slot,
+        kind: playerRow.kind,
+        acknowledged: !!(playerRow.acknowledged || actorRow.acknowledged)
+      };
+    }).filter(Boolean);
+    return {
+      playerSawActor: playerRows,
+      actorSawPlayer: actorRows,
+      mutual: mutual,
+      acknowledged: mutual.filter(function (row) { return row.acknowledged; })
+    };
+  }
+
   /* A visit is a chain, not three unrelated flags. The arrival, anything
      said through the door and the final choice share a night/slot and are
      returned together. Player recognition comes only from observations. */
@@ -642,6 +699,8 @@
     thresholdVisitCount: thresholdVisitCount,
     sharedDiscoveries: sharedDiscoveries,
     sharedDiscoveryForActor: sharedDiscoveryForActor,
+    recognitionEvents: recognitionEvents,
+    encounterRecognition: encounterRecognition,
     monsterAwareness: monsterAwareness,
     recordMonsterAwareness: recordMonsterAwareness,
     relationshipHistory: relationshipHistory,

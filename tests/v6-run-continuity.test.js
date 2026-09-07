@@ -277,6 +277,48 @@ function addOutcome(state, options) {
   assert.deepStrictEqual(RunContinuity.observedCompanionIds(state, "rosa", 2, "Graveyard"), ["hazel"], "an observed and recognised meeting is remembered");
 })();
 
+(function sightingsStayDirectionalUntilBothPeopleRecogniseTheSameEvent() {
+  var state = run("directional-recognition");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:lane-sighting", type: "crossed_paths", phase: "night", night: 2,
+    location: "Old Church", actorIds: ["player", "rosa", "hazel"],
+    truth: { data: { kind: "crossed_paths", slot: 2, acknowledged: false } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    id: "night:2:lane-sighting:player", eventId: "night:2:lane-sighting",
+    observerId: "player", actorIdsRecognised: ["rosa"], locationRecognised: true
+  });
+  var oneSided = RunContinuity.encounterRecognition(state, "rosa", { night: 2 });
+  assert.strictEqual(oneSided.playerSawActor.length, 1);
+  assert.strictEqual(oneSided.actorSawPlayer.length, 0, "seeing Rosa cannot give Rosa the reverse memory");
+  assert.strictEqual(oneSided.mutual.length, 0);
+  assert.strictEqual(RunContinuity.recognitionEvents(state, "player", "hazel", { night: 2 }).length, 0, "mere participation is not recognition");
+
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    id: "night:2:lane-sighting:rosa", eventId: "night:2:lane-sighting",
+    observerId: "rosa", actorIdsRecognised: ["player"], locationRecognised: true
+  });
+  var mutual = RunContinuity.encounterRecognition(state, "rosa", { night: 2, location: "Old Church" });
+  assert.strictEqual(mutual.mutual.length, 1, "two directional observations of one event make a mutual sighting");
+  assert.strictEqual(mutual.acknowledged.length, 0, "a mutual glimpse is not automatically a hail");
+
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:lane-hail", type: "hailed", phase: "night", night: 2,
+    location: "Old Church", actorIds: ["player", "rosa"],
+    truth: { data: { kind: "hailed", slot: 3, acknowledged: true } }
+  });
+  [
+    { id: "night:2:lane-hail:player", observerId: "player", actorIdsRecognised: ["rosa"] },
+    { id: "night:2:lane-hail:rosa", observerId: "rosa", actorIdsRecognised: ["player"] }
+  ].forEach(function (observation) {
+    state.continuity = Continuity.recordObservation(state.continuity, Object.assign({
+      eventId: "night:2:lane-hail", locationRecognised: true
+    }, observation));
+  });
+  var hailed = RunContinuity.encounterRecognition(JSON.parse(JSON.stringify(state)), "rosa", { night: 2 });
+  assert.strictEqual(hailed.acknowledged.length, 1, "an acknowledged mutual meeting survives serialization");
+})();
+
 (function alibisAreClaimsAboutPrivateRouteMemory() {
   var state = run("canonical-alibi");
   state.continuity = Continuity.appendEvent(state.continuity, {
@@ -362,6 +404,7 @@ function addOutcome(state, options) {
   assert(source.includes('v6OutcomeKnowledge.kind === "found_body"'), "the recap distinguishes reaching an aftermath");
   assert(source.includes('v6OutcomeKnowledge.kind === "last_seen_alive"'), "the recap only says the player left someone alive after a recorded prior sighting");
   assert(source.includes("v6Run.sharedDiscoveryForActor"), "shared interview memories come from canonical mutual observation");
+  assert(source.includes("runContinuity.encounterRecognition"), "interview sightings come from directional canonical observations");
   assert(source.includes("HE_V6_RUN_CONTINUITY.thresholdVisitCount"), "door visit totals come from canonical visit chains");
   assert(source.includes("canonicalMonsterAwareness(s)"), "night planning receives canonical mutual monster awareness");
   assert(source.includes("HE_V6_RUN_CONTINUITY.unacknowledgedRelationship"), "interview consequences come from canonical relationship history");

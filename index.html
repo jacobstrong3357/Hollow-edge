@@ -4238,7 +4238,15 @@ const turnedAlive = (s) => s.npcs.filter((n) => canonicalActorStatus(s, n.id) ==
    which is a shared foolishness rather than a story about you. */
 const seenOutNights = (s) => {
   const nights = new Set();
-  for (const x of s.npcs) for (const e of (x.sawYouOut || [])) if (!e.met) nights.add(e.night);
+  const imported = (night) => typeof HE_V6_DIRECTOR_ADAPTER !== "undefined" && HE_V6_DIRECTOR_ADAPTER
+    && s.continuity && HE_V6_DIRECTOR_ADAPTER.hasImportedNight(s.continuity, night);
+  for (const log of (s.nightLogs || [])) {
+    if (!imported(log.night)) continue;
+    if (s.npcs.some((npc) => villagerSightedPlayer(s, npc.id, log.night).some((row) => !row.acknowledged))) nights.add(log.night);
+  }
+  for (const x of s.npcs) for (const e of (x.sawYouOut || [])) {
+    if (!imported(e.night) && !e.met) nights.add(e.night);
+  }
   return nights.size;
 };
 const aliveNpcs = (s) => s.npcs.filter((n) => canonicalActorCanAppear(s, n.id));
@@ -7218,13 +7226,16 @@ function resolveNight(prev, planIn, preEvents) {
              Kept to what was actually witnessed, and never fatal - the rope
              does not come for the player - but it costs standing with the
              people who loved them, and it is said to your face. -- */
-          const alibis = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (!director || (x.disp || 0) >= 0) && (x.sawYouOut || []).some((e2) => e2.night === n && e2.met && e2.nearAttack && e2.loc !== victimWhere));
-          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (x.sawYouOut || []).some((e2) => e2.night === n && !e2.met && (!director || (e2.nearAttack && e2.loc === victimWhere))));
+          const nearAttack = (row) => !director || Math.abs(row.slot - director.monsterSchedule.attackSlot) <= 1;
+          const alibis = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id && (!director || (x.disp || 0) >= 0)
+            && recordedEncounter(s, x.id, n).acknowledged.some((row) => nearAttack(row) && row.location !== victimWhere));
+          const tellers = s.npcs.filter((x) => x.alive && !x.fled && x.id !== victim.id
+            && villagerSightedPlayer(s, x.id, n).some((row) => !row.acknowledged && nearAttack(row) && (!director || row.location === victimWhere)));
           if (alibis.length) {
             const names = alibis.slice(0, 2).map((x) => x.name);
-            const entry = (alibis[0].sawYouOut || []).find((e2) => e2.night === n && e2.met && e2.nearAttack && e2.loc !== victimWhere);
+            const entry = recordedEncounter(s, alibis[0].id, n).acknowledged.find((row) => nearAttack(row) && row.location !== victimWhere);
             const named = names.length === 1 ? names[0] : names[0] + " and " + names[1];
-            dawn.push(ev(named + (names.length === 1 ? " places" : " place") + " you at the " + entry.loc + " near the hour " + victim.name + " died at the " + victimWhere + ". The village may doubt your purpose, but not where you were.", alibis[0].id, 2));
+            dawn.push(ev(named + (names.length === 1 ? " places" : " place") + " you at the " + entry.location + " near the hour " + victim.name + " died at the " + victimWhere + ". The village may doubt your purpose, but not where you were.", alibis[0].id, 2));
           } else if (tellers.length) {
             const teller = tellers[0];
             s.lastWith = { id: victim.id, name: victim.name, night: n, teller: teller.id };
@@ -7797,11 +7808,12 @@ function resolveNight(prev, planIn, preEvents) {
      A hail in the lane is exempt (see seenOutNights): you were both out and
      both know it, and the shared foolishness is what makes it harmless. --- */
   if (!s.over) {
-    const witnessed = s.npcs.filter((x) => x.alive && !x.fled && (x.sawYouOut || []).some((e2) => e2.night === n && !e2.met));
+    const witnessed = s.npcs.filter((x) => x.alive && !x.fled
+      && villagerSightedPlayer(s, x.id, n).some((row) => !row.acknowledged));
     if (witnessed.length) {
       const nightsSeen = seenOutNights(s);
       const teller = pick(witnessed);
-      const where = (teller.sawYouOut || []).filter((e2) => e2.night === n && !e2.met).map((e2) => e2.loc)[0] || plan.loc;
+      const where = villagerSightedPlayer(s, teller.id, n).filter((row) => !row.acknowledged).map((row) => row.location)[0] || plan.loc;
       /* One night out is ordinary enough to be forgiven; a pattern is not.
          The cost lands on the one who did the telling, never on every
          witness at once: a whole square cooling by a step each time you
@@ -8694,6 +8706,40 @@ function recordedTogether(s, speakerId, otherId, night, location) {
   return !!location && recordedCompanions(s, speakerId, night, location).some((npc) => npc.id === otherId);
 }
 
+/* Sight is not reciprocal. V6 asks each observer's memory of the same event;
+   the copied arrays remain only for saves made before that night was imported
+   into the continuity ledger. */
+function recordedEncounter(s, actorId, night, location) {
+  const v6Adapter = typeof HE_V6_DIRECTOR_ADAPTER !== "undefined" ? HE_V6_DIRECTOR_ADAPTER : null;
+  const runContinuity = typeof HE_V6_RUN_CONTINUITY !== "undefined" ? HE_V6_RUN_CONTINUITY : null;
+  if (runContinuity && v6Adapter && s.continuity && v6Adapter.hasImportedNight(s.continuity, night)) {
+    return runContinuity.encounterRecognition(s, actorId, { night, ...(location ? { location } : {}) });
+  }
+  const playerRows = (s.playerSaw || []).filter((row) => row.night === night && row.id === actorId
+    && (!location || row.loc === location)).map((row, index) => ({
+      eventId: row.eventId || `legacy:player:${night}:${actorId}:${index}`,
+      night, location: row.loc || null, acknowledged: false,
+    }));
+  const npc = npcById(s, actorId);
+  const actorRows = ((npc && npc.sawYouOut) || []).filter((row) => row.night === night
+    && (!location || row.loc === location)).map((row, index) => ({
+      eventId: row.eventId || `legacy:actor:${night}:${actorId}:${index}`,
+      night, location: row.loc || null, acknowledged: !!row.met,
+    }));
+  const mutual = actorRows.filter((actorRow) => actorRow.acknowledged && playerRows.some((playerRow) =>
+    !actorRow.location || !playerRow.location || actorRow.location === playerRow.location
+  )).map((row) => ({ ...row, acknowledged: true }));
+  return { playerSawActor: playerRows, actorSawPlayer: actorRows, mutual, acknowledged: mutual };
+}
+
+function playerSighted(s, actorId, night, location) {
+  return recordedEncounter(s, actorId, night, location).playerSawActor;
+}
+
+function villagerSightedPlayer(s, actorId, night, location) {
+  return recordedEncounter(s, actorId, night, location).actorSawPlayer;
+}
+
 /* One canonical key for both the answer engine and the question tray. This
    keeps a paid line of questioning visibly spent and also lets the handler
    reject a stale double tap before it costs patience or a question. */
@@ -8795,6 +8841,10 @@ function answerFor(s, id, night, q, targetId) {
   const lying = (isMonster && log && log.active) || (npc.turned && tn !== null && night >= tn);
   const evn = log ? log.event : null;
   const priorNightClaim = establishedNightClaim(s, id, night);
+  const encounter = recordedEncounter(s, id, night);
+  const playerWitnessed = encounter.playerSawActor.find((row) => row.location && row.location !== "home");
+  const actorWitnessedPlayer = encounter.actorSawPlayer;
+  const acknowledgedMeeting = encounter.acknowledged;
   const mentions = [];
   let quote = "", claim = null, foundSign = null, clue = null, guardedLie = false, socialReaction = false, dispositionDelta = 0;
 
@@ -8940,20 +8990,19 @@ function answerFor(s, id, night, q, targetId) {
        that night (hailed, followed, watched, or simply crossed paths with
        them at a location), there is no plausible reason left to deny the
        plain fact of the place itself -- only to be evasive about why. */
-    const playerWitnessed = s.playerSaw.find((f) => f.night === night && f.id === id && f.loc && f.loc !== "home");
-    const witnessedPlace = playerWitnessed ? placeNoun(playerWitnessed.loc, (log && log.exposureMap && log.exposureMap[id]) || "outdoor") : null;
+    const witnessedPlace = playerWitnessed ? placeNoun(playerWitnessed.location, (log && log.exposureMap && log.exposureMap[id]) || "outdoor") : null;
     let witnessedHandled = false;
     if (isMonster) {
       const mc = monsterClaim();
       claim = mc.loc;
       if (playerWitnessed && mutualMonsterRecognition) {
-        claim = playerWitnessed.loc;
-        s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
+        claim = playerWitnessed.location;
+        s.monsterClaims[night] = { loc: playerWitnessed.location, admitOut: true };
         quote = `${npc.name} does not answer. The house is empty. They knew you escaped and left before dawn.`;
         witnessedHandled = true;
       } else if (playerWitnessed && !monsterFaceKnown) {
-        claim = playerWitnessed.loc;
-        s.monsterClaims[night] = { loc: playerWitnessed.loc, admitOut: true };
+        claim = playerWitnessed.location;
+        s.monsterClaims[night] = { loc: playerWitnessed.location, admitOut: true };
         quote = `"The ${witnessedPlace}. You saw me yourself. Sleep and I have parted ways, that is all."`;
         witnessedHandled = true;
       } else if (log.griefOut && log.griefOut[id]) {
@@ -8980,7 +9029,7 @@ function answerFor(s, id, night, q, targetId) {
       else quote = `"The ${placeNoun(mc.loc, "outdoor")}, briefly. Saw nothing, heard nothing."`;
     } else if (lying) {
       if (playerWitnessed) {
-        claim = playerWitnessed.loc;
+        claim = playerWitnessed.location;
         quote = `"The ${witnessedPlace}. You saw me there yourself." The words come out flat, a fact recited rather than felt.`;
         witnessedHandled = true;
       } else {
@@ -8991,7 +9040,7 @@ function answerFor(s, id, night, q, targetId) {
       const gd = npcById(s, log.griefOut[id]);
       const gname = gd ? gd.name : "the dead";
       if (playerWitnessed) {
-        claim = playerWitnessed.loc;
+        claim = playerWitnessed.location;
         quote = `"You know where. The ${witnessedPlace}. You saw me there, and you know who is buried in it."`;
         witnessedHandled = true;
       } else if (chance(0.6)) {
@@ -9004,7 +9053,7 @@ function answerFor(s, id, night, q, targetId) {
     } else if (log && log.secretOut && log.secretOut[id] && !hasEarnedSecret(s, id)) {
       /* an innocent hiding a human secret lies too: badly, unless the lie is already dead on arrival */
       if (playerWitnessed) {
-        claim = playerWitnessed.loc;
+        claim = playerWitnessed.location;
         quote = `"You know where. The ${witnessedPlace}. What I was doing there is mine."`;
         witnessedHandled = true;
       } else {
@@ -9034,7 +9083,7 @@ function answerFor(s, id, night, q, targetId) {
     }
     /* -- the night walk is remembered, both ways -- */
     if (!witnessedHandled) {
-      const metMe = (npc.sawYouOut || []).find((e2) => e2.night === night && e2.met);
+      const metMe = acknowledgedMeeting[0];
       /* the night somebody died with your lantern on the same road: asked
          where THEY were that night, they answer, and then they ask you the
          same thing, because the whole village has been asking it since
@@ -9049,11 +9098,11 @@ function answerFor(s, id, night, q, targetId) {
           : ` A beat. "You were abroad that night yourself, mind. Same night as ${lw.name}. I only repeat what the square says, and the square has said it twice."`;
       } else if (metMe && claim && claim !== "home") {
         quote += ` "But you know that. You hailed me in the lane yourself, remember. Two fools abroad on the same bad night."`;
-      } else if (claim && claim !== "home" && s.playerSaw.some((f) => f.night === night && f.id === id && f.loc === claim)) {
+      } else if (claim && claim !== "home" && encounter.mutual.some((row) => row.location === claim)) {
         quote += ` "But then, you know that already. You were there yourself. I saw your lantern."`;
-      } else if ((isMonster || npc.turned) && claim === "home" && (npc.sawYouOut || []).some((e2) => e2.night === night) && chance(0.5)) {
+      } else if ((isMonster || npc.turned) && claim === "home" && actorWitnessedPlayer.length && chance(0.5)) {
         quote += ` A pause, one beat too long. "Strange question, though, from you. I could swear I saw YOU abroad that night. What is it you do out there, in the dark, while honest folk sleep?"`;
-      } else if (!isMonster && !npc.turned && (npc.sawYouOut || []).some((e2) => e2.night === night && !e2.met) && chance(0.55)) {
+      } else if (!isMonster && !npc.turned && actorWitnessedPlayer.some((row) => !row.acknowledged) && chance(0.55)) {
         /* an honest neighbour brings it up too, and that is the point: the
            barb was never proof of anything about THEM, and it is not proof
            of anything about you either. Everyone out after dark looks the
@@ -9074,11 +9123,7 @@ function answerFor(s, id, night, q, targetId) {
     if (deniedThisPlace) quote = `“I told you: I was not there. I cannot name people on a road I deny walking.”`;
     else if (!event) quote = `“I do not know which road you mean.”`;
     else {
-      const atPlace = new Set();
-      (s.worldEvents || []).filter((other) => other.night === event.night && other.location === event.location && (other.actorIds || []).includes(id)).forEach((other) => {
-        (other.actorIds || []).forEach((actorId) => { if (actorId !== id) atPlace.add(actorId); });
-      });
-      const seen = [...atPlace].map((actorId) => npcById(s, actorId)).filter((x) => x && x.alive);
+      const seen = recordedCompanions(s, id, event.night, event.location).filter((x) => x && x.alive);
       seen.forEach((x) => mentions.push({ id: x.id, loc: event.location, kind: "with", night }));
       quote = seen.length
         ? `“I saw ${seen.map((x) => x.name).join(" and ")} near the ${event.location}. No one else I could identify.”`
@@ -9092,14 +9137,13 @@ function answerFor(s, id, night, q, targetId) {
        the same witness list; acknowledge it, then add only what was seen
        beyond that first answer (an absence, odd behaviour, or someone met
        on the road). */
-    const playerWitnessed = (s.playerSaw || []).find((f) => f.night === night && f.id === id && f.loc && f.loc !== "home");
     const selfSecretCover = log && log.secretOut && log.secretOut[id] && !hasEarnedSecret(s, id) && !playerWitnessed;
     const narrativeClaim = priorNightClaim
       ? priorNightClaim.claim
       : isMonster
         ? monsterClaim().loc
         : (lying || selfSecretCover)
-          ? (playerWitnessed ? playerWitnessed.loc : "home")
+          ? (playerWitnessed ? playerWitnessed.location : "home")
           : (actual || "home");
     claim = narrativeClaim;
     const coveringRealLocation = narrativeClaim !== actual;
@@ -9858,17 +9902,17 @@ function answerFor(s, id, night, q, targetId) {
 
   let flag = null;
   if (q === "where" && claim) {
-    const contra = s.playerSaw.find((f) => f.night === night && f.id === id && f.loc !== claim);
-    if (contra) flag = `You saw them out that night, near the ${contra.loc}. This is a lie.`;
+    const contra = encounter.playerSawActor.find((row) => row.location !== claim);
+    if (contra) flag = `You saw them out that night, near the ${contra.location}. This is a lie.`;
   }
   if (q === "saw" && claim) {
-    const contra = s.playerSaw.find((f) => f.night === night && f.id === id && f.loc !== claim);
-    if (contra) flag = `Their witness account depends on being ${claim === "home" ? "at home" : `at the ${claim}`}. You saw them near the ${contra.loc}. This is a lie.`;
+    const contra = encounter.playerSawActor.find((row) => row.location !== claim);
+    if (contra) flag = `Their witness account depends on being ${claim === "home" ? "at home" : `at the ${claim}`}. You saw them near the ${contra.location}. This is a lie.`;
   }
   if (q === "about" && targetId) {
     const placed = mentions.find((mn) => mn.kind === "placed" || mn.kind === "vouch");
     if (placed) {
-      const truth = s.playerSaw.find((f) => f.night === night && f.id === targetId && f.loc !== placed.loc);
+      const truth = playerSighted(s, targetId, night).find((row) => row.location !== placed.loc);
       if (truth) flag = `You know where ${npcById(s, targetId).name} truly was that night. This is a lie.`;
     }
   }
@@ -17961,11 +18005,24 @@ function MonsterVillage() {
     const struckP = s.struckNpcs.includes(n.id);
     const facts = [];
     const playerSightings = new Map();
-    for (const f of s.playerSaw.filter((seen) => seen.id === n.id)) {
+    const importedNight = (night) => HE_V6_DIRECTOR_ADAPTER && s.continuity
+      && HE_V6_DIRECTOR_ADAPTER.hasImportedNight(s.continuity, night);
+    const canonicalEncounter = HE_V6_RUN_CONTINUITY
+      ? HE_V6_RUN_CONTINUITY.encounterRecognition(s, n.id, {})
+      : { playerSawActor: [], actorSawPlayer: [] };
+    const canonicalPlayerSightings = canonicalEncounter.playerSawActor.map((row) => ({
+      night: row.night, loc: row.location, met: row.acknowledged, eventId: row.eventId,
+    }));
+    const legacyPlayerSightings = s.playerSaw.filter((seen) => seen.id === n.id && !importedNight(seen.night));
+    for (const f of [...canonicalPlayerSightings, ...legacyPlayerSightings]) {
       playerSightings.set(`${f.night}|${f.loc}`, f);
     }
     const laneMemories = new Map();
-    for (const e2 of (n.sawYouOut || [])) {
+    const canonicalLaneMemories = canonicalEncounter.actorSawPlayer.map((row) => ({
+      night: row.night, loc: row.location, met: row.acknowledged, eventId: row.eventId,
+    }));
+    const legacyLaneMemories = (n.sawYouOut || []).filter((row) => !importedNight(row.night));
+    for (const e2 of [...canonicalLaneMemories, ...legacyLaneMemories]) {
       const key = `${e2.night}|${e2.loc}`;
       const prior = laneMemories.get(key);
       if (!prior || (!prior.met && e2.met)) laneMemories.set(key, e2);
