@@ -2729,6 +2729,28 @@ function reachRescueDoor(state) {
   assert(!currentContextQuestions.some(function (entry) { return /You saw me at|What did you make of that/.test(entry.label); }), "one-sided sightings cannot leak into player-authored interview questions");
   assert(!currentContextQuestions.some(function (entry) { return /old parcel/.test(entry.label); }), "older unasked evidence no longer crowds the current interview");
 
+  var canonicalTopicState = {
+    nightNum: 3, askedLog: { falk: [] }, npcs: [], continuity: {}, memories: [], observations: [],
+    worldEvents: [{
+      eventId: "n3:encounter:falk:old-church", sourceEventIds: ["encounter:falk"],
+      night: 3, location: "Old Church", kind: "director_encounter", actorIds: ["falk"],
+      question: "At the Old Church, why were you out?"
+    }]
+  };
+  contextualContext.HE_V6_DIRECTOR_ADAPTER = {
+    hasImportedNight: function () { return true; },
+    playerCanRaiseLegacyEvent: function () { return true; },
+    playerDirectlyKnowsLegacyEvent: function () { return true; },
+    canonicalIdsForLegacyEvent: function () { return ["night:3:director:event:encounter:falk"]; }
+  };
+  contextualContext.HE_V6_RUN_CONTINUITY = {
+    sharedDiscoveryForActor: function () { return null; },
+    recognitionEvents: function () { return [{ eventId: "night:3:director:event:encounter:falk" }]; }
+  };
+  assert.strictEqual(contextualContext.contextualQuestionsFor(canonicalTopicState, "falk").length, 1, "a canonical player recognition creates the direct encounter topic without a copied observation");
+  contextualContext.HE_V6_RUN_CONTINUITY.recognitionEvents = function () { return []; };
+  assert.strictEqual(contextualContext.contextualQuestionsFor(canonicalTopicState, "falk").length, 0, "raiseable hearsay cannot be phrased as a firsthand sighting");
+
   var companionSource = html.slice(html.indexOf("function recordedCompanions"), html.indexOf("/* One canonical key", html.indexOf("function recordedCompanions")));
   var companionState = {
     npcs: [{ id: "tobias", name: "Old Tobias", alive: true }, { id: "falk", name: "Doctor Falk", alive: true }, { id: "rosa", name: "Rosa", alive: false }],

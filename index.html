@@ -3009,6 +3009,8 @@ function contextualQuestionsFor(s, npcId) {
   const v6CanRaise = (event) => typeof HE_V6_DIRECTOR_ADAPTER === "undefined"
     || !HE_V6_DIRECTOR_ADAPTER
     || HE_V6_DIRECTOR_ADAPTER.playerCanRaiseLegacyEvent(s.continuity, event);
+  const v6DirectlyKnows = (event) => !v6Adapter
+    || v6Adapter.playerDirectlyKnowsLegacyEvent(s.continuity, event);
   const relevantNight = s.nightNum;
   const asked = new Set((s.askedLog[npcId] || []).filter((k) => k.includes(":context:")));
   const out = [];
@@ -3035,12 +3037,17 @@ function contextualQuestionsFor(s, npcId) {
   const sharedVictimId = canonicalShared ? canonicalShared.victimId : sharedEvent && sharedEvent.victimId;
   const sharedLocation = canonicalShared ? canonicalShared.location : sharedEvent && sharedEvent.location;
   const directKinds = ["seen", "not_seen", "evidence"];
+  const eventIsImported = (event) => !!(event && v6Adapter && s.continuity
+    && v6Adapter.hasImportedNight(s.continuity, event.night));
   /* Ordinary sightings belong to the preceding night only. A physical item
      found by daylight is different: the player still has it. Keep its return
      action available across later days until they actually give it back. */
   const relevantDirectObservation = (obs) => {
     if (obs.subjectId !== npcId || !directKinds.includes(obs.kind)) return false;
     const sourceEvent = events.find((entry) => entry.eventId === obs.eventId);
+    /* Once this night has a ledger, the copied observation is presentation
+       data only. Eligibility comes from the canonical observation/evidence. */
+    if (eventIsImported(sourceEvent)) return false;
     if (sourceEvent && !v6CanRaise(sourceEvent)) return false;
     if (obs.night === relevantNight) return true;
     const event = sourceEvent;
@@ -3049,18 +3056,32 @@ function contextualQuestionsFor(s, npcId) {
       && event.actorIds && event.actorIds.includes(npcId)
       && !asked.has(`${obs.night}:context:${id}`));
   };
-  const directEvents = new Set((s.observations || [])
-    .filter(relevantDirectObservation)
-    .map((obs) => obs.eventId));
+  const directRows = (s.observations || []).filter(relevantDirectObservation).map((obs) => ({
+    obs, event: events.find((entry) => entry.eventId === obs.eventId),
+  }));
+  if (v6Run && v6Adapter && s.continuity) {
+    const playerRecognitionIds = new Set(v6Run.recognitionEvents(s, "player", npcId, {}).map((row) => row.eventId));
+    for (const event of events) {
+      if (!eventIsImported(event) || !event.question || !(event.actorIds || []).includes(npcId)) continue;
+      const id = `${event.eventId}:${event.kind === "director_finding" ? "evidence" : "seen"}`;
+      const current = event.night === relevantNight;
+      const carried = event.kind === "director_finding" && event.returnable && !asked.has(`${event.night}:context:${id}`);
+      if (!current && !carried) continue;
+      const sourceIds = v6Adapter.canonicalIdsForLegacyEvent(event);
+      const kind = event.kind === "director_finding" && v6DirectlyKnows(event)
+        ? "evidence"
+        : sourceIds.some((sourceId) => playerRecognitionIds.has(sourceId)) ? "seen" : null;
+      if (kind) directRows.push({ obs: { eventId: event.eventId, night: event.night, kind, subjectId: npcId }, event });
+    }
+  }
   const offeredEvents = new Set();
   const offeredShapes = new Set();
   const offeredLabels = new Set();
   /* Seed visible labels from every already-spent context key before building
      the tray. Otherwise an older duplicate can reappear simply because its
      unasked ledger row was visited before the asked one. */
-  for (const obs of (s.observations || [])) {
-    if (!relevantDirectObservation(obs)) continue;
-    const event = events.find((entry) => entry.eventId === obs.eventId);
+  for (const row of directRows) {
+    const { obs, event } = row;
     const id = `${obs.eventId}:${obs.kind}`;
     if (event && event.question && asked.has(`${obs.night}:context:${id}`)) offeredLabels.add(`${obs.night}|${event.question}`);
   }
@@ -3072,9 +3093,8 @@ function contextualQuestionsFor(s, npcId) {
       offeredEvents.add(sharedEvent.eventId);
     }
   }
-  for (const obs of (s.observations || [])) {
-    if (!relevantDirectObservation(obs)) continue;
-    const event = events.find((e) => e.eventId === obs.eventId);
+  for (const row of directRows) {
+    const { obs, event } = row;
     if (!event || !event.question) continue;
     const id = `${event.eventId}:${obs.kind}`;
     const shape = `${obs.night}|${obs.kind === "evidence" ? "evidence" : "where"}|${event.location}|${event.question}`;

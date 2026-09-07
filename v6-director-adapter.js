@@ -537,11 +537,24 @@
     });
   }
 
+  /* Direct interview prompts (“I saw you…”, “I found…”) have a stricter
+     threshold than general raiseability. Testimony permits a hearsay topic,
+     but must never be rewritten as the player's own sight or discovery. */
+  function playerDirectlyKnowsLegacyEvent(ledger, event) {
+    if (!ledger || !event || event.night == null || !hasImportedNight(ledger, event.night)) return true;
+    var ids = canonicalIdsForLegacyEvent(event);
+    if (ids.some(function (id) { return Continuity.observedEvent(ledger, PLAYER_ID, id); })) return true;
+    return list(ledger.evidence).some(function (evidence) {
+      return ids.indexOf(evidence.sourceEventId) >= 0 && list(evidence.discoveredBy).indexOf(PLAYER_ID) >= 0;
+    });
+  }
+
   return Object.freeze({
     projectDirectorNight: projectDirectorNight,
     eventIdFor: eventIdFor,
     hasImportedNight: hasImportedNight,
     canonicalIdsForLegacyEvent: canonicalIdsForLegacyEvent,
-    playerCanRaiseLegacyEvent: playerCanRaiseLegacyEvent
+    playerCanRaiseLegacyEvent: playerCanRaiseLegacyEvent,
+    playerDirectlyKnowsLegacyEvent: playerDirectlyKnowsLegacyEvent
   });
 });

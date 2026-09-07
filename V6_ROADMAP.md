@@ -43,7 +43,7 @@ existing V5 screens remain authoritative until each consumer below has moved
 and its parity tests pass. This is deliberate: V6 must replace the compatibility
 shell gradually, not become another independent story engine beside it.
 
-### Current checkpoint: V6.1h
+### Current checkpoint: V6.1i
 
 The playable build now initializes and persists the V6 ledger. When a Director
 night reaches a terminal state, `v6-director-adapter.js` imports every truth
@@ -147,6 +147,14 @@ lantern” from co-location or the opposite person's sighting. Witness lists,
 death-night alibis, suspicion for being abroad and character records use those
 same observer-specific events; copied `playerSaw` and `sawYouOut` rows remain
 only as fallback for nights saved before the V6 import boundary.
+
+Contextual interview topics now distinguish a fact the player may generally
+raise from a fact the player knows firsthand. For imported nights, direct
+“I saw you” topics are generated from canonical player recognition and “I
+found this” topics from canonical discovered evidence, not from the copied
+`observations` list. Testimony remains valid hearsay but cannot be promoted
+into first-person knowledge. Legacy event summaries now supply wording only;
+they no longer decide whether their own question is available.
 
 ## Delivery slices
 

@@ -157,6 +157,27 @@ function take(state, wanted) {
   }), true);
 })();
 
+(function hearsayDoesNotBecomeAFirsthandInterviewPrompt() {
+  var state = Director.createNight(config("v6-adapter-hearsay"));
+  state.ledgers.truth.push({
+    id: "private-errand:tobias", slot: 1, kind: "private_errand", location: "Graveyard",
+    actors: ["tobias"]
+  });
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, { runId: "run-hearsay", actors: actors });
+  var eventId = Adapter.eventIdFor(state, "private-errand:tobias");
+  ledger = Continuity.recordTestimony(ledger, {
+    id: "rosa-reports-tobias", speakerId: "rosa", listenerId: "player",
+    aboutEventId: eventId, claims: { actorId: "tobias", location: "Graveyard" }
+  });
+  var legacy = {
+    eventId: "n2:encounter:tobias:graveyard", sourceEventIds: ["private-errand:tobias"],
+    night: 2, kind: "director_encounter"
+  };
+  assert.strictEqual(Adapter.playerCanRaiseLegacyEvent(ledger, legacy), true, "hearsay remains a valid general topic");
+  assert.strictEqual(Adapter.playerDirectlyKnowsLegacyEvent(ledger, legacy), false, "hearsay cannot become an I-saw-you prompt");
+})();
+
 (function witnessedSecretsBecomeCanonicalPlayerKnowledge() {
   var state = Director.createNight(config("v6-adapter-secret"));
   state.ledgers.truth.push({
