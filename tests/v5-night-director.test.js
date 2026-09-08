@@ -2270,12 +2270,33 @@ function reachRescueDoor(state) {
   state = take(state, { type: "REACH_HOME" });
   assert(/Doctor Falk has not come home/i.test(state.currentBeat.text));
   state = take(state, { type: "ANSWER_DOOR" });
-  assert(/left for the Old Mill before the bell/i.test(state.currentBeat.text), "answering advances from the missing-person claim to a concrete last sighting");
+  assert(/take the road toward the Old Mill before the bell/i.test(state.currentBeat.text), "answering advances from the missing-person claim to a concrete last sighting");
   state = take(state, { type: "STEP_OUTSIDE" });
-  assert(state.found.clues.some(function (clue) { return /Doctor Falk/.test(clue.text) && /search the first stretch together/i.test(clue.text); }), "opening the door advances the search instead of repeating the threshold line");
+  assert(/follow the mill road as far as the broken wheel/i.test(state.currentBeat.text) && /no blood, body or dropped lantern/i.test(state.currentBeat.text), "opening the door shows the concrete search and what it failed to find");
+  assert(state.found.clues.some(function (clue) { return /Rosa saw Doctor Falk take the road/.test(clue.text) && /searched the approach together and found no trace/i.test(clue.text); }), "the journal keeps the useful fact without copying the whole scene");
   var findings = Director.consequenceProjection(state).findings.filter(function (finding) { return finding.source === "threshold_missing_report"; });
   assert.deepStrictEqual(findings.map(function (finding) { return finding.actorId; }).sort(), ["falk", "rosa"], "the reporter and missing neighbour each receive a usable interview lead");
   assert(findings.every(function (finding) { return finding.question && finding.honest && finding.evasive; }), "both sides of the report have complete interview copy");
+})();
+
+(function aMissingPersonSearchUsesConcreteVillageSquareLanguage() {
+  var config = baseConfig("neighbour-threshold-square-concern");
+  config.villagers = [
+    { id: "liesel", name: "Liesel", role: "the Innkeeper", alive: true },
+    { id: "rosa", name: "Rosa", role: "the Seamstress", alive: true }
+  ];
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { liesel: "home", rosa: "home" } };
+  config.thresholdEvent = { roll: 0, visitorKind: "neighbour", actorId: "liesel", purpose: "concern", concernId: "rosa", clueLocation: "Village Square", requestRoll: 0 };
+  var state = Director.createNight(config);
+  state = take(state, { type: "LEAVE", to: "Village Square" });
+  state = take(state, { type: "GO_HOME" });
+  state = take(state, { type: "REACH_HOME" });
+  state = take(state, { type: "ANSWER_DOOR" });
+  assert(/take the lane into the Village Square/i.test(state.currentBeat.text) && !/road toward the Village Square/i.test(state.currentBeat.text), "the central square is approached by its lane, not described like a distant destination");
+  state = take(state, { type: "STEP_OUTSIDE" });
+  assert(/check the alleys around the well/i.test(state.currentBeat.text) && /No answer\. You find no blood, body or dropped lantern\./.test(state.currentBeat.text), "the search shows where the player looked and what they found");
+  assert(state.currentBeat.text.split(/\s+/).length <= 55, "the complete threshold search stays readable on one mobile card");
 })();
 
 (function announcedGatheringsRemainReachable() {
@@ -3602,6 +3623,9 @@ function reachRescueDoor(state) {
   assert(directorSource.includes("visibleDiscoveries") && directorSource.includes('join(" ")'), "multiple findings earned in one action are presented together before entering the Journal");
   assert(directorSource.includes('purpose = "rescue"') && directorSource.includes('threshold_rescue_refused') && directorSource.includes('shared_body_discovery'), "the named doorstep rescue can resolve as a lethal lure, a refused victim, or a shared body discovery");
   assert(directorSource.includes('kind: "threshold_rescue_refusal"') && html.includes("tells the square they came to your door") && html.includes("repairPublicBlame(s, refusalEvent"), "a refused monster rescue becomes a specific public accusation at first light");
+  ["retraces the evening", "left no answer there", "agree what each of you must ask", "can tell the village exactly that", "write down the lead, not a conclusion", "clear enough to record if you choose"].forEach(function (phrase) {
+    assert(!directorSource.includes(phrase), "threshold scenes must show concrete actions instead of procedural summary: " + phrase);
+  });
   assert(html.includes("event.sharedDiscovery") && html.includes("No accusation is made against you") && html.includes("We took the same road and found the body together"), "daylight preserves the companion's corroboration and remembered interview answer");
   assert(html.includes('source === "threshold_missing_report"') && html.includes("is missing from the village"), "an unavailable subject of a threshold report is explained in the interview picker");
   assert(html.includes('window.storage.get("mv-run-day-ui")') && html.includes('window.storage.set("mv-run-day-ui"'), "committed daylight presentation is saved separately from the run");

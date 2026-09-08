@@ -1961,6 +1961,10 @@
     return lines[(Math.floor((roll || 0) * lines.length) + nightOffset) % lines.length];
   }
 
+  function thresholdRouteTo(location) {
+    return location === "Village Square" ? "the lane into the Village Square" : "the road toward the " + location;
+  }
+
   function thresholdRequestText(state, revealed) {
     var threshold = state.thresholdEvent;
     var actor = thresholdActor(state, threshold.actorId);
@@ -2067,7 +2071,7 @@
     }
     if (threshold.purpose === "concern") {
       var missing = thresholdTarget(state);
-      return "“I will help,” you say. " + name + " answers, “" + (missing ? missing.name : "They") + " left for the " + threshold.clueLocation + " before the bell. Their home is still dark. Bring your lantern; I will show you where I last saw them.”";
+      return "“I will help,” you say. " + name + " answers, “I saw " + (missing ? missing.name : "them") + " take " + thresholdRouteTo(threshold.clueLocation) + " before the bell. Their lamp is still dark. Bring your lantern.”";
     }
     if (threshold.purpose === "rescue") {
       var rescueTarget = thresholdTarget(state);
@@ -2669,9 +2673,9 @@
         finalLocation = threshold.clueLocation || state.monsterSchedule.huntLoc || "Village Square";
         state.player.location = finalLocation;
         if (rescueAttack && actor) recordSharedRescueDiscovery(state, rescueAttack, actor);
-        text = "You and " + (actor ? actor.name : "your neighbour") + " take lanterns to the " + finalLocation + ". You find " + (rescueTarget ? rescueTarget.name : "the missing neighbour") + " where the road narrows. The attacker is gone; the body is still warm. You arrived together, and " + (actor ? actor.name : "your companion") + " can tell the village exactly that.";
+        text = "You and " + (actor ? actor.name : "your neighbour") + " take lanterns to the " + finalLocation + ". You find " + (rescueTarget ? rescueTarget.name : "the missing neighbour") + " where the road narrows. The attacker is gone; the body is still warm. " + (actor ? actor.name : "Your companion") + " kneels beside them. “We came together,” they say. “I will tell them.”";
       } else if (threshold.purpose === "sign" && threshold.sign) {
-          text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " The physical mark is clear enough to record if you choose.";
+          text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " leads you to the " + threshold.clueLocation + ". " + STAMP_TEXT[threshold.sign] + " They shield the lantern while you examine the mark.";
         if (!state.found.stamps.some(function (stamp) { return stamp.sign === threshold.sign; })) {
           state.found.stamps.push({ sign: threshold.sign, slot: state.cursor, location: threshold.clueLocation, beatId: "threshold-result:" + state.cursor + ":" + action.type.toLowerCase(), source: "threshold_neighbour" });
         }
@@ -2679,8 +2683,17 @@
         var concernTarget = thresholdTarget(state);
         var concernName = concernTarget ? concernTarget.name : "the missing neighbour";
         var reporterName = actor ? actor.name : "Your neighbour";
-        text = "You lift the bar and open the door. Outside, " + reporterName + " retraces the evening: " + concernName + " took the road toward the " + threshold.clueLocation + " before the bell, never reached home, and left no answer there. You search the first stretch together, then agree what each of you must ask by daylight.";
-        state.found.clues.push({ id: "threshold-concern:" + state.cursor, slot: state.cursor, location: threshold.clueLocation, text: text, source: "threshold_neighbour" });
+        var concernRoute = thresholdRouteTo(threshold.clueLocation);
+        var concernSearch = {
+          "Village Square": "You check the alleys around the well and call " + concernName + "'s name.",
+          "Tavern": "You search the yard and the lane behind the Tavern, calling " + concernName + "'s name.",
+          "Old Church": "You search along the churchyard wall and the vestry path.",
+          "Graveyard": "You search between the gate and the first row of graves.",
+          "Old Mill": "You follow the mill road as far as the broken wheel.",
+          "Dark Forest": "You search from the last cottage to the first trees."
+        }[threshold.clueLocation] || ("You search the road toward the " + threshold.clueLocation + ".");
+        text = "You lift the bar. " + reporterName + " leads you along " + concernRoute + ". " + concernSearch + " No answer. You find no blood, body or dropped lantern. " + reporterName + " goes to wake the others; you return home before dawn.";
+        state.found.clues.push({ id: "threshold-concern:" + state.cursor, slot: state.cursor, location: threshold.clueLocation, text: reporterName + " saw " + concernName + " take " + concernRoute + ". You searched the approach together and found no trace.", source: "threshold_neighbour" });
         if (actor && concernTarget) appendTruth(state, {
           id: "threshold-missing-report:" + state.cursor + ":" + concernTarget.id,
           slot: state.cursor,
@@ -2691,14 +2704,14 @@
           subjectId: concernTarget.id,
           text: actor.name + " reported that " + concernTarget.name + " failed to return from the " + threshold.clueLocation + ".",
           reporterQuestion: "You came to my door because " + concernTarget.name + " had not returned from the " + threshold.clueLocation + ". What exactly did you see?",
-          reporterHonest: "“I saw " + concernTarget.name + " take the road toward the " + threshold.clueLocation + " before the bell. Their home stayed dark, so I came to you.”",
-          reporterEvasive: "“I told you what frightened me. I cannot turn worry into proof.”",
-          subjectQuestion: actor.name + " said you never came home from the " + threshold.clueLocation + ". Where were you?",
-          subjectHonest: "“I was delayed on the road from the " + threshold.clueLocation + ". I should have sent word. " + actor.name + " had reason to worry.”",
-          subjectEvasive: "“" + actor.name + " lost sight of me. That is not the same as knowing where I went.”"
+          reporterHonest: "“I saw " + concernTarget.name + " take " + concernRoute + " before the bell. Their lamp was still dark after midnight, so I came for you.”",
+          reporterEvasive: "“I saw them leave. I did not see what happened after.”",
+          subjectQuestion: actor.name + " said you had not returned from the " + threshold.clueLocation + " when they came to my door. What delayed you?",
+          subjectHonest: "“I took longer than I meant to. By the time I returned, " + actor.name + " was out looking for me.”",
+          subjectEvasive: "“I was late. That is all " + actor.name + " knew, and all you know.”"
         });
       } else if (threshold.purpose === "rumour") {
-        text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " lowers their voice. “I saw " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " near the " + threshold.clueLocation + " after dark. I cannot say why.” You write down the lead, not a conclusion.";
+        text = "You lift the bar and step outside. " + (actor ? actor.name : "Your neighbour") + " lowers their voice. “I saw " + (thresholdTarget(state) ? thresholdTarget(state).name : "someone") + " near the " + threshold.clueLocation + " after dark. I called once. They did not turn.” Before you can ask more, they head home.";
         state.found.clues.push({ id: "threshold-rumour:" + state.cursor, slot: state.cursor, location: HOME, text: text, source: "threshold_neighbour" });
       } else if (threshold.purpose === "refuge") {
         text = "You lift the bar and open the door. You let " + (actor ? actor.name : "your neighbour") + " inside. They heard footsteps behind them, but saw no face. You bar the door together until dawn.";
@@ -2726,20 +2739,20 @@
           text: actor.name + " came to your door, then took you to the " + questionPlace + ". " + questionFinding,
           question: "You came to my door and took me to the " + questionPlace + ". What were you trying to show me?",
           honest: "“The mark we found together. I wanted another pair of eyes on it before daylight spoiled it.”",
-          evasive: "“You chose to follow me. We both saw the same mark. Decide for yourself what it means.”"
+          evasive: "“The mark was under your lantern as well as mine. I know no more about it than you do.”"
         });
       } else if (threshold.purpose === "return_item" && watchedActor && watchedActorReturnedItem) {
         text = "You lift the bar and open the door. " + actor.name + " returns " + (threshold.item || "what you dropped") + ". They ask why you watched their house.";
       } else if (threshold.purpose === "return_item" && watchedActor) {
         text = threshold.spoken
-          ? "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " hands back " + (threshold.item || "what you dropped") + ". They leave the question hanging between you."
+          ? "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " hands back " + (threshold.item || "what you dropped") + ". “Why were you watching " + watchedActor.name + "'s house?” You give no answer before they leave."
           : "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it outside " + watchedActor.name + "'s door.";
       } else if (threshold.purpose === "return_item" && answeredIntent.kind === "search" && answeredIntent.loc) {
         text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". They found it at the " + answeredIntent.loc + ".";
       } else if (threshold.purpose === "return_item") {
         text = "You lift the bar and open the door. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ".";
       } else {
-        text = "You lift the bar and open the door. You step outside. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + " and leaves you with an uncomfortable question about the night's watch.";
+        text = "You lift the bar and step outside. " + (actor ? actor.name : "Your neighbour") + " returns " + (threshold.item || "what you dropped") + ". “Were you out tonight?” they ask. You do not answer before they leave.";
       }
     } else return invalid(state, action, "The door remains between you and it.");
     threshold.resolved = true;
