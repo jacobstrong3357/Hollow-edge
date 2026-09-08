@@ -2784,7 +2784,7 @@
     threat.setupResolved = true;
     state.phase = "threat";
     appendBeat(state, makeBeat(threat.id, "threat", threat.slot, threat.location,
-      response + " For one more breath, " + victimName + " is only a neighbour beside you. Then they look past your shoulder. Their hands go still. A shape closes the distance behind them. It has not seen your choice yet.", {
+      response + " Then " + victimName + "'s eyes fix past your shoulder. “Behind you!” A shape rushes from the fog at your back. The warning buys one heartbeat.", {
         actorId: threat.victimId,
         sign: threat.sign,
         truthEventId: exchange.id,
@@ -2885,7 +2885,9 @@
         var saved = outcome.intervene < 0.35;
         appendTruth(state, { id: "intervene:" + threat.slot, slot: threat.slot, kind: "intervention", location: threat.location, actors: ["player", threat.victimId], succeeded: saved });
         appendBeat(state, makeBeat("intervene-beat:" + threat.slot, "flee", threat.slot, threat.location,
-          saved ? "You shout. Your neighbour runs for the wall. The figure turns toward you instead." : "You shout. Your neighbour runs, but the figure reaches them before the wall.", { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
+          threat.setupResolved
+            ? (saved ? "You turn and draw it past your neighbour. They run for the wall. The thing turns back toward you." : "You turn too late. It knocks you aside and reaches your neighbour.")
+            : (saved ? "You shout. Your neighbour runs for the wall. The figure turns toward you instead." : "You shout. Your neighbour runs, but the figure reaches them before the wall."), { actorId: threat.victimId, outcome: saved ? "saved" : "failed" }));
         if (!saved) killVillager(state, threat.victimId, threat.slot, true, threat.location);
         else if (state.monsterSchedule.relentless) {
           /* The warning saves the neighbour from the first rush by making the
@@ -2899,15 +2901,17 @@
             fallbackLocation: threat.location
           });
         }
-      } else if (action.type === "IGNORE" || action.type === "FLEE") {
+      } else if (action.type === "IGNORE" || action.type === "FLEE" || (action.type === "SACRIFICE" && threat.setupResolved)) {
         appendTruth(state, { id: "abandon:" + threat.slot + ":" + threat.victimId, slot: threat.slot, kind: "abandonment", action: action.type, location: threat.location, actors: ["player", threat.victimId], victimId: threat.victimId });
         killVillager(state, threat.victimId, threat.slot, true, threat.location);
         var witnessedDeathBeat = state.currentBeat;
         var abandonedVictim = state.cast.find(function (villager) { return villager.id === threat.victimId; });
-        var abandonmentText = action.type === "FLEE"
+        var abandonmentText = action.type === "SACRIFICE"
+          ? "You seize " + (abandonedVictim ? abandonedVictim.name : "your neighbour") + " and shove them into the rushing shape. Their warning ends in your place. You run."
+          : action.type === "FLEE"
           ? "You run while the sound behind you becomes an event the village must survive in the morning."
           : "You stay hidden. " + (witnessedDeathBeat && witnessedDeathBeat.text || ("The shape reaches " + (abandonedVictim ? abandonedVictim.name : "your neighbour") + " before your eyes.")) + " You do not call out.";
-        appendBeat(state, makeBeat("flee-witness:" + threat.slot, action.type === "FLEE" ? "flee" : "aftermath", threat.slot, threat.location, abandonmentText, {
+        appendBeat(state, makeBeat("flee-witness:" + threat.slot, action.type === "FLEE" || action.type === "SACRIFICE" ? "flee" : "aftermath", threat.slot, threat.location, abandonmentText, {
           actorId: threat.victimId,
           outcome: "abandoned",
           meta: action.type === "IGNORE" ? { bodyAtScene: true, investigable: true, disturbanceLocation: threat.location, victimId: threat.victimId, attackEventId: "attack:" + threat.slot + ":" + threat.victimId, critical: true } : undefined
@@ -2916,7 +2920,7 @@
       state.resolvedAttackSlots.push(threat.slot);
       state.pendingThreat = null;
       state.phase = "active";
-      if (action.type === "FLEE") state.phase = "returning";
+      if (action.type === "FLEE" || action.type === "SACRIFICE") state.phase = "returning";
       return state;
     }
     if (action.type !== "FLEE" && action.type !== "HIDE") return invalid(state, action, "Run or hide.");
@@ -3439,11 +3443,21 @@
         action("WATCH_MONSTER", "Stay hidden. Watch it. Learn it", "amber"),
         action("CONFRONT_MONSTER", state.player.armedGuess ? "Step out. Name it. End it here" : "Step out and say the name", "danger")
       ];
-      if (state.pendingThreat.kind === "witness") return [
-        action("INTERVENE", "Shout a warning", "danger", { hint: "You may save them. If it turns, the thing may chase you." }),
-        action("IGNORE", "Stay silent", "quiet", { hint: "They die. You stay hidden and can examine the body." }),
-        action("FLEE", "Run for home", "danger", { hint: "They die. You reach home without examining the body." })
-      ];
+      if (state.pendingThreat.kind === "witness") {
+        var warnedVictim = state.cast.find(function (row) { return row.id === state.pendingThreat.victimId; });
+        var warnedName = warnedVictim && warnedVictim.name || "your neighbour";
+        return [
+          state.pendingThreat.setupResolved
+            ? action("INTERVENE", "Turn. Draw it away from " + warnedName, "danger", { hint: "You may save them. If it turns, the thing may chase you." })
+            : action("INTERVENE", "Shout a warning", "danger", { hint: "You may save them. If it turns, the thing may chase you." }),
+          state.pendingThreat.setupResolved
+            ? action("SACRIFICE", "Shove " + warnedName + " into its path", "danger", { hint: "They die. You use the moment to escape." })
+            : action("IGNORE", "Stay silent", "quiet", { hint: "They die. You stay hidden and can examine the body." }),
+          state.pendingThreat.setupResolved
+            ? action("FLEE", "Run. Leave " + warnedName + " behind", "danger", { hint: "They die. You reach home without examining the body." })
+            : action("FLEE", "Run for home", "danger", { hint: "They die. You reach home without examining the body." })
+        ];
+      }
       return concealmentActions(state.player.location);
     }
     if (state.phase === "chase") {
@@ -3868,7 +3882,7 @@
         var rescuedId = (event.actors || []).find(function (id) { return id !== "player"; });
         if (rescuedId) relationships.push({ eventId: event.id, actorId: rescuedId, kind: event.succeeded ? "rescued" : "attempted_rescue", succeeded: !!event.succeeded, slot: event.slot, location: event.location });
       } else if (event.kind === "abandonment") {
-        relationships.push({ eventId: event.id, actorId: event.victimId, kind: "abandoned", action: event.action, slot: event.slot, location: event.location });
+        relationships.push({ eventId: event.id, actorId: event.victimId, kind: event.action === "SACRIFICE" ? "betrayed" : "abandoned", action: event.action, slot: event.slot, location: event.location });
       } else if (event.kind === "threshold_confrontation") {
         relationships.push({ eventId: event.id, actorId: event.actorId, kind: "caught_watching", slot: event.slot, location: event.location });
       } else if (event.kind === "intrusion_witnessed") {

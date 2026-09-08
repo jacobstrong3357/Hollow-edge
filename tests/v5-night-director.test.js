@@ -1208,12 +1208,12 @@ function answerAttackSetup(state, preferredMode) {
   state = answerAttackSetup(state);
   if (state.pendingThreat.kind === "witness") {
     var victimId = state.pendingThreat.victimId;
-    state = Director.reduce(state, { type: "IGNORE" });
+    state = Director.reduce(state, { type: "SACRIFICE" });
     var victim = state.cast.find(function (v) { return v.id === victimId; });
     assert(victim.alive && victim.changed, "a turning attack keeps the changed villager physically present");
     assert(state.ledgers.truth.some(function (x) { return x.victimId === victimId && x.kind === "changed"; }));
-    assert(state.ledgers.truth.some(function (x) { return x.victimId === victimId && x.kind === "abandonment"; }), "leaving a neighbour is durable relationship truth, not merely attack presentation");
-    assert(Director.consequenceProjection(state).relationships.some(function (x) { return x.actorId === victimId && x.kind === "abandoned"; }));
+    assert(state.ledgers.truth.some(function (x) { return x.victimId === victimId && x.kind === "abandonment" && x.action === "SACRIFICE"; }), "using a neighbour as a shield is durable relationship truth, not merely attack presentation");
+    assert(Director.consequenceProjection(state).relationships.some(function (x) { return x.actorId === victimId && x.kind === "betrayed"; }));
   } else {
     assert.strictEqual(state.pendingThreat.victimId, "player", "the only alternate target is the player");
   }
@@ -1261,9 +1261,18 @@ function answerAttackSetup(state, preferredMode) {
   state = answerAttackSetup(state, "ask");
   assert.strictEqual(state.phase, "threat", "being at the sampled hunt opens a live intervention scene");
   assert(state.pendingThreat && state.pendingThreat.kind === "witness" && state.pendingThreat.victimId === "rosa", "the sampled neighbour remains the quarry when the player witnesses the hunt");
+  assert(/“Behind you!”/.test(state.currentBeat.text), "the neighbour, not the player, warns of the thing approaching from behind the player");
   var witnessChoices = Director.availableActions(state);
-  assert(witnessChoices.some(function (action) { return action.type === "INTERVENE" && action.label === "Shout a warning"; }), "the player can try to stop the killing");
+  assert(witnessChoices.some(function (action) { return action.type === "INTERVENE" && /Draw it away from Rosa/.test(action.label); }), "the player can turn and try to draw the attack away");
+  assert(witnessChoices.some(function (action) { return action.type === "SACRIFICE" && /Shove Rosa into its path/.test(action.label); }), "the player can deliberately put the neighbour in the thing's path");
+  assert(!witnessChoices.some(function (action) { return action.label === "Shout a warning"; }), "the player is not asked to shout a warning after Rosa has already warned them");
   assert(witnessChoices.every(function (action) { return action.hint && /die|save/i.test(action.hint); }), "every witnessed-death choice previews its stakes");
+
+  var sacrificeState = JSON.parse(JSON.stringify(state));
+  sacrificeState = take(sacrificeState, { type: "SACRIFICE" });
+  assert.strictEqual(sacrificeState.phase, "returning", "sacrificing the neighbour buys an immediate route home");
+  assert(!sacrificeState.cast.find(function (villager) { return villager.id === "rosa"; }).alive, "the neighbour dies when deliberately pushed into the attack");
+  assert(Director.consequenceProjection(sacrificeState).relationships.some(function (rel) { return rel.actorId === "rosa" && rel.kind === "betrayed"; }), "the deliberate sacrifice is not flattened into ordinary abandonment");
 
   state.outcomes[2].intervene = 0.1;
   state = take(state, { type: "INTERVENE" });
@@ -1561,10 +1570,11 @@ function answerAttackSetup(state, preferredMode) {
   assert.strictEqual(state.pendingThreat.location, "Graveyard", "the witnessed attack occurs where Tobias and the player actually stand");
   assert.strictEqual(state.cast.find(function (actor) { return actor.id === "tobias"; }).alive, true, "Tobias remains alive until the player resolves the visible threat");
   assert(!state.ledgers.truth.some(function (event) { return event.kind === "followed" && event.actorId === "tobias"; }), "the calm follow card is not emitted after the attack has already begun");
-  state = take(state, { type: "IGNORE" });
+  state.outcomes[2].intervene = 0.9;
+  state = take(state, { type: "INTERVENE" });
   var death = state.ledgers.truth.find(function (event) { return event.kind === "slain" && event.victimId === "tobias"; });
   assert(death && death.witnessed && death.location === "Graveyard", "the death is recorded as witnessed at the Graveyard");
-  assert(/stay hidden|before your eyes/i.test(state.currentBeat.text) && /Old Tobias/.test(state.currentBeat.text) && /neck breaks|colour drains|frost races|skin turns grey|vessels around it blacken|grave soil pours|wounds tear open/i.test(state.currentBeat.text), "staying silent shows Tobias dying in front of the player rather than replacing the death with a label");
+  assert(/Old Tobias/.test(state.currentBeat.text) && /neck breaks|colour drains|frost races|skin turns grey|vessels around it blacken|grave soil pours|wounds tear open/i.test(state.currentBeat.text), "a failed attempt shows Tobias dying in front of the player rather than replacing the death with a label");
   assert(state.currentBeat.text.split(/\s+/).length <= 40, "the witnessed death itself stays short enough to read as a moment rather than a wall of prose");
   var aftermathChoices = Director.guidedActions(state, { target: "Graveyard", kind: "search", intentDone: true, searches: {}, interacted: {} });
   assert.strictEqual(aftermathChoices[0].type, "INVESTIGATE_HERE", "a witnessed body makes examination the first immediate choice");
@@ -1613,7 +1623,8 @@ function answerAttackSetup(state, preferredMode) {
   assert(Director.availableActions(state).some(function (action) { return action.responseMode === "ask" && /who broke the millrace/.test(action.label); }), "the player can ask Rosa about the flooding before the scene turns");
   state = answerAttackSetup(state, "ask");
   assert.strictEqual(state.phase, "threat", "the attack interrupts the shared mill rescue");
-  state = take(state, { type: "IGNORE" });
+  state.outcomes[2].intervene = 0.9;
+  state = take(state, { type: "INTERVENE" });
   assert(/Rosa's skin greys/.test(state.currentBeat.text) && /Black veins reach their throat/.test(state.currentBeat.text) && /They fall/.test(state.currentBeat.text), "Rosa's death is shown as a concise visible physical collapse");
   assert(/Old Tobias and Liesel saw it leave/.test(state.currentBeat.text), "the short death scene keeps the other mill rescuers present as witnesses");
   assert(state.currentBeat.text.split(/\s+/).length <= 36, "even a witnessed crisis death with corroborating villagers stays below the phone-card prose cap");
@@ -2304,7 +2315,8 @@ function reachRescueDoor(state) {
   assert.strictEqual(state.pendingThreat.victimId, "rosa", "the timetable, hail delay and seeded priority make Rosa the traceable target");
   assert(state.ledgers.memories.falk.length && state.ledgers.memories.ansel.length, "Falk and Ansel remember the player's church visit independently");
   assert.strictEqual(state.delays.rosa, 1, "the player's conversation changed Rosa's timing before the hunt");
-  state = take(state, { type: "IGNORE" });
+  state.outcomes[5].intervene = 0.9;
+  state = take(state, { type: "INTERVENE" });
   assert(state.ledgers.truth.some(function (e) { return e.kind === "slain" && e.victimId === "rosa" && e.location === "Graveyard"; }), "the lived attack, not a dawn roll, fixes Rosa's fate and location");
 })();
 

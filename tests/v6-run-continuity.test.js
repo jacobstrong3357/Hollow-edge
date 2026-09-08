@@ -395,6 +395,19 @@ function addOutcome(state, options) {
   assert.strictEqual(state.continuity.events.length, before, "reopening the interview cannot duplicate the acknowledgement");
 })();
 
+(function deliberateSacrificeIsNotOrdinaryAbandonment() {
+  var state = run("relationship-betrayal");
+  state.continuity = Continuity.appendEvent(state.continuity, {
+    id: "night:2:director:abandon:2:rosa", type: "abandonment", phase: "night", night: 2,
+    location: "Dark Forest", actorIds: ["player", "rosa"], truth: { data: { id: "abandon:2:rosa", victimId: "rosa", action: "SACRIFICE" } }
+  });
+  state.continuity = Continuity.recordObservation(state.continuity, {
+    eventId: "night:2:director:abandon:2:rosa", observerId: "rosa", actorIdsRecognised: ["player"]
+  });
+  var relationship = RunContinuity.relationshipHistory(state, { actorId: "rosa" })[0];
+  assert(relationship && relationship.kind === "betrayed", "pushing a neighbour into the attack remains a distinct continuity consequence");
+})();
+
 (function earnedDramaticScenesBecomeDurablePromises() {
   var state = run("dramatic-promises");
   state.monster = { vid: "hazel", type: "hag" };

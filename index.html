@@ -6308,6 +6308,7 @@ function resolveNight(prev, planIn, preEvents) {
       location: rel.location, confidence: "certain", acknowledged: true,
       text: rel.kind === "rescued" ? "They remember the player drawing the danger away."
         : rel.kind === "attempted_rescue" ? "They remember the player trying to reach them."
+          : rel.kind === "betrayed" ? "They remember the player forcing them into the attack."
           : rel.kind === "caught_watching" ? "They found what the player dropped and confronted them at their door."
             : rel.kind === "intrusion" ? "They saw the player disturb a private offering."
               : rel.kind === "restraint" ? "They saw the player leave a private offering untouched."
@@ -6354,6 +6355,8 @@ function resolveNight(prev, planIn, preEvents) {
         dawn.push(ev(`${target.name} came back from the dark remembering that you were close enough to help, and chose not to.`, target.id, 2));
       } else if (rel.kind === "abandoned") {
         s.clues.push(`Night ${n}: you left ${target.name} to what was moving in the ${rel.location}. Nobody has accused you of it. You know.`);
+      } else if (rel.kind === "betrayed") {
+        s.clues.push(`Night ${n}: ${target.name} warned you. You pushed them into the thing and escaped while it took them.`);
       } else if (rel.kind === "caught_watching") {
         s.npcs = s.npcs.map((npc) => npc.id === rel.actorId ? { ...npc, disp: clampDisp((npc.disp || 0) - 1) } : npc);
       } else if (rel.kind === "intrusion") {
@@ -16263,7 +16266,7 @@ function MonsterVillage() {
       }
       else if (action.type === "LISTEN") Snd.cue(wx === "storm" ? "thunder" : wx === "fog" ? "bell_distant" : wx === "frost" ? "frost_step" : "whisper");
       else if (action.type === "MOVE") Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : ["Old Church", "Graveyard"].includes(action.to) ? "gate" : action.to === "Dark Forest" ? "crickets" : ["Village Square", "Tavern"].includes(action.to) ? "bustle" : "leaves");
-      else if (["FOLLOW", "FLEE", "RUN", "BREAK_LINE"].includes(action.type)) Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : action.type === "BREAK_LINE" ? "gate" : "leaves");
+      else if (["FOLLOW", "FLEE", "SACRIFICE", "RUN", "BREAK_LINE"].includes(action.type)) Snd.cue(wx === "storm" ? "rain_step" : wx === "frost" ? "frost_step" : action.type === "BREAK_LINE" ? "gate" : "leaves");
       else if (action.type === "LINGER_AFTER_FOLLOW") Snd.cue(action.pauseMode === "near" ? (wx === "storm" ? "thunder" : "bustle") : (["Old Church", "Graveyard"].includes(next.player.location) ? "earth" : wx === "frost" ? "frost_step" : "leaves"));
       else if (action.type === "WATCH_MONSTER") { Snd.silence(true); Snd.cue("breath_close"); }
       else if (action.type === "CONFRONT_MONSTER") Snd.danger();
@@ -17574,6 +17577,7 @@ function MonsterVillage() {
     if (nightConsequence) {
       if (nightConsequence.kind === "rescued") opener.push(`They do not make you ask about the ${nightConsequence.location}. "I heard you call. I took the road because it was your voice. I am here because you did not stay quiet."`);
       else if (nightConsequence.kind === "attempted_rescue") opener.push(`They look at you for a long moment. "You tried to reach me in the ${nightConsequence.location}. Trying is not nothing. It is not the same as getting there."`);
+      else if (nightConsequence.kind === "betrayed") opener.push(`They recoil before you can speak. "I warned you. You put me between yourself and it."`);
       else if (nightConsequence.kind === "abandoned") opener.push(`They leave you standing. "I saw you choose. Do not tell me about fear; I was there too. You had a road home. You took it."`);
       else if (nightConsequence.kind === "intrusion") opener.push(`They stop you at the door. "I saw you disturb what was left at the ${nightConsequence.location}. Some things are private."`);
       else if (nightConsequence.kind === "restraint") opener.push(`They let you in at once. "I saw you leave that offering alone at the ${nightConsequence.location}. Thank you."`);
@@ -18510,6 +18514,7 @@ function MonsterVillage() {
     canonicalRelations.forEach((rel) => {
       const relationshipText = rel.kind === "rescued" ? "they remember that you drew the danger away"
         : rel.kind === "attempted_rescue" ? "they remember that you tried to reach them"
+        : rel.kind === "betrayed" ? "they remember that you forced them into the attack"
         : rel.kind === "abandoned" ? "they remember that you chose the road home"
         : rel.kind === "caught_watching" ? "they remember confronting you about watching their door"
         : rel.kind === "intrusion" ? "they remember that you disturbed what was left there"

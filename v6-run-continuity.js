@@ -421,7 +421,7 @@
 
   function relationshipKind(event, raw) {
     if (event.type === "intervention") return raw.succeeded ? "rescued" : "attempted_rescue";
-    if (event.type === "abandonment") return "abandoned";
+    if (event.type === "abandonment") return raw.action === "SACRIFICE" ? "betrayed" : "abandoned";
     if (event.type === "threshold_confrontation") return "caught_watching";
     if (event.type === "intrusion_witnessed") return "intrusion";
     if (event.type === "restraint_witnessed") return "restraint";
