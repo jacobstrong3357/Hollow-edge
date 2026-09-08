@@ -1874,20 +1874,30 @@
     var threshold = state && state.thresholdEvent;
     var monster = state && state.monsterSchedule;
     var doorTaunt = state && state.currentFacts && state.currentFacts.monsterTaunt && state.currentFacts.monsterTaunt.channel === "door";
-    if (!threshold || !monster || !monster.active || !monster.rescueDoor || doorTaunt || threshold.roll >= 0.48 || threshold.rescueRoll >= 0.26) return threshold;
+    var mutuallyRecognised = state && state.player && state.player.recognizedHost && state.player.monsterSawYou;
+    if (!threshold || !monster || !monster.active || !monster.rescueDoor || doorTaunt || mutuallyRecognised || monster.id === "vampire") return threshold;
+    var monsterArrivalLimit = state.player && state.player.monsterSawYou ? 0.62 : 0.28;
+    var monsterChoiceLimit = state.player && state.player.monsterSawYou ? 0.68 : 0.42;
+    var forcedMonsterVisit = threshold.visitorKind === "monster" && threshold.roll < 0.48;
+    var sampledMonsterVisit = !threshold.visitorKind && threshold.roll < monsterArrivalLimit && threshold.visitorRoll < monsterChoiceLimit;
+    var sampledRescue = !threshold.visitorKind && threshold.roll < 0.48 && threshold.rescueRoll < 0.26;
+    if (!forcedMonsterVisit && !sampledMonsterVisit && !sampledRescue) return threshold;
     var candidates = (state.cast || []).filter(function (actor) {
       return actor.alive && !actor.changed && actor.id !== monster.hostId;
     });
-    /* One person is named as the endangered neighbour and another must still
-       be available to make the innocent version of the visit. */
-    if (candidates.length < 2) return threshold;
+    var visitorKind = forcedMonsterVisit || sampledMonsterVisit
+      ? "monster"
+      : threshold.visitorRoll < (state.player.monsterSawYou ? 0.58 : 0.5) ? "monster" : "neighbour";
+    /* A monster needs one other living soul to name. The honest version also
+       needs a second innocent neighbour who can stand at the door. */
+    if (!candidates.length || (visitorKind === "neighbour" && candidates.length < 2)) return threshold;
     var target = candidates[Math.floor((threshold.targetRoll || 0) * candidates.length) % candidates.length];
     threshold.rescuePlanned = true;
     threshold.purpose = "rescue";
     threshold.requestMode = "outside";
     threshold.concernId = target.id;
     threshold.clueLocation = monster.huntLoc || "Village Square";
-    threshold.visitorKind = threshold.visitorRoll < (state.player.monsterSawYou ? 0.58 : 0.5) ? "monster" : "neighbour";
+    threshold.visitorKind = visitorKind;
     return threshold;
   }
 
@@ -2566,6 +2576,18 @@
         } else {
           text = "You keep the bolt drawn. The visitor goes toward the " + threshold.clueLocation + " without you. Before dawn, the village bell sounds for " + barredTargetName + ". They were found too late.";
         }
+        if (barredAttack && threshold.visitorKind === "monster") appendTruth(state, {
+          id: "threshold-rescue-refusal:" + state.cursor + ":" + barredAttack.victimId,
+          slot: state.cursor,
+          kind: "threshold_rescue_refusal",
+          location: barredAttack.location,
+          actorId: threshold.actorId,
+          actors: [threshold.actorId, "player"].filter(Boolean),
+          victimId: barredAttack.victimId,
+          attackEventId: barredAttack.id,
+          looked: !!threshold.looked,
+          spoken: !!threshold.spoken
+        });
         if (!barredAttack) text = "You keep the bolt drawn. The visitor waits, then leaves toward the " + threshold.clueLocation + " alone.";
       } else if (threshold.visitorKind === "taunt") {
         var tauntLine = threshold.contextualTaunt && threshold.contextualTaunt.line || "The voice laughs softly. “Soon.”";

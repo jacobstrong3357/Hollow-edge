@@ -5861,7 +5861,7 @@ function compileDirectorNight(s, facts, openingIntent) {
     /* Owed drama is forced on the first eligible active night. It remains a
        real doorstep with the normal choices; only its arrival is guaranteed. */
     thresholdEvent: facts.active && (thresholdPromise || offerPromise) ? {
-      roll: 0, rescueRoll: 1, visitorRoll: 0, visitorKind: "monster",
+      roll: 0, rescueRoll: 0, visitorRoll: 0, visitorKind: "monster",
       purpose: "lure", requestMode: monsterTruth.id === "vampire" ? "inside" : "outside",
       promiseKind: offerPromise ? "monster_offer" : "threshold_consequence",
     } : null,
@@ -6550,6 +6550,8 @@ function resolveNight(prev, planIn, preEvents) {
      feast they did not live to leave. The attack section below reuses this
      exact choice; the event incidents exclude this soul. */
   const directorAttack = director && (director.ledgers.truth || []).find((e) => e.kind === "slain" || e.kind === "changed");
+  const directorThresholdRefusal = director && (director.ledgers.truth || []).find((e) => e.kind === "threshold_rescue_refusal");
+  let thresholdBlameLine = null;
   let doomedId = null;
   if (active && !s.over) {
     if (director) {
@@ -7408,6 +7410,25 @@ function resolveNight(prev, planIn, preEvents) {
         }
         recordActorStatus(s, victim.id, "dead", { id: `night:${n}:legacy-attack:${victim.id}`, type: "slain", phase: "night", night: n, location: victimWhere, observedBy: mods.witnessKill && mods.witnessKill.id === victim.id ? ["player"] : [], truth: { cause: "monster_attack", sign: directorAttack ? directorAttack.sign : null } });
         s.deaths.push({ night: n, id: victim.id, name: victim.name, kind: "slain", where: victimWhere, whereDetail: victimPlace, exposure: exposureMap[victim.id], examined: false, found: [] });
+        if (directorThresholdRefusal && directorThresholdRefusal.victimId === victim.id && !s.monsterUncovered) {
+          const accuser = npcById(s, directorThresholdRefusal.actorId || (s.monster && s.monster.vid));
+          const refusalEvent = {
+            eventId: `night:${n}:director:${directorThresholdRefusal.id}`,
+            night: n,
+            kind: "threshold_rescue_refusal",
+            victimId: victim.id,
+            victimName: victim.name,
+            location: victimWhere,
+            actorIds: accuser ? [accuser.id] : [],
+            witnessIds: accuser ? [accuser.id] : [],
+            suspicious: true,
+          };
+          if (!(s.worldEvents || []).some((event) => event.eventId === refusalEvent.eventId)) s.worldEvents = [...(s.worldEvents || []), refusalEvent];
+          const dispositionBeforeBlame = Object.fromEntries(s.npcs.map((npc) => [npc.id, npc.disp || 0]));
+          repairPublicBlame(s, refusalEvent, dispositionBeforeBlame);
+          thresholdBlameLine = `${accuser ? accuser.name : "The visitor"} tells the square they came to your door because ${victim.name} was hurt. You kept the bolt drawn. By breakfast, the village is repeating that ${victim.name} died because you would not help.`;
+          s.clues.push(`Night ${n}: a visitor named ${victim.name} as hurt and asked you to leave your house. You refused. At first light, ${accuser ? accuser.name : "the visitor"} blamed you publicly for ${victim.name}'s death.`);
+        }
         const v6OutcomeKnowledge = director && HE_V6_RUN_CONTINUITY
           ? HE_V6_RUN_CONTINUITY.playerOutcomeKnowledge(s, n, victim.id)
           : null;
@@ -7492,6 +7513,7 @@ function resolveNight(prev, planIn, preEvents) {
                 ? `Others reach the ${victimWhere} at first light. ${victim.name} is where you already found them. ${weatherFinding}`
                 : `${victim.name} is missing from the well. They are found at the ${victimWhere}. ${weatherFinding}`;
             dawn.push(ev(dawnDeathLine, victim.id, 2));
+            if (thresholdBlameLine) dawn.push(ev(thresholdBlameLine, directorThresholdRefusal.actorId || undefined, 3));
             if (directorAttack && directorAttack.monsterNote) {
               const noteLine = `Pinned to ${victim.name}'s coat is a scrap in a small, deliberate hand: “${directorAttack.monsterNote}”`;
               dawn.push(ev(noteLine, victim.id, 3));

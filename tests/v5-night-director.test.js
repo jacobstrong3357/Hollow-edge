@@ -1824,6 +1824,8 @@ function reachRescueDoor(state) {
   assert.strictEqual(state.cast.find(function (actor) { return actor.id === "wilhelm"; }).alive, false, "refusing the monster leaves Wilhelm as its victim");
   var death = state.ledgers.truth.find(function (event) { return event.kind === "slain" && event.victimId === "wilhelm"; });
   assert(death && death.source === "threshold_rescue_refused" && death.location === "Dark Forest");
+  var refusal = state.ledgers.truth.find(function (event) { return event.kind === "threshold_rescue_refusal"; });
+  assert(refusal && refusal.victimId === "wilhelm" && refusal.actorId === "liesel", "the monster's chosen face retains the refusal it can weaponise at first light");
   var question = Director.consequenceProjection(state).findings.find(function (finding) { return finding.source === "threshold_monster_visit"; });
   assert(question && /Wilhelm was hurt/.test(question.question) && /Wilhelm died there/.test(question.question), "the identified host can be challenged about the named lure afterward");
 })();
@@ -1862,6 +1864,23 @@ function reachRescueDoor(state) {
     if (state.thresholdEvent.rescuePlanned) found[state.thresholdEvent.visitorKind] = true;
   }
   assert(found.monster && found.neighbour, "the deterministic tape includes both a monster lure and an honest neighbour's plea");
+})();
+
+(function anUnrecognisedMonsterDoorstepUsesANamedRescueInsteadOfAnObviousGenericLure() {
+  var config = baseConfig("promised-monster-rescue");
+  config.slots = 3;
+  config.villagers = [
+    { id: "liesel", name: "Liesel", role: "the Innkeeper", alive: true, home: "Tavern" },
+    { id: "wilhelm", name: "Wilhelm", role: "the Blacksmith", alive: true, home: "Village Square" },
+    { id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Dark Forest" }
+  ];
+  config.player = { monsterSawYou: true };
+  config.monster = { id: "werewolf", hostId: "liesel", active: true, signs: ["claw", "bite", "tracks"], hunts: ["Dark Forest"], attack: "kill", reach: "out", huntSlot: 1, rescueDoor: true };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Dark Forest", attackSlot: 1, outMap: { liesel: "Dark Forest", wilhelm: "Dark Forest", greta: "home" } };
+  config.thresholdEvent = { roll: 0, rescueRoll: 1, visitorRoll: 0, visitorKind: "monster", purpose: "lure" };
+  var state = Director.createNight(config);
+  assert.strictEqual(state.thresholdEvent.purpose, "rescue", "a guaranteed disguised-monster visit is upgraded to the ambiguous rescue structure");
+  assert(state.thresholdEvent.concernId && state.thresholdEvent.concernId !== state.monsterSchedule.hostId, "the plea names another living villager rather than exposing the host");
 })();
 
 (function everyMonsterTypeCanUseDoctorFalksFaceForTheRescueLure() {
@@ -3582,6 +3601,7 @@ function reachRescueDoor(state) {
   assert(html.includes("quiet-night-event") && html.includes("inactiveStreak >= 2"), "a strict-cycle lull receives deterministic public activity instead of a dead stretch");
   assert(directorSource.includes("visibleDiscoveries") && directorSource.includes('join(" ")'), "multiple findings earned in one action are presented together before entering the Journal");
   assert(directorSource.includes('purpose = "rescue"') && directorSource.includes('threshold_rescue_refused') && directorSource.includes('shared_body_discovery'), "the named doorstep rescue can resolve as a lethal lure, a refused victim, or a shared body discovery");
+  assert(directorSource.includes('kind: "threshold_rescue_refusal"') && html.includes("tells the square they came to your door") && html.includes("repairPublicBlame(s, refusalEvent"), "a refused monster rescue becomes a specific public accusation at first light");
   assert(html.includes("event.sharedDiscovery") && html.includes("No accusation is made against you") && html.includes("We took the same road and found the body together"), "daylight preserves the companion's corroboration and remembered interview answer");
   assert(html.includes('source === "threshold_missing_report"') && html.includes("is missing from the village"), "an unavailable subject of a threshold report is explained in the interview picker");
   assert(html.includes('window.storage.get("mv-run-day-ui")') && html.includes('window.storage.set("mv-run-day-ui"'), "committed daylight presentation is saved separately from the run");
