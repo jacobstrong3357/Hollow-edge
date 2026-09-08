@@ -6235,10 +6235,17 @@ function resolveNight(prev, planIn, preEvents) {
         : "";
       const routeHonest = `“You saw me passing the ${thread.location} on my way to the ${destination}. I was out to ${reason}.”${weatherReply}`;
       const routeEvasive = `“You saw me passing the ${thread.location} on my way to the ${destination}. The road is public. Why I took it is mine.”${weatherReply}`;
+      const samePlaceFollowQuestion = thread.startedHere
+        ? dialogue.revealsSecret
+          ? `At the ${thread.location}, I saw what you did. Tell me about it.`
+          : dialogue.lostAfterFollow
+            ? `I kept you in sight at the ${thread.location}. Why did you slip away?`
+            : `I watched you at the ${thread.location}. ${directorErrandQuestion(reason)}`
+        : null;
       return {
         eventId: thread.eventId, night: n, location: thread.location, kind: "director_encounter",
         actorIds: actorId ? [actorId] : [], subjectId: actorId || null,
-        question: thread.followed && dialogue.question ? dialogue.question : weatherQuestion,
+        question: thread.followed ? (samePlaceFollowQuestion || dialogue.question || weatherQuestion) : weatherQuestion,
         honest: passingThrough ? routeHonest : (dialogue.honest || `“I went out to ${reason}. You may dislike the hour. It does not change the errand.”${weatherReply}`),
         evasive: passingThrough ? routeEvasive : (dialogue.evasive || `“You saw me on a road. You did not see why. Do not make a confession out of a lantern.”${weatherReply}`),
         reaffirm: thread.followed && dialogue.revealsSecret
@@ -6247,7 +6254,7 @@ function resolveNight(prev, planIn, preEvents) {
             ? `“I told you then: it was private. Seeing me twice does not make it yours.”`
             : `“I told you then: I went out to ${reason}. My answer has not changed with the daylight.”`))),
         acknowledged: !!thread.acknowledged, privateErrand,
-        directorKind: thread.kind, playerSaw: !!thread.playerSaw, followed: !!thread.followed, sourceEventIds: thread.sourceEventIds,
+        directorKind: thread.kind, playerSaw: !!thread.playerSaw, followed: !!thread.followed, startedHere: !!thread.startedHere, sourceEventIds: thread.sourceEventIds,
         destination, reason, passingThrough,
         weather: director.weather, weatherEffect: thread.weatherEffect || null,
       };
@@ -14209,9 +14216,31 @@ function DawnCarousel({ items, s, onOpen, onDone }) {
   );
 }
 
+const NAMED_SUBJECT_VERBS = {
+  are: "is",
+  answer: "answers",
+  exhale: "exhales",
+  flinch: "flinches",
+  keep: "keeps",
+  lower: "lowers",
+  press: "presses",
+  repeat: "repeats",
+  sit: "sits",
+  smell: "smells",
+};
+
+function namedSubjectLine(name, line) {
+  const text = String(line);
+  if (/^Their\b/.test(text)) return text.replace(/^Their\b/, `${name}'s`);
+  const match = text.match(/^They\s+([A-Za-z]+)\b/);
+  if (!match || !NAMED_SUBJECT_VERBS[match[1]]) return text;
+  return `${name} ${NAMED_SUBJECT_VERBS[match[1]]}${text.slice(match[0].length)}`
+    .replace(/\band (answer|exhale|flinch|keep|lower|press|repeat|sit|smell)\b/g, (whole, verb) => `and ${NAMED_SUBJECT_VERBS[verb]}`);
+}
+
 function demeanorLine(s, id) {
   const npc = npcById(s, id);
-  const nameLine = (line) => String(line).replace(/^They\b/, npc.name).replace(/^Their\b/, `${npc.name}'s`);
+  const nameLine = (line) => namedSubjectLine(npc.name, line);
   if (id === s.monster.vid && s.monster.type === "vampire" && chance(0.22)) return nameLine("They keep to the doorway the whole time, weight on the outer step. However the conversation turns, they never quite come inside.");
   if (id === s.monster.vid && s.monster.type === "hollowed" && chance(0.25)) return nameLine("They are delighted to see you. They say 'delighted', twice, and 'colloquy' once, and a dozen other words nobody in this valley was taught, and the hour is the most erudite and the least human conversation you have had all week.");
   if (id === s.monster.vid) return nameLine(chance(0.3) ? pickFreshIdx("demeanorMonsterTell", DEMEANOR.monsterTell) : pickFreshIdx("demeanorNormal", DEMEANOR.normal));

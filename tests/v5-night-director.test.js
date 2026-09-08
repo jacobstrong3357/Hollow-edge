@@ -963,6 +963,32 @@ function answerAttackSetup(state, preferredMode) {
   assert(!/follow Hazel to the Graveyard/.test(state.currentBeat.text), "the scene never repeats travel the player did not make");
 })();
 
+(function followingFromTheDestinationDoesNotArriveThereTwice() {
+  var config = baseConfig("already-at-church");
+  config.slots = 4;
+  config.monster.active = false;
+  config.currentFacts = { weather: "still", active: false, outMap: { ansel: "Old Church" } };
+  config.villagers = [{
+    id: "ansel", name: "Father Ansel", role: "the Priest", alive: true, home: "Village Square",
+    motive: { id: "vestry", family: "secret", destination: "Old Church", reason: "check the vestry", object: "a wrapped object", depart: 0, duration: 4 },
+    dialogue: { follow: "You follow Father Ansel to the Old Church. At the Old Church, it goes dark. A door closes softly somewhere you cannot place." }
+  }];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 0;
+  state.player.location = "Old Church";
+  state.schedules.ansel.slots[0] = "Old Church";
+  state.schedules.ansel.slots[1] = "Old Church";
+  state.visibility[0].ansel = true;
+  state.currentBeat = { id: "ansel-at-church", type: "encounter", slot: 0, location: "Old Church", actorId: "ansel", text: "Father Ansel enters the light." };
+  state = take(state, { type: "FOLLOW", actorId: "ansel" });
+  assert(/already at the Old Church/.test(state.currentBeat.text), "the follow begins from the player's current place");
+  assert(!/At the Old Church,/.test(state.currentBeat.text), "the follow result does not arrive at the same place a second time");
+  assert(/It goes dark/.test(state.currentBeat.text), "the authored consequence remains after removing duplicate travel");
+  var projected = Director.consequenceProjection(state).encounters.find(function (row) { return row.actorId === "ansel"; });
+  assert(projected && projected.startedHere, "daylight receives the fact that the follow began at its destination");
+})();
+
 (function aVillagerLostAfterFollowingCannotBeHailedThroughTheDoor() {
   var config = baseConfig("lost-after-follow");
   config.slots = 4;
@@ -3195,6 +3221,7 @@ function reachRescueDoor(state) {
   var beatTextSource = html.slice(html.indexOf("const directorBeatText"), html.indexOf("const commitDirector", html.indexOf("const directorBeatText")));
   assert(beatTextSource.includes('event.kind === "followed"') && beatTextSource.includes("event.revealedSecret") && beatTextSource.includes("dialogue.caughtHail"), "hailing after a revealed follow acknowledges what the player witnessed");
   assert(beatTextSource.includes("beat.meta.startedHere ? beat.text"), "the UI preserves corrected same-location follow narration");
+  assert(html.includes("const samePlaceFollowQuestion = thread.startedHere") && html.includes("I kept you in sight at the ${thread.location}. Why did you slip away?"), "the interview preserves that a follow began at its destination");
   var roadsideSource = html.slice(html.indexOf("const DIRECTOR_ROADSIDE_WARNING"), html.indexOf("function directorHailFor"))
     .replace("const DIRECTOR_ROADSIDE_WARNING =", "DIRECTOR_ROADSIDE_WARNING =");
   var roadsideContext = {};

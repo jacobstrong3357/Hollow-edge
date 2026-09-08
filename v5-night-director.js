@@ -1582,11 +1582,16 @@
       var samePlaceLead = state.weather === "fog"
         ? villager.name + " is already here in the fog. You keep their lantern in sight as they move across the " + routePlace + "."
         : state.weather === "storm"
-          ? villager.name + " is already at the " + routePlace + ". By lightning, you fall in behind them."
+          ? villager.name + " is already at the " + routePlace + ". By lightning, you keep them in sight from where you stand."
           : state.weather === "frost"
             ? villager.name + " is already at the " + routePlace + ". You pick up their fresh tracks from where you stand."
-            : villager.name + " is already at the " + routePlace + ". You fall in behind them when they move on.";
+            : villager.name + " is already at the " + routePlace + ". You keep them in sight from where you stand.";
       var followTail = String(followText || "").replace(/^[^.?!]+[.?!]\s*/, "");
+      var escapedRoutePlace = String(routePlace).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      followTail = followTail
+        .replace(new RegExp("^At the " + escapedRoutePlace + ",\\s*", "i"), "")
+        .replace(/^There,\s*/i, "");
+      if (followTail) followTail = followTail.charAt(0).toUpperCase() + followTail.slice(1);
       followText = samePlaceLead + (followTail ? " " + followTail : "");
       event.startedHere = true;
     }
@@ -3886,6 +3891,7 @@
       group.acknowledged = group.acknowledged || !!event.acknowledged;
       group.playerSaw = group.playerSaw || event.playerSaw !== false;
       group.followed = group.followed || event.kind === "followed";
+      group.startedHere = group.startedHere || !!event.startedHere;
       group.sourceEventIds.push(event.id);
       (event.playerSaw === false ? group.unseenSlots : group.seenSlots).push(event.slot);
     });
