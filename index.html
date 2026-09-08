@@ -4392,12 +4392,18 @@ function toggleJournalSign(s, sign) {
 function cancelUnavailableFavour(s) {
   if (!s || !s.sideQuest) return false;
   const giver = npcById(s, s.sideQuest.giver);
-  if (giver && canonicalActorCanAppear(s, giver.id)) return false;
+  const giverUnderRope = !!(s.mob && s.mob.target === s.sideQuest.giver && !s.sideQuest.due);
+  if (giver && canonicalActorCanAppear(s, giver.id) && !giverUnderRope) return false;
   s.sideQuest = null;
   return true;
 }
 function assignFollowFavour(s, giverId, gated = false) {
   if (!s || s.sideQuest) return null;
+  /* Somebody due to hang at first light has one urgent request: watch their
+     own door and prove where they are. They cannot also send the player to
+     watch Hazel, then punish that player for choosing the plea for their
+     life. The rope objective already supplies the self-watch route. */
+  if (s.mob && s.mob.target === giverId) return null;
   const targets = s.npcs.filter((npc) => canonicalActorCanAppear(s, npc.id) && npc.id !== giverId
     && !(npc.turned && npc.known) && npc.id !== s.faceKnown);
   if (!targets.length) return null;
@@ -5101,6 +5107,17 @@ const DIRECTOR_SITE_OBJECT_ITEM = {
   "Dark Forest": "a strip of clean linen",
   "Old Mill": "a cup and iron filings",
   "Tavern": "a list of villagers",
+};
+/* Authored discoveries own their artwork. They must never be reclassified
+   from incidental nouns in the prose (the church wax used to become cloth
+   merely because its description also mentioned one coat thread). */
+const DIRECTOR_SITE_OBJECT_ART = {
+  "Village Square": "item-art:wrapped-loaf",
+  "Old Church": "item-art:candle-wax",
+  "Graveyard": "item-art:dead-flower",
+  "Dark Forest": "item-art:cloth",
+  "Old Mill": "item-art:cup-iron-filings",
+  "Tavern": "item-art:written-paper",
 };
 /* Empty searches should still feel like actions taken in a real place. These
    describe the circuit without naming the evidence category the hidden search
@@ -5913,7 +5930,12 @@ function compileDirectorNight(s, facts, openingIntent) {
         id: `n${n}:route-payoff:${target}:${slot}`, type: "clue", slot,
         location: target, actorId: clueAgenda && clueAgenda.actorId,
         text: routeClueText,
-        meta: { searchMode: clueMode, siteSearch: true, siteObject: !clueAgenda, object: clueAgenda ? clueAgenda.motive.object : DIRECTOR_SITE_OBJECT_ITEM[target], sitePayoff: routeCluePayoff, inspectLabel: !clueAgenda ? "Investigate the object" : undefined },
+        meta: {
+          searchMode: clueMode, siteSearch: true, siteObject: !clueAgenda,
+          object: clueAgenda ? clueAgenda.motive.object : DIRECTOR_SITE_OBJECT_ITEM[target],
+          imageKey: clueAgenda ? itemArtKey(clueAgenda.motive.object) : DIRECTOR_SITE_OBJECT_ART[target],
+          sitePayoff: routeCluePayoff, inspectLabel: !clueAgenda ? "Investigate the object" : undefined,
+        },
       }));
     if (facts.secretLeadId && facts.secretLeadLoc === target) {
       const leadRow = directorConfig.villagers.find((row) => row.id === facts.secretLeadId);
@@ -8061,6 +8083,11 @@ function resolveNight(prev, planIn, preEvents) {
       const mobReason = pickFreshIdx("mobReasons", MOB_REASONS)(target.name);
       s.mob = { accuser: accuser.id, target: target.id, deadline: n + 1, reason: mobReason };
       dawn.push(ev(pick(MOB_ULTIMATUM)(accuser.name, target.name, mobReason), target.id, 2));
+      if (s.sideQuest && s.sideQuest.giver === target.id && !s.sideQuest.due) {
+        const oldTarget = npcById(s, s.sideQuest.target);
+        s.sideQuest = null;
+        dawn.push(ev(`${target.name} withdraws the earlier request about ${oldTarget ? oldTarget.name : "another door"}. “Forget it. If you watch any door tonight, watch mine.”`, target.id, 1));
+      }
       /* a village that has been counting your nights considers you out loud
          before it settles on someone else. The rope never comes for you: the
          game is not that, and a fail state you cannot argue with would make
@@ -9926,10 +9953,14 @@ function answerFor(s, id, night, q, targetId) {
   if (q === "help") {
     s.npcs = s.npcs.map((x) => (x.id === id ? { ...x, disp: clampDisp((x.disp || 0) + 1) } : x));
     s.patience[id] = Math.min(PERSONA[id].patience + 1, (s.patience[id] || 0) + 1);
-    const followTarget = assignFollowFavour(s, id);
-    quote = followTarget
-      ? pickFreshIdx("followFavourAsk", FOLLOW_FAVOUR_ASK)(followTarget.name)
-      : HELP_LINES[id] || `They find you a small necessary task. You finish it before asking anything more.`;
+    if (s.mob && s.mob.target === id) {
+      quote = `“Watch my door tonight. If I never leave and the thing kills elsewhere, tell the square before the rope comes.”`;
+    } else {
+      const followTarget = assignFollowFavour(s, id);
+      quote = followTarget
+        ? pickFreshIdx("followFavourAsk", FOLLOW_FAVOUR_ASK)(followTarget.name)
+        : HELP_LINES[id] || `They find you a small necessary task. You finish it before asking anything more.`;
+    }
   }
 
   if (q === "howare") {
@@ -10780,9 +10811,15 @@ function Portrait({ id, size = 56, dead, turnedKnown, disp }) {
 const FOUND_THINGS_SPRITE = "assets/ink-v1/items/found-things-sprite-v4.jpg";
 const DEAD_FLOWER_ART = "assets/ink-v1/items/dead-flower-v1.jpg";
 const CHALK_RULE_ART = "assets/ink-v1/items/chalk-folding-rule-v1.png";
+const CANDLE_WAX_ART = "assets/ink-v1/items/candle-wax-v1.png";
+const WRAPPED_LOAF_ART = "assets/ink-v1/items/wrapped-loaf-v1.png";
+const CUP_IRON_FILINGS_ART = "assets/ink-v1/items/cup-iron-filings-v1.png";
 const ITEM_ART_MANIFEST = [
   { key: "dead-flower", match: /dead flower/i, artwork: DEAD_FLOWER_ART, cell: [0, 1] },
   { key: "chalk-folding-rule", match: /chalk.*folding rule|folding rule.*chalk/i, artwork: CHALK_RULE_ART, cell: [1, 1] },
+  { key: "candle-wax", match: /candle wax|wax.*thumbprint|candle.*(?:dark )?thread/i, artwork: CANDLE_WAX_ART, cell: [0, 0] },
+  { key: "wrapped-loaf", match: /wrapped loaf|bread wrapped in .*arithmetic/i, artwork: WRAPPED_LOAF_ART, cell: [0, 2] },
+  { key: "cup-iron-filings", match: /cup.*iron filings|iron filings.*cup/i, artwork: CUP_IRON_FILINGS_ART, cell: [1, 1] },
   { key: "keepsake", match: /mourning|locket|ribbon|keepsake|token/i, cell: [1, 0] },
   { key: "medical-tools", match: /medical bag|physician|instrument|doctor/i, cell: [2, 0] },
   { key: "written-paper", match: /prayer|book|ledger|letter|message|pages|written note|list of names|tally slip/i, cell: [3, 0] },
@@ -16335,7 +16372,7 @@ function MonsterVillage() {
           </div>
           <div style={{ padding: "13px 14px", marginBottom: 10, background: danger ? "rgba(53,12,20,.84)" : beat && beat.type === "delusion" ? "rgba(42,31,55,.78)" : crisisEvent ? "rgba(42,33,20,.88)" : "rgba(7,9,16,.82)", borderLeft: `2px solid ${danger ? C.redBright : beat && beat.type === "delusion" ? "#9E7FC4" : C.nightAmber}`, boxShadow: "0 8px 24px rgba(0,0,0,.26)" }}>
             <div className="flex" style={{ gap: 11, alignItems: "flex-start" }}>
-              {foundObject ? <ItemPortrait object={foundObject} size={42} /> : actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
+              {foundObject ? <ItemPortrait object={foundObject} imageKey={beat.meta.imageKey} size={42} /> : actor && <div className="shrink-0"><Portrait id={actor.id} size={42} dead={!actor.alive} turnedKnown={actor.turned && actor.known} disp={actor.disp} /></div>}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="mv-display" style={{ fontSize: 10.5, letterSpacing: 2, color: danger ? C.redBright : beat && beat.type === "delusion" ? "#C0A8D8" : C.nightAmber }}>{beat ? (changedScene ? "CHANGED" : labels[beat.type] || "THE ROAD") : terminal ? (d.phase === "dead" ? "THE ROAD ENDS" : "BEHIND YOUR BOLT") : "THE ROAD"}</div>
                 {crisisChoiceResult && (

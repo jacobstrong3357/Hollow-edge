@@ -3298,6 +3298,10 @@ function reachRescueDoor(state) {
   assert(html.includes('const DEAD_FLOWER_ART = "assets/ink-v1/items/dead-flower-v1.jpg"') && html.includes('/dead flower/i') && html.includes('backgroundSize: artwork ? "cover"'), "a dead flower uses its unmistakable dedicated wilted-flower portrait instead of the herb-bottle basket");
   assert(html.includes('const CHALK_RULE_ART = "assets/ink-v1/items/chalk-folding-rule-v1.png"') && html.includes('/chalk/i.test(item) && /folding rule/i.test(item)'), "chalk and a folding rule use their own matching portrait instead of the hammer-and-nails sprite cell");
   assert(fs.existsSync(path.join(__dirname, "..", "assets", "ink-v1", "items", "chalk-folding-rule-v1.png")), "the dedicated chalk-and-rule portrait is present in the project");
+  ["candle-wax-v1.png", "wrapped-loaf-v1.png", "cup-iron-filings-v1.png"].forEach(function (asset) {
+    assert(fs.existsSync(path.join(__dirname, "..", "assets", "ink-v1", "items", asset)), "the authored discovery portrait exists: " + asset);
+  });
+  assert(html.includes("DIRECTOR_SITE_OBJECT_ART") && html.includes("imageKey={beat.meta.imageKey}"), "fixed-location discoveries bind an explicit portrait instead of guessing from incidental words in their prose");
   assert(html.includes('The figure ahead was never there.') && directorSource.includes('The sight ahead was false. The danger behind you is not.'), "a false sight cleanly turns into an explicit nearby threat instead of saying nobody is there");
   assert(html.includes('["hailed", "crossed_paths"].includes(event.kind) && event.playerSaw !== false'), "an unseen passer cannot trigger a recap claiming the player was with them");
   assert(html.includes('event.kind !== "director_body_investigation"') && !html.includes(': `You saw me at the ${event.location}. What did you make of that?`;'), "private reverse sightings do not leak into the player's interview tray");
@@ -3552,6 +3556,7 @@ function reachRescueDoor(state) {
   }, { id: "greta", name: "Greta" }, 3, { night: 3, you: { kind: "watch", id: "greta" }, outMap: { greta: "home" } });
   assert(oldSaveOutcome && oldSaveOutcome.kind === "visitor" && oldSaveOutcome.visitorId === "hazel", "an existing save recovers the visitor from its lived-night clue instead of reporting an empty door");
   assert(html.includes("homeWatch: watching && f.homeWatch") && html.includes('watchOutcome.kind === "visitor"'), "new watch reports preserve and narrate the structured visitor outcome");
+  assert(html.includes('if (s.mob && s.mob.target === giverId) return null') && html.includes("withdraws the earlier request") && html.includes("watch mine"), "a villager marked for hanging cannot issue or preserve a competing watch favour for somebody else");
   assert(html.includes("Grave dirt has been tracked out of the burial ground") && directorSource.includes("Grave dirt lies on top of the road mud"), "grave dirt is named and distinguished from ordinary mud in both presentation paths");
   assert(html.includes("const playerSightings = new Map()") && html.includes("they saw your lantern too") && html.includes("you did not identify them at the time"), "the profile merges reciprocal sightings and never says the player may not have seen someone they explicitly saw");
   var pacingSource = html.slice(html.indexOf("function isActive"), html.indexOf("/* ================= NIGHT RESOLUTION", html.indexOf("function isActive")));
