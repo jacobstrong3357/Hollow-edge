@@ -2680,14 +2680,14 @@ function reachRescueDoor(state) {
   assert(sampledNight.includes("const secretCatchChance") && sampledNight.includes(": 0.35"), "meeting a secret-carrying villager does not automatically decode the errand");
   var compiledNight = html.slice(html.indexOf("function compileDirectorNight"), html.indexOf("function resolveNight"));
   assert(compiledNight.includes("directorAfflictionBeats(s, facts, slots)") && html.includes('crisisStage: "arrival"') && html.includes('crisisStage: "struggle"') && html.includes('crisisStage: "aftermath"') && html.includes('crisisStage: "resolution"'), "a sampled village crisis owns a multi-beat Director sequence through its final outcome");
-  assert(html.includes('arrival: "WHAT HAPPENED"') && html.includes('struggle: "THE DANGER NOW"') && html.includes('aftermath: "FINAL CHOICE"') && html.includes('resolution: "OUTCOME"') && html.includes("The first bucket from the village well came up black") && html.includes("says she is closing for good"), "every crisis states the incident and present stage in direct mobile labels");
+  assert(html.includes('arrival: "WHAT HAPPENED"') && html.includes('struggle: "THE DANGER NOW"') && html.includes('aftermath: "FINAL CHOICE"') && html.includes('resolution: "OUTCOME"') && html.includes("The first bucket from the village well came up black") && html.includes("says the tavern is closing for good"), "every crisis states the incident and present stage in direct mobile labels");
   assert(html.includes("afflictionLocation: scene.location") && html.includes("afflictionWound: scene.wound"), "the crisis carries its authored location and damaged-night artwork into every beat");
   assert(html.includes('event: { bg: "#0A0907"') && html.includes('kicker={crisisEvent ? "A VILLAGE EVENT"') && !html.includes('const danger = !!afflictionScene'), "village events use an amber event treatment rather than monster-danger red");
   [
     "One drinker accused another of being the monster",
-    "Liesel emptied the room into the rain",
-    "Help Liesel clear the room without a crush",
-    "Help Liesel set the iron bar",
+    "{anchor} emptied the room into the rain",
+    "Help {anchor} clear the room without a crush",
+    "Help {anchor} set the iron bar",
     "Offer to carry news between the houses"
   ].forEach(function (phrase) {
     assert(html.includes(phrase), "the closing tavern explains and advances its event: " + phrase);
@@ -2931,6 +2931,7 @@ function reachRescueDoor(state) {
   assert(personAnswer.includes("t.fled") && personAnswer.includes("left before dawn") && personAnswer.includes('kind: "with"') && personAnswer.includes('kind: "suspects"'), "missing-person, witnessed-location and suspicion answers all create useful leads rather than a bare no");
   var answerDelivery = html.slice(html.indexOf("function computeAnswer"), html.indexOf("function answerFor", html.indexOf("function computeAnswer")));
   assert(html.includes("const INTERVIEW_DELIVERY") && html.includes("guarded:") && html.includes("practised:") && html.includes("afraid:"), "interviews have concise guarded, rehearsed and frightened delivery pools without adding choices");
+  assert(html.includes("t.refused &&") && html.includes("REFUSED TO ANSWER"), "a hostile evasion is labelled as a refusal instead of masquerading as a factual answer");
   assert(answerDelivery.includes("out.guardedLie && roll < 72") && answerDelivery.includes("monsterish && roll < 32") && answerDelivery.includes("!monsterish && roll < 8") && answerDelivery.includes("8 + fearLimit"), "secret keepers often show strain, monsters sometimes sound practised, and innocent rehearsed answers remain possible red herrings");
   assert(answerDelivery.includes("s.deaths || []") && answerDelivery.includes("who.disp < 0") && answerDelivery.includes("deliveryTell: true"), "fearful delivery becomes more likely as deaths and hostility accumulate while remaining embedded in the answer");
   assert(personAnswer.includes("protectsSecret") && personAnswer.includes("guardedLie = true") && personAnswer.includes('kind: "vouch"'), "a bonded villager can falsely vouch that a neighbour was home to protect their secret");
@@ -3015,6 +3016,11 @@ function reachRescueDoor(state) {
   assert(personalPanel.includes('>What work needs doing?</Btn>') && !personalPanel.includes('>Ask what work needs doing.</Btn>'), "the work prompt is phrased as the question the player actually asks");
   var helpAnswer = html.slice(html.indexOf('if (q === "help")'), html.indexOf('if (q === "howare")', html.indexOf('if (q === "help")')));
   assert(helpAnswer.includes("assignFollowFavour(s, id)") && helpAnswer.includes("FOLLOW_FAVOUR_ASK"), "asking what work needs doing can issue the follow-someone-tonight favour through the new personal category");
+  assert(html.includes('latestNight.you.kind === "watch"') && html.includes('npc.id !== justWatched') && html.includes('(s.hardCleared || []).includes(npc.id)'), "follow favours cannot recycle last night's watched neighbour or somebody observation already cleared");
+  assert(html.includes("const gt = assignFollowFavour(s, id, true)"), "distrust-gated follow favours use the same continuity-safe target selection as ordinary favours");
+  assert(html.includes('kind: "death_scene"') && html.includes('kind: "crisis"') && html.includes("The epilogue remembers the night the player actually lived"), "night logs preserve witnessed death scenes and lived village crises instead of only the opening dusk action");
+  var craftAnswerSource = html.slice(html.indexOf("function craftAnswer"), html.indexOf("function definiteFindingObject"));
+  assert(html.includes("function rememberedSightingsBy") && craftAnswerSource.includes("rememberedSightingsBy(s, id)") && craftAnswerSource.includes("rememberedSightingsBy(s, id, Math.max(1, s.nightNum - 2))") && !craftAnswerSource.includes("Object.entries(lg.outMap)"), "Liesel and Marta can report only sightings in their own memory, never actors pulled from the hidden schedule");
   var favourResolution = html.slice(html.indexOf("/* --- side quest: did the player watch/follow"), html.indexOf("/* --- a secret the player", html.indexOf("/* --- side quest: did the player watch/follow")));
   assert(favourResolution.includes('action.type === "FOLLOW"') && favourResolution.includes("directorFollowedTarget") && favourResolution.includes("targetStayedHome") && favourResolution.includes("keptFavour"), "a Director favour succeeds only when a departing target is actually followed, or a watched target stays home");
   var nightPlan = html.slice(html.indexOf('const planModal = modal === "plan"'), html.indexOf("const riteModal", html.indexOf('const planModal = modal === "plan"')));
@@ -3167,6 +3173,14 @@ function reachRescueDoor(state) {
   assert(html.includes('event.kind === "director_body_investigation"') && html.includes("PUBLIC_BLAME_WITNESS"), "a body witness gives a concrete response instead of a generic denial");
   assert(html.includes('q === "where" && publicBlame') && html.includes("PUBLIC_BLAME_GOSSIP"), "where and village-talk questions surface the lasting accusation");
   assert(html.includes("THE VILLAGE SUSPECTS YOU") && html.includes("repairPublicBlame(run)"), "the accusation is visible in interviews and repaired into existing saves");
+  assert(!html.includes("finds you still at ${tgt.name}'s door") && html.includes("every hour of ${tgt.name}'s movements you witnessed"), "saving an accused villager does not pretend the player stayed at their door after following them elsewhere");
+  assert(html.includes("x.id !== watching && x.id !== mods.follow"), "a watched or followed villager cannot recast the player's explained presence as a mysterious lantern sighting at dawn");
+  assert(html.includes('replaceAll("{anchor}", anchorName)') && html.includes('"Go to {anchor}"') && !html.includes('"Go to Father Ansel"'), "village crises substitute a living participant instead of resurrecting a dead canonical helper");
+  assert(html.includes('{ suppressAffliction: openingIntent.kind === "watch" }') && html.includes('!sampleOptions.suppressAffliction'), "a random village crisis cannot erase a deliberate door watch chosen to test an investigative lead");
+  assert(html.includes('AFFLICTION_CRISIS[affliction].stageResponses[lastWitnessChoice.crisisStage].witness') && html.includes('s.clues.push(`Night ${n}: ${witnessDetail}`)') && html.includes('AFFLICTION_DAWN.churchBurn(ansel && ansel.alive ? ansel.name : null), anchorId || undefined'), "crisis evidence is repeated plainly at dawn and attributed to a living participant");
+  assert(html.includes("earnedSecondLook || chance(0.75)"), "a second relevant body examination is guaranteed to yield a sign after the first relevant reading fails");
+  assert(html.includes('hostileTier === "neutral" && standing.hostileMajority ? 0.2 : 0') && html.includes("cannot make a warm or fond neighbour"), "village distrust no longer makes a warm individual abruptly refuse the player as an enemy");
+  assert(html.includes('victimWhere === "home" ? `${victim.name}\'s house`') && html.includes("does not answer the morning bell") && !html.includes("missing from the well. They are found at the"), "dawn names a death plainly and renders home as a house rather than a map location");
   var accusationSource = html.slice(html.indexOf("function actAccuse"), html.indexOf("/* ================= ART:", html.indexOf("function actAccuse")));
   assert(accusationSource.includes("uncoverMonster(s, npc.name)"), "both a true rite and a right-face/wrong-name public unmasking set the permanent proof flag");
   assert(html.includes('!s.monsterUncovered && s.publicBlame') && html.includes('!s.monsterUncovered && lw') && html.includes('event.kind === "director_body_investigation"') && html.includes("vindicationAnswer: true"), "public proof blocks gossip, last-seen and body-witness accusations while replacing culprit questions with an apology");
@@ -3371,7 +3385,7 @@ function reachRescueDoor(state) {
   assert(html.includes('{ id: "mimic", name: "Mimic", signs: ["claw", "tracks", "bite", "cold", "flora", "hex", "graves", "wail"]'), "the Mimic retains all eight signs");
   assert(html.includes('{ id: "succubus", name: "Succubus", signs: ["wail", "hex", "bite"]'), "wailing, hex marks and bite marks keep the real Succubus possible in the journal");
   assert(html.includes('const physicalEvidenceAt') && html.includes('.filter(isPhysicalSign)'), "searches filter sounds from physical evidence without changing any monster's sign definition");
-  assert(html.includes('const directorInvestigation = director') && html.includes('You did not leave them living. You saw the night take them.'), "a death the player reached and witnessed cannot be replaced by the generic left-them-living recap");
+  assert(html.includes('const directorInvestigation = director') && html.includes("died with you beside them") && html.includes("stayed until the end"), "a death the player reached and witnessed cannot be replaced by the generic left-them-living recap");
   assert(html.includes('recognizedHost: awareness.playerRecognisedHost') && html.includes('failedRite: awareness.failedRiteCount > 0'), "the doorstep Director receives canonical mutual identity and failed-rite continuity");
   assert(html.includes('const FOUND_THINGS_SPRITE = "assets/ink-v1/items/found-things-sprite-v4.jpg"') && html.includes("<ItemPortrait object={foundObject}"), "things left behind receive a small illustrated portrait");
   assert(html.includes('const DEAD_FLOWER_ART = "assets/ink-v1/items/dead-flower-v1.jpg"') && html.includes('/dead flower/i') && html.includes('backgroundSize: artwork ? "cover"'), "a dead flower uses its unmistakable dedicated wilted-flower portrait instead of the herb-bottle basket");
@@ -3683,11 +3697,16 @@ function reachRescueDoor(state) {
   assert(html.includes('"THE ROAD OUT"') && html.includes('"WHO MADE IT OUT"'), "evacuation has its own ending language instead of pretending the monster died");
   assert(!runtimeCopy.includes("Nobody can agree whether the dogs belong to the same lane"), "the malformed dog rumour cannot return");
   assert(!runtimeCopy.includes("They will not say where they are bound, then say it anyway"), "a villager cannot refuse and answer in the same breath");
+  assert(!runtimeCopy.includes("I sat with ${d} a while") && runtimeCopy.includes("I sat beside ${d}'s grave a while"), "mourning testimony cannot sound like a meeting with a dead villager");
   assert(!runtimeCopy.includes("near the Home") && !runtimeCopy.includes("at the Home"), "a doorstep event is never rendered as a map location called Home");
   assert(html.includes("exclusiveClaim") && html.includes("actorNightTimeline") && html.includes("I came home afterward"), "interviews distinguish one stop from an exclusive all-night alibi and can recount multiple stops");
   assert(html.includes("Someone keeping beyond my lantern could have passed unseen") && html.includes("If somebody followed me, they stayed outside my lantern"), "a villager can truthfully miss a hidden follower without claiming the place was empty");
   assert(html.includes("PERSONAL ONLY") && html.includes("done answering investigative questions today"), "spent patience is explained in player language");
   assert(html.includes("beat.meta.lastWords") && html.includes(">LAST WORDS</div>"), "last words are shown in the live night scene before the Journal records them");
+  assert(html.includes("After that, they do not breathe again."), "a last-words scene states plainly that the victim dies before presenting the next choice");
+  assert(html.includes("died with you beside them") && !html.includes("died in front of you. You followed the cry"), "a final-breath recap does not pretend the player witnessed the attack");
+  assert(html.includes("Their last words were for you alone") && html.includes("You were beside them for their final breath"), "dawn states the unique last-words information and distinguishes it from seeing the attack");
+  assert(html.includes("const publicWail") && html.includes("You were outside and close enough to be certain: it was no wind."), "a witnessed wail is one decisive evidence card instead of two repetitive cards");
   assert(html.includes("PRIVATE_ERRAND_OBJECTS") && directorSource.includes("PRIVATE_ERRAND_OBJECTS"), "private errands use villager-specific objects in both route generators");
 })();
 

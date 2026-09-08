@@ -32,4 +32,10 @@ assert.strictEqual(
   "an unrecognised verb keeps the grammatical neutral-pronoun sentence"
 );
 
+assert(!html.includes("`the deaths began"), "standalone quoted accusations begin as complete sentences");
+assert(!html.includes("lore's hand"), "rite-preparer copy must not form a stacked possessive from an appositive");
+assert(html.includes("Greta, keeper of her grandmother's lore") && html.includes("will prepare it"), "rite-preparer copy reads as two complete sentences in the accusation confirmation");
+assert(!html.includes("if you'd been stood") && !html.includes("Nothing else. Nothing else is needed."), "a caught favour lie is concise and uses natural English");
+assert(html.includes('d.where === "home" ? `${d.name}\'s house`') && html.includes("struck inside ${deathPlace}"), "the ending names a victim's house instead of exposing the internal Home location");
+
 console.log("prose-grammar: all tests passed");
