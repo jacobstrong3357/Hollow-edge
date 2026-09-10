@@ -157,6 +157,25 @@ function take(state, wanted) {
   }), true);
 })();
 
+(function aConcealedChangedSurvivorRemembersTheirScreamExcuse() {
+  var state = Director.createNight(config("v6-adapter-changed-excuse"));
+  state.ledgers.truth.push({
+    id: "investigated:attack:2:tobias", slot: 2, kind: "investigated_attack",
+    location: "Old Church", actors: ["player", "tobias"], victimId: "tobias",
+    concealedChange: true, coverInjury: "ankle",
+    coverClaim: "I missed a step and hurt my ankle. The scream was mine."
+  });
+  state.ledgers.observations.push({
+    eventId: "investigated:attack:2:tobias", slot: 2, kind: "attack_aftermath",
+    location: "Old Church", actors: ["tobias"], clarity: "partial", reliability: "direct"
+  });
+  state.phase = "complete";
+  var ledger = Adapter.projectDirectorNight(null, state, { runId: "run-changed-excuse", actors: actors });
+  var eventId = Adapter.eventIdFor(state, "investigated:attack:2:tobias");
+  assert.strictEqual(Continuity.observedEvent(ledger, "player", eventId), true, "the player remembers finding Tobias after the scream");
+  assert.strictEqual(Continuity.observedEvent(ledger, "tobias", eventId), true, "Tobias remembers giving the cover story to the player");
+})();
+
 (function hearsayDoesNotBecomeAFirsthandInterviewPrompt() {
   var state = Director.createNight(config("v6-adapter-hearsay"));
   state.ledgers.truth.push({

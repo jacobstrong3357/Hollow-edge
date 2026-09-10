@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -66,8 +67,18 @@ let html = source
   .replace("</head>", '<link rel="stylesheet" href="game.css" />\n</head>');
 
 await fs.writeFile(path.join(outDir, "index.html"), html);
+
+/* Source artwork keeps both lossless PNG masters and browser-ready WebP
+   exports. Shipping both made the user-test build more than 200 MB even
+   though the game always requests the WebP version. Retain standalone PNGs,
+   but leave a PNG master out when an identically named WebP is beside it. */
+function productionAsset(source) {
+  if (path.extname(source).toLowerCase() !== ".png") return true;
+  return !fsSync.existsSync(source.slice(0, -4) + ".webp");
+}
+
 await Promise.all([
-  fs.cp(path.join(root, "assets"), path.join(outDir, "assets"), { recursive: true }),
+  fs.cp(path.join(root, "assets"), path.join(outDir, "assets"), { recursive: true, filter: productionAsset }),
   fs.copyFile(path.join(root, "v5-content.js"), path.join(outDir, "v5-content.js")),
   fs.copyFile(path.join(root, "v5-night-director.js"), path.join(outDir, "v5-night-director.js")),
   fs.copyFile(path.join(root, "v6-continuity.js"), path.join(outDir, "v6-continuity.js")),

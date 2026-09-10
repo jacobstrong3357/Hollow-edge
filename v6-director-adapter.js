@@ -245,7 +245,7 @@
      observation row to the derived interview fact. Canonical V6 does. */
   function importLivedPlayerEvents(ledger, director) {
     list(director.ledgers && director.ledgers.truth).filter(function (event) {
-      return !!PLAYER_LIVED_KINDS[event.kind] || (event.kind === "investigated_attack" && event.sharedDiscovery);
+      return !!PLAYER_LIVED_KINDS[event.kind] || (event.kind === "investigated_attack" && (event.sharedDiscovery || event.concealedChange));
     }).forEach(function (event) {
       var canonicalId = eventIdFor(director, event.id);
       if (!eventExists(ledger, canonicalId)) return;
@@ -269,7 +269,7 @@
       }
       /* A named visitor remembers making the visit. This does not teach them
          anything about the player's other movements or the missing subject. */
-      var participantId = event.actorId || event.reporterId || null;
+      var participantId = event.actorId || event.reporterId || (event.concealedChange ? event.victimId : null) || null;
       if (participantId && participantId !== PLAYER_ID && ledger.actors[participantId]
         && !Continuity.observedEvent(ledger, participantId, canonicalId)) {
         ledger = Continuity.recordObservation(ledger, {

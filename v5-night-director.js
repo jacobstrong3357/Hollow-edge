@@ -349,6 +349,104 @@
     graves: function (name) { return "Grave soil pours from " + name + "'s mouth. They claw their throat and collapse."; }
   };
 
+  /* What the player actually watches is a clue to the creature's nature, not
+     merely the mark left afterward. None of these lines names the monster or
+     its human host. A changed survivor keeps a short first-person fragment of
+     the same act for a later interview. */
+  var WITNESSED_MONSTER_ATTACK = {
+    werewolf: {
+      kill: function (name) { return "The shape hits " + name + " on all fours. Claws open their coat; then jaws close at the throat. They stop moving before it releases them."; },
+      turn: function (name) { return "The shape pins " + name + " with claws and bites deep into their shoulder. Their spine bows. The breath that follows sounds almost like a growl."; },
+      memory: "Claws held me down. It bit my shoulder, and something in my bones answered it."
+    },
+    vampire: {
+      kill: function (name) { return "One pale arm locks around " + name + ". Its mouth seals beneath their jaw and drinks until their struggling stops."; },
+      turn: function (name) { return "It holds " + name + " almost gently and bites beneath the jaw. It drinks only until their knees fold. When it lets go, the punctures close around dark blood. " + name + " opens their eyes and does not know you."; },
+      memory: "Cold hands held me still. Teeth went in beneath my jaw. It drank, then stopped before I died."
+    },
+    wraith: {
+      kill: function (name) { return "The figure passes one hand through " + name + "'s chest. Frost blooms beneath their clothes. Their final breath hangs in the air after they fall."; },
+      turn: function (name) { return "A colourless hand enters " + name + "'s chest without breaking the cloth. Frost closes over their lips. When the hand withdraws, their shadow rises a moment before they do."; },
+      memory: "Its hand went through my chest. There was no wound, only cold, and my shadow stood before I could."
+    },
+    ghoul: {
+      kill: function (name) { return "It drags " + name + " down and bites through the belly. The feeding is quick, wet and heedless of the hands striking its back."; },
+      turn: function (name) { return "It bites into " + name + "'s belly, then presses grave dirt into the wound. Their hands begin digging at the road before their eyes open."; },
+      memory: "It bit through my belly and packed the wound with earth. I woke wanting to dig."
+    },
+    witch: {
+      kill: function (name) { return "It closes a fist around a knot of hair. A black shape tightens across " + name + "'s chest, and their body folds around it until the heart stops."; },
+      turn: function (name) { return "It draws a crooked sign over " + name + " without touching them. The last line burns through cloth and skin. They rise when one hooked finger beckons."; },
+      memory: "It drew a shape over me. The last line burned inside my chest, and then my body obeyed its hand."
+    },
+    demon: {
+      kill: function (name) { return "The shape opens along red seams. One jointed hand enters " + name + "'s ribs and closes on something deeper than flesh. They empty all at once."; },
+      turn: function (name) { return "Black breath pours from the split in its face into " + name + "'s mouth. Their limbs hammer against the ground, then go still. When they speak again, two voices use the same throat."; },
+      memory: "It breathed into my mouth. Something moved behind my eyes and spoke with my voice."
+    },
+    shifter: {
+      kill: function (name) { return "Its fingers lengthen into hooks. One opens " + name + "'s side while the other feels carefully along their face, learning it as they die."; },
+      turn: function (name) { return "Its face loosens like warm wax and presses against " + name + "'s. Their outlines run together for one sickening breath. When they separate, " + name + "'s expression belongs to neither of them."; },
+      memory: "Its face melted against mine. I felt it learning every part of me from the inside."
+    },
+    banshee: {
+      kill: function (name) { return "Its mouth opens past the jaw. The cry strikes " + name + " without crossing the space between. Blood runs from their ears and they fall before the echo."; },
+      turn: function (name) { return "The open mouth pours a scream into " + name + ". Their body lifts rigid from the road. When they settle, the same unfinished note trembles behind every breath."; },
+      memory: "The scream was inside my skull. It lifted me from the ground and left part of the note breathing in me."
+    },
+    lich: {
+      kill: function (name) { return "A dry hand closes near " + name + "'s heart without touching it. Their flesh shrinks against the bone while a small red light gathers in the waiting palm."; },
+      turn: function (name) { return "It draws a thread of red light from " + name + "'s chest. Their skin withers, but the heart keeps beating. They stand only when the dry hand lifts."; },
+      memory: "It pulled something warm out through my chest. I could feel myself withering while my heart kept beating."
+    },
+    revenant: {
+      kill: function (name) { return "Grave-cold hands force " + name + " to their knees. Soil spills from empty sleeves and packs itself into their mouth until the struggling ends."; },
+      turn: function (name) { return "Dead hands hold " + name + " down while soil crawls into their mouth. They rise with earth behind the teeth and wait for the next command."; },
+      memory: "Dead hands held me. Earth moved into my mouth by itself. When I stood, I was waiting for an order."
+    },
+    doppel: {
+      kill: function (name) { return "Its face becomes " + name + "'s before the knife moves. It cuts their throat, catches the last sound in its mouth, and repeats it perfectly."; },
+      turn: function (name) { return "Its jaw opens wider than a face should. A pale cord passes from its mouth into " + name + "'s. Their skin lifts and crawls as though another body is fitting itself underneath. They get up wearing their own face badly."; },
+      memory: "Its mouth covered mine. Something went down my throat. I could feel it moving beneath my skin."
+    },
+    hag: {
+      kill: function (name) { return "The bent shape settles astride " + name + "'s chest. Each shallow breath drives it lower until ribs give way and the last breath cannot return."; },
+      turn: function (name) { return "It crouches on " + name + "'s chest and drinks each breath from their mouth. When it rises, they remain asleep with their eyes open."; },
+      memory: "It sat on my chest and drank the breath from my mouth. I woke, but some part of me stayed asleep."
+    },
+    necromancer: {
+      kill: function (name) { return "Hands push up through the road and seize " + name + ". The shape gives one quiet order. The dead pull until the body stops answering itself."; },
+      turn: function (name) { return "Dead hands open " + name + "'s back. A grey shadow is pressed beneath the skin before the wound closes. They rise held upright by movements not their own."; },
+      memory: "Dead hands opened my back. Something cold was put under my skin and has been holding me upright since."
+    },
+    mimic: {
+      kill: function (name) { return "One arm becomes claws, the mouth becomes a crushing jaw, and frost pours from both. It tries three ways of killing " + name + " and keeps the one that works."; },
+      turn: function (name) { return "Claws hold " + name + " while teeth, frost and black veins pass over them in turn. Their body copies every change, then keeps pieces of all three."; },
+      memory: "It kept changing while it held me. Claws, teeth, cold. My body copied each one and did not change all the way back."
+    },
+    succubus: {
+      kill: function (name) { return "It cups " + name + "'s face and kisses them. The kiss becomes a bite. Their chest hollows slowly as the shape drinks without letting them fall."; },
+      turn: function (name) { return "It kisses " + name + " until their hands stop resisting. The bite opens inside the kiss. When it steps away, they follow without being called."; },
+      memory: "I wanted to go to it. The kiss became a bite, and afterward I wanted only to follow."
+    },
+    hollowed: {
+      kill: function (name) { return "Long fingers open " + name + " with careful, measured cuts. The faceless head bends close, listening to each breath as though arranging it."; },
+      turn: function (name) { return "Long fingers open a narrow seam in " + name + " and fold something black inside. The seam closes under one smoothing thumb. They stand straighter than they ever did alive."; },
+      memory: "It opened me carefully and folded something into the space. I felt the seam close under its thumb."
+    }
+  };
+
+  function witnessedMonsterAttack(state, victimName, turned) {
+    var row = WITNESSED_MONSTER_ATTACK[state.monsterSchedule && state.monsterSchedule.id];
+    if (!row) return {
+      text: turned
+        ? victimName + " convulses beneath the attack. When the shape releases them, they rise without answering their name."
+        : (WITNESSED_DEATH_TEXT[actualSign(state, state.cursor)] ? WITNESSED_DEATH_TEXT[actualSign(state, state.cursor)](victimName) : victimName + " falls and does not breathe again."),
+      memory: "I remember its weight, then pain. After that, only flashes."
+    };
+    return { text: (turned ? row.turn : row.kill)(victimName), memory: row.memory };
+  }
+
   /* Watching the revealed host earns a sign by showing the action that made
      it. Search copy describes evidence already left behind; these lines show
      the monster producing that evidence in front of the player. */
@@ -377,6 +475,35 @@
     function (name) { return name + " whispers, ‘Go home.’ The voice is theirs. The empty stare is not."; },
     function (name) { return name + " flinches from the lantern, but not from the blood beside them."; },
     function (name) { return name + " says your name once, without recognition, and turns toward the road."; }
+  ];
+
+  /* A turned survivor still has enough of their old social reflexes to hide
+     what happened. Reaching a scream should therefore produce a person with
+     a thin, repeatable explanation, not a body tableau that instantly labels
+     them CHANGED. The exact excuse is stored on the investigation event so
+     the road, dawn and a later interview all remember the same account. */
+  var CHANGED_SCREAM_EXCUSES = [
+    function (name, location) { return {
+      injury: "ankle",
+      arrival: "You reach the " + location + ". " + name + " braces against the wall, holding an ankle. “I missed the step. The cry was mine.” The smile asking you to believe nothing else happened arrives late.",
+      reaffirm: name + " keeps one hand at the ankle. “A fall. An undignified noise. That is all you heard.” They are working too carefully to sound amused.",
+      follow: "You keep " + name + " in sight. The limp lasts to the edge of the lantern light, then vanishes. They do not look back.",
+      claim: "I missed a step and turned my ankle. The scream was mine. Nothing else happened."
+    }; },
+    function (name, location) { return {
+      injury: "ankle",
+      arrival: "You reach the " + location + ". " + name + " sits on the lowest step, rubbing an ankle. “I slipped. A clumsy priest, nothing worse.” Their breathing is too calm for pain.",
+      reaffirm: name + " tests the ankle and gives you a patient look. “Stone, rain, a bad step. Must the dark improve every accident?”",
+      follow: "You follow " + name + " from the " + location + ". They favour the ankle while your lantern reaches them. Beyond it, their stride becomes perfectly even.",
+      claim: "I slipped on the stone and hurt my ankle. You heard me cry out. It was only a fall."
+    }; },
+    function (name, location) { return {
+      injury: "ankle",
+      arrival: "You reach the " + location + ". " + name + " leans on the door, one foot raised. “Caught my robe and fell. The ankle will mend.” The answer is ready before your question.",
+      reaffirm: name + " gestures to the lifted foot. “My ankle, my pride, and nothing more. You have found the whole mystery.” The answer is ready before the question.",
+      follow: "You trail " + name + " into the lane. The injured foot touches down softly, then normally, as though the body has forgotten which part it claimed was hurt.",
+      claim: "I caught my robe, fell, and hurt my ankle. That was the scream."
+    }; }
   ];
 
   function motive(id, family, destination, reason, object) {
@@ -554,7 +681,7 @@
           "Dark Forest": ["retrieve something lost before daylight exposes the errand", "a hooded lantern and an empty satchel"],
           "Old Church": ["meet somebody beneath the bell before the village wakes", "a folded note with no name outside"],
           "Village Square": ["deliver something a frightened household needs before dawn", "a covered parcel held close"],
-          Tavern: ["collect a message left with Liesel and answer none of her questions", "a sealed message and a door key"],
+          Tavern: ["collect a sealed message Liesel kept behind the bar", "the sealed message"],
           "Old Mill": ["collect supplies promised before the road became unsafe", "a sacking bundle smelling of rain"]
         }[forcedDestination] || ["finish a private errand before dawn", "a small wrapped object"];
         pool = [motive("adapted_errand_" + String(forcedDestination).toLowerCase().replace(/[^a-z]+/g, "_"), "personal", forcedDestination, flexible[0], flexible[1])];
@@ -967,17 +1094,18 @@
     if (seen) appendObservation(state, { eventId: truth.id, slot: slot, kind: acknowledged ? "meeting" : "sighting", location: state.player.location, actors: [villager.id], clarity: sightClarity, reliability: "direct", weather: state.weather });
     state.ledgers.memories[villager.id].push({ eventId: truth.id, slot: slot, subject: "player", kind: acknowledged ? "meeting" : "sighting", location: state.player.location, clarity: seen ? sightClarity : "one_sided", acknowledged: !!acknowledged, weather: state.weather, interpretation: memoryInterpretation(villager, acknowledged) });
     if (!seen) return;
-    var changedAftermath = !!(villager.changed && state.ledgers.truth.some(function (event) {
+    var changedInvestigation = villager.changed && state.ledgers.truth.slice().reverse().find(function (event) {
       return event.kind === "investigated_attack" && event.victimId === villager.id;
-    }));
+    });
+    var changedAftermath = !!changedInvestigation;
     var encounterText = changedAftermath
-      ? CHANGED_AFTERMATH_REPLIES[Math.floor(keyedNumber(state.seed, "changed-aftermath-reply:" + villager.id) * CHANGED_AFTERMATH_REPLIES.length) % CHANGED_AFTERMATH_REPLIES.length](villager.name)
+      ? (changedInvestigation.coverReaffirm || CHANGED_AFTERMATH_REPLIES[Math.floor(keyedNumber(state.seed, "changed-aftermath-reply:" + villager.id) * CHANGED_AFTERMATH_REPLIES.length) % CHANGED_AFTERMATH_REPLIES.length](villager.name))
       : weatherEncounterText(state, villager, acknowledged);
     appendBeat(state, makeBeat(id, "encounter", slot, state.player.location,
       encounterText, {
         actorId: villager.id,
         truthEventId: truth.id,
-        meta: { changedAftermath: changedAftermath, critical: changedAftermath },
+        meta: { changedAftermath: changedAftermath, recognizedChanged: !!(changedInvestigation && changedInvestigation.recognizedChanged), critical: changedAftermath },
         signature: semanticSignature({ family: "encounter", actorId: villager.id, location: state.player.location, interaction: acknowledged ? "hail" : "glimpse", outcome: "mutual" })
       }));
   }
@@ -1128,8 +1256,18 @@
     var priorPlace = priorMeeting && priorMeeting.location ? (priorMeeting.location === HOME || priorMeeting.location === "home" ? "home" : "the " + priorMeeting.location) : null;
     var keptInSight = state.followingActorId === victimId
       || (priorMeeting && priorMeeting.kind === "followed" && priorMeeting.location === location);
+    /* A scheduled attack can land in the same sampled hour as an authored
+       door departure. The attack setup becomes the visible beat, so it must
+       carry that departure forward instead of making the watched neighbour
+       appear outdoors without ever opening their door. */
+    var watchedDeparture = !keptInSight
+      && state.openingIntent && state.openingIntent.kind === "watch"
+      && state.openingIntent.id === victimId
+      && state.player.location === location;
     var lead = keptInSight
       ? "You have kept " + name + " in sight. At the " + location + ", they stop and turn to you."
+      : watchedDeparture
+        ? "The door you have been watching opens. " + name + " steps outside and spots you before you can decide whether to follow."
       : priorMeeting
         ? name + " catches your lantern again." + (priorPlace && priorMeeting.location !== location ? " You last spoke at " + priorPlace + "; now they have found you at the " + location + "." : "")
         : name + " hails you before you can pass.";
@@ -1215,7 +1353,7 @@
         };
       }
     }
-    return { kind: kind, text: text, choices: choices, responses: responses, followedIntoScene: keptInSight };
+    return { kind: kind, text: text, choices: choices, responses: responses, followedIntoScene: keptInSight, watchedDeparture: watchedDeparture };
   }
 
   function killVillager(state, victimId, slot, witnessed, locationOverride) {
@@ -1241,15 +1379,21 @@
       : "";
     var contextualTaunt = state.currentFacts && state.currentFacts.monsterTaunt;
     var promisedNote = contextualTaunt && contextualTaunt.targetId === victimId ? contextualTaunt.noteText || null : null;
-    var event = appendTruth(state, { id: "attack:" + slot + ":" + victimId, slot: slot, kind: turned ? "changed" : "slain", location: attackLocation, actors: [state.monsterSchedule.hostId, victimId].filter(Boolean), victimId: victimId, sign: sign, witnessed: !!witnessed, crisisWitnessIds: crisisWitnessIds, monsterNote: promisedNote, tauntKind: promisedNote ? contextualTaunt.kind : null });
+    var witnessedMethod = witnessed ? witnessedMonsterAttack(state, victim.name, turned) : null;
+    var event = appendTruth(state, { id: "attack:" + slot + ":" + victimId, slot: slot, kind: turned ? "changed" : "slain", location: attackLocation, actors: [state.monsterSchedule.hostId, victimId].filter(Boolean), victimId: victimId, sign: sign, witnessed: !!witnessed, witnessedMethodText: witnessedMethod && witnessedMethod.text || null, victimAttackMemory: turned && witnessedMethod ? witnessedMethod.memory : null, crisisWitnessIds: crisisWitnessIds, monsterNote: promisedNote, tauntKind: promisedNote ? contextualTaunt.kind : null });
     if (witnessed) {
-      appendObservation(state, { eventId: event.id, slot: slot, kind: "attack_aftermath", location: event.location, actors: [victimId], clarity: "partial", reliability: "direct", sign: sign });
+      appendObservation(state, { eventId: event.id, slot: slot, kind: "attack_aftermath", location: event.location, actors: [victimId], clarity: "partial", reliability: "direct", sign: sign, text: witnessedMethod.text });
+      if (turned && witnessedMethod.memory) {
+        state.ledgers.memories[victimId] = state.ledgers.memories[victimId] || [];
+        state.ledgers.memories[victimId].push({
+          eventId: event.id, slot: slot, subject: victimId, kind: "attack_fragment", location: event.location,
+          clarity: "fragmented", acknowledged: false, interpretation: witnessedMethod.memory
+        });
+      }
       appendBeat(state, makeBeat("aftermath:" + slot + ":" + victimId, "aftermath", slot, event.location,
-        turned
-          ? victim.name + " is alive, but no longer answers their name. The attacker leaves." + crisisWitnessTail
-          : (WITNESSED_DEATH_TEXT[sign] ? WITNESSED_DEATH_TEXT[sign](victim.name) : victim.name + " falls and does not breathe again.") + (crisisWitnessTail || " The attacker leaves."), {
+        witnessedMethod.text + (crisisWitnessTail || " The attacker leaves."), {
           actorId: victimId, sign: sign, truthEventId: event.id,
-          meta: { bodyAtScene: true, investigable: true, disturbanceLocation: event.location, victimId: victimId, attackEventId: event.id, critical: true }
+          meta: { bodyAtScene: true, investigable: true, disturbanceLocation: event.location, victimId: victimId, attackEventId: event.id, witnessedMethod: true, changedVictim: turned, critical: true }
         }));
     } else if (state.player.location !== HOME) {
       /* An unwitnessed attack must still disturb the lived night. This is
@@ -1394,7 +1538,7 @@
       appendBeat(state, makeBeat(attackSetup ? "attack-setup:" + slot + ":" + victim : state.pendingThreat.id, attackSetup ? "encounter" : "threat", slot, threatLocation,
         attackSetup ? attackSetup.text : victim === "player" ? playerThreatText : witnessText,
         { actorId: victim === "player" ? null : victim, sign: attackSetup ? null : state.pendingThreat.sign, meta: attackSetup
-          ? { attackSetup: true, setupKind: attackSetup.kind, followedIntoScene: !!attackSetup.followedIntoScene, affliction: state.currentFacts && state.currentFacts.afflictionLoc === threatLocation ? state.currentFacts.affliction : null, critical: true }
+          ? { attackSetup: true, setupKind: attackSetup.kind, followedIntoScene: !!attackSetup.followedIntoScene, watchedDeparture: !!attackSetup.watchedDeparture, affliction: state.currentFacts && state.currentFacts.afflictionLoc === threatLocation ? state.currentFacts.affliction : null, critical: true }
           : { reintroduced: !!(witnessText && witnessText.indexOf(" again.") >= 0) } }));
       return;
     }
@@ -1451,12 +1595,18 @@
     if (!event || (event.kind !== "slain" && event.kind !== "changed")) return null;
     var victim = state.cast.find(function (row) { return row.id === event.victimId; });
     var victimName = victim && victim.name || "Your neighbour";
+    var changedSurvivor = event.kind === "changed";
+    var recognizedChange = changedSurvivor && !!action.examineWitnessedBody;
+    var concealedChange = changedSurvivor && !recognizedChange;
+    var coverStory = concealedChange
+      ? CHANGED_SCREAM_EXCUSES[Math.floor(keyedNumber(state.seed, "changed-scream-excuse:" + event.id) * CHANGED_SCREAM_EXCUSES.length) % CHANGED_SCREAM_EXCUSES.length](victimName, event.location)
+      : null;
     var wxClue = state.weather === "frost" ? 0.45 : state.weather === "fog" ? 0.25 : state.weather === "storm" ? 0.18 : 0.32;
     var alreadyStamped = (state.knownSigns || []).indexOf(event.sign) >= 0 || state.found.stamps.some(function (stamp) { return stamp.sign === event.sign; });
     /* A distant cry may lose its physical evidence before the player arrives.
        A witnessed body is already at their feet, so examining it always shows
        the real mark, even if that sign is already written in the Journal. */
-    var clueFound = !!event.sign && (action.examineWitnessedBody || (!alreadyStamped && keyedNumber(state.seed, "investigate-clue:" + event.id) < wxClue));
+    var clueFound = !changedSurvivor && !!event.sign && (action.examineWitnessedBody || (!alreadyStamped && keyedNumber(state.seed, "investigate-clue:" + event.id) < wxClue));
     var wordChance = state.weather === "storm" ? 0.08 : state.weather === "fog" ? 0.16 : state.weather === "frost" ? 0.24 : 0.2;
     var heardLastWords = event.kind === "slain" && keyedNumber(state.seed, "investigate-words:" + event.id) < wordChance;
     var lastWords = heardLastWords ? LAST_WORDS[Math.floor(keyedNumber(state.seed, "investigate-words-line:" + event.id) * LAST_WORDS.length) % LAST_WORDS.length] : null;
@@ -1469,15 +1619,17 @@
       ? event.crisisWitnessIds
       : state.currentFacts && state.currentFacts.afflictionLoc === event.location
         ? (state.currentFacts.afflictionCrowd || []) : [];
-    var corroboratingWitnesses = possibleWitnesses.filter(function (row) {
+    var corroboratingWitnesses = (changedSurvivor ? [] : possibleWitnesses).filter(function (row) {
       return crisisWitnessIds.indexOf(row.id) >= 0 && actorLocation(state, row.id, event.slot) === event.location;
     }).slice(0, 3);
-    var corroborated = corroboratingWitnesses.length > 0;
+    var corroborated = !changedSurvivor && corroboratingWitnesses.length > 0;
     var corroboratingWitnessIds = corroboratingWitnesses.map(function (row) { return row.id; });
-    var suspicious = !corroborated && possibleWitnesses.length > 0 && keyedNumber(state.seed, "body-suspicion:" + event.id) < 0.48;
+    var suspicious = !changedSurvivor && !corroborated && possibleWitnesses.length > 0 && keyedNumber(state.seed, "body-suspicion:" + event.id) < 0.48;
     var witnessIds = suspicious ? possibleWitnesses.slice(0, Math.min(2, possibleWitnesses.length)).map(function (row) { return row.id; }) : [];
-    var text = event.kind === "changed"
-      ? (action.examineWitnessedBody ? victimName + " is alive, but changed. They do not answer their name." : "You reach the " + event.location + ". " + victimName + " is alive, but changed and unresponsive.")
+    var text = concealedChange
+      ? coverStory.arrival
+      : recognizedChange
+        ? victimName + " is alive, but changed. They do not answer their name."
       : (action.examineWitnessedBody
         ? victimName + " lies dead."
         : "You reach the " + event.location + ". " + victimName + " lies where the cry ended.");
@@ -1507,7 +1659,13 @@
       sign: clueFound ? event.sign : null,
       heardLastWords: heardLastWords,
       lastWords: lastWords,
-      recognizedChanged: event.kind === "changed",
+      recognizedChanged: recognizedChange,
+      concealedChange: concealedChange,
+      coverInjury: coverStory && coverStory.injury || null,
+      coverClaim: coverStory && coverStory.claim || null,
+      coverReaffirm: coverStory && coverStory.reaffirm || null,
+      coverFollow: coverStory && coverStory.follow || null,
+      question: concealedChange ? "You said the scream was only a fall. What really happened?" : null,
       corroborated: corroborated,
       corroboratingWitnessIds: corroboratingWitnessIds,
       suspicious: suspicious,
@@ -1531,7 +1689,7 @@
       actorId: event.victimId,
       sign: clueFound ? event.sign : null,
       truthEventId: truth.id,
-      meta: { bodyInvestigation: true, recognizedChanged: event.kind === "changed", lastWords: lastWords, suspicious: suspicious, witnessIds: witnessIds, corroborated: corroborated, corroboratingWitnessIds: corroboratingWitnessIds, critical: true }
+      meta: { bodyInvestigation: true, recognizedChanged: recognizedChange, concealedChange: concealedChange, coverInjury: coverStory && coverStory.injury || null, lastWords: lastWords, suspicious: suspicious, witnessIds: witnessIds, corroborated: corroborated, corroboratingWitnessIds: corroboratingWitnessIds, critical: true }
     }));
     if (clueFound && beat && !state.found.stamps.some(function (stamp) { return stamp.sign === event.sign; })) {
       state.found.stamps.push({ sign: event.sign, slot: slot, location: event.location, beatId: beat.id });
@@ -1550,9 +1708,10 @@
     if (!villager || !schedule) return;
     var dialogue = villager.dialogue || {};
     var destination = locationOverride || (schedule.motive.destination === HOME ? state.player.location : schedule.motive.destination);
-    var changedAftermath = !!(villager.changed && state.ledgers.truth.some(function (row) {
+    var changedInvestigation = villager.changed && state.ledgers.truth.slice().reverse().find(function (row) {
       return row.kind === "investigated_attack" && row.victimId === villager.id;
-    }));
+    });
+    var changedAftermath = !!changedInvestigation;
     var lostAfterFollow = !changedAftermath && !!dialogue.lostAfterFollow;
     var event = appendTruth(state, {
       id: "followed:" + slot + ":" + actorId,
@@ -1576,7 +1735,7 @@
         : state.weather === "frost" ? "You follow " + villager.name + "'s fresh tracks to the " + routePlace + "."
           : "You follow " + villager.name + " to the " + routePlace + ".";
     var followText = changedAftermath
-      ? "You follow " + villager.name + ". They never look back. At the " + routePlace + ", they stop and wait in silence. The attack changed them."
+      ? (changedInvestigation.coverFollow || ("You follow " + villager.name + ". They never look back. At the " + routePlace + ", they stop and wait in silence."))
       : dialogue.follow || (fallbackLead + " There, " + villager.name + " finishes an ordinary errand and leaves.");
     if (startedHere) {
       var samePlaceLead = state.weather === "fog"
@@ -1601,7 +1760,7 @@
       followText, {
         actorId: actorId,
         truthEventId: event.id,
-        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, lostActorId: lostAfterFollow ? actorId : null, startedHere: startedHere, critical: true }
+        meta: { motiveFamily: schedule.motive.family, revealedSecret: !changedAftermath && !!dialogue.revealsSecret, changedAftermath: changedAftermath, recognizedChanged: !!(changedInvestigation && changedInvestigation.recognizedChanged), lostActorId: lostAfterFollow ? actorId : null, startedHere: startedHere, critical: true }
       }));
     if (state.followedActorIds.indexOf(actorId) < 0) state.followedActorIds.push(actorId);
     return event;
@@ -2169,7 +2328,7 @@
     if (threshold.purpose === "rescue") {
       var rescueTarget = thresholdTarget(state);
       var rescueReveal = weatherLead || name + " stands on the step. ";
-      return rescueReveal + "They carry a hooded lantern and keep looking toward the " + (threshold.clueLocation || "Village Square") + ". They say " + (rescueTarget ? rescueTarget.name : "someone") + " is hurt. Nothing you can see proves whether they came for help or for you.";
+      return rescueReveal + "They carry a hooded lantern and keep looking toward the " + (threshold.clueLocation || "Village Square") + ". They say " + (rescueTarget ? rescueTarget.name : "someone") + " is hurt.";
     }
     if (threshold.visitorKind === "neighbour") {
       var neighbourDetail = threshold.purpose === "return_item" ? "They hold " + (threshold.item || "your glove") + "."
@@ -2185,7 +2344,7 @@
       "They keep glancing over one shoulder. Their voice is steady, but their hands are not.",
       "They smile when they see movement behind the shutter, then ask very softly for your help."
     ]);
-    return weatherLead + (weatherLead ? strangeDetail : name + " stands on the step. " + strangeDetail) + " Nothing you can see proves why they came.";
+    return weatherLead + (weatherLead ? strangeDetail : name + " stands on the step. " + strangeDetail);
   }
 
   function beginThresholdOrComplete(state) {
@@ -2581,7 +2740,8 @@
         if (exposedMonster) {
           text = "You keep the bolt drawn. " + (actor ? actor.name : "The thing") + " laughs softly. “Stay, then. " + barredTargetName + " will do.” One cry reaches the cottage from the " + threshold.clueLocation + ", then stops.";
         } else if (threshold.visitorKind === "monster") {
-          text = "You keep the bolt drawn. The visitor begs once more, then runs toward the " + threshold.clueLocation + ". Later, one cry reaches the cottage and stops. " + barredTargetName + " does not come home.";
+          var barredVisitorName = threshold.looked && actor ? actor.name : "The visitor";
+          text = "You keep the bolt drawn. " + barredVisitorName + " pleads once more for you to help " + barredTargetName + ", then runs toward the " + threshold.clueLocation + ". Later, one cry reaches the cottage and stops. " + barredTargetName + " does not come home.";
         } else {
           text = "You keep the bolt drawn. The visitor goes toward the " + threshold.clueLocation + " without you. Before dawn, the village bell sounds for " + barredTargetName + ". They were found too late.";
         }
@@ -2768,7 +2928,7 @@
       actorId: action.type === "KEEP_BARRED" ? null : threshold.actorId || null,
       outcome: killed ? "caught" : "safe",
       signature: semanticSignature({ family: "threshold", actorId: threshold.actorId, location: HOME, interaction: threshold.kind, outcome: action.type.toLowerCase() }),
-      meta: { thresholdDecision: true, visitorKind: threshold.visitorKind, opened: !!threshold.opened, killed: killed, soundCue: threshold.visitorKind === "taunt" ? "giggle" : null, critical: true }
+      meta: { thresholdDecision: true, thresholdMarkFound: threshold.purpose === "sign" && !!threshold.sign, visitorKind: threshold.visitorKind, opened: !!threshold.opened, killed: killed, soundCue: threshold.visitorKind === "taunt" ? "giggle" : null, critical: true }
     }));
     appendObservation(state, { eventId: "threshold-choice:" + state.cursor, beatId: beat && beat.id, slot: state.cursor, kind: "threshold", location: finalLocation, actors: action.type !== "KEEP_BARRED" && threshold.actorId ? [threshold.actorId] : [], clarity: action.type === "KEEP_BARRED" ? "partial" : "clear", reliability: "sensory", text: text });
     if (killed) {
@@ -2823,8 +2983,14 @@
     threat.kind = "witness";
     threat.setupResolved = true;
     state.phase = "threat";
+    var approach = {
+      fog: "A shape tears out of the fog at your back.",
+      storm: "Lightning throws a shape across the road at your back, already rushing.",
+      frost: "The frozen road cracks under a step at your back. A shape is already rushing.",
+      still: "A shape breaks from the dark at your back."
+    }[state.weather] || "A shape breaks from the dark at your back.";
     appendBeat(state, makeBeat(threat.id, "threat", threat.slot, threat.location,
-      response + " Then " + victimName + "'s eyes fix past your shoulder. “Behind you!” A shape rushes from the fog at your back. The warning buys one heartbeat.", {
+      response + " Then " + victimName + "'s eyes fix past your shoulder. “Behind you!” " + approach + " The warning buys one heartbeat.", {
         actorId: threat.victimId,
         sign: threat.sign,
         truthEventId: exchange.id,
@@ -3488,14 +3654,14 @@
         var warnedName = warnedVictim && warnedVictim.name || "your neighbour";
         return [
           state.pendingThreat.setupResolved
-            ? action("INTERVENE", "Turn. Draw it away from " + warnedName, "danger", { hint: "You may save them. If it turns, the thing may chase you." })
-            : action("INTERVENE", "Shout a warning", "danger", { hint: "You may save them. If it turns, the thing may chase you." }),
+            ? action("INTERVENE", "Turn. Draw it away from " + warnedName, "danger")
+            : action("INTERVENE", "Shout a warning", "danger"),
           state.pendingThreat.setupResolved
-            ? action("SACRIFICE", "Shove " + warnedName + " into its path", "danger", { hint: "They die. You use the moment to escape." })
-            : action("IGNORE", "Stay silent", "quiet", { hint: "They die. You stay hidden and can examine the body." }),
+            ? action("SACRIFICE", "Shove " + warnedName + " into its path", "danger")
+            : action("IGNORE", "Stay silent", "quiet"),
           state.pendingThreat.setupResolved
-            ? action("FLEE", "Run. Leave " + warnedName + " behind", "danger", { hint: "They die. You reach home without examining the body." })
-            : action("FLEE", "Run for home", "danger", { hint: "They die. You reach home without examining the body." })
+            ? action("FLEE", "Run. Leave " + warnedName + " behind", "danger")
+            : action("FLEE", "Run for home", "danger")
         ];
       }
       return concealmentActions(state.player.location);
@@ -3787,8 +3953,8 @@
       }
       var changedVictim = state.cast.find(function (villager) { return villager.id === beat.actorId && villager.changed; });
       if (changedVictim) {
-        add(all.find(function (item) { return item.type === "HAIL" && item.actorId === beat.actorId; }), "Speak to " + changedVictim.name);
-        add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }), "Follow " + changedVictim.name + " when they move");
+        add(all.find(function (item) { return item.type === "HAIL" && item.actorId === beat.actorId; }), "Ask " + changedVictim.name + " about the scream");
+        add(all.find(function (item) { return item.type === "FOLLOW" && item.actorId === beat.actorId; }), "Keep " + changedVictim.name + " in sight when they leave");
         if (target && state.player.location !== target) {
           var returnPath = shortestPath(state.graph, state.player.location, target);
           add(all.find(function (item) { return item.type === "MOVE" && item.to === returnPath[1]; }), "Return to the " + target);
@@ -4054,6 +4220,12 @@
         heardLastWords: !!event.heardLastWords,
         lastWords: event.lastWords || null,
         recognizedChanged: !!event.recognizedChanged,
+        concealedChange: !!event.concealedChange,
+        coverInjury: event.coverInjury || null,
+        coverClaim: event.coverClaim || null,
+        coverReaffirm: event.coverReaffirm || null,
+        coverFollow: event.coverFollow || null,
+        question: event.question || null,
         corroborated: !!event.corroborated,
         corroboratingWitnessIds: (event.corroboratingWitnessIds || []).slice(),
         sharedDiscovery: !!event.sharedDiscovery,
