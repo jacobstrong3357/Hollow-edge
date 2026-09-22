@@ -15615,7 +15615,7 @@ function MonsterVillage() {
             ) : (
               <button onClick={start} className="mv-btn heInkButton mv-display w-full text-center heNewGameButton">NEW GAME</button>
             )}
-            <a href="/beta-feedback.html" target="_blank" rel="noopener noreferrer" className="mv-body heBetaFeedbackLink">Send beta feedback ↗</a>
+            <a href="/beta-feedback.html" className="mv-body heBetaFeedbackLink">Send beta feedback</a>
             <div className="flex justify-center mt-2">
               <button onClick={toggleSound} className="mv-body heSoundToggle">
                 {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
@@ -16242,7 +16242,7 @@ function MonsterVillage() {
               style={{ borderRadius: 3, padding: "13px 0", background: `${tone.glow}`, border: `1px solid ${tone.ink}`, color: tone.ink, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>{joined ? "WHAT YOU LEAVE BEHIND" : evacuated ? "WHO MADE IT OUT" : "WHAT BECAME OF THEM"}</button>
             <button onClick={() => { setEpiOpen(false); setS(null); }} className="mv-btn mv-display w-full"
               style={{ borderRadius: 3, padding: "13px 0", background: "transparent", border: `1px solid ${C.line}`, color: C.parch, fontSize: 14.5, letterSpacing: 2, cursor: "pointer" }}>ANOTHER VILLAGE</button>
-            <a href="/beta-feedback.html" target="_blank" rel="noopener noreferrer" className="mv-body" style={{ color: C.parch, textAlign: "center", fontSize: 13, padding: "4px 0", textDecoration: "underline", textUnderlineOffset: 3 }}>Send beta feedback ↗</a>
+            <a href="/beta-feedback.html" className="mv-body" style={{ color: C.parch, textAlign: "center", fontSize: 13, padding: "4px 0", textDecoration: "underline", textUnderlineOffset: 3 }}>Send beta feedback</a>
           </div>
         </div>
         <div className="mvVignette" />

@@ -22,6 +22,8 @@ assert.doesNotMatch(feedback + thanks, /\u2014/, "beta pages should not use em d
 assert.match(game, /href="\/beta-feedback\.html"/);
 assert.match(game, /className="mv-body heBetaFeedbackLink"/);
 assert.match(game, /\.heBetaFeedbackLink \{[^}]*color:var\(--he-ink\) !important/);
+assert.doesNotMatch(game, /href="\/beta-feedback\.html"[^>]*target="_blank"/);
+assert.doesNotMatch(game, /Send beta feedback ↗/);
 assert.match(build, /"beta-feedback\.html", "beta-thanks\.html"/);
 
 console.log("beta-feedback: form and build wiring passed");
