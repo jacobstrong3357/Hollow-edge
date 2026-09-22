@@ -13537,6 +13537,9 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visibl
 .heNewGameButton { min-height:46px; padding:11px 0; border:1px solid var(--he-ink) !important; border-radius:1px !important; background:var(--he-ink) !important; box-shadow:3px 4px 0 rgba(25,23,21,.2); font-size:14px; letter-spacing:3.5px; cursor:pointer; }
 .heGate .heNewGameButton, .heGate .heNewGameButton * { color:var(--he-paper-light) !important; text-shadow:none !important; }
 .heSoundToggle { min-height:34px; padding:6px 10px; background:rgba(243,233,214,.6); border:0 !important; color:var(--he-graphite); font-size:12px; cursor:pointer; }
+.heBetaFeedbackLink { display:flex; align-items:center; justify-content:center; width:100%; min-height:44px; margin-top:10px; padding:8px 12px; background:rgba(243,233,214,.94); color:var(--he-ink) !important; border:1px solid var(--he-ink); box-shadow:2px 3px 0 rgba(25,23,21,.2); font-size:14px; font-weight:700; text-decoration:none; }
+.heBetaFeedbackLink:hover { background:var(--he-paper-light); }
+.heBetaFeedbackLink:focus-visible { outline:3px solid var(--he-blood); outline-offset:3px; }
 .heHomeDrawer { background:radial-gradient(circle at 50% 0,rgba(91,65,52,.28),transparent 35%),#0c0a0a !important; }
 .heGate .heHomeDrawer h1, .heGate .heHomeDrawer p, .heGate .heHomeDrawer .mv-display { color:var(--he-paper-light) !important; text-shadow:none !important; }
 .heGate .heHomeDrawer button:not(.mvHomeGate) { border-color:rgba(232,222,202,.28) !important; }
@@ -15612,13 +15615,11 @@ function MonsterVillage() {
             ) : (
               <button onClick={start} className="mv-btn heInkButton mv-display w-full text-center heNewGameButton">NEW GAME</button>
             )}
+            <a href="/beta-feedback.html" target="_blank" rel="noopener noreferrer" className="mv-body heBetaFeedbackLink">Send beta feedback ↗</a>
             <div className="flex justify-center mt-2">
               <button onClick={toggleSound} className="mv-body heSoundToggle">
                 {snd ? "♪ sound: lit" : "♪ sound: snuffed"}
               </button>
-            </div>
-            <div className="text-center mt-2">
-              <a href="/beta-feedback.html" target="_blank" rel="noopener noreferrer" className="mv-body" style={{ color: C.parch, fontSize: 13, textDecoration: "underline", textUnderlineOffset: 3 }}>Send beta feedback ↗</a>
             </div>
           </div>
         </div>
