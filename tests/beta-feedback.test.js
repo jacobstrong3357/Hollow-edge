@@ -11,6 +11,7 @@ const game = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const build = fs.readFileSync(path.join(root, "scripts", "build-site.mjs"), "utf8");
 
 assert.match(feedback, /<form name="beta-feedback" method="POST" action="\/beta-thanks\.html" data-netlify="true" netlify-honeypot="bot-field">/);
+assert.doesNotMatch(feedback, /Tell me what worked/);
 assert.doesNotMatch(feedback, /name="form-name"/, "Netlify injects the hidden form-name into static HTML during deployment");
 for (const name of ["kind", "where", "happened", "expected", "device", "email", "bot-field"]) {
   assert.match(feedback, new RegExp('name="' + name + '"'), name + " must be part of the static form Netlify detects");

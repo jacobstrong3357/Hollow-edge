@@ -14,9 +14,8 @@
     main { width: min(100% - 32px, 640px); margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 0 max(48px, env(safe-area-inset-bottom)); }
     a { color: #f3c780; text-underline-offset: 3px; }
     .eyebrow { color: #f3c780; font-size: 12px; letter-spacing: .23em; text-transform: uppercase; font-weight: bold; }
-    h1 { font-size: clamp(32px, 8vw, 48px); line-height: 1.08; margin: 12px 0 14px; font-weight: normal; }
+    h1 { font-size: clamp(32px, 8vw, 48px); line-height: 1.08; margin: 12px 0 26px; font-weight: normal; }
     p { line-height: 1.55; }
-    .intro { max-width: 55ch; color: #ddd2c0; margin-bottom: 28px; }
     form { background: #111521; border: 1px solid #766a73; border-left: 3px solid #f3c780; padding: clamp(20px, 5vw, 32px); box-shadow: 0 15px 40px #08091380; }
     .field { margin-bottom: 23px; }
     label, legend { display: block; font-size: 17px; margin-bottom: 7px; }
@@ -38,7 +37,6 @@
     <a class="return" href="/">← Back to the game</a>
     <div class="eyebrow">Hollow's Edge · beta</div>
     <h1>How did it go?</h1>
-    <p class="intro">Tell me what worked, what felt confusing, or where the story went wrong. A few sentences are plenty. Spoilers are fine.</p>
 
     <form name="beta-feedback" method="POST" action="/beta-thanks.html" data-netlify="true" netlify-honeypot="bot-field">
       <p class="honeypot" aria-hidden="true"><label>Leave this blank: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
