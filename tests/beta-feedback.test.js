@@ -17,7 +17,8 @@ for (const name of ["kind", "where", "happened", "expected", "device", "email", 
 }
 assert.match(feedback, /name="happened" required/);
 assert.doesNotMatch(feedback, /name="email"[^>]*required/);
-assert.match(thanks, /Your report has been sent/);
+assert.match(thanks, /Your feedback has been sent/);
+assert.doesNotMatch(feedback + thanks, /\u2014/, "beta pages should not use em dashes");
 assert.match(game, /href="\/beta-feedback\.html"/);
 assert.match(build, /"beta-feedback\.html", "beta-thanks\.html"/);
 

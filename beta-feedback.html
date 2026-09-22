@@ -37,8 +37,8 @@
   <main>
     <a class="return" href="/">← Back to the game</a>
     <div class="eyebrow">Hollow's Edge · beta</div>
-    <h1>Tell us what happened.</h1>
-    <p class="intro">A short note is enough. Tell us where the story surprised you, where a choice didn't lead where you expected, or what made you want to keep playing. Spoilers are welcome here.</p>
+    <h1>How did it go?</h1>
+    <p class="intro">Tell me what worked, what felt confusing, or where the story went wrong. A few sentences are plenty. Spoilers are fine.</p>
 
     <form name="beta-feedback" method="POST" action="/beta-thanks.html" data-netlify="true" netlify-honeypot="bot-field">
       <p class="honeypot" aria-hidden="true"><label>Leave this blank: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
@@ -58,13 +58,13 @@
 
       <div class="field">
         <label for="where">Where were you? <span class="optional">Optional</span></label>
-        <span class="hint">Night number, place, character, or the words on the screen—whatever you remember.</span>
+        <span class="hint">A night, place, character, or a few words from the screen will do.</span>
         <input id="where" name="where" type="text" maxlength="240" placeholder="e.g. Night 2, outside Father Ansel's door" />
       </div>
 
       <div class="field">
         <label for="happened">What happened?</label>
-        <span class="hint">For a bug, include the option you clicked and what appeared next.</span>
+        <span class="hint">If something went wrong, tell me what you chose and what came up next.</span>
         <textarea id="happened" name="happened" required minlength="10" maxlength="4000" placeholder="I chose to walk with Greta, but the next screen…"></textarea>
       </div>
 
@@ -83,7 +83,7 @@
         <input id="email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" />
       </div>
 
-      <p class="privacy">Your feedback goes to the game's developer through Netlify. Email is optional and used only to follow up about your report. Please don't include passwords, personal details, or anything from your saved game you don't want to share.</p>
+      <p class="privacy">Your feedback comes to me through Netlify. You don't need to leave an email unless you want a reply. Please don't include passwords or personal details.</p>
       <button type="submit">Send feedback</button>
     </form>
   </main>
