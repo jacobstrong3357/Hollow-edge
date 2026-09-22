@@ -87,7 +87,7 @@ await Promise.all([
   fs.copyFile(path.join(root, "v6-continuity-inspector.js"), path.join(outDir, "v6-continuity-inspector.js"))
 ]);
 
-for (const optionalFile of ["favicon.svg"]) {
+for (const optionalFile of ["favicon.svg", "beta-feedback.html", "beta-thanks.html"]) {
   try {
     await fs.copyFile(path.join(root, optionalFile), path.join(outDir, optionalFile));
   } catch (error) {

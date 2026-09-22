@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#171927" />
+  <title>Beta feedback · Hollow's Edge</title>
+  <meta name="description" content="Tell us what worked, what confused you, or where Hollow's Edge stopped following your choices." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: dark; font-family: Georgia, "Times New Roman", serif; background: #171927; color: #f0e5d1; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 0, #3c2947 0, #25263c 30%, #171927 70%); }
+    main { width: min(100% - 32px, 640px); margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 0 max(48px, env(safe-area-inset-bottom)); }
+    a { color: #f3c780; text-underline-offset: 3px; }
+    .eyebrow { color: #f3c780; font-size: 12px; letter-spacing: .23em; text-transform: uppercase; font-weight: bold; }
+    h1 { font-size: clamp(32px, 8vw, 48px); line-height: 1.08; margin: 12px 0 14px; font-weight: normal; }
+    p { line-height: 1.55; }
+    .intro { max-width: 55ch; color: #ddd2c0; margin-bottom: 28px; }
+    form { background: #111521; border: 1px solid #766a73; border-left: 3px solid #f3c780; padding: clamp(20px, 5vw, 32px); box-shadow: 0 15px 40px #08091380; }
+    .field { margin-bottom: 23px; }
+    label, legend { display: block; font-size: 17px; margin-bottom: 7px; }
+    .hint { display: block; color: #bfb9b4; font-size: 14px; line-height: 1.45; margin-bottom: 9px; }
+    input, select, textarea { width: 100%; border: 1px solid #968c91; border-radius: 3px; background: #25283a; color: #fff7e9; font: 16px/1.4 Georgia, "Times New Roman", serif; padding: 12px 13px; }
+    textarea { min-height: 110px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: #bbb5bb; opacity: 1; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #f3c780; outline-offset: 3px; }
+    .optional { color: #bfb9b4; font-size: 13px; font-style: italic; }
+    .privacy { color: #cbc2b9; font-size: 14px; border-top: 1px solid #565260; padding-top: 17px; }
+    button { display: block; width: 100%; border: 1px solid #f3c780; border-radius: 3px; background: #f3c780; color: #211b20; font: bold 15px Georgia, "Times New Roman", serif; letter-spacing: .08em; text-transform: uppercase; padding: 15px; cursor: pointer; }
+    button:hover { background: #ffe0a4; }
+    .return { display: inline-block; margin-bottom: 22px; }
+    .honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="return" href="/">← Back to the game</a>
+    <div class="eyebrow">Hollow's Edge · beta</div>
+    <h1>Tell us what happened.</h1>
+    <p class="intro">A short note is enough. Tell us where the story surprised you, where a choice didn't lead where you expected, or what made you want to keep playing. Spoilers are welcome here.</p>
+
+    <form name="beta-feedback" method="POST" action="/beta-thanks.html" data-netlify="true" netlify-honeypot="bot-field">
+      <p class="honeypot" aria-hidden="true"><label>Leave this blank: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+
+      <div class="field">
+        <label for="kind">What kind of feedback is this?</label>
+        <select id="kind" name="kind" required>
+          <option value="" selected disabled>Choose one</option>
+          <option value="confusing-choice">A confusing choice</option>
+          <option value="story-mismatch">The story didn't follow my choice</option>
+          <option value="bug">A bug or something that got stuck</option>
+          <option value="pacing">Pacing or difficulty</option>
+          <option value="liked">Something I liked</option>
+          <option value="other">Something else</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="where">Where were you? <span class="optional">Optional</span></label>
+        <span class="hint">Night number, place, character, or the words on the screen—whatever you remember.</span>
+        <input id="where" name="where" type="text" maxlength="240" placeholder="e.g. Night 2, outside Father Ansel's door" />
+      </div>
+
+      <div class="field">
+        <label for="happened">What happened?</label>
+        <span class="hint">For a bug, include the option you clicked and what appeared next.</span>
+        <textarea id="happened" name="happened" required minlength="10" maxlength="4000" placeholder="I chose to walk with Greta, but the next screen…"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="expected">What did you expect, or what would improve it? <span class="optional">Optional</span></label>
+        <textarea id="expected" name="expected" maxlength="2500" placeholder="I expected to follow her instead of continuing the watch."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="device">Device and browser <span class="optional">Optional</span></label>
+        <input id="device" name="device" type="text" maxlength="160" placeholder="e.g. iPhone / Safari, or Windows / Chrome" />
+      </div>
+
+      <div class="field">
+        <label for="email">Email, only if you'd like a reply <span class="optional">Optional</span></label>
+        <input id="email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" />
+      </div>
+
+      <p class="privacy">Your feedback goes to the game's developer through Netlify. Email is optional and used only to follow up about your report. Please don't include passwords, personal details, or anything from your saved game you don't want to share.</p>
+      <button type="submit">Send feedback</button>
+    </form>
+  </main>
+</body>
+</html>
