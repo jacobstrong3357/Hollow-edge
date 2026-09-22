@@ -37,5 +37,7 @@ assert(!html.includes("lore's hand"), "rite-preparer copy must not form a stacke
 assert(html.includes("Greta, keeper of her grandmother's lore") && html.includes("will prepare it"), "rite-preparer copy reads as two complete sentences in the accusation confirmation");
 assert(!html.includes("if you'd been stood") && !html.includes("Nothing else. Nothing else is needed."), "a caught favour lie is concise and uses natural English");
 assert(html.includes('d.where === "home" ? `${d.name}\'s house`') && html.includes("struck inside ${deathPlace}"), "the ending names a victim's house instead of exposing the internal Home location");
+assert(html.includes("function repairVillagerNames(run)") && html.includes("repairVillagerNames(run);"), "loaded runs restore the authored capitalization of villager names");
+assert(html.includes("repairNightVillagerNames(wr.walk)"), "an interrupted night also restores authored villager-name capitalization");
 
 console.log("prose-grammar: all tests passed");

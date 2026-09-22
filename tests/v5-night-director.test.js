@@ -1153,6 +1153,49 @@ function answerAttackSetup(state, preferredMode) {
   assert(caught && caught.caught && caught.location === "Village Square", "the caught outcome carries the same location into the death resolver");
 })();
 
+(function aMaskedInvitationSurvivesTheHailDelayOnAWatchRoute() {
+  var config = baseConfig("greta-watch-invitation");
+  config.openingIntent = { kind: "watch", id: "ansel" };
+  config.monster = { id: "werewolf", hostId: "greta", active: true, signs: ["claw", "tracks"], hunts: ["Old Church"], attack: "kill", reach: "out", voice: { mode: "beast" } };
+  config.currentFacts = { weather: "still", active: true, huntLoc: "Old Church", attackSlot: 5, outMap: { greta: "Old Church", ansel: "home" } };
+  config.villagers = [
+    {
+      id: "greta", name: "Greta", role: "the Herbalist", alive: true, home: "Dark Forest",
+      motive: { id: "masked-errand", family: "medicine", destination: "Old Church", reason: "gather yew", object: "a yew bundle", depart: 0, duration: 5 },
+      dialogue: { hail: "Greta offers an easy smile. Walk with me.", luresFollow: true }
+    },
+    {
+      id: "ansel", name: "Father Ansel", role: "the Priest", alive: true, home: "Old Church",
+      motive: { id: "sleep", family: "home", destination: "home", reason: "sleep", object: "nothing", depart: 9, duration: 0 }
+    }
+  ];
+  var state = Director.createNight(config);
+  state.phase = "active";
+  state.cursor = 1;
+  state.player.location = "Old Church";
+  state.schedules.greta.slots[0] = "Village Square";
+  state.schedules.greta.slots[1] = "Old Church";
+  state.visibility[1].greta = true;
+  state.currentBeat = { id: "greta-crosses", type: "encounter", slot: 1, location: "Old Church", actorId: "greta", text: "Greta crosses your path." };
+
+  state = take(state, { type: "HAIL", actorId: "greta" });
+  assert.strictEqual(state.delays.greta, 1, "the conversation still delays Greta's hidden timetable");
+  assert(!Director.availableActions(state).some(function (choice) { return choice.type === "FOLLOW" && choice.actorId === "greta"; }), "the raw location lookup demonstrates the delayed-actor edge case");
+
+  var actions = Director.guidedActions(state, {
+    target: "Old Church", kind: "watch", actorId: "greta", actorName: "Father Ansel",
+    intentDone: true, interacted: { "greta|HAIL": true }
+  });
+  var accept = actions.find(function (choice) { return choice.type === "FOLLOW" && choice.actorId === "greta"; });
+  assert(accept && accept.label === "Accept. Walk with Greta", "Greta's invitation replaces the stale watch action with the promised choice");
+  assert.strictEqual(actions[0].type, "FOLLOW", "the invitation is the first response on the card");
+
+  state = Director.reduce(state, accept);
+  assert.strictEqual(state.lastError, null, "the promised follow remains legal even after Greta's delayed timetable removes the raw action");
+  assert.strictEqual(state.phase, "threat", "accepting the invitation reaches Greta's follow scene instead of resuming Father Ansel's watch");
+  assert(state.currentBeat && state.currentBeat.actorId === "greta", "the next scene remains about Greta");
+})();
+
 (function aCorrectArmedConfrontationCanEndAtTheReveal() {
   var config = baseConfig("named-in-the-dark");
   config.player = { armedGuess: {
@@ -3728,7 +3771,7 @@ function reachRescueDoor(state) {
   assert(html.includes('shiftMonsterBond(s, 2)') && html.includes('event.kind === "monster_spared_player"'), "a Director reprieve restores both affinity steps earned by being spared and obeying");
   assert(html.includes('event.kind === "hailed" && (event.actors || []).includes(s.monster.vid)') && html.includes('shiftMonsterBond(s, 1)'), "speaking directly to the active host at night again builds its interest in the player");
   assert(html.includes("monsterOfferReady(s, n) && !revealChoice") && html.includes("mods.directorOffer"), "fatal Director chases, close encounters and threshold visits can converge on the earned offer instead of bypassing it");
-  assert(html.includes('v5-night-director.js?v=29'), "the local page cache-busts the current Director runtime");
+  assert(html.includes('v5-night-director.js?v=30'), "the local page cache-busts the current Director runtime");
   assert(html.includes("homeMusic(!s || (s.phase === \"day\" && !s.over && !walk), !s)"), "the piano distinguishes the fuller title menu from safe day screens");
   assert(html.includes('s.phase === "day" && !walk) { Snd.scene(null); Snd.wind_(-30); }'), "a true day screen clears the previous night's rain and weather scene");
   assert(html.includes('else if (!walk) Snd.wind_(-30);'), "the day-labelled state cannot clear weather underneath a night walk still in progress");

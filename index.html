@@ -91,7 +91,7 @@
 </script>
 
 <script src="v5-content.js"></script>
-<script src="v5-night-director.js?v=29"></script>
+<script src="v5-night-director.js?v=30"></script>
 <script src="v6-continuity.js?v=1"></script>
 <script src="v6-director-adapter.js?v=1"></script>
 <script src="v6-run-continuity.js?v=1"></script>
@@ -2866,6 +2866,30 @@ const NPC_DEFS = [
   { id: "falk", name: "Doctor Falk", role: "the Physician", build: "stooped", sex: "m" },
   { id: "rosa", name: "Rosa", role: "the Seamstress", build: "tall", sex: "f" },
 ];
+
+/* Character ids are intentionally lowercase internal keys. Old saves and
+   interrupted night presentations can occasionally leak those keys into a
+   stored name field. Restore the fixed cast's authored display names at the
+   save boundary so every screen says “Greta”, never “greta”. */
+function repairVillagerNames(run) {
+  if (!run) return run;
+  const names = Object.fromEntries(NPC_DEFS.map((npc) => [npc.id, npc.name]));
+  (run.npcs || []).forEach((npc) => { if (names[npc.id]) npc.name = names[npc.id]; });
+  (run.deaths || []).forEach((death) => { if (names[death.id]) death.name = names[death.id]; });
+  if (run.continuity && run.continuity.actors) {
+    Object.keys(names).forEach((id) => {
+      if (run.continuity.actors[id]) run.continuity.actors[id].name = names[id];
+    });
+  }
+  return run;
+}
+
+function repairNightVillagerNames(walk) {
+  if (!walk || !walk.director) return walk;
+  const names = Object.fromEntries(NPC_DEFS.map((npc) => [npc.id, npc.name]));
+  (walk.director.cast || []).forEach((npc) => { if (names[npc.id]) npc.name = names[npc.id]; });
+  return walk;
+}
 
 /* ---------- who was close to whom ----------
    Eight people who have lived in one another's pockets their whole lives.
@@ -15188,6 +15212,7 @@ function MonsterVillage() {
             if (HE_CONTINUITY) run = HE_CONTINUITY.upgradeRun(run);
             repairPlayerKnowledge(run);
             if (HE_V6_RUN_CONTINUITY) HE_V6_RUN_CONTINUITY.syncRunActors(run);
+            repairVillagerNames(run);
             setSavedRun(run);
             /* The live lane queue is UI state, but unlike an unopened picker
                it has already sampled the night and recorded player choices.
@@ -15196,7 +15221,7 @@ function MonsterVillage() {
             try {
               const r3 = await window.storage.get("mv-run-walk");
               const wr = r3 && r3.value ? JSON.parse(r3.value) : null;
-              if (wr && wr.gameId === run.gameId && wr.walk && (wr.walk.mode === "out" || wr.walk.mode === "watch" || wr.walk.mode === "director")) setSavedWalk(wr.walk);
+              if (wr && wr.gameId === run.gameId && wr.walk && (wr.walk.mode === "out" || wr.walk.mode === "watch" || wr.walk.mode === "director")) setSavedWalk(repairNightVillagerNames(wr.walk));
             } catch (e2) { /* a stale walk is safe to ignore */ }
             /* A paid interview and a completed daylight search have already
                changed the run. Preserve the presentation beside the save so

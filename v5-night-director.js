@@ -3226,6 +3226,16 @@
     if (next.phase === "threat") return resolveThreat(next, action);
     var forcedWatchFollow = presentingBeat && presentingBeat.type === "watch" && presentingBeat.meta && presentingBeat.meta.departure
       && action.type === "FOLLOW" && action.actorId === presentingBeat.actorId;
+    /* Hailing a masked host can produce a direct invitation to walk with
+       them. HAIL deliberately delays the villager's timetable, which can
+       make the ordinary actorsAt() lookup stop offering FOLLOW on the very
+       next render. The invitation itself is enough to keep that immediate
+       response legal (and also repairs nights saved on the stuck screen). */
+    var invitedActor = action.actorId && next.cast.find(function (villager) { return villager.id === action.actorId; });
+    var forcedAcceptedInvitation = presentingBeat && presentingBeat.type === "encounter"
+      && presentingBeat.actorId === action.actorId && action.type === "FOLLOW"
+      && next.monsterSchedule.active && next.monsterSchedule.hostId === action.actorId
+      && invitedActor && invitedActor.dialogue && invitedActor.dialogue.luresFollow;
     var forcedClueInspect = presentingBeat && presentingBeat.type === "clue" && presentingBeat.meta && presentingBeat.meta.inspectable && !presentingBeat.meta.inspected
       && action.type === "INSPECT_CLUE";
     var forcedHiddenFigureAction = presentingBeat && presentingBeat.meta && presentingBeat.meta.hiddenFigure && presentingBeat.meta.hiddenActorId
@@ -3237,7 +3247,7 @@
       && action.to === presentingBeat.meta.disturbanceLocation && !!action.investigateEventId;
     var forcedBodyDefence = presentingBeat && presentingBeat.meta && presentingBeat.meta.bodyInvestigation && presentingBeat.meta.suspicious
       && (action.type === "PLEAD_INNOCENCE" || (action.type === "SHOW_BODY_EVIDENCE" && !!presentingBeat.sign));
-    var legal = forcedWatchFollow || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || forcedRemoteInvestigation || forcedBodyDefence || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
+    var legal = forcedWatchFollow || forcedAcceptedInvitation || forcedClueInspect || forcedHiddenFigureAction || forcedLocalInvestigation || forcedRemoteInvestigation || forcedBodyDefence || availableActions(next).some(function (x) { return x.type === action.type && (!x.actorId || x.actorId === action.actorId) && (!x.to || x.to === action.to); });
     if (!legal) return invalid(next, action, "That action is not available now.");
     if ((action.type === "PLEAD_INNOCENCE" || action.type === "SHOW_BODY_EVIDENCE") && presentingBeat && presentingBeat.meta && presentingBeat.meta.bodyInvestigation && presentingBeat.meta.suspicious) {
       var investigatedEvent = (next.ledgers.truth || []).find(function (event) { return event.id === presentingBeat.truthEventId && event.kind === "investigated_attack"; });
@@ -3972,7 +3982,8 @@
       var acceptedLure = !!((guide.interacted || {})[hailKey] && guidedActor && guidedActor.dialogue && guidedActor.dialogue.luresFollow);
       if (!(guide.interacted || {})[hailKey]) add(all.find(function (item) { return item.type === "HAIL" && item.actorId === guide.actorId; }));
       if (!(guide.interacted || {})[followKey]) add(
-        all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; }),
+        all.find(function (item) { return item.type === "FOLLOW" && item.actorId === guide.actorId; })
+          || (acceptedLure ? action("FOLLOW", "Follow " + guidedActor.name, "amber", { actorId: guide.actorId }) : null),
         acceptedLure ? "Accept. Walk with " + guidedActor.name : null
       );
     }
